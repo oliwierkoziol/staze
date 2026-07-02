@@ -1,0 +1,3 @@
+Przeprowadzono analizę głównego rdzenia rozgrywki (core gameplay), jego kluczowych mechanik oraz sposobu progresji gracza.
+Dokonano również analizy źródeł inspiracji, ze szczególnym uwzględnieniem tego, w jaki sposób główne filary rozgrywki zostały zaimplementowane i funkcjonowały w innych produkcjach.
+Opracowano wstępny zarys mechaniki walki, obejmujący zarówno jednostki dostępne dla gracza, jak i typy przeciwników, z którymi będzie się mierzył w trakcie rozgrywki.

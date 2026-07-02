@@ -1,0 +1,2 @@
+Dokonano wyboru tematyki projektu oraz określono jego główne cele i założenia.
+Przeprowadzono wstępną analizę wymagań technologicznych, obejmującą wybór odpowiednich narzędzi, technologii oraz środowiska programistycznego.
