@@ -1,0 +1,2 @@
+01.07.2026 - Określenie projektu do wykonania w czasie stażu. Ustalenie, że projektem na praktyki będzie gra strategiczna, omówienie wszelkich zależności i zmiennych. Stworzenie konceptu, zamysłu gry.
+02.07.2026 - Dopracowywanie konceptu, omówienie szczegółów projektu. Początkowe prace nad wyglądem mapy w grze i nad jej funkcjonalnością.
