@@ -1,0 +1,12 @@
+1 lipca
+- Wybraliśmy projekt do zrobienia na stażach
+- Wybraliśmy technologię, którą będzie wykorzystywał projekt (Godot)
+- Rozpisaliśmy w dokumentacji wszystkie komponenty gry
+
+2 lipca
+- Uzgodniliśmy to, jak ogólnie będzie wyglądała rozgrywka
+- Utworzyliśmy pierwszy prototyp systemu walki
+
+3 lipca
+- Dodalismy mozliwosc ruszania się oraz atakowania jednostek
+- Ustaliliśmy sposób zaznaczania jednostek i wyświetlania ich statystyk
