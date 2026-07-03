@@ -1,4 +1,10 @@
 Dzień 1 (01.07.2026)
 - wymyślanie pomysłów na projekt stażowy
+- stworzenie funkcjonalności poruszania się postacią
 Dzień 2  (02.07.2026)
-- prototypowanie (tworzenie postaci poruszającej się po mapie)
+- dołączenie funkcjonalności poruszania się postacią do mapy 
+- dodanie zoptymalizowanego wybierania ścieżki do postaci
+- wizualizacja ścieżki przed i podczas jej wybrania
+- umożliwienie wybierania postaci (nie jest zawsze zaznaczona)
+Dzień 3 (03.07.2026)
+- ukazanie wymagań budowli przez ui (jakie materiały są potrzebne oraz na jakim polu musi się znajdować)
