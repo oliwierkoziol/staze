@@ -8,15 +8,14 @@ const SAMPLE_UNITS := [
 		"side": "player",
 		"count": 24,
 		"hp": 35,
-		"dmg": "5-8",
+		"dmg": 7,
 		"def": 7,
 		"move_range": 4,
 		"attack_range": 1,
 		"action_name": "Ciecie",
 		"skill_names": ["Tarcza", "Szarza", "Mur stali"],
-		"cooldowns": [0, 2, 4],
 		"resistance": "Ogien 10%",
-		"buffs": "Obrona +2",
+		"buffs": "Brak",
 		"debuffs": "Brak",
 		"grid_x": 0,
 		"grid_y": 3
@@ -28,15 +27,14 @@ const SAMPLE_UNITS := [
 		"side": "player",
 		"count": 18,
 		"hp": 22,
-		"dmg": "4-6",
+		"dmg": 5,
 		"def": 4,
 		"move_range": 3,
 		"attack_range": 6,
 		"action_name": "Strzal",
 		"skill_names": ["Precyzja", "Grad strzal", "Odskok"],
-		"cooldowns": [0, 3, 2],
 		"resistance": "Lod 15%",
-		"buffs": "Cel +1",
+		"buffs": "Brak",
 		"debuffs": "Brak",
 		"grid_x": 0,
 		"grid_y": 7
@@ -48,16 +46,15 @@ const SAMPLE_UNITS := [
 		"side": "enemy",
 		"count": 16,
 		"hp": 28,
-		"dmg": "6-10",
+		"dmg": 8,
 		"def": 5,
 		"move_range": 6,
 		"attack_range": 1,
 		"action_name": "Rozdarcie",
 		"skill_names": ["Doskok", "Krzyk", "Szal"],
-		"cooldowns": [0, 2, 5],
 		"resistance": "Trucizna 20%",
 		"buffs": "Brak",
-		"debuffs": "Atak -1",
+		"debuffs": "Brak",
 		"grid_x": 14,
 		"grid_y": 3
 	},
@@ -68,16 +65,15 @@ const SAMPLE_UNITS := [
 		"side": "enemy",
 		"count": 9,
 		"hp": 26,
-		"dmg": "8-12",
+		"dmg": 10,
 		"def": 3,
 		"move_range": 3,
 		"attack_range": 5,
 		"action_name": "Piorun",
 		"skill_names": ["Totem", "Iskra", "Burza"],
-		"cooldowns": [1, 0, 4],
 		"resistance": "Elektrycznosc 25%",
 		"buffs": "Brak",
-		"debuffs": "Morale -1",
+		"debuffs": "Brak",
 		"grid_x": 14,
 		"grid_y": 7
 	}
@@ -85,6 +81,7 @@ const SAMPLE_UNITS := [
 
 const GRID_COLUMNS := 15
 const GRID_ROWS := 11
+const MAX_EVENT_LOG_ENTRIES := 60
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
 @onready var hud: CanvasLayer = $HUD
@@ -93,12 +90,15 @@ const GRID_ROWS := 11
 @onready var basic_attack_button: Button = $HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent/BasicAttackButton
 @onready var general_skills_label: Label = $HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/GeneralSkills
 @onready var general_rule_label: Label = $HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/GeneralRule
+@onready var event_log_scroll: ScrollContainer = $HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll
+@onready var event_log_label: RichTextLabel = $HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll/EventLog
 
 var units: Array = []
 var selected_unit_id := -1
 var current_turn := "player"
 var is_animating := false
 var highlight_mode := "move"
+var event_log: Array[String] = []
 
 
 func _ready() -> void:
@@ -112,7 +112,8 @@ func _ready() -> void:
 	board.cell_right_clicked.connect(_on_cell_right_clicked)
 	board.animation_finished.connect(_on_board_animation_finished)
 	basic_attack_button.pressed.connect(_on_basic_attack_button_pressed)
-	general_skills_label.text = "Tura:\nGracz rusza jedna jednostka, potem rusza przeciwnik."
+	general_skills_label.text = "General Aldric\nUmiejetnosci jednostek sa na razie placeholderem w statystykach."
+	_log_event("Bitwa rozpoczeta.")
 	_on_unit_selected(units[0])
 	_update_turn_label()
 	_update_basic_attack_button()
@@ -137,7 +138,6 @@ func _on_unit_selected(unit_data: Dictionary) -> void:
 		"Zasieg ataku: %s" % unit_data.attack_range,
 		"Atak podstawowy: %s" % unit_data.action_name,
 		"Umiejetnosci: %s" % ", ".join(unit_data.skill_names),
-		"Cooldowny: %s" % ", ".join(unit_data.cooldowns.map(func(value: int) -> String: return str(value))),
 		"Odpornosci: %s" % unit_data.resistance,
 		"Buffy: %s" % unit_data.buffs,
 		"Debuffy: %s" % unit_data.debuffs
@@ -152,7 +152,7 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	if unit.is_empty():
 		board.set_highlighted_cells([])
 		return
-	
+
 	if highlight_mode == "attack":
 		var target := _find_unit_at_cell(cell)
 		if not target.is_empty() and target.side != unit.side and _is_in_attack_range(unit, cell):
@@ -173,6 +173,9 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 		return
 
 	if highlight_mode == "attack":
+		highlight_mode = "move"
+		_update_highlighted_cells(unit)
+		_update_basic_attack_button()
 		return
 
 	var path := _find_path(unit, Vector2i(unit.grid_x, unit.grid_y), cell)
@@ -185,6 +188,7 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 	_sync_board()
 	board.animate_unit_path(unit.id, path)
 	await board.animation_finished
+	_log_event("%s przemieszcza sie." % unit.name)
 	_end_player_turn()
 
 
@@ -222,6 +226,7 @@ func _enemy_take_turn() -> void:
 		_sync_board()
 		board.animate_unit_path(enemy_unit.id, best_path)
 		await board.animation_finished
+		_log_event("%s przemieszcza sie." % enemy_unit.name)
 
 	target = _find_nearest_player_unit(enemy_unit)
 	if not enemy_unit.is_empty() and not target.is_empty() and _is_in_attack_range(enemy_unit, Vector2i(target.grid_x, target.grid_y)):
@@ -280,13 +285,6 @@ func _find_nearest_player_unit(enemy_unit: Dictionary) -> Dictionary:
 	return nearest
 
 
-func _is_occupied(cell: Vector2i) -> bool:
-	for unit in units:
-		if unit.grid_x == cell.x and unit.grid_y == cell.y:
-			return true
-	return false
-
-
 func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[Vector2i]:
 	var reachable_cells: Array[Vector2i] = _get_reachable_cells(enemy_unit)
 	var best_path: Array[Vector2i] = []
@@ -310,12 +308,13 @@ func _sync_board() -> void:
 		board.set_highlighted_cells([])
 	else:
 		_update_highlighted_cells(selected_unit)
+		_on_unit_selected(selected_unit)
 	_update_basic_attack_button()
 
 
 func _update_turn_label() -> void:
 	var turn_name: String = "Gracz" if current_turn == "player" else "Przeciwnik"
-	general_rule_label.text = "Aktywna tura: %s\nKolejnosc: gracz -> przeciwnik -> gracz" % turn_name
+	general_rule_label.text = "Aktywna tura: %s\nPrawy klik: ruch lub anulowanie trybu ataku." % turn_name
 
 
 func _update_highlighted_cells(unit: Dictionary) -> void:
@@ -323,7 +322,7 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 		board.set_highlighted_cells([])
 		board.set_prioritize_cell_click_on_left(false)
 		return
- 
+
 	if highlight_mode == "attack":
 		board.set_highlighted_cells(_get_attackable_cells(unit), true)
 		board.set_prioritize_cell_click_on_left(true)
@@ -376,25 +375,21 @@ func _is_in_attack_range(unit: Dictionary, cell: Vector2i) -> bool:
 func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_after := true) -> void:
 	var casualties: int = _calculate_casualties(attacker, target)
 	target.count = max(0, int(target.count) - casualties)
+	_log_event("%s uderza %s i zadaje %s strat." % [attacker.name, target.name, casualties])
 	if target.count <= 0:
+		_log_event("%s zostaje rozbite." % target.name)
 		units.erase(target)
+	if target.id == selected_unit_id:
+		selected_unit_id = -1
 	_sync_board()
 	if end_turn_after:
 		_end_player_turn()
 
 
 func _calculate_casualties(attacker: Dictionary, target: Dictionary) -> int:
-	var average_damage: float = _get_average_damage(attacker.dmg)
-	var damage_per_unit: int = max(1, int(round(average_damage)) - int(target.def))
+	var damage_per_unit: int = max(1, int(attacker.dmg) - int(target.def))
 	var total_damage: int = damage_per_unit * int(attacker.count)
 	return max(1, int(total_damage / max(1, int(target.hp))))
-
-
-func _get_average_damage(damage_text: String) -> float:
-	var parts: PackedStringArray = damage_text.split("-")
-	if parts.size() != 2:
-		return float(int(damage_text))
-	return (float(int(parts[0])) + float(int(parts[1]))) / 2.0
 
 
 func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
@@ -482,6 +477,7 @@ func _validate_setup() -> void:
 	for unit in SAMPLE_UNITS:
 		assert(unit.grid_x >= 0 and unit.grid_x < GRID_COLUMNS)
 		assert(unit.grid_y >= 0 and unit.grid_y < GRID_ROWS)
+		assert(unit.dmg >= 1)
 
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
 	assert(_get_attackable_cells(SAMPLE_UNITS[0]).has(Vector2i(1, 3)))
@@ -507,6 +503,18 @@ func _update_basic_attack_button() -> void:
 	var can_use_attack: bool = not unit.is_empty() and current_turn == "player" and unit.side == "player"
 	basic_attack_button.disabled = not can_use_attack
 	basic_attack_button.text = "Anuluj atak" if highlight_mode == "attack" and can_use_attack else "Atak podstawowy"
+
+
+func _log_event(text: String) -> void:
+	event_log.append(text)
+	while event_log.size() > MAX_EVENT_LOG_ENTRIES:
+		event_log.pop_front()
+	event_log_label.text = "\n".join(event_log)
+	call_deferred("_scroll_event_log_to_bottom")
+
+
+func _scroll_event_log_to_bottom() -> void:
+	event_log_scroll.scroll_vertical = int(event_log_label.get_content_height())
 
 
 func _hex_distance(a: Vector2i, b: Vector2i) -> int:
