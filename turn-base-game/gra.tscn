@@ -112,3 +112,28 @@ autowrap_mode = 2
 layout_mode = 2
 text = "-"
 autowrap_mode = 2
+
+[node name="EventLogTitle" type="Label" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
+layout_mode = 2
+text = "Dziennik bitwy"
+
+[node name="EventLogPanel" type="PanelContainer" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
+custom_minimum_size = Vector2(0, 220)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="EventLogScroll" type="ScrollContainer" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/EventLogPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="EventLog" type="RichTextLabel" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll"]
+custom_minimum_size = Vector2(0, 220)
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = false
+scroll_active = false
+fit_content = true
+autowrap_mode = 3
+text = "-"
