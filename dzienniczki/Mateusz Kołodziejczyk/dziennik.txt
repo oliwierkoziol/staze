@@ -1,2 +1,3 @@
 01.07.2026 - Określenie projektu do wykonania w czasie stażu. Ustalenie, że projektem na praktyki będzie gra strategiczna, omówienie wszelkich zależności i zmiennych. Stworzenie konceptu, zamysłu gry.
 02.07.2026 - Dopracowywanie konceptu, omówienie szczegółów projektu. Początkowe prace nad wyglądem mapy w grze i nad jej funkcjonalnością.
+03.07.2026 - Dodanie możliwości budowania budynków na mapie, podzielenie budynków na kategorie. Praca nad wyglądu paneli ze statystykami, menu budowy. Poprawa funkcjonalności tworzenia budynków, ustalenie ograniczeń, wymogów co do stworzenia struktur miasta.
