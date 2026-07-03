@@ -1,0 +1,4 @@
+Dzień 1 (01.07.2026)
+- wymyślanie pomysłów na projekt stażowy
+Dzień 2  (02.07.2026)
+- prototypowanie (tworzenie postaci poruszającej się po mapie)
