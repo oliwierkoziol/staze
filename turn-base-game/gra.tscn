@@ -1,7 +1,63 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/gra.gd" id="1_a1tqk"]
 [ext_resource type="Script" path="res://scripts/plansza_walki.gd" id="2_h3x7m"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_frame"]
+bg_color = Color(0.05, 0.05, 0.04, 0.88)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.63, 0.51, 0.22, 0.85)
+content_margin_left = 12.0
+content_margin_top = 12.0
+content_margin_right = 12.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_section"]
+bg_color = Color(0.07, 0.07, 0.06, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.42, 0.34, 0.15, 0.75)
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.10, 0.10, 0.08, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.65, 0.52, 0.20, 0.9)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_pressed"]
+bg_color = Color(0.23, 0.19, 0.08, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.88, 0.75, 0.34, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
 
 [node name="Gra" type="Control"]
 layout_mode = 3
@@ -13,127 +69,348 @@ grow_vertical = 2
 script = ExtResource("1_a1tqk")
 
 [node name="BattleLayer" type="Node2D" parent="."]
-position = Vector2(476, 104)
+position = Vector2(430, 120)
 
 [node name="PlanszaWalki" type="Node2D" parent="BattleLayer"]
 script = ExtResource("2_h3x7m")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
-[node name="RootMargin" type="MarginContainer" parent="HUD"]
+[node name="Overlay" type="Control" parent="HUD"]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 24
 
-[node name="RootLayout" type="HBoxContainer" parent="HUD/RootMargin"]
+[node name="TopBar" type="PanelContainer" parent="HUD/Overlay"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = 40.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_frame")
+
+[node name="TopMargin" type="MarginContainer" parent="HUD/Overlay/TopBar"]
 layout_mode = 2
-theme_override_constants/separation = 28
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
 
-[node name="LeftPanel" type="PanelContainer" parent="HUD/RootMargin/RootLayout"]
-custom_minimum_size = Vector2(280, 0)
+[node name="TurnLabel" type="Label" parent="HUD/Overlay/TopBar/TopMargin"]
 layout_mode = 2
-size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
+text = "TURA 1"
 
-[node name="LeftMargin" type="MarginContainer" parent="HUD/RootMargin/RootLayout/LeftPanel"]
+[node name="LeftPanel" type="PanelContainer" parent="HUD/Overlay"]
+custom_minimum_size = Vector2(348, 0)
+layout_mode = 1
+anchor_right = 0.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 56.0
+offset_right = 356.0
+offset_bottom = -56.0
+grow_vertical = 2
+clip_contents = true
+theme_override_styles/panel = SubResource("StyleBoxFlat_frame")
+
+[node name="LeftMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
 
-[node name="LeftContent" type="VBoxContainer" parent="HUD/RootMargin/RootLayout/LeftPanel/LeftMargin"]
+[node name="LeftContent" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 12
 
-[node name="LeftTitle" type="Label" parent="HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent"]
+[node name="LeftTitle" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent"]
 layout_mode = 2
-text = "Wybrana jednostka"
+theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
+text = "STATYSTYKI JEDNOSTKI"
+horizontal_alignment = 1
 
-[node name="UnitName" type="Label" parent="HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent"]
+[node name="UnitHeader" type="PanelContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent"]
 layout_mode = 2
-text = "-"
+theme_override_styles/panel = SubResource("StyleBoxFlat_section")
 
-[node name="UnitStats" type="Label" parent="HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent"]
+[node name="UnitHeaderMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader"]
 layout_mode = 2
-size_flags_vertical = 3
-text = "-"
-autowrap_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
 
-[node name="BasicAttackButton" type="Button" parent="HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent"]
+[node name="UnitHeaderContent" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin"]
 layout_mode = 2
-text = "Atak podstawowy"
+theme_override_constants/separation = 6
 
-[node name="CenterSpacer" type="Control" parent="HUD/RootMargin/RootLayout"]
-custom_minimum_size = Vector2(820, 0)
+[node name="UnitName" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent"]
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="RightPanel" type="PanelContainer" parent="HUD/RootMargin/RootLayout"]
-custom_minimum_size = Vector2(280, 0)
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="RightMargin" type="MarginContainer" parent="HUD/RootMargin/RootLayout/RightPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
-
-[node name="RightContent" type="VBoxContainer" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="GeneralTitle" type="Label" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
-layout_mode = 2
-text = "General"
-
-[node name="PortraitPlaceholder" type="ColorRect" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
-custom_minimum_size = Vector2(0, 160)
-layout_mode = 2
-color = Color(0.26, 0.30, 0.38, 1)
-
-[node name="GeneralName" type="Label" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
-layout_mode = 2
-text = "Aldric z Zelaznej Strazy"
-
-[node name="GeneralSkills" type="Label" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
-layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.90, 0.78, 1)
 text = "-"
 autowrap_mode = 2
 
-[node name="GeneralRule" type="Label" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
+[node name="UnitMeta" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent"]
 layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.44, 0.78, 0.35, 1)
 text = "-"
 autowrap_mode = 2
 
-[node name="EventLogTitle" type="Label" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
-layout_mode = 2
-text = "Dziennik bitwy"
-
-[node name="EventLogPanel" type="PanelContainer" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
-custom_minimum_size = Vector2(0, 220)
+[node name="UnitStatsPanel" type="PanelContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_section")
 
-[node name="EventLogScroll" type="ScrollContainer" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/EventLogPanel"]
+[node name="UnitStatsMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="UnitStats" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.90, 0.87, 0.78, 1)
+text = "-"
+autowrap_mode = 2
+
+[node name="ActionsTitle" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
+text = "AKCJE"
+horizontal_alignment = 1
+
+[node name="ActionsPanel" type="PanelContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+
+[node name="ActionsMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="ActionsLabel" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel/ActionsMargin"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.90, 0.87, 0.78, 1)
+text = "-"
+autowrap_mode = 2
+
+[node name="RightPanel" type="PanelContainer" parent="HUD/Overlay"]
+custom_minimum_size = Vector2(348, 0)
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -356.0
+offset_top = 56.0
+offset_right = -8.0
+offset_bottom = -56.0
+grow_horizontal = 0
+grow_vertical = 2
+clip_contents = true
+theme_override_styles/panel = SubResource("StyleBoxFlat_frame")
+
+[node name="RightMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="RightContent" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="GeneralTitle" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
+text = "STATYSTYKI GENERALA"
+horizontal_alignment = 1
+
+[node name="GeneralPanel" type="PanelContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+
+[node name="GeneralPanelMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="GeneralPanelContent" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="GeneralName" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.95, 0.90, 0.78, 1)
+text = "KAPITAN ALARIC"
+autowrap_mode = 2
+
+[node name="GeneralLevel" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.44, 0.78, 0.35, 1)
+text = "Poziom 5"
+
+[node name="GeneralRule" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.90, 0.87, 0.78, 1)
+text = "-"
+autowrap_mode = 2
+
+[node name="GeneralSkillsTitle" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
+text = "UMIEJETNOSCI GENERALA"
+horizontal_alignment = 1
+
+[node name="GeneralSkillsPanel" type="PanelContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+
+[node name="GeneralSkillsMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="GeneralSkills" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel/GeneralSkillsMargin"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.90, 0.87, 0.78, 1)
+text = "-"
+autowrap_mode = 2
+
+[node name="EventLogTitle" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
+text = "PRZEBIEG WALKI"
+horizontal_alignment = 1
+
+[node name="EventLogPanel" type="PanelContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent"]
+custom_minimum_size = Vector2(0, 240)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+
+[node name="EventLogScroll" type="ScrollContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="EventLog" type="RichTextLabel" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll"]
-custom_minimum_size = Vector2(0, 220)
+[node name="EventLog" type="RichTextLabel" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll"]
+custom_minimum_size = Vector2(0, 240)
 layout_mode = 2
 size_flags_horizontal = 3
 bbcode_enabled = false
 scroll_active = false
 fit_content = true
 autowrap_mode = 3
+theme_override_colors/default_color = Color(0.90, 0.87, 0.78, 1)
 text = "-"
+
+[node name="BottomBar" type="PanelContainer" parent="HUD/Overlay"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 372.0
+offset_top = -140.0
+offset_right = -372.0
+offset_bottom = -56.0
+grow_horizontal = 2
+grow_vertical = 0
+clip_contents = true
+theme_override_styles/panel = SubResource("StyleBoxFlat_frame")
+
+[node name="BottomMargin" type="MarginContainer" parent="HUD/Overlay/BottomBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 6
+
+[node name="BottomLayout" type="HBoxContainer" parent="HUD/Overlay/BottomBar/BottomMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="UnitListPanel" type="PanelContainer" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+clip_contents = true
+theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+
+[node name="UnitListMargin" type="MarginContainer" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/UnitListPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="UnitListScroll" type="ScrollContainer" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/UnitListPanel/UnitListMargin"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_scroll_mode = 1
+vertical_scroll_mode = 0
+
+[node name="UnitList" type="HBoxContainer" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/UnitListPanel/UnitListMargin/UnitListScroll"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ActionBar" type="HBoxContainer" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="AttackActionButton" type="Button" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar"]
+custom_minimum_size = Vector2(108, 60)
+layout_mode = 2
+clip_text = true
+theme_override_colors/font_color = Color(0.92, 0.88, 0.78, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+text = "ATAK PODSTAWOWY"
+
+[node name="Skill1ActionButton" type="Button" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar"]
+custom_minimum_size = Vector2(82, 60)
+layout_mode = 2
+disabled = true
+clip_text = true
+theme_override_colors/font_color = Color(0.65, 0.62, 0.54, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+text = "UMIEJETNOSC 1"
+
+[node name="Skill2ActionButton" type="Button" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar"]
+custom_minimum_size = Vector2(82, 60)
+layout_mode = 2
+disabled = true
+clip_text = true
+theme_override_colors/font_color = Color(0.65, 0.62, 0.54, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+text = "UMIEJETNOSC 2"
+
+[node name="Skill3ActionButton" type="Button" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar"]
+custom_minimum_size = Vector2(82, 60)
+layout_mode = 2
+disabled = true
+clip_text = true
+theme_override_colors/font_color = Color(0.65, 0.62, 0.54, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+text = "UMIEJETNOSC 3"

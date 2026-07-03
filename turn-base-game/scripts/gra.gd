@@ -5,6 +5,7 @@ const SAMPLE_UNITS := [
 		"id": 1,
 		"name": "Miecznicy",
 		"short_name": "MI",
+		"role": "Piechota ciezka",
 		"side": "player",
 		"count": 24,
 		"hp": 35,
@@ -24,6 +25,7 @@ const SAMPLE_UNITS := [
 		"id": 2,
 		"name": "Lucznicy",
 		"short_name": "LU",
+		"role": "Strzelcy",
 		"side": "player",
 		"count": 18,
 		"hp": 22,
@@ -41,8 +43,69 @@ const SAMPLE_UNITS := [
 	},
 	{
 		"id": 3,
+		"name": "Pikinierzy",
+		"short_name": "PI",
+		"role": "Piechota defensywna",
+		"side": "player",
+		"count": 20,
+		"hp": 30,
+		"dmg": 6,
+		"def": 8,
+		"move_range": 3,
+		"attack_range": 2,
+		"action_name": "Pchniecie pika",
+		"skill_names": ["Mur pik", "Kontratak", "Utrzymanie linii"],
+		"resistance": "Szarza 25%",
+		"buffs": "Premia przeciw kawalerii",
+		"debuffs": "Slabszy w zwarciu bocznym",
+		"grid_x": 0,
+		"grid_y": 1
+	},
+	{
+		"id": 4,
+		"name": "Kawaleria",
+		"short_name": "KA",
+		"role": "Uderzenie mobilne",
+		"side": "player",
+		"count": 12,
+		"hp": 42,
+		"dmg": 10,
+		"def": 6,
+		"move_range": 7,
+		"attack_range": 1,
+		"action_name": "Szarza",
+		"skill_names": ["Tratowanie", "Odskok", "Przelamanie"],
+		"resistance": "Morale 15%",
+		"buffs": "Pierwszy atak +2 DMG",
+		"debuffs": "Brak",
+		"grid_x": 0,
+		"grid_y": 5
+	},
+	{
+		"id": 5,
+		"name": "Asasyni",
+		"short_name": "AS",
+		"role": "Zabojcy",
+		"side": "player",
+		"count": 8,
+		"hp": 18,
+		"dmg": 14,
+		"def": 3,
+		"move_range": 5,
+		"attack_range": 1,
+		"action_name": "Skrytobojstwo",
+		"skill_names": ["Dym", "Krwawienie", "Zanik"],
+		"resistance": "Trucizna 35%",
+		"buffs": "Premia z pierwszego ciosu",
+		"debuffs": "Niska wytrzymalosc",
+		"grid_x": 0,
+		"grid_y": 9
+	},
+	{
+		"id": 6,
 		"name": "Wilczy jezdzcy",
 		"short_name": "WJ",
+		"role": "Najezdzcy",
 		"side": "enemy",
 		"count": 16,
 		"hp": 28,
@@ -59,9 +122,10 @@ const SAMPLE_UNITS := [
 		"grid_y": 3
 	},
 	{
-		"id": 4,
+		"id": 7,
 		"name": "Szamani",
 		"short_name": "SZ",
+		"role": "Wsparcie",
 		"side": "enemy",
 		"count": 9,
 		"hp": 26,
@@ -82,16 +146,27 @@ const SAMPLE_UNITS := [
 const GRID_COLUMNS := 15
 const GRID_ROWS := 11
 const MAX_EVENT_LOG_ENTRIES := 60
+const CARD_FONT_COLOR := Color(0.92, 0.88, 0.78, 1.0)
+const CARD_SELECTED_FONT_COLOR := Color(0.99, 0.95, 0.84, 1.0)
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
 @onready var hud: CanvasLayer = $HUD
-@onready var unit_name_label: Label = $HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent/UnitName
-@onready var unit_stats_label: Label = $HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent/UnitStats
-@onready var basic_attack_button: Button = $HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent/BasicAttackButton
-@onready var general_skills_label: Label = $HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/GeneralSkills
-@onready var general_rule_label: Label = $HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/GeneralRule
-@onready var event_log_scroll: ScrollContainer = $HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll
-@onready var event_log_label: RichTextLabel = $HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll/EventLog
+@onready var turn_label: Label = $HUD/Overlay/TopBar/TopMargin/TurnLabel
+@onready var unit_name_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitName
+@onready var unit_meta_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitMeta
+@onready var unit_stats_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin/UnitStats
+@onready var actions_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel/ActionsMargin/ActionsLabel
+@onready var action_attack_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/AttackActionButton
+@onready var action_skill_1_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill1ActionButton
+@onready var action_skill_2_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill2ActionButton
+@onready var action_skill_3_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill3ActionButton
+@onready var general_name_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralName
+@onready var general_level_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralLevel
+@onready var general_skills_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel/GeneralSkillsMargin/GeneralSkills
+@onready var general_rule_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralRule
+@onready var event_log_scroll: ScrollContainer = $HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll
+@onready var event_log_label: RichTextLabel = $HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll/EventLog
+@onready var unit_list: HBoxContainer = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/UnitListPanel/UnitListMargin/UnitListScroll/UnitList
 
 var units: Array = []
 var selected_unit_id := -1
@@ -99,6 +174,7 @@ var current_turn := "player"
 var is_animating := false
 var highlight_mode := "move"
 var event_log: Array[String] = []
+var round_number := 1
 
 
 func _ready() -> void:
@@ -111,12 +187,18 @@ func _ready() -> void:
 	board.cell_clicked.connect(_on_cell_clicked)
 	board.cell_right_clicked.connect(_on_cell_right_clicked)
 	board.animation_finished.connect(_on_board_animation_finished)
-	basic_attack_button.pressed.connect(_on_basic_attack_button_pressed)
-	general_skills_label.text = "General Aldric\nUmiejetnosci jednostek sa na razie placeholderem w statystykach."
+	action_attack_button.pressed.connect(_on_basic_attack_button_pressed)
+	general_name_label.text = "KAPITAN ALARIC"
+	general_level_label.text = "Poziom 5"
+	general_skills_label.text = "\n".join([
+		"Szarza bojowa: sojusznicy zyskuja +25% DMG na 2 tury.",
+		"Wezwanie bastionu: +3 DEF i odpornosc na oslabienie na 2 tury."
+	])
 	_log_event("Bitwa rozpoczeta.")
 	_on_unit_selected(units[0])
 	_update_turn_label()
 	_update_basic_attack_button()
+	_refresh_unit_selector()
 
 
 func _on_unit_selected(unit_data: Dictionary) -> void:
@@ -128,20 +210,26 @@ func _on_unit_selected(unit_data: Dictionary) -> void:
 	board.set_selected_unit(unit_data.id)
 	_update_highlighted_cells(unit_data)
 	_update_basic_attack_button()
-	unit_name_label.text = "%s (%s)" % [unit_data.name, unit_data.side]
+	unit_name_label.text = unit_data.name.to_upper()
+	unit_meta_label.text = "Poziom 1 - %s - %s" % [unit_data.role, "Gracz" if unit_data.side == "player" else "Przeciwnik"]
 	unit_stats_label.text = "\n".join([
-		"Liczebnosc: %s" % unit_data.count,
-		"HP jednostki: %s" % unit_data.hp,
-		"Obrazenia: %s" % unit_data.dmg,
-		"Obrona: %s" % unit_data.def,
-		"Ruch: %s" % unit_data.move_range,
-		"Zasieg ataku: %s" % unit_data.attack_range,
-		"Atak podstawowy: %s" % unit_data.action_name,
-		"Umiejetnosci: %s" % ", ".join(unit_data.skill_names),
-		"Odpornosci: %s" % unit_data.resistance,
-		"Buffy: %s" % unit_data.buffs,
-		"Debuffy: %s" % unit_data.debuffs
+		"HP  %s" % unit_data.hp,
+		"DMG %s" % unit_data.dmg,
+		"DEF %s" % unit_data.def,
+		"Liczebnosc  %s" % unit_data.count,
+		"Ruch  %s" % unit_data.move_range,
+		"Zasieg ataku  %s" % unit_data.attack_range,
+		"",
+		"Odpornosci  %s" % unit_data.resistance,
+		"Buffy  %s" % unit_data.buffs,
+		"Debuffy  %s" % unit_data.debuffs
 	])
+	actions_label.text = "\n".join([
+		"Atak podstawowy: %s" % unit_data.action_name,
+		"Umiejetnosci: %s" % ", ".join(unit_data.skill_names)
+	])
+	_update_action_placeholders(unit_data)
+	_refresh_unit_selector()
 
 
 func _on_cell_clicked(cell: Vector2i) -> void:
@@ -200,6 +288,7 @@ func _end_player_turn() -> void:
 	board.set_highlighted_cells([])
 	board.set_prioritize_cell_click_on_left(false)
 	_update_basic_attack_button()
+	_refresh_unit_selector()
 	_update_turn_label()
 	_enemy_take_turn()
 
@@ -233,11 +322,14 @@ func _enemy_take_turn() -> void:
 		_perform_basic_attack(enemy_unit, target, false)
 
 	current_turn = "player"
+	round_number += 1
 	_update_turn_label()
 
 	var first_player: Dictionary = _find_first_player_unit()
 	if not first_player.is_empty():
 		_on_unit_selected(first_player)
+	else:
+		_refresh_unit_selector()
 
 
 func _find_unit_by_id(unit_id: int) -> Dictionary:
@@ -310,11 +402,13 @@ func _sync_board() -> void:
 		_update_highlighted_cells(selected_unit)
 		_on_unit_selected(selected_unit)
 	_update_basic_attack_button()
+	_refresh_unit_selector()
 
 
 func _update_turn_label() -> void:
 	var turn_name: String = "Gracz" if current_turn == "player" else "Przeciwnik"
-	general_rule_label.text = "Aktywna tura: %s\nPrawy klik: ruch lub anulowanie trybu ataku." % turn_name
+	turn_label.text = "TURA %s" % round_number
+	general_rule_label.text = "Aktywna tura: %s\nLewy klik wybiera cel. Prawy klik porusza lub anuluje tryb ataku." % turn_name
 
 
 func _update_highlighted_cells(unit: Dictionary) -> void:
@@ -482,11 +576,12 @@ func _validate_setup() -> void:
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
 	assert(_get_attackable_cells(SAMPLE_UNITS[0]).has(Vector2i(1, 3)))
 	assert(not _get_attackable_cells(SAMPLE_UNITS[0]).has(Vector2i(0, 3)))
-	assert(_calculate_casualties(SAMPLE_UNITS[0], SAMPLE_UNITS[2]) >= 1)
+	assert(_calculate_casualties(SAMPLE_UNITS[0], SAMPLE_UNITS[5]) >= 1)
 
 
 func _on_board_animation_finished(_unit_id: int) -> void:
 	is_animating = false
+	_refresh_unit_selector()
 
 
 func _on_basic_attack_button_pressed() -> void:
@@ -501,8 +596,9 @@ func _on_basic_attack_button_pressed() -> void:
 func _update_basic_attack_button() -> void:
 	var unit := _find_unit_by_id(selected_unit_id)
 	var can_use_attack: bool = not unit.is_empty() and current_turn == "player" and unit.side == "player"
-	basic_attack_button.disabled = not can_use_attack
-	basic_attack_button.text = "Anuluj atak" if highlight_mode == "attack" and can_use_attack else "Atak podstawowy"
+	action_attack_button.disabled = not can_use_attack
+	var attack_text := "ANULUJ ATAK" if highlight_mode == "attack" and can_use_attack else "ATAK PODSTAWOWY"
+	action_attack_button.text = attack_text
 
 
 func _log_event(text: String) -> void:
@@ -515,6 +611,78 @@ func _log_event(text: String) -> void:
 
 func _scroll_event_log_to_bottom() -> void:
 	event_log_scroll.scroll_vertical = int(event_log_label.get_content_height())
+
+
+func _refresh_unit_selector() -> void:
+	for child in unit_list.get_children():
+		child.queue_free()
+
+	for unit in units:
+		if unit.side != "player":
+			continue
+
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(124, 60)
+		button.clip_text = true
+		button.text = "%s\n%s %s\nHP %s DMG %s" % [
+			unit.count,
+			unit.short_name,
+			unit.name,
+			unit.hp,
+			unit.dmg
+		]
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.disabled = current_turn != "player" or is_animating
+		button.add_theme_color_override("font_color", CARD_SELECTED_FONT_COLOR if unit.id == selected_unit_id else CARD_FONT_COLOR)
+		button.add_theme_stylebox_override("normal", _make_unit_card_style(unit.id == selected_unit_id))
+		button.add_theme_stylebox_override("hover", _make_unit_card_style(true))
+		button.add_theme_stylebox_override("pressed", _make_unit_card_style(true))
+		button.pressed.connect(_on_unit_card_pressed.bind(unit.id))
+		unit_list.add_child(button)
+
+
+func _on_unit_card_pressed(unit_id: int) -> void:
+	if current_turn != "player" or is_animating:
+		return
+
+	var unit := _find_unit_by_id(unit_id)
+	if unit.is_empty():
+		return
+
+	_on_unit_selected(unit)
+
+
+func _make_unit_card_style(selected: bool) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.18, 0.15, 0.07, 0.96) if selected else Color(0.08, 0.08, 0.07, 0.96)
+	style.border_color = Color(0.90, 0.77, 0.34, 1.0) if selected else Color(0.57, 0.46, 0.18, 0.92)
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.content_margin_left = 10.0
+	style.content_margin_top = 8.0
+	style.content_margin_right = 10.0
+	style.content_margin_bottom = 8.0
+	return style
+
+
+func _update_action_placeholders(unit: Dictionary) -> void:
+	var skills: Array = unit.get("skill_names", [])
+	var labels: Array[String] = [
+		"UM. 1\n%s" % _skill_name_at(skills, 0),
+		"UM. 2\n%s" % _skill_name_at(skills, 1),
+		"UM. 3\n%s" % _skill_name_at(skills, 2)
+	]
+	action_skill_1_button.text = labels[0]
+	action_skill_2_button.text = labels[1]
+	action_skill_3_button.text = labels[2]
+
+
+func _skill_name_at(skills: Array, index: int) -> String:
+	if index >= 0 and index < skills.size():
+		return str(skills[index]).to_upper()
+	return "PLACEHOLDER"
 
 
 func _hex_distance(a: Vector2i, b: Vector2i) -> int:
