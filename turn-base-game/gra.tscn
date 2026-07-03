@@ -1,0 +1,114 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/gra.gd" id="1_a1tqk"]
+[ext_resource type="Script" path="res://scripts/plansza_walki.gd" id="2_h3x7m"]
+
+[node name="Gra" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_a1tqk")
+
+[node name="BattleLayer" type="Node2D" parent="."]
+position = Vector2(476, 104)
+
+[node name="PlanszaWalki" type="Node2D" parent="BattleLayer"]
+script = ExtResource("2_h3x7m")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="RootMargin" type="MarginContainer" parent="HUD"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="RootLayout" type="HBoxContainer" parent="HUD/RootMargin"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="LeftPanel" type="PanelContainer" parent="HUD/RootMargin/RootLayout"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="LeftMargin" type="MarginContainer" parent="HUD/RootMargin/RootLayout/LeftPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="LeftContent" type="VBoxContainer" parent="HUD/RootMargin/RootLayout/LeftPanel/LeftMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="LeftTitle" type="Label" parent="HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent"]
+layout_mode = 2
+text = "Wybrana jednostka"
+
+[node name="UnitName" type="Label" parent="HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent"]
+layout_mode = 2
+text = "-"
+
+[node name="UnitStats" type="Label" parent="HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "-"
+autowrap_mode = 2
+
+[node name="BasicAttackButton" type="Button" parent="HUD/RootMargin/RootLayout/LeftPanel/LeftMargin/LeftContent"]
+layout_mode = 2
+text = "Atak podstawowy"
+
+[node name="CenterSpacer" type="Control" parent="HUD/RootMargin/RootLayout"]
+custom_minimum_size = Vector2(820, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RightPanel" type="PanelContainer" parent="HUD/RootMargin/RootLayout"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="RightMargin" type="MarginContainer" parent="HUD/RootMargin/RootLayout/RightPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="RightContent" type="VBoxContainer" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="GeneralTitle" type="Label" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
+layout_mode = 2
+text = "General"
+
+[node name="PortraitPlaceholder" type="ColorRect" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
+color = Color(0.26, 0.30, 0.38, 1)
+
+[node name="GeneralName" type="Label" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
+layout_mode = 2
+text = "Aldric z Zelaznej Strazy"
+
+[node name="GeneralSkills" type="Label" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
+layout_mode = 2
+text = "-"
+autowrap_mode = 2
+
+[node name="GeneralRule" type="Label" parent="HUD/RootMargin/RootLayout/RightPanel/RightMargin/RightContent"]
+layout_mode = 2
+text = "-"
+autowrap_mode = 2
