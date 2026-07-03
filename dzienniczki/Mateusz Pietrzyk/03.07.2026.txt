@@ -1,0 +1,4 @@
+Praca postępuje.
+Dalsze prace nad prototypem systemu walki i wstępny gameplay z UI.
+Połączyliśmy pojedyncze mechaniki w jedną, działającą całość.
+Całość pozwala nam teraz na swobodne dodawanie nowych rzeczy/mechanik które możemy (miejmy nadzieje) miarodajnie testować
