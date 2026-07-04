@@ -148,6 +148,10 @@ const GRID_ROWS := 11
 const MAX_EVENT_LOG_ENTRIES := 60
 const CARD_FONT_COLOR := Color(0.92, 0.88, 0.78, 1.0)
 const CARD_SELECTED_FONT_COLOR := Color(0.99, 0.95, 0.84, 1.0)
+const LOG_COLOR_YELLOW := Color(0.95, 0.82, 0.25, 1.0)
+const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
+const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
+const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
 @onready var hud: CanvasLayer = $HUD
@@ -194,7 +198,8 @@ func _ready() -> void:
 		"Szarza bojowa: sojusznicy zyskuja +25% DMG na 2 tury.",
 		"Wezwanie bastionu: +3 DEF i odpornosc na oslabienie na 2 tury."
 	])
-	_log_event("Bitwa rozpoczeta.")
+	event_log_label.bbcode_enabled = true
+	_log_event(_color_log_text("Bitwa rozpoczeta.", LOG_COLOR_YELLOW))
 	_on_unit_selected(units[0])
 	_update_turn_label()
 	_update_basic_attack_button()
@@ -276,7 +281,7 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 	_sync_board()
 	board.animate_unit_path(unit.id, path)
 	await board.animation_finished
-	_log_event("%s przemieszcza sie." % unit.name)
+	_log_event("%s przemieszcza sie." % _unit_name_log_text(unit))
 	_end_player_turn()
 
 
@@ -315,7 +320,7 @@ func _enemy_take_turn() -> void:
 		_sync_board()
 		board.animate_unit_path(enemy_unit.id, best_path)
 		await board.animation_finished
-		_log_event("%s przemieszcza sie." % enemy_unit.name)
+		_log_event("%s przemieszcza sie." % _unit_name_log_text(enemy_unit))
 
 	target = _find_nearest_player_unit(enemy_unit)
 	if not enemy_unit.is_empty() and not target.is_empty() and _is_in_attack_range(enemy_unit, Vector2i(target.grid_x, target.grid_y)):
@@ -469,9 +474,15 @@ func _is_in_attack_range(unit: Dictionary, cell: Vector2i) -> bool:
 func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_after := true) -> void:
 	var casualties: int = _calculate_casualties(attacker, target)
 	target.count = max(0, int(target.count) - casualties)
-	_log_event("%s uderza %s i zadaje %s strat." % [attacker.name, target.name, casualties])
+	_log_event(
+		"%s uderza %s i zadaje %s strat." % [
+			_unit_name_log_text(attacker),
+			_unit_name_log_text(target),
+			_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+		]
+	)
 	if target.count <= 0:
-		_log_event("%s zostaje rozbite." % target.name)
+		_log_event("%s zostaje rozbite." % _unit_name_log_text(target))
 		units.erase(target)
 	if target.id == selected_unit_id:
 		selected_unit_id = -1
@@ -599,6 +610,15 @@ func _update_basic_attack_button() -> void:
 	action_attack_button.disabled = not can_use_attack
 	var attack_text := "ANULUJ ATAK" if highlight_mode == "attack" and can_use_attack else "ATAK PODSTAWOWY"
 	action_attack_button.text = attack_text
+
+
+func _color_log_text(text: String, color: Color) -> String:
+	return "[color=#%s]%s[/color]" % [color.to_html(false), text]
+
+
+func _unit_name_log_text(unit: Dictionary) -> String:
+	var color: Color = LOG_COLOR_PLAYER if unit.side == "player" else LOG_COLOR_ENEMY
+	return _color_log_text(unit.name, color)
 
 
 func _log_event(text: String) -> void:
