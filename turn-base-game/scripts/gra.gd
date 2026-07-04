@@ -243,11 +243,6 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		board.set_highlighted_cells([])
 		return
 
-	var target := _find_unit_at_cell(cell)
-	if not target.is_empty() and target.side != unit.side and _is_in_attack_range(unit, cell):
-		_perform_basic_attack(unit, target)
-		return
-
 	if cell.x == unit.grid_x and cell.y == unit.grid_y:
 		_update_highlighted_cells(unit)
 		return
@@ -259,6 +254,11 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 
 	var unit := _find_unit_by_id(selected_unit_id)
 	if unit.is_empty() or unit.side != "player":
+		return
+
+	var target := _find_unit_at_cell(cell)
+	if not target.is_empty() and target.side != unit.side and _is_in_attack_range(unit, cell):
+		_perform_basic_attack(unit, target)
 		return
 
 	var path := _find_path(unit, Vector2i(unit.grid_x, unit.grid_y), cell)
@@ -280,7 +280,6 @@ func _end_player_turn() -> void:
 	selected_unit_id = -1
 	board.set_selected_unit(-1)
 	board.set_highlighted_cells([], [])
-	board.set_prioritize_cell_click_on_left(false)
 	_update_basic_attack_button()
 	_refresh_unit_selector()
 	_update_turn_label()
@@ -402,18 +401,16 @@ func _sync_board() -> void:
 func _update_turn_label() -> void:
 	var turn_name: String = "Gracz" if current_turn == "player" else "Przeciwnik"
 	turn_label.text = "TURA %s" % round_number
-	general_rule_label.text = "Aktywna tura: %s\nLewy klik atakuje wroga w zasiegu. Prawy klik porusza jednostke." % turn_name
+	general_rule_label.text = "Aktywna tura: %s\nLewy klik wybiera jednostke. Prawy klik atakuje wroga w zasiegu lub porusza jednostke." % turn_name
 
 
 func _update_highlighted_cells(unit: Dictionary) -> void:
 	if unit.is_empty() or current_turn != "player" or unit.side != "player":
 		board.set_highlighted_cells([], [])
-		board.set_prioritize_cell_click_on_left(false)
 		return
 
 	var attack_cells: Array[Vector2i] = _get_attackable_enemy_cells(unit)
 	board.set_highlighted_cells(_get_reachable_cells(unit), attack_cells)
-	board.set_prioritize_cell_click_on_left(not attack_cells.is_empty())
 
 
 func _get_reachable_cells(unit: Dictionary) -> Array[Vector2i]:

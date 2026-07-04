@@ -14,7 +14,6 @@ var units: Array = []
 var selected_unit_id := -1
 var highlighted_move_cells: Array[Vector2i] = []
 var highlighted_attack_cells: Array[Vector2i] = []
-var prioritize_cell_click_on_left := false
 var visual_positions: Dictionary = {}
 var active_tweens: Dictionary = {}
 
@@ -46,10 +45,6 @@ func set_highlighted_cells(move_cells: Array, attack_cells: Array = []) -> void:
 	for cell in attack_cells:
 		highlighted_attack_cells.append(cell)
 	queue_redraw()
-
-
-func set_prioritize_cell_click_on_left(enabled: bool) -> void:
-	prioritize_cell_click_on_left = enabled
 
 
 func _draw() -> void:
@@ -95,17 +90,19 @@ func _on_unit_tween_finished(unit_id: int) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		var local_position: Vector2 = to_local(event.position)
-		var clicked_unit: Dictionary = get_unit_at_position(local_position)
-		if event.button_index == MOUSE_BUTTON_LEFT and not clicked_unit.is_empty() and not prioritize_cell_click_on_left:
+		var clicked_cell: Vector2i = get_cell_at_position(local_position)
+		if clicked_cell.x == -1:
+			return
+
+		var clicked_unit: Dictionary = get_unit_at_cell(clicked_cell)
+		if event.button_index == MOUSE_BUTTON_LEFT and not clicked_unit.is_empty():
 			unit_selected.emit(clicked_unit)
 			return
 
-		var clicked_cell: Vector2i = get_cell_at_position(local_position)
-		if clicked_cell.x != -1:
-			if event.button_index == MOUSE_BUTTON_LEFT:
-				cell_clicked.emit(clicked_cell)
-			elif event.button_index == MOUSE_BUTTON_RIGHT:
-				cell_right_clicked.emit(clicked_cell)
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			cell_clicked.emit(clicked_cell)
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			cell_right_clicked.emit(clicked_cell)
 
 
 func draw_hex_grid() -> void:
@@ -165,12 +162,18 @@ func _draw_cell_highlights(cells: Array[Vector2i], fill_color: Color, border_col
 		draw_polyline(points + PackedVector2Array([points[0]]), border_color, 2.0)
 
 
-func get_unit_at_position(local_mouse_position: Vector2) -> Dictionary:
+func get_unit_at_cell(cell: Vector2i) -> Dictionary:
 	for unit in units:
-		var center: Vector2 = axial_to_pixel(unit.grid_x, unit.grid_y)
-		if center.distance_to(local_mouse_position) <= HEX_RADIUS * 0.52:
+		if unit.grid_x == cell.x and unit.grid_y == cell.y:
 			return unit
 	return {}
+
+
+func get_unit_at_position(local_mouse_position: Vector2) -> Dictionary:
+	var cell: Vector2i = get_cell_at_position(local_mouse_position)
+	if cell.x == -1:
+		return {}
+	return get_unit_at_cell(cell)
 
 
 func get_cell_at_position(local_mouse_position: Vector2) -> Vector2i:
