@@ -12,8 +12,8 @@ const SQRT_THREE := 1.7320508
 
 var units: Array = []
 var selected_unit_id := -1
-var highlighted_cells: Array[Vector2i] = []
-var highlighted_cells_are_attack := false
+var highlighted_move_cells: Array[Vector2i] = []
+var highlighted_attack_cells: Array[Vector2i] = []
 var prioritize_cell_click_on_left := false
 var visual_positions: Dictionary = {}
 var active_tweens: Dictionary = {}
@@ -38,11 +38,13 @@ func set_selected_unit(unit_id: int) -> void:
 	queue_redraw()
 
 
-func set_highlighted_cells(cells: Array, is_attack := false) -> void:
-	highlighted_cells.clear()
-	for cell in cells:
-		highlighted_cells.append(cell)
-	highlighted_cells_are_attack = is_attack
+func set_highlighted_cells(move_cells: Array, attack_cells: Array = []) -> void:
+	highlighted_move_cells.clear()
+	highlighted_attack_cells.clear()
+	for cell in move_cells:
+		highlighted_move_cells.append(cell)
+	for cell in attack_cells:
+		highlighted_attack_cells.append(cell)
 	queue_redraw()
 
 
@@ -140,9 +142,20 @@ func draw_units() -> void:
 
 
 func draw_highlighted_cells() -> void:
-	var fill_color: Color = Color(0.82, 0.20, 0.20, 0.32) if highlighted_cells_are_attack else Color(0.35, 0.72, 0.95, 0.35)
-	var border_color: Color = Color(0.62, 0.10, 0.10, 0.95) if highlighted_cells_are_attack else Color(0.12, 0.46, 0.70, 0.95)
-	for cell in highlighted_cells:
+	_draw_cell_highlights(
+		highlighted_move_cells,
+		Color(0.35, 0.72, 0.95, 0.35),
+		Color(0.12, 0.46, 0.70, 0.95)
+	)
+	_draw_cell_highlights(
+		highlighted_attack_cells,
+		Color(0.82, 0.20, 0.20, 0.32),
+		Color(0.62, 0.10, 0.10, 0.95)
+	)
+
+
+func _draw_cell_highlights(cells: Array[Vector2i], fill_color: Color, border_color: Color) -> void:
+	for cell in cells:
 		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
 		var points: PackedVector2Array = PackedVector2Array()
 		for corner in 6:

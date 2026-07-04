@@ -176,7 +176,6 @@ var units: Array = []
 var selected_unit_id := -1
 var current_turn := "player"
 var is_animating := false
-var highlight_mode := "move"
 var event_log: Array[String] = []
 var round_number := 1
 
@@ -191,7 +190,6 @@ func _ready() -> void:
 	board.cell_clicked.connect(_on_cell_clicked)
 	board.cell_right_clicked.connect(_on_cell_right_clicked)
 	board.animation_finished.connect(_on_board_animation_finished)
-	action_attack_button.pressed.connect(_on_basic_attack_button_pressed)
 	general_name_label.text = "KAPITAN ALARIC"
 	general_level_label.text = "Poziom 5"
 	general_skills_label.text = "\n".join([
@@ -211,7 +209,6 @@ func _on_unit_selected(unit_data: Dictionary) -> void:
 		return
 
 	selected_unit_id = unit_data.id
-	highlight_mode = "move"
 	board.set_selected_unit(unit_data.id)
 	_update_highlighted_cells(unit_data)
 	_update_basic_attack_button()
@@ -246,10 +243,9 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		board.set_highlighted_cells([])
 		return
 
-	if highlight_mode == "attack":
-		var target := _find_unit_at_cell(cell)
-		if not target.is_empty() and target.side != unit.side and _is_in_attack_range(unit, cell):
-			_perform_basic_attack(unit, target)
+	var target := _find_unit_at_cell(cell)
+	if not target.is_empty() and target.side != unit.side and _is_in_attack_range(unit, cell):
+		_perform_basic_attack(unit, target)
 		return
 
 	if cell.x == unit.grid_x and cell.y == unit.grid_y:
@@ -263,12 +259,6 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 
 	var unit := _find_unit_by_id(selected_unit_id)
 	if unit.is_empty() or unit.side != "player":
-		return
-
-	if highlight_mode == "attack":
-		highlight_mode = "move"
-		_update_highlighted_cells(unit)
-		_update_basic_attack_button()
 		return
 
 	var path := _find_path(unit, Vector2i(unit.grid_x, unit.grid_y), cell)
@@ -288,9 +278,8 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 func _end_player_turn() -> void:
 	current_turn = "enemy"
 	selected_unit_id = -1
-	highlight_mode = "move"
 	board.set_selected_unit(-1)
-	board.set_highlighted_cells([])
+	board.set_highlighted_cells([], [])
 	board.set_prioritize_cell_click_on_left(false)
 	_update_basic_attack_button()
 	_refresh_unit_selector()
@@ -413,22 +402,18 @@ func _sync_board() -> void:
 func _update_turn_label() -> void:
 	var turn_name: String = "Gracz" if current_turn == "player" else "Przeciwnik"
 	turn_label.text = "TURA %s" % round_number
-	general_rule_label.text = "Aktywna tura: %s\nLewy klik wybiera cel. Prawy klik porusza lub anuluje tryb ataku." % turn_name
+	general_rule_label.text = "Aktywna tura: %s\nLewy klik atakuje wroga w zasiegu. Prawy klik porusza jednostke." % turn_name
 
 
 func _update_highlighted_cells(unit: Dictionary) -> void:
 	if unit.is_empty() or current_turn != "player" or unit.side != "player":
-		board.set_highlighted_cells([])
+		board.set_highlighted_cells([], [])
 		board.set_prioritize_cell_click_on_left(false)
 		return
 
-	if highlight_mode == "attack":
-		board.set_highlighted_cells(_get_attackable_cells(unit), true)
-		board.set_prioritize_cell_click_on_left(true)
-		return
-
-	board.set_highlighted_cells(_get_reachable_cells(unit))
-	board.set_prioritize_cell_click_on_left(false)
+	var attack_cells: Array[Vector2i] = _get_attackable_enemy_cells(unit)
+	board.set_highlighted_cells(_get_reachable_cells(unit), attack_cells)
+	board.set_prioritize_cell_click_on_left(not attack_cells.is_empty())
 
 
 func _get_reachable_cells(unit: Dictionary) -> Array[Vector2i]:
@@ -464,6 +449,17 @@ func _get_attackable_cells(unit: Dictionary) -> Array[Vector2i]:
 				continue
 			if _hex_distance(origin, cell) <= int(unit.attack_range):
 				attackable.append(cell)
+	return attackable
+
+
+func _get_attackable_enemy_cells(unit: Dictionary) -> Array[Vector2i]:
+	var attackable: Array[Vector2i] = []
+	for other in units:
+		if other.side == unit.side:
+			continue
+		var cell := Vector2i(other.grid_x, other.grid_y)
+		if _is_in_attack_range(unit, cell):
+			attackable.append(cell)
 	return attackable
 
 
@@ -595,21 +591,16 @@ func _on_board_animation_finished(_unit_id: int) -> void:
 	_refresh_unit_selector()
 
 
-func _on_basic_attack_button_pressed() -> void:
-	var unit := _find_unit_by_id(selected_unit_id)
-	if unit.is_empty() or current_turn != "player" or unit.side != "player":
-		return
-	highlight_mode = "move" if highlight_mode == "attack" else "attack"
-	_update_highlighted_cells(unit)
-	_update_basic_attack_button()
-
-
 func _update_basic_attack_button() -> void:
 	var unit := _find_unit_by_id(selected_unit_id)
-	var can_use_attack: bool = not unit.is_empty() and current_turn == "player" and unit.side == "player"
+	var can_use_attack: bool = (
+		not unit.is_empty()
+		and current_turn == "player"
+		and unit.side == "player"
+		and not _get_attackable_enemy_cells(unit).is_empty()
+	)
 	action_attack_button.disabled = not can_use_attack
-	var attack_text := "ANULUJ ATAK" if highlight_mode == "attack" and can_use_attack else "ATAK PODSTAWOWY"
-	action_attack_button.text = attack_text
+	action_attack_button.text = "ATAK PODSTAWOWY"
 
 
 func _color_log_text(text: String, color: Color) -> String:
