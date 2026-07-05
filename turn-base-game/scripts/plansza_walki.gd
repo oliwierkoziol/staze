@@ -94,11 +94,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		if clicked_cell.x == -1:
 			return
 
-		var clicked_unit: Dictionary = get_unit_at_cell(clicked_cell)
-		if event.button_index == MOUSE_BUTTON_LEFT and not clicked_unit.is_empty():
-			unit_selected.emit(clicked_unit)
-			return
-
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			cell_clicked.emit(clicked_cell)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:

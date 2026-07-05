@@ -11,6 +11,7 @@ const SAMPLE_UNITS := [
 		"hp": 35,
 		"dmg": 7,
 		"def": 7,
+		"speed": 5,
 		"move_range": 4,
 		"attack_range": 1,
 		"action_name": "Ciecie",
@@ -31,6 +32,7 @@ const SAMPLE_UNITS := [
 		"hp": 22,
 		"dmg": 5,
 		"def": 4,
+		"speed": 6,
 		"move_range": 3,
 		"attack_range": 6,
 		"action_name": "Strzal",
@@ -51,6 +53,7 @@ const SAMPLE_UNITS := [
 		"hp": 30,
 		"dmg": 6,
 		"def": 8,
+		"speed": 4,
 		"move_range": 3,
 		"attack_range": 2,
 		"action_name": "Pchniecie pika",
@@ -71,6 +74,7 @@ const SAMPLE_UNITS := [
 		"hp": 42,
 		"dmg": 10,
 		"def": 6,
+		"speed": 8,
 		"move_range": 7,
 		"attack_range": 1,
 		"action_name": "Szarza",
@@ -91,6 +95,7 @@ const SAMPLE_UNITS := [
 		"hp": 18,
 		"dmg": 14,
 		"def": 3,
+		"speed": 9,
 		"move_range": 5,
 		"attack_range": 1,
 		"action_name": "Skrytobojstwo",
@@ -111,6 +116,7 @@ const SAMPLE_UNITS := [
 		"hp": 28,
 		"dmg": 8,
 		"def": 5,
+		"speed": 7,
 		"move_range": 6,
 		"attack_range": 1,
 		"action_name": "Rozdarcie",
@@ -131,6 +137,7 @@ const SAMPLE_UNITS := [
 		"hp": 26,
 		"dmg": 10,
 		"def": 3,
+		"speed": 6,
 		"move_range": 3,
 		"attack_range": 5,
 		"action_name": "Piorun",
@@ -155,7 +162,7 @@ const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
 @onready var hud: CanvasLayer = $HUD
-@onready var turn_label: Label = $HUD/Overlay/TopBar/TopMargin/TurnLabel
+@onready var turn_queue_list: HBoxContainer = $HUD/Overlay/TopBar/TopMargin/TopQueueScroll/TopQueueList
 @onready var unit_name_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitName
 @onready var unit_meta_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitMeta
 @onready var unit_stats_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin/UnitStats
@@ -164,20 +171,24 @@ const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 @onready var action_skill_1_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill1ActionButton
 @onready var action_skill_2_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill2ActionButton
 @onready var action_skill_3_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill3ActionButton
+@onready var end_turn_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/EndTurnButton
 @onready var general_name_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralName
 @onready var general_level_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralLevel
 @onready var general_skills_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel/GeneralSkillsMargin/GeneralSkills
 @onready var general_rule_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralRule
 @onready var event_log_scroll: ScrollContainer = $HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll
 @onready var event_log_label: RichTextLabel = $HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll/EventLog
-@onready var unit_list: HBoxContainer = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/UnitListPanel/UnitListMargin/UnitListScroll/UnitList
 
 var units: Array = []
 var selected_unit_id := -1
-var current_turn := "player"
+var active_unit_id := -1
+var current_turn := ""
 var is_animating := false
 var event_log: Array[String] = []
 var round_number := 1
+var turn_queue: Array[int] = []
+var turn_queue_index := -1
+var pending_action := ""
 
 
 func _ready() -> void:
@@ -185,11 +196,15 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_disable_hud_mouse(hud)
 	units = SAMPLE_UNITS.map(func(unit: Dictionary) -> Dictionary: return unit.duplicate(true))
+	for unit in units:
+		unit.remaining_move = int(unit.move_range)
+		unit.action_points = 1
 	board.set_units(units)
-	board.unit_selected.connect(_on_unit_selected)
 	board.cell_clicked.connect(_on_cell_clicked)
 	board.cell_right_clicked.connect(_on_cell_right_clicked)
 	board.animation_finished.connect(_on_board_animation_finished)
+	action_attack_button.pressed.connect(_on_attack_button_pressed)
+	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	general_name_label.text = "KAPITAN ALARIC"
 	general_level_label.text = "Poziom 5"
 	general_skills_label.text = "\n".join([
@@ -198,28 +213,40 @@ func _ready() -> void:
 	])
 	event_log_label.bbcode_enabled = true
 	_log_event(_color_log_text("Bitwa rozpoczeta.", LOG_COLOR_YELLOW))
-	_on_unit_selected(units[0])
-	_update_turn_label()
-	_update_basic_attack_button()
-	_refresh_unit_selector()
+	_rebuild_turn_queue()
+	_start_next_activation()
 
 
 func _on_unit_selected(unit_data: Dictionary) -> void:
 	if is_animating:
 		return
+ 
+	_show_unit_details(unit_data)
 
+
+func _show_unit_details(unit_data: Dictionary) -> void:
 	selected_unit_id = unit_data.id
 	board.set_selected_unit(unit_data.id)
-	_update_highlighted_cells(unit_data)
-	_update_basic_attack_button()
+	if unit_data.side == "player":
+		_update_highlighted_cells(unit_data)
+	else:
+		board.set_highlighted_cells([], [])
+	_render_unit_details(unit_data)
+	_update_action_buttons()
+	_refresh_turn_queue()
+
+
+func _render_unit_details(unit_data: Dictionary) -> void:
 	unit_name_label.text = unit_data.name.to_upper()
 	unit_meta_label.text = "Poziom 1 - %s - %s" % [unit_data.role, "Gracz" if unit_data.side == "player" else "Przeciwnik"]
 	unit_stats_label.text = "\n".join([
 		"HP  %s" % unit_data.hp,
 		"DMG %s" % unit_data.dmg,
 		"DEF %s" % unit_data.def,
+		"Szybkosc %s" % unit_data.speed,
 		"Liczebnosc  %s" % unit_data.count,
-		"Ruch  %s" % unit_data.move_range,
+		"Ruch  %s / %s" % [_get_display_move(unit_data), unit_data.move_range],
+		"Punkty akcji  %s" % _get_display_action_points(unit_data),
 		"Zasieg ataku  %s" % unit_data.attack_range,
 		"",
 		"Odpornosci  %s" % unit_data.resistance,
@@ -231,72 +258,69 @@ func _on_unit_selected(unit_data: Dictionary) -> void:
 		"Umiejetnosci: %s" % ", ".join(unit_data.skill_names)
 	])
 	_update_action_placeholders(unit_data)
-	_refresh_unit_selector()
 
 
 func _on_cell_clicked(cell: Vector2i) -> void:
-	if is_animating:
+	if is_animating or not _is_player_turn():
+		return
+ 
+	var active_unit := _get_active_unit()
+	if active_unit.is_empty() or active_unit.side != "player":
+		return
+ 
+	var clicked_unit := _find_unit_at_cell(cell)
+	if not clicked_unit.is_empty():
+		_show_unit_details(clicked_unit)
+	if pending_action == "attack":
+		if not clicked_unit.is_empty() and clicked_unit.side != active_unit.side and _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
+			_perform_basic_attack(active_unit, clicked_unit)
+		return
+ 
+	if selected_unit_id != active_unit.id:
 		return
 
-	var unit := _find_unit_by_id(selected_unit_id)
-	if unit.is_empty():
-		board.set_highlighted_cells([])
+	if not clicked_unit.is_empty():
 		return
 
-	if cell.x == unit.grid_x and cell.y == unit.grid_y:
-		_update_highlighted_cells(unit)
-		return
-
-
-func _on_cell_right_clicked(cell: Vector2i) -> void:
-	if current_turn != "player" or is_animating:
-		return
-
-	var unit := _find_unit_by_id(selected_unit_id)
-	if unit.is_empty() or unit.side != "player":
-		return
-
-	var target := _find_unit_at_cell(cell)
-	if not target.is_empty() and target.side != unit.side and _is_in_attack_range(unit, cell):
-		_perform_basic_attack(unit, target)
-		return
-
-	var path := _find_path(unit, Vector2i(unit.grid_x, unit.grid_y), cell)
-	if path.is_empty() or path.size() > int(unit.move_range):
+	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell)
+	if path.is_empty() or path.size() > _get_remaining_move(active_unit):
 		return
 
 	is_animating = true
-	unit.grid_x = cell.x
-	unit.grid_y = cell.y
+	active_unit.grid_x = cell.x
+	active_unit.grid_y = cell.y
+	active_unit.remaining_move = max(0, _get_remaining_move(active_unit) - path.size())
+	pending_action = ""
 	_sync_board()
-	board.animate_unit_path(unit.id, path)
+	board.animate_unit_path(active_unit.id, path)
 	await board.animation_finished
-	_log_event("%s przemieszcza sie." % _unit_name_log_text(unit))
-	_end_player_turn()
+	_log_event("%s przemieszcza sie." % _unit_name_log_text(active_unit))
+	_sync_board()
+	if not _can_unit_continue_turn(active_unit):
+		_end_current_activation()
 
 
-func _end_player_turn() -> void:
-	current_turn = "enemy"
+func _on_cell_right_clicked(cell: Vector2i) -> void:
+	return
+
+
+func _end_current_activation() -> void:
+	pending_action = ""
 	selected_unit_id = -1
 	board.set_selected_unit(-1)
 	board.set_highlighted_cells([], [])
-	_update_basic_attack_button()
-	_refresh_unit_selector()
-	_update_turn_label()
-	_enemy_take_turn()
+	_update_action_buttons()
+	_start_next_activation()
 
 
 func _enemy_take_turn() -> void:
-	var enemy_unit := _find_first_enemy_unit()
-	if enemy_unit.is_empty():
-		current_turn = "player"
-		_update_turn_label()
+	var enemy_unit := _get_active_unit()
+	if enemy_unit.is_empty() or enemy_unit.side != "enemy":
 		return
 
 	var target := _find_nearest_player_unit(enemy_unit)
 	if target.is_empty():
-		current_turn = "player"
-		_update_turn_label()
+		_end_current_activation()
 		return
 
 	var best_path := _find_best_enemy_path(enemy_unit, target)
@@ -305,43 +329,24 @@ func _enemy_take_turn() -> void:
 		is_animating = true
 		enemy_unit.grid_x = destination.x
 		enemy_unit.grid_y = destination.y
+		enemy_unit.remaining_move = max(0, _get_remaining_move(enemy_unit) - best_path.size())
 		_sync_board()
 		board.animate_unit_path(enemy_unit.id, best_path)
 		await board.animation_finished
 		_log_event("%s przemieszcza sie." % _unit_name_log_text(enemy_unit))
 
 	target = _find_nearest_player_unit(enemy_unit)
-	if not enemy_unit.is_empty() and not target.is_empty() and _is_in_attack_range(enemy_unit, Vector2i(target.grid_x, target.grid_y)):
+	if not enemy_unit.is_empty() and not target.is_empty() and _can_unit_attack(enemy_unit) and _is_in_attack_range(enemy_unit, Vector2i(target.grid_x, target.grid_y)):
 		_perform_basic_attack(enemy_unit, target, false)
+		_end_current_activation()
+		return
 
-	current_turn = "player"
-	round_number += 1
-	_update_turn_label()
-
-	var first_player: Dictionary = _find_first_player_unit()
-	if not first_player.is_empty():
-		_on_unit_selected(first_player)
-	else:
-		_refresh_unit_selector()
+	_end_current_activation()
 
 
 func _find_unit_by_id(unit_id: int) -> Dictionary:
 	for unit in units:
 		if unit.id == unit_id:
-			return unit
-	return {}
-
-
-func _find_first_enemy_unit() -> Dictionary:
-	for unit in units:
-		if unit.side == "enemy":
-			return unit
-	return {}
-
-
-func _find_first_player_unit() -> Dictionary:
-	for unit in units:
-		if unit.side == "player":
 			return unit
 	return {}
 
@@ -371,7 +376,7 @@ func _find_nearest_player_unit(enemy_unit: Dictionary) -> Dictionary:
 
 
 func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[Vector2i]:
-	var reachable_cells: Array[Vector2i] = _get_reachable_cells(enemy_unit)
+	var reachable_cells: Array[Vector2i] = _get_reachable_cells(enemy_unit, _get_remaining_move(enemy_unit))
 	var best_path: Array[Vector2i] = []
 	var best_distance: int = _hex_distance(Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), Vector2i(target.grid_x, target.grid_y))
 	for cell in reachable_cells:
@@ -390,30 +395,39 @@ func _sync_board() -> void:
 	board.set_units(units)
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
 	if selected_unit.is_empty():
-		board.set_highlighted_cells([])
+		board.set_highlighted_cells([], [])
 	else:
 		_update_highlighted_cells(selected_unit)
-		_on_unit_selected(selected_unit)
-	_update_basic_attack_button()
-	_refresh_unit_selector()
+		_render_unit_details(selected_unit)
+	_update_turn_label()
+	_update_action_buttons()
+	_refresh_turn_queue()
 
 
 func _update_turn_label() -> void:
-	var turn_name: String = "Gracz" if current_turn == "player" else "Przeciwnik"
-	turn_label.text = "TURA %s" % round_number
-	general_rule_label.text = "Aktywna tura: %s\nLewy klik wybiera jednostke. Prawy klik atakuje wroga w zasiegu lub porusza jednostke." % turn_name
+	var active_unit := _get_active_unit()
+	var turn_name := "Brak"
+	if current_turn == "player":
+		turn_name = "Gracz"
+	elif current_turn == "enemy":
+		turn_name = "Przeciwnik"
+	var active_name: String = active_unit.name if not active_unit.is_empty() else "-"
+	general_rule_label.text = "Aktywna jednostka: %s (%s)\nLPM porusza albo wybiera cel ataku. PPM pokazuje statystyki. Tura %s." % [active_name, turn_name, round_number]
 
 
 func _update_highlighted_cells(unit: Dictionary) -> void:
-	if unit.is_empty() or current_turn != "player" or unit.side != "player":
+	if unit.is_empty() or unit.side != "player":
 		board.set_highlighted_cells([], [])
 		return
 
-	var attack_cells: Array[Vector2i] = _get_attackable_enemy_cells(unit)
-	board.set_highlighted_cells(_get_reachable_cells(unit), attack_cells)
+	var move_budget: int = unit.move_range if unit.id != active_unit_id else _get_remaining_move(unit)
+	var attack_cells: Array[Vector2i] = []
+	if unit.id == active_unit_id and pending_action == "attack":
+		attack_cells = _get_attackable_enemy_cells(unit)
+	board.set_highlighted_cells(_get_reachable_cells(unit, move_budget), attack_cells)
 
 
-func _get_reachable_cells(unit: Dictionary) -> Array[Vector2i]:
+func _get_reachable_cells(unit: Dictionary, max_distance: int) -> Array[Vector2i]:
 	var origin: Vector2i = Vector2i(unit.grid_x, unit.grid_y)
 	var blocked: Dictionary = _get_blocked_cells(unit.id)
 	var distances: Dictionary = {origin: 0}
@@ -423,7 +437,7 @@ func _get_reachable_cells(unit: Dictionary) -> Array[Vector2i]:
 	while not frontier.is_empty():
 		var current: Vector2i = frontier.pop_front()
 		var current_distance: int = distances[current]
-		if current_distance >= int(unit.move_range):
+		if current_distance >= max_distance:
 			continue
 
 		for neighbor in _get_neighbors(current):
@@ -450,6 +464,9 @@ func _get_attackable_cells(unit: Dictionary) -> Array[Vector2i]:
 
 
 func _get_attackable_enemy_cells(unit: Dictionary) -> Array[Vector2i]:
+	if not _can_unit_attack(unit):
+		return []
+
 	var attackable: Array[Vector2i] = []
 	for other in units:
 		if other.side == unit.side:
@@ -465,6 +482,8 @@ func _is_in_attack_range(unit: Dictionary, cell: Vector2i) -> bool:
 
 
 func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_after := true) -> void:
+	attacker.action_points = max(0, int(attacker.get("action_points", 0)) - 1)
+	pending_action = ""
 	var casualties: int = _calculate_casualties(attacker, target)
 	target.count = max(0, int(target.count) - casualties)
 	_log_event(
@@ -477,11 +496,14 @@ func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_af
 	if target.count <= 0:
 		_log_event("%s zostaje rozbite." % _unit_name_log_text(target))
 		units.erase(target)
+		turn_queue.erase(target.id)
+		if turn_queue_index >= turn_queue.size():
+			turn_queue_index = turn_queue.size() - 1
 	if target.id == selected_unit_id:
-		selected_unit_id = -1
+		selected_unit_id = attacker.id if attacker.side == "player" else -1
 	_sync_board()
 	if end_turn_after:
-		_end_player_turn()
+		_end_current_activation()
 
 
 func _calculate_casualties(attacker: Dictionary, target: Dictionary) -> int:
@@ -576,6 +598,7 @@ func _validate_setup() -> void:
 		assert(unit.grid_x >= 0 and unit.grid_x < GRID_COLUMNS)
 		assert(unit.grid_y >= 0 and unit.grid_y < GRID_ROWS)
 		assert(unit.dmg >= 1)
+		assert(unit.speed >= 1)
 
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
 	assert(_get_attackable_cells(SAMPLE_UNITS[0]).has(Vector2i(1, 3)))
@@ -585,19 +608,23 @@ func _validate_setup() -> void:
 
 func _on_board_animation_finished(_unit_id: int) -> void:
 	is_animating = false
-	_refresh_unit_selector()
+	_refresh_turn_queue()
 
 
-func _update_basic_attack_button() -> void:
-	var unit := _find_unit_by_id(selected_unit_id)
+func _update_action_buttons() -> void:
+	var unit := _get_active_unit()
 	var can_use_attack: bool = (
 		not unit.is_empty()
-		and current_turn == "player"
+		and _is_player_turn()
 		and unit.side == "player"
+		and _can_unit_attack(unit)
 		and not _get_attackable_enemy_cells(unit).is_empty()
+		and selected_unit_id == unit.id
 	)
 	action_attack_button.disabled = not can_use_attack
-	action_attack_button.text = "ATAK PODSTAWOWY"
+	action_attack_button.button_pressed = pending_action == "attack"
+	action_attack_button.text = "ATAK PODSTAWOWY" if pending_action != "attack" else "WYBIERZ CEL"
+	end_turn_button.disabled = not _is_player_turn() or unit.is_empty()
 
 
 func _color_log_text(text: String, color: Color) -> String:
@@ -621,49 +648,66 @@ func _scroll_event_log_to_bottom() -> void:
 	event_log_scroll.scroll_vertical = int(event_log_label.get_content_height())
 
 
-func _refresh_unit_selector() -> void:
-	for child in unit_list.get_children():
+func _refresh_turn_queue() -> void:
+	for child in turn_queue_list.get_children():
 		child.queue_free()
 
-	for unit in units:
-		if unit.side != "player":
+	for unit_id in _get_visible_turn_queue():
+		var unit := _find_unit_by_id(unit_id)
+		if unit.is_empty():
 			continue
 
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(124, 60)
 		button.clip_text = true
-		button.text = "%s\n%s %s\nHP %s DMG %s" % [
+		button.text = "%s\n%s %s\nSPD %s RUCH %s" % [
 			unit.count,
 			unit.short_name,
 			unit.name,
-			unit.hp,
-			unit.dmg
+			unit.speed,
+			_get_display_move(unit)
 		]
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.disabled = current_turn != "player" or is_animating
-		button.add_theme_color_override("font_color", CARD_SELECTED_FONT_COLOR if unit.id == selected_unit_id else CARD_FONT_COLOR)
-		button.add_theme_stylebox_override("normal", _make_unit_card_style(unit.id == selected_unit_id))
-		button.add_theme_stylebox_override("hover", _make_unit_card_style(true))
-		button.add_theme_stylebox_override("pressed", _make_unit_card_style(true))
-		button.pressed.connect(_on_unit_card_pressed.bind(unit.id))
-		unit_list.add_child(button)
+		button.disabled = is_animating
+		button.add_theme_color_override("font_color", CARD_SELECTED_FONT_COLOR if unit.id == selected_unit_id else Color(0.95, 0.95, 0.92, 1.0))
+		button.add_theme_stylebox_override("normal", _make_turn_queue_card_style(unit, unit.id == selected_unit_id))
+		button.add_theme_stylebox_override("hover", _make_turn_queue_card_style(unit, unit.id == selected_unit_id, true))
+		button.add_theme_stylebox_override("pressed", _make_turn_queue_card_style(unit, true, true))
+		button.pressed.connect(_on_turn_queue_pressed.bind(unit.id))
+		button.gui_input.connect(_on_turn_queue_gui_input.bind(unit.id))
+		turn_queue_list.add_child(button)
 
 
-func _on_unit_card_pressed(unit_id: int) -> void:
-	if current_turn != "player" or is_animating:
+func _on_turn_queue_pressed(unit_id: int) -> void:
+	if is_animating:
 		return
 
 	var unit := _find_unit_by_id(unit_id)
 	if unit.is_empty():
 		return
 
+	pending_action = ""
 	_on_unit_selected(unit)
 
 
-func _make_unit_card_style(selected: bool) -> StyleBoxFlat:
+func _on_turn_queue_gui_input(event: InputEvent, unit_id: int) -> void:
+	return
+
+
+func _make_turn_queue_card_style(unit: Dictionary, selected: bool, hovered := false) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.18, 0.15, 0.07, 0.96) if selected else Color(0.08, 0.08, 0.07, 0.96)
-	style.border_color = Color(0.90, 0.77, 0.34, 1.0) if selected else Color(0.57, 0.46, 0.18, 0.92)
+	var player_bg := Color(0.09, 0.16, 0.26, 0.96)
+	var enemy_bg := Color(0.24, 0.10, 0.10, 0.96)
+	var selected_bg := Color(0.23, 0.19, 0.08, 0.98)
+	var player_border := Color(0.35, 0.65, 0.95, 0.95)
+	var enemy_border := Color(0.92, 0.35, 0.30, 0.95)
+	var selected_border := Color(0.90, 0.77, 0.34, 1.0)
+
+	style.bg_color = selected_bg if selected else player_bg if unit.side == "player" else enemy_bg
+	style.border_color = selected_border if selected else player_border if unit.side == "player" else enemy_border
+	if hovered and not selected:
+		style.bg_color = style.bg_color.lightened(0.08)
+		style.border_color = style.border_color.lightened(0.08)
 	style.border_width_left = 1
 	style.border_width_top = 1
 	style.border_width_right = 1
@@ -704,3 +748,139 @@ func _oddr_to_cube(cell: Vector2i) -> Vector3i:
 	var z: int = cell.y
 	var y: int = -x - z
 	return Vector3i(x, y, z)
+
+
+func _rebuild_turn_queue() -> void:
+	turn_queue = []
+	for unit in units:
+		turn_queue.append(int(unit.id))
+	turn_queue.sort_custom(func(a: int, b: int) -> bool:
+		var unit_a: Dictionary = _find_unit_by_id(a)
+		var unit_b: Dictionary = _find_unit_by_id(b)
+		if int(unit_a.speed) == int(unit_b.speed):
+			if unit_a.side == unit_b.side:
+				return a < b
+			return unit_a.side == "player"
+		return int(unit_a.speed) > int(unit_b.speed)
+	)
+	turn_queue_index = -1
+
+
+func _start_next_activation() -> void:
+	if not _has_units_on_side("player") or not _has_units_on_side("enemy"):
+		active_unit_id = -1
+		current_turn = ""
+		selected_unit_id = -1
+		board.set_selected_unit(-1)
+		board.set_highlighted_cells([], [])
+		_update_turn_label()
+		_update_action_buttons()
+		_refresh_turn_queue()
+		return
+
+	while true:
+		if turn_queue.is_empty():
+			_rebuild_turn_queue()
+			if turn_queue.is_empty():
+				return
+
+		turn_queue_index += 1
+		if turn_queue_index >= turn_queue.size():
+			round_number += 1
+			_rebuild_turn_queue()
+			continue
+
+		var next_unit := _find_unit_by_id(turn_queue[turn_queue_index])
+		if next_unit.is_empty():
+			turn_queue.remove_at(turn_queue_index)
+			turn_queue_index -= 1
+			continue
+
+		_start_unit_activation(next_unit)
+		return
+
+
+func _start_unit_activation(unit: Dictionary) -> void:
+	active_unit_id = unit.id
+	current_turn = unit.side
+	unit.remaining_move = int(unit.move_range)
+	unit.action_points = 1
+	pending_action = ""
+	selected_unit_id = unit.id if unit.side == "player" else -1
+	board.set_selected_unit(selected_unit_id)
+	_sync_board()
+	if unit.side == "enemy":
+		_enemy_take_turn()
+
+
+func _get_active_unit() -> Dictionary:
+	return _find_unit_by_id(active_unit_id)
+
+
+func _is_player_turn() -> bool:
+	return current_turn == "player"
+
+
+func _get_remaining_move(unit: Dictionary) -> int:
+	return int(unit.get("remaining_move", unit.get("move_range", 0)))
+
+
+func _get_display_move(unit: Dictionary) -> int:
+	return _get_remaining_move(unit) if unit.id == active_unit_id else int(unit.move_range)
+
+
+func _get_display_action_points(unit: Dictionary) -> int:
+	return int(unit.get("action_points", 0)) if unit.id == active_unit_id else 1
+
+
+func _can_unit_attack(unit: Dictionary) -> bool:
+	return int(unit.get("action_points", 0)) > 0
+
+
+func _can_unit_continue_turn(unit: Dictionary) -> bool:
+	return _get_remaining_move(unit) > 0 or _can_unit_attack(unit)
+
+
+func _has_units_on_side(side: String) -> bool:
+	for unit in units:
+		if unit.side == side:
+			return true
+	return false
+
+
+func _get_visible_turn_queue() -> Array[int]:
+	var visible_queue: Array[int] = []
+	if turn_queue.is_empty():
+		return visible_queue
+
+	var start_index: int = maxi(turn_queue_index, 0)
+	for offset in range(turn_queue.size()):
+		var index: int = (start_index + offset) % turn_queue.size()
+		visible_queue.append(turn_queue[index])
+	return visible_queue
+
+
+func _on_attack_button_pressed() -> void:
+	if not _is_player_turn() or is_animating or action_attack_button.disabled:
+		return
+
+	var unit := _get_active_unit()
+	if unit.is_empty():
+		return
+
+	pending_action = "" if pending_action == "attack" else "attack"
+	selected_unit_id = unit.id
+	_update_highlighted_cells(unit)
+	_update_action_buttons()
+	_refresh_turn_queue()
+
+
+func _on_end_turn_pressed() -> void:
+	if not _is_player_turn() or is_animating:
+		return
+
+	var unit := _get_active_unit()
+	if unit.is_empty():
+		return
+
+	_end_current_activation()
