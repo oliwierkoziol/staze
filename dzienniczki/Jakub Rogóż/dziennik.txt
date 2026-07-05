@@ -1,0 +1,19 @@
+1 lipca
+
+Wybraliśmy projekt, który będziemy realizować na stażu
+
+Zdecydowaliśmy, że gra będzie tworzona w Godocie
+
+Rozpisaliśmy w dokumentacji wszystkie główne komponenty gry
+
+2 lipca
+
+Ustaliliśmy ogólny wygląd i zasady rozgrywki
+
+Stworzyliśmy pierwszy prototyp systemu walki
+
+3 lipca
+
+Dodaliśmy możliwość poruszania się i atakowania jednostek
+
+Ustaliliśmy sposób zaznaczania jednostek oraz wyświetlania ich statystyk
