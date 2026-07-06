@@ -1,0 +1,2 @@
+Wprowadziliśmy ulepszone UI dalszy rozwój w tym kierunku jest zaplanowany.
+Dodano kilka umiejętności jednostek oraz zmieniono sposób wczytywania jednostek i ich umiejętności (przy użyciu plików w formacie JSON), co pozwoli nam łatwiej i szybciej testować potencjalne zmiany w balansie.
