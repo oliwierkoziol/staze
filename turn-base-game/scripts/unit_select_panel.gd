@@ -1,7 +1,7 @@
 class_name UnitSelectPanel
 extends VBoxContainer
 
-signal selection_changed(side: String, slot: int, type_id: String)
+signal selection_changed(side: String, faction: String)
 signal randomize_requested(side: String)
 
 const EMPTY_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
@@ -10,26 +10,24 @@ const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 var _side: String = "player"
 var _faction_options: Array[String] = []
 var _current_faction: String = ""
-var _current_type_id: String = ""
 var _faction_button: OptionButton
 var _main_portrait: TextureRect
-var _class_buttons: Array[Button] = []
+var _class_icons: Array[TextureRect] = []
 var _classes_container: HBoxContainer
 var _random_button: Button
 
 
 func _ready() -> void:
-	add_theme_constant_override("separation", 12)
+	add_theme_constant_override("separation", 16)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_build_ui()
 
 
-func setup(side: String, faction_options: Array[String], initial_faction: String, initial_type_id: String) -> void:
+func setup(side: String, faction_options: Array[String], initial_faction: String) -> void:
 	_side = side
 	_faction_options = faction_options
 	_set_faction(initial_faction)
-	_set_type(initial_type_id)
 
 
 func get_side() -> String:
@@ -40,28 +38,44 @@ func get_selected_faction() -> String:
 	return _current_faction
 
 
-func get_selected_type_id() -> String:
-	return _current_type_id
+func set_faction(faction: String) -> void:
+	_set_faction(faction)
 
 
-func set_type(type_id: String) -> void:
-	_set_type(type_id)
-
-
-func randomize_type() -> void:
+func randomize_faction() -> void:
 	var faction_ids: Array[String] = UnitTypeLibraryScript.get_faction_ids()
 	if faction_ids.is_empty():
 		return
 	var faction: String = faction_ids[randi() % faction_ids.size()]
 	_set_faction(faction)
-	var units: Array[Dictionary] = UnitTypeLibraryScript.get_faction_units(faction)
-	if units.is_empty():
-		return
-	var unit: Dictionary = units[randi() % units.size()]
-	_set_type(str(unit.get("id", "")))
 
 
 func _build_ui() -> void:
+	add_theme_constant_override("separation", 16)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	var panel := Panel.new()
+	panel.anchor_right = 1.0
+	panel.anchor_bottom = 1.0
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.12, 0.16, 1.0)
+	style.border_color = Color(0.45, 0.38, 0.24, 1.0)
+	style.border_width_left = 3
+	style.border_width_top = 3
+	style.border_width_right = 3
+	style.border_width_bottom = 3
+	style.content_margin_left = 20.0
+	style.content_margin_top = 20.0
+	style.content_margin_right = 20.0
+	style.content_margin_bottom = 20.0
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	panel.add_theme_stylebox_override("panel", style)
+	add_child(panel)
+
 	var title := Label.new()
 	title.text = "ARMIA GRACZA" if _side == "player" else "ARMIA KOMPUTERA"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -88,15 +102,32 @@ func _build_ui() -> void:
 
 	_main_portrait = TextureRect.new()
 	_main_portrait.name = "MainPortrait"
-	_main_portrait.custom_minimum_size = Vector2(220, 220)
+	_main_portrait.custom_minimum_size = Vector2(260, 260)
 	_main_portrait.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_main_portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_main_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_main_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	add_child(_main_portrait)
+
+	var portrait_border := Panel.new()
+	portrait_border.custom_minimum_size = Vector2(260, 260)
+	portrait_border.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var border_style := StyleBoxFlat.new()
+	border_style.bg_color = Color(0.08, 0.08, 0.1, 1.0)
+	border_style.border_color = Color(0.55, 0.48, 0.3, 1.0)
+	border_style.border_width_left = 2
+	border_style.border_width_top = 2
+	border_style.border_width_right = 2
+	border_style.border_width_bottom = 2
+	border_style.corner_radius_top_left = 6
+	border_style.corner_radius_top_right = 6
+	border_style.corner_radius_bottom_left = 6
+	border_style.corner_radius_bottom_right = 6
+	portrait_border.add_theme_stylebox_override("panel", border_style)
+	portrait_border.add_child(_main_portrait)
+	add_child(portrait_border)
 
 	var classes_label := Label.new()
-	classes_label.text = "Wybierz klasę:"
+	classes_label.text = "Jednostki armii:"
 	classes_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	classes_label.add_theme_color_override("font_color", Color(0.85, 0.82, 0.72, 1.0))
 	add_child(classes_label)
@@ -111,67 +142,59 @@ func _build_ui() -> void:
 func _set_faction(faction: String) -> void:
 	if _faction_button == null:
 		return
+	_current_faction = faction
 	_faction_button.clear()
 	for index in _faction_options.size():
 		_faction_button.add_item(_faction_display_name(_faction_options[index]))
 		if _faction_options[index] == faction:
 			_faction_button.select(index)
-	_current_faction = faction
-	_rebuild_class_buttons()
+	_refresh_view()
 
 
-func _set_type(type_id: String) -> void:
-	_current_type_id = type_id
-	var type_data: Dictionary = _find_type_data(type_id)
-	if type_data.is_empty():
+func _refresh_view() -> void:
+	var units: Array[Dictionary] = UnitTypeLibraryScript.get_faction_units(_current_faction)
+
+	if units.is_empty():
 		_main_portrait.texture = EMPTY_PORTRAIT
 	else:
-		var tex: Texture2D = _load_texture(str(type_data.get("portrait", "")))
+		var random_unit: Dictionary = units[randi() % units.size()]
+		var tex: Texture2D = _load_texture(str(random_unit.get("portrait", "")))
 		_main_portrait.texture = tex if tex != null else EMPTY_PORTRAIT
-	_rebuild_class_buttons()
-	selection_changed.emit(_side, 0, _current_type_id)
 
+	for icon in _class_icons:
+		icon.queue_free()
+	_class_icons.clear()
 
-func _rebuild_class_buttons() -> void:
-	for button in _class_buttons:
-		button.queue_free()
-	_class_buttons.clear()
+	for unit in units:
+		var icon := TextureRect.new()
+		icon.custom_minimum_size = Vector2(80, 80)
+		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		var tex: Texture2D = _load_texture(str(unit.get("portrait", "")))
+		icon.texture = tex if tex != null else EMPTY_PORTRAIT
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 
-	var units: Array[Dictionary] = UnitTypeLibraryScript.get_faction_units(_current_faction)
-	for index in units.size():
-		var unit: Dictionary = units[index]
-		var button := _create_class_button(unit)
-		_classes_container.add_child(button)
-		_class_buttons.append(button)
+		var icon_border := Panel.new()
+		icon_border.custom_minimum_size = Vector2(80, 80)
+		icon_border.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		var icon_style := StyleBoxFlat.new()
+		icon_style.bg_color = Color(0.08, 0.08, 0.1, 1.0)
+		icon_style.border_color = Color(0.4, 0.35, 0.22, 1.0)
+		icon_style.border_width_left = 2
+		icon_style.border_width_top = 2
+		icon_style.border_width_right = 2
+		icon_style.border_width_bottom = 2
+		icon_style.corner_radius_top_left = 4
+		icon_style.corner_radius_top_right = 4
+		icon_style.corner_radius_bottom_left = 4
+		icon_style.corner_radius_bottom_right = 4
+		icon_border.add_theme_stylebox_override("panel", icon_style)
+		icon_border.add_child(icon)
+		_classes_container.add_child(icon_border)
+		_class_icons.append(icon)
 
-
-func _create_class_button(unit: Dictionary) -> Button:
-	var button := Button.new()
-	button.custom_minimum_size = Vector2(72, 72)
-	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	button.flat = true
-
-	var tex: Texture2D = _load_texture(str(unit.get("portrait", "")))
-	var icon: TextureRect = TextureRect.new()
-	icon.name = "Icon"
-	icon.anchor_right = 1.0
-	icon.anchor_bottom = 1.0
-	icon.offset_left = 4.0
-	icon.offset_top = 4.0
-	icon.offset_right = -4.0
-	icon.offset_bottom = -4.0
-	icon.grow_horizontal = 2
-	icon.grow_vertical = 2
-	icon.texture = tex if tex != null else EMPTY_PORTRAIT
-	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	button.add_child(icon)
-
-	var type_id: String = str(unit.get("id", ""))
-	button.pressed.connect(_on_class_pressed.bind(type_id))
-	return button
+	selection_changed.emit(_side, _current_faction)
 
 
 func _on_faction_changed(_index: int) -> void:
@@ -181,26 +204,11 @@ func _on_faction_changed(_index: int) -> void:
 	var faction: String = _faction_options[selected]
 	if faction == _current_faction:
 		return
-	_current_faction = faction
-	var units: Array[Dictionary] = UnitTypeLibraryScript.get_faction_units(faction)
-	var first_type: String = ""
-	if not units.is_empty():
-		first_type = str(units[0].get("id", ""))
-	_set_type(first_type)
-
-
-func _on_class_pressed(type_id: String) -> void:
-	_set_type(type_id)
+	_set_faction(faction)
 
 
 func _on_randomize_pressed() -> void:
 	randomize_requested.emit(_side)
-
-
-func _find_type_data(type_id: String) -> Dictionary:
-	if type_id == "":
-		return {}
-	return UnitTypeLibraryScript.lookup(type_id)
 
 
 func _load_texture(path: String) -> Texture2D:

@@ -77,7 +77,7 @@ func _show_team_setup() -> void:
 		board.visible = false
 
 
-func _on_team_setup_finished(player_types: Array[String], enemy_types: Array[String]) -> void:
+func _on_team_setup_finished(player_faction: String, enemy_faction: String) -> void:
 	_load_battle_config()
 	var setup: Control = get_node_or_null("TeamSetup")
 	if setup != null:
@@ -86,8 +86,39 @@ func _on_team_setup_finished(player_types: Array[String], enemy_types: Array[Str
 		hud.visible = true
 	if board != null:
 		board.visible = true
-	_build_battle_config_from_selection(player_types, enemy_types)
+	_build_battle_config_from_factions(player_faction, enemy_faction)
 	_setup_battle_scene()
+
+
+func _build_battle_config_from_factions(player_faction: String, enemy_faction: String) -> void:
+	var player_units: Array[Dictionary] = UnitTypeLibraryScript.get_faction_units(player_faction)
+	var enemy_units: Array[Dictionary] = UnitTypeLibraryScript.get_faction_units(enemy_faction)
+	var next_id := 1
+	var player_positions := _compute_player_positions(player_units.size())
+	var enemy_positions := _compute_enemy_positions(enemy_units.size())
+	unit_configs.clear()
+	for index in player_units.size():
+		var type_id: String = str(player_units[index].get("id", ""))
+		var pos: Vector2i = player_positions[index]
+		unit_configs.append({
+			"id": next_id,
+			"type_id": type_id,
+			"side": "player",
+			"grid_x": pos.x,
+			"grid_y": pos.y,
+		})
+		next_id += 1
+	for index in enemy_units.size():
+		var type_id: String = str(enemy_units[index].get("id", ""))
+		var pos: Vector2i = enemy_positions[index]
+		unit_configs.append({
+			"id": next_id,
+			"type_id": type_id,
+			"side": "enemy",
+			"grid_x": pos.x,
+			"grid_y": pos.y,
+		})
+		next_id += 1
 
 
 func _build_battle_config_from_selection(player_types: Array[String], enemy_types: Array[String]) -> void:

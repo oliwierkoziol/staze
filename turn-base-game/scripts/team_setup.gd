@@ -1,6 +1,6 @@
 extends Control
 
-signal setup_finished(player_type_id: String, enemy_type_id: String)
+signal setup_finished(player_faction: String, enemy_faction: String)
 
 const UnitSelectPanelScene: PackedScene = preload("res://scenes/unit_select_panel.tscn")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
@@ -21,7 +21,7 @@ func _build_ui() -> void:
 
 	var background := ColorRect.new()
 	background.name = "Background"
-	background.color = Color(0.08, 0.08, 0.1, 1.0)
+	background.color = Color(0.06, 0.06, 0.08, 1.0)
 	background.anchor_right = 1.0
 	background.anchor_bottom = 1.0
 	add_child(background)
@@ -51,7 +51,7 @@ func _build_ui() -> void:
 	column.add_child(title)
 
 	var panels_row := HBoxContainer.new()
-	panels_row.add_theme_constant_override("separation", 60)
+	panels_row.add_theme_constant_override("separation", 80)
 	panels_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panels_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panels_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -70,8 +70,8 @@ func _build_ui() -> void:
 	_enemy_panel.randomize_requested.connect(_on_randomize_requested)
 	panels_row.add_child(_enemy_panel)
 
-	_player_panel.setup("player", faction_ids, default_faction, _random_type_for_faction(default_faction))
-	_enemy_panel.setup("enemy", faction_ids, _random_faction(), _random_type_for_faction(default_faction))
+	_player_panel.setup("player", faction_ids, default_faction)
+	_enemy_panel.setup("enemy", faction_ids, _random_fiction())
 
 	_start_button = Button.new()
 	_start_button.text = "START"
@@ -82,18 +82,11 @@ func _build_ui() -> void:
 	column.add_child(_start_button)
 
 
-func _random_faction() -> String:
+func _random_fiction() -> String:
 	var faction_ids: Array[String] = UnitTypeLibraryScript.get_faction_ids()
 	if faction_ids.is_empty():
 		return ""
 	return faction_ids[randi() % faction_ids.size()]
-
-
-func _random_type_for_faction(faction: String) -> String:
-	var units: Array[Dictionary] = UnitTypeLibraryScript.get_faction_units(faction)
-	if units.is_empty():
-		return ""
-	return str(units[randi() % units.size()].get("id", ""))
 
 
 func _randomize() -> void:
@@ -102,10 +95,10 @@ func _randomize() -> void:
 
 func _on_randomize_requested(side: String) -> void:
 	if side == "player":
-		_player_panel.randomize_type()
+		_player_panel.randomize_faction()
 	else:
-		_enemy_panel.randomize_type()
+		_enemy_panel.randomize_faction()
 
 
 func _on_start_pressed() -> void:
-	setup_finished.emit(_player_panel.get_selected_type_id(), _enemy_panel.get_selected_type_id())
+	setup_finished.emit(_player_panel.get_selected_faction(), _enemy_panel.get_selected_faction())
