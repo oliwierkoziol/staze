@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://bhatt12lhf7ik" path="res://assets/ui/divider.png" id="6_tr5l5"]
 [ext_resource type="Texture2D" uid="uid://8rrp7aitsb83" path="res://assets/ui/unit1.png" id="7_unit1"]
 [ext_resource type="Script" path="res://scripts/unit_stats_display.gd" id="8_stats"]
+[ext_resource type="Script" path="res://scripts/unit_status_panel.gd" id="9_status"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_6otim"]
 font_size = 22
@@ -456,6 +457,37 @@ theme_override_constants/margin_bottom = 20
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("8_stats")
+
+[node name="UnitStatusPanel" type="NinePatchRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=1981211681]
+texture_filter = 1
+custom_minimum_size = Vector2(0, 220)
+layout_mode = 2
+texture = ExtResource("4_panel")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+script = ExtResource("5_npp")
+
+[node name="UnitStatusMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatusPanel" unique_id=1981211682]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="UnitStatus" type="HBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatusPanel/UnitStatusMargin" unique_id=1981211683]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("9_status")
 
 [node name="BottomBar" type="NinePatchRect" parent="HUD/Overlay" unique_id=833392484]
 texture_filter = 1

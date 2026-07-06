@@ -16,7 +16,7 @@ const SAMPLE_UNITS := [
 		"count": 12,
 		"move_range": 5,
 		"attack_range": 1,
-		"resistance": "Brak",
+		"resistances": {"fire": 25, "lightning": 10, "poison": 50, "cold": 0},
 		"action_name": "Cios kontrolny",
 		"skill_ids": ["prowokacja", "strzal_w_kolano", "zatruty_sztylet"]
 	},
@@ -35,7 +35,7 @@ const SAMPLE_UNITS := [
 		"count": 8,
 		"move_range": 4,
 		"attack_range": 1,
-		"resistance": "Brak",
+		"resistances": {"fire": 0, "lightning": 0, "poison": 0, "cold": 0},
 		"action_name": "Lekki cios",
 		"skill_ids": []
 	},
@@ -54,7 +54,7 @@ const SAMPLE_UNITS := [
 		"count": 6,
 		"move_range": 3,
 		"attack_range": 1,
-		"resistance": "Brak",
+		"resistances": {"fire": 0, "lightning": 0, "poison": 0, "cold": 0},
 		"action_name": "Popychacz",
 		"skill_ids": []
 	}
@@ -108,7 +108,7 @@ const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 @onready var unit_name_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText/UnitName
 @onready var unit_meta_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText/UnitMeta
 @onready var unit_stats_display: VBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin/UnitStats
-@onready var actions_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel/ActionsMargin/ActionsLabel
+@onready var unit_status_panel: HBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatusPanel/UnitStatusMargin/UnitStatus
 @onready var action_attack_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/AttackActionButton
 @onready var action_skill_1_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill1ActionButton
 @onready var action_skill_2_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill2ActionButton
@@ -208,11 +208,8 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 		"count": str(unit_data.count),
 		"move": "%s / %s" % [_get_display_move(unit_data), unit_data.move_range],
 		"action_points": str(_get_display_action_points(unit_data)),
-		"attack_range": str(unit_data.attack_range),
-		"resistance": str(unit_data.resistance),
-		"buffs": str(unit_data.buffs),
-		"debuffs": str(unit_data.debuffs),
 	})
+	unit_status_panel.set_unit(unit_data)
 	_update_action_placeholders(unit_data)
 
 
@@ -231,6 +228,7 @@ func _clear_unit_details() -> void:
 	unit_name_label.text = "BRAK JEDNOSTEK"
 	unit_meta_label.text = ""
 	unit_stats_display.clear_values()
+	unit_status_panel.clear()
 	action_skill_1_button.text = "UM. 1"
 	action_skill_2_button.text = "UM. 2"
 	action_skill_3_button.text = "UM. 3"
