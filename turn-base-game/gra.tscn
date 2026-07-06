@@ -3,32 +3,17 @@
 [ext_resource type="Script" uid="uid://cg6sg1l7cd6su" path="res://scripts/gra.gd" id="1_a1tqk"]
 [ext_resource type="Script" uid="uid://7ofr6sym1gat" path="res://scripts/plansza_walki.gd" id="2_h3x7m"]
 [ext_resource type="Texture2D" uid="uid://dorgbej1rx6pq" path="res://assets/backgrounds/back.png" id="3_jh8wd"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_frame"]
-content_margin_left = 12.0
-content_margin_top = 12.0
-content_margin_right = 12.0
-content_margin_bottom = 12.0
-bg_color = Color(0.05, 0.05, 0.04, 0.88)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.63, 0.51, 0.22, 0.85)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_section"]
-content_margin_left = 10.0
-content_margin_top = 10.0
-content_margin_right = 10.0
-content_margin_bottom = 10.0
-bg_color = Color(0.07, 0.07, 0.06, 0.92)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.42, 0.34, 0.15, 0.75)
+[ext_resource type="Texture2D" uid="uid://crjsdxb2h5qqg" path="res://assets/ui/panel.png" id="4_panel"]
+[ext_resource type="Script" uid="uid://dv3u7m8d30w8n" path="res://scripts/nine_patch_panel.gd" id="5_npp"]
+[ext_resource type="Texture2D" uid="uid://bhatt12lhf7ik" path="res://assets/ui/divider.png" id="6_tr5l5"]
+[ext_resource type="Texture2D" uid="uid://8rrp7aitsb83" path="res://assets/ui/unit1.png" id="7_unit1"]
+[ext_resource type="Script" path="res://scripts/unit_stats_display.gd" id="8_stats"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_6otim"]
+font_size = 22
+font_color = Color(0.76862746, 0.61960787, 0.2901961, 1)
+outline_size = 3
+outline_color = Color(0.11256667, 0.09398364, 0.056831576, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
 content_margin_left = 10.0
@@ -115,7 +100,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="TopBar" type="PanelContainer" parent="HUD/Overlay" unique_id=1348661909]
+[node name="TopBar" type="NinePatchRect" parent="HUD/Overlay" unique_id=1348661909]
+oversampling_with_scale = 1
+texture_filter = 1
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -123,16 +110,29 @@ anchor_right = 0.5
 offset_left = -389.0
 offset_top = 17.0
 offset_right = 431.0
-offset_bottom = 75.0
+offset_bottom = 122.0
 grow_horizontal = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_frame")
+texture = ExtResource("4_panel")
+region_rect = Rect2(0, 0, 62, 63)
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
 
 [node name="TopMargin" type="MarginContainer" parent="HUD/Overlay/TopBar" unique_id=1274170366]
-layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 10
+texture_filter = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 22
 
 [node name="TopQueueScroll" type="ScrollContainer" parent="HUD/Overlay/TopBar/TopMargin" unique_id=1105193033]
 layout_mode = 2
@@ -146,7 +146,8 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 14
 alignment = 1
 
-[node name="RightPanel" type="PanelContainer" parent="HUD/Overlay" unique_id=23082911]
+[node name="RightPanel" type="NinePatchRect" parent="HUD/Overlay" unique_id=23082911]
+texture_filter = 1
 custom_minimum_size = Vector2(300, 0)
 clip_contents = true
 layout_mode = 1
@@ -160,14 +161,23 @@ offset_right = -16.0
 offset_bottom = -64.0
 grow_horizontal = 0
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_frame")
+texture = ExtResource("4_panel")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
 
 [node name="RightMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel" unique_id=82583585]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
 
 [node name="RightContent" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin" unique_id=46290738]
 layout_mode = 2
@@ -179,16 +189,27 @@ theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
 text = "STATYSTYKI GENERALA"
 horizontal_alignment = 1
 
-[node name="GeneralPanel" type="PanelContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=1591106099]
+[node name="GeneralPanel" type="NinePatchRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=1591106099]
+texture_filter = 1
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+texture = ExtResource("4_panel")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+script = ExtResource("5_npp")
 
 [node name="GeneralPanelMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel" unique_id=804480615]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 22
 
 [node name="GeneralPanelContent" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin" unique_id=1246087797]
 layout_mode = 2
@@ -218,16 +239,27 @@ theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
 text = "UMIEJETNOSCI GENERALA"
 horizontal_alignment = 1
 
-[node name="GeneralSkillsPanel" type="PanelContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=18234707]
+[node name="GeneralSkillsPanel" type="NinePatchRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=18234707]
+texture_filter = 1
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+texture = ExtResource("4_panel")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+script = ExtResource("5_npp")
 
 [node name="GeneralSkillsMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel" unique_id=805178180]
-layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
 
 [node name="GeneralSkills" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel/GeneralSkillsMargin" unique_id=84610017]
 layout_mode = 2
@@ -241,16 +273,29 @@ theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
 text = "PRZEBIEG WALKI"
 horizontal_alignment = 1
 
-[node name="EventLogPanel" type="PanelContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=726158766]
+[node name="EventLogPanel" type="NinePatchRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=726158766]
+texture_filter = 1
 custom_minimum_size = Vector2(0, 240)
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+texture = ExtResource("4_panel")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+script = ExtResource("5_npp")
 
 [node name="EventLogScroll" type="ScrollContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel" unique_id=177272283]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
 horizontal_scroll_mode = 0
 
 [node name="EventLog" type="RichTextLabel" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll" unique_id=2002893563]
@@ -262,7 +307,8 @@ text = "-"
 fit_content = true
 scroll_active = false
 
-[node name="LeftPanel" type="PanelContainer" parent="HUD/Overlay" unique_id=198121168]
+[node name="LeftPanel" type="NinePatchRect" parent="HUD/Overlay" unique_id=198121168]
+texture_filter = 1
 custom_minimum_size = Vector2(348, 0)
 clip_contents = true
 layout_mode = 1
@@ -273,14 +319,25 @@ offset_top = 16.0
 offset_right = 364.0
 offset_bottom = -64.0
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_frame")
+texture = ExtResource("4_panel")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="LeftMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel" unique_id=105759845]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
 
 [node name="LeftContent" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin" unique_id=254464742]
 layout_mode = 2
@@ -293,6 +350,10 @@ text = "STATYSTYKI JEDNOSTKI"
 label_settings = SubResource("LabelSettings_6otim")
 horizontal_alignment = 1
 
+[node name="TextureRect" type="TextureRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=953284804]
+layout_mode = 2
+texture = ExtResource("6_tr5l5")
+
 [node name="ClosePopupButton" type="Button" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=105665221]
 visible = false
 custom_minimum_size = Vector2(0, 42)
@@ -303,78 +364,101 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button_pressed")
 text = "ZAMKNIJ"
 
-[node name="UnitHeader" type="PanelContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=1359612349]
+[node name="UnitHeader" type="NinePatchRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=1359612349]
+texture_filter = 1
+clip_contents = true
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+texture = ExtResource("4_panel")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+script = ExtResource("5_npp")
 
 [node name="UnitHeaderMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader" unique_id=474921516]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 10
 
-[node name="UnitHeaderContent" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin" unique_id=23956198]
+[node name="UnitHeaderContent" type="HBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin" unique_id=23956198]
 layout_mode = 2
-theme_override_constants/separation = 6
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+alignment = 1
 
-[node name="UnitName" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent" unique_id=1842716353]
+[node name="UnitPortrait" type="TextureRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent" unique_id=1982736401]
+visible = false
+custom_minimum_size = Vector2(76, 76)
+layout_mode = 2
+size_flags_vertical = 4
+texture_filter = 1
+texture = ExtResource("7_unit1")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="UnitHeaderText" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent" unique_id=3127845092]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="UnitName" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText" unique_id=1842716353]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 20
 text = "-"
-autowrap_mode = 2
+clip_text = true
+text_overrun_behavior = 3
 
-[node name="UnitMeta" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent" unique_id=1418601747]
+[node name="UnitMeta" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText" unique_id=1418601747]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.44, 0.78, 0.35, 1)
+theme_override_font_sizes/font_size = 16
 text = "-"
-autowrap_mode = 2
+clip_text = true
+text_overrun_behavior = 3
 
-[node name="UnitStatsPanel" type="PanelContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=1618589884]
+[node name="UnitStatsPanel" type="NinePatchRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=1618589884]
+texture_filter = 1
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_section")
+texture = ExtResource("4_panel")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+script = ExtResource("5_npp")
 
 [node name="UnitStatsMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel" unique_id=1111943316]
-layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
 
-[node name="UnitStats" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin" unique_id=1311480050]
+[node name="UnitStats" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin" unique_id=1311480050]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
-text = "-"
-autowrap_mode = 2
+script = ExtResource("8_stats")
 
-[node name="ActionsTitle" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=766867542]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
-text = "AKCJE"
-horizontal_alignment = 1
-
-[node name="ActionsPanel" type="PanelContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=887742544]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_section")
-
-[node name="ActionsMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel" unique_id=2030409136]
-layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
-
-[node name="ActionsLabel" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel/ActionsMargin" unique_id=1966515965]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
-text = "-"
-autowrap_mode = 2
-
-[node name="BottomBar" type="PanelContainer" parent="HUD/Overlay" unique_id=833392484]
+[node name="BottomBar" type="NinePatchRect" parent="HUD/Overlay" unique_id=833392484]
+texture_filter = 1
 custom_minimum_size = Vector2(760, 126)
 layout_mode = 1
 anchors_preset = 7
@@ -388,13 +472,23 @@ offset_right = 410.0
 offset_bottom = -59.0
 grow_horizontal = 2
 grow_vertical = 0
+texture = ExtResource("4_panel")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
 
 [node name="BottomMargin" type="MarginContainer" parent="HUD/Overlay/BottomBar" unique_id=309482735]
-layout_mode = 2
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 12
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 24
 
 [node name="BottomLayout" type="HBoxContainer" parent="HUD/Overlay/BottomBar/BottomMargin" unique_id=215614661]
 layout_mode = 2

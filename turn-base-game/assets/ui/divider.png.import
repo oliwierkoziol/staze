@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://crjsdxb2h5qqg"
-path="res://.godot/imported/panel.png-3b9543c06792d57fdee8f168520a6a81.ctex"
+uid="uid://bhatt12lhf7ik"
+path="res://.godot/imported/divider.png-89465bed9aae46d609175abd88241b53.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/panel.png"
-dest_files=["res://.godot/imported/panel.png-3b9543c06792d57fdee8f168520a6a81.ctex"]
+source_file="res://assets/ui/divider.png"
+dest_files=["res://.godot/imported/divider.png-89465bed9aae46d609175abd88241b53.ctex"]
 
 [params]
 
@@ -37,4 +37,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=0
+detect_3d/compress_to=1

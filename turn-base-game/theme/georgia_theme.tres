@@ -1,4 +1,4 @@
-[gd_resource type="Theme" format=3 load_steps=2]
+[gd_resource type="Theme" format=3 uid="uid://cna4ihybudjlx"]
 
 [sub_resource type="SystemFont" id="SystemFont_georgia"]
 font_names = PackedStringArray("Georgia")

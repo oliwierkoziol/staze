@@ -3,7 +3,7 @@ extends Control
 const SAMPLE_UNITS := [
 	{
 		"id": 1,
-		"name": "Oddzial Testowy",
+		"name": "Piechur",
 		"short_name": "TST",
 		"role": "Tester Skilli",
 		"side": "player",
@@ -104,9 +104,10 @@ const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
 @onready var hud: CanvasLayer = $HUD
 @onready var turn_queue_list: HBoxContainer = $HUD/Overlay/TopBar/TopMargin/TopQueueScroll/TopQueueList
-@onready var unit_name_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitName
-@onready var unit_meta_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitMeta
-@onready var unit_stats_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin/UnitStats
+@onready var unit_portrait: TextureRect = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitPortrait
+@onready var unit_name_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText/UnitName
+@onready var unit_meta_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText/UnitMeta
+@onready var unit_stats_display: VBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin/UnitStats
 @onready var actions_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel/ActionsMargin/ActionsLabel
 @onready var action_attack_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/AttackActionButton
 @onready var action_skill_1_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill1ActionButton
@@ -196,7 +197,9 @@ func _show_unit_details(unit_data: Dictionary) -> void:
 
 
 func _render_unit_details(unit_data: Dictionary) -> void:
+	unit_portrait.visible = true
 	unit_name_label.text = unit_data.name.to_upper()
+<<<<<<< Updated upstream
 	unit_meta_label.text = "Poziom 1 - %s - %s" % [unit_data.role, "Gracz" if unit_data.side == "player" else "Przeciwnik"]
 	unit_stats_label.text = "\n".join([
 		"HP  %s" % unit_data.hp,
@@ -216,6 +219,22 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 		"Atak podstawowy: %s" % unit_data.action_name,
 		"Umiejetnosci: %s" % _format_skill_list(unit_data)
 	])
+=======
+	unit_meta_label.text = "Poziom 1"
+	unit_stats_display.set_values({
+		"hp": "%s / %s" % [unit_data.hp, unit_data.get("max_hp", unit_data.hp)],
+		"dmg": str(unit_data.dmg),
+		"def": str(unit_data.def),
+		"speed": str(unit_data.speed),
+		"count": str(unit_data.count),
+		"move": "%s / %s" % [_get_display_move(unit_data), unit_data.move_range],
+		"action_points": str(_get_display_action_points(unit_data)),
+		"attack_range": str(unit_data.attack_range),
+		"resistance": str(unit_data.resistance),
+		"buffs": str(unit_data.buffs),
+		"debuffs": str(unit_data.debuffs),
+	})
+>>>>>>> Stashed changes
 	_update_action_placeholders(unit_data)
 
 
@@ -230,10 +249,10 @@ func _format_skill_list(unit_data: Dictionary) -> String:
 
 
 func _clear_unit_details() -> void:
+	unit_portrait.visible = false
 	unit_name_label.text = "BRAK JEDNOSTEK"
 	unit_meta_label.text = ""
-	unit_stats_label.text = ""
-	actions_label.text = ""
+	unit_stats_display.clear_values()
 	action_skill_1_button.text = "UM. 1"
 	action_skill_2_button.text = "UM. 2"
 	action_skill_3_button.text = "UM. 3"
