@@ -115,17 +115,28 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func draw_hex_grid() -> void:
+	var texture_size: Vector2 = GRASS_TEXTURE.get_size()
 	for row in GRID_ROWS:
 		for column in GRID_COLUMNS:
 			var center: Vector2 = axial_to_pixel(column, row)
-			var size: float = HEX_RADIUS * 2.0
-			var rect := Rect2(center - Vector2(size / 2.0, size / 2.0), Vector2(size, size))
-			draw_texture_rect(GRASS_TEXTURE, rect, false)
 			var points: PackedVector2Array = PackedVector2Array()
+			var uvs: PackedVector2Array = PackedVector2Array()
 			for corner in 6:
 				var angle: float = deg_to_rad(60.0 * corner - 30.0)
-				points.append(center + Vector2(cos(angle), sin(angle)) * HEX_RADIUS)
+				var offset: Vector2 = Vector2(cos(angle), sin(angle)) * HEX_RADIUS
+				var vertex: Vector2 = center + offset
+				points.append(vertex)
+				uvs.append(_hex_vertex_to_uv(offset, texture_size))
+			draw_colored_polygon(points, Color.WHITE, uvs, GRASS_TEXTURE)
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(0.33, 0.25, 0.16), 2.0)
+
+
+func _hex_vertex_to_uv(offset: Vector2, texture_size: Vector2) -> Vector2:
+	var half_width: float = HEX_RADIUS * SQRT_THREE / 2.0
+	var half_height: float = HEX_RADIUS
+	var u: float = (offset.x + half_width) / (half_width * 2.0)
+	var v: float = (offset.y + half_height) / (half_height * 2.0)
+	return Vector2(u * texture_size.x, v * texture_size.y)
 
 
 func draw_obstacles() -> void:
