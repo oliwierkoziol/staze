@@ -5,6 +5,7 @@ signal setup_finished(player_faction: String, enemy_faction: String)
 const UnitSelectPanelScene: PackedScene = preload("res://scenes/unit_select_panel.tscn")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const UnitSelectPanelClass = preload("res://scripts/unit_select_panel.gd")
+const BATTLE_BACKGROUND: Texture2D = preload("res://assets/backgrounds/back.png")
 
 var _player_panel: UnitSelectPanelClass
 var _enemy_panel: UnitSelectPanelClass
@@ -19,12 +20,21 @@ func _build_ui() -> void:
 	for child in get_children():
 		child.queue_free()
 
-	var background := ColorRect.new()
+	var background := TextureRect.new()
 	background.name = "Background"
-	background.color = Color(0.06, 0.06, 0.08, 1.0)
+	background.texture = BATTLE_BACKGROUND
 	background.anchor_right = 1.0
 	background.anchor_bottom = 1.0
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	add_child(background)
+
+	var overlay := ColorRect.new()
+	overlay.name = "Overlay"
+	overlay.color = Color(0.02, 0.02, 0.04, 0.78)
+	overlay.anchor_right = 1.0
+	overlay.anchor_bottom = 1.0
+	add_child(overlay)
 
 	var main := MarginContainer.new()
 	main.name = "Main"

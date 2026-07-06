@@ -609,14 +609,18 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		selected_unit_id = active_unit.id
 		_show_unit_details(active_unit)
 
+	var remaining_move: int = _get_remaining_move(active_unit)
+	if remaining_move <= 0:
+		return
+
 	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell)
-	if path.is_empty() or path.size() > _get_remaining_move(active_unit):
+	if path.is_empty() or path.size() > remaining_move:
 		return
 
 	is_animating = true
 	active_unit.grid_x = cell.x
 	active_unit.grid_y = cell.y
-	active_unit.remaining_move = max(0, _get_remaining_move(active_unit) - path.size())
+	active_unit.remaining_move = max(0, remaining_move - path.size())
 	pending_skill_id = ""
 	_sync_board()
 	board.animate_unit_path(active_unit.id, path)

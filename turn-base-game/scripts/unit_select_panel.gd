@@ -161,8 +161,8 @@ func _refresh_view() -> void:
 		var tex: Texture2D = _load_texture(str(random_unit.get("portrait", "")))
 		_main_portrait.texture = tex if tex != null else EMPTY_PORTRAIT
 
-	for icon in _class_icons:
-		icon.queue_free()
+	for icon_border in _classes_container.get_children():
+		icon_border.queue_free()
 	_class_icons.clear()
 
 	for unit in units:

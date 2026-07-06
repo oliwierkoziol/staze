@@ -17,6 +17,8 @@ const HEX_INNER_BORDER_COLOR := Color(0.76, 0.62, 0.36, 0.42)
 const ROCK_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock.png")
 const TREE_TEXTURE: Texture2D = preload("res://assets/mapTiles/tree.png")
 const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
+const EMPTY_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
+const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 
 var units: Array = []
 var selected_unit_id := -1
@@ -193,10 +195,10 @@ func draw_units() -> void:
 	for unit in units:
 		var center: Vector2 = visual_positions.get(unit.id, axial_to_pixel(unit.grid_x, unit.grid_y))
 		var portrait: Texture2D = _load_unit_portrait(unit)
-		if portrait != null:
-			var sprite_size := Vector2(HEX_RADIUS * 1.9, HEX_RADIUS * 2.2)
-			var sprite_rect := Rect2(center - Vector2(sprite_size.x / 2.0, sprite_size.y * 0.68), sprite_size)
-			draw_texture_rect(portrait, sprite_rect, false)
+		var texture: Texture2D = portrait if portrait != null else EMPTY_PORTRAIT
+		var sprite_size := Vector2(HEX_RADIUS * 1.9, HEX_RADIUS * 2.2)
+		var sprite_rect := Rect2(center - Vector2(sprite_size.x / 2.0, sprite_size.y * 0.68), sprite_size)
+		draw_texture_rect(texture, sprite_rect, false)
 
 		if unit.id == selected_unit_id:
 			var outline_radius := HEX_RADIUS * 0.55
@@ -211,6 +213,11 @@ func draw_units() -> void:
 
 func _load_unit_portrait(unit: Dictionary) -> Texture2D:
 	var portrait_path: String = str(unit.get("portrait", ""))
+	if portrait_path == "":
+		var type_id: String = str(unit.get("type_id", ""))
+		if type_id != "":
+			var type_data: Dictionary = UnitTypeLibraryScript.lookup(type_id)
+			portrait_path = str(type_data.get("portrait", ""))
 	if portrait_path == "":
 		return null
 	var res: Resource = load(portrait_path)
