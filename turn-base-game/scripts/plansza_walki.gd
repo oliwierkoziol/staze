@@ -9,6 +9,7 @@ const HEX_RADIUS := 42.0
 const GRID_COLUMNS := 15
 const GRID_ROWS := 11
 const SQRT_THREE := 1.7320508
+const GRASS_TEXTURE: Texture2D = preload("res://assets/mapTiles/grass.png")
 
 var units: Array = []
 var selected_unit_id := -1
@@ -117,12 +118,13 @@ func draw_hex_grid() -> void:
 	for row in GRID_ROWS:
 		for column in GRID_COLUMNS:
 			var center: Vector2 = axial_to_pixel(column, row)
+			var size: float = HEX_RADIUS * 2.0
+			var rect := Rect2(center - Vector2(size / 2.0, size / 2.0), Vector2(size, size))
+			draw_texture_rect(GRASS_TEXTURE, rect, false)
 			var points: PackedVector2Array = PackedVector2Array()
 			for corner in 6:
 				var angle: float = deg_to_rad(60.0 * corner - 30.0)
 				points.append(center + Vector2(cos(angle), sin(angle)) * HEX_RADIUS)
-			var fill_color: Color = Color(0.86, 0.80, 0.66) if (row + column) % 2 == 0 else Color(0.80, 0.74, 0.61)
-			draw_colored_polygon(points, fill_color)
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(0.33, 0.25, 0.16), 2.0)
 
 

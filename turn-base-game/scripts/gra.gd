@@ -152,13 +152,7 @@ const SAMPLE_UNITS := [
 
 const GRID_COLUMNS := 15
 const GRID_ROWS := 11
-const OBSTACLES: Array[Dictionary] = [
-	{"grid_x": 3, "grid_y": 3, "type": "woda"},
-	{"grid_x": 7, "grid_y": 5, "type": "kamienie"},
-	{"grid_x": 10, "grid_y": 7, "type": "drzewa"},
-	{"grid_x": 5, "grid_y": 8, "type": "woda"},
-	{"grid_x": 12, "grid_y": 2, "type": "kamienie"}
-]
+const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "drzewa"]
 const MAX_EVENT_LOG_ENTRIES := 60
 const CARD_FONT_COLOR := Color(0.92, 0.88, 0.78, 1.0)
 const CARD_SELECTED_FONT_COLOR := Color(0.99, 0.95, 0.84, 1.0)
@@ -187,6 +181,7 @@ const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 @onready var event_log_label: RichTextLabel = $HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll/EventLog
 
 var units: Array = []
+var obstacles: Array[Dictionary] = []
 var selected_unit_id := -1
 var active_unit_id := -1
 var current_turn := ""
@@ -207,7 +202,8 @@ func _ready() -> void:
 		unit.remaining_move = int(unit.move_range)
 		unit.action_points = 1
 	board.set_units(units)
-	board.set_obstacles(OBSTACLES)
+	obstacles = _generate_obstacles()
+	board.set_obstacles(obstacles)
 	board.cell_clicked.connect(_on_cell_clicked)
 	board.cell_right_clicked.connect(_on_cell_right_clicked)
 	board.animation_finished.connect(_on_board_animation_finished)
@@ -271,24 +267,26 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 func _on_cell_clicked(cell: Vector2i) -> void:
 	if is_animating or not _is_player_turn():
 		return
- 
+
 	var active_unit := _get_active_unit()
 	if active_unit.is_empty() or active_unit.side != "player":
 		return
- 
+
 	var clicked_unit := _find_unit_at_cell(cell)
 	if not clicked_unit.is_empty():
-		_show_unit_details(clicked_unit)
+		if clicked_unit.side == "player":
+			selected_unit_id = clicked_unit.id
+			_show_unit_details(clicked_unit)
+		return
+
 	if pending_action == "attack":
 		if not clicked_unit.is_empty() and clicked_unit.side != active_unit.side and _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
 			_perform_basic_attack(active_unit, clicked_unit)
 		return
- 
-	if selected_unit_id != active_unit.id:
-		return
 
-	if not clicked_unit.is_empty():
-		return
+	if selected_unit_id != active_unit.id:
+		selected_unit_id = active_unit.id
+		_show_unit_details(active_unit)
 
 	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell)
 	if path.is_empty() or path.size() > _get_remaining_move(active_unit):
@@ -401,7 +399,7 @@ func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[
 
 func _sync_board() -> void:
 	board.set_units(units)
-	board.set_obstacles(OBSTACLES)
+	board.set_obstacles(obstacles)
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
 	if selected_unit.is_empty():
 		board.set_highlighted_cells([], [])
@@ -556,19 +554,80 @@ func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vect
 	return path
 
 
+func _generate_obstacles() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var occupied: Dictionary = {}
+	for unit in SAMPLE_UNITS:
+		occupied[Vector2i(unit.grid_x, unit.grid_y)] = true
+
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var type_count: int = rng.randi_range(2, OBSTACLE_TYPES.size())
+	var shuffled_types: Array[String] = OBSTACLE_TYPES.duplicate()
+	shuffled_types.shuffle()
+
+	for type_index in range(type_count):
+		var type: String = shuffled_types[type_index]
+		var cluster_size: int = rng.randi_range(1, 4)
+		var cluster: Array[Vector2i] = _generate_cluster(cluster_size, occupied, rng)
+		for cell in cluster:
+			occupied[cell] = true
+			result.append({"grid_x": cell.x, "grid_y": cell.y, "type": type})
+	return result
+
+
+func _generate_cluster(target_size: int, occupied: Dictionary, rng: RandomNumberGenerator) -> Array[Vector2i]:
+	var attempts: int = 0
+	while attempts < 200:
+		attempts += 1
+		var start: Vector2i = _random_empty_cell(occupied, rng)
+		if start == Vector2i(-1, -1):
+			continue
+		var cluster: Array[Vector2i] = [start]
+		var frontier: Array[Vector2i] = [start]
+		occupied[start] = true
+		while cluster.size() < target_size and not frontier.is_empty():
+			frontier.shuffle()
+			var current: Vector2i = frontier.pop_front()
+			var neighbors: Array[Vector2i] = _get_neighbors(current)
+			neighbors.shuffle()
+			for neighbor in neighbors:
+				if occupied.has(neighbor):
+					continue
+				occupied[neighbor] = true
+				cluster.append(neighbor)
+				frontier.append(neighbor)
+				if cluster.size() >= target_size:
+					break
+		return cluster
+	return []
+
+
+func _random_empty_cell(occupied: Dictionary, rng: RandomNumberGenerator) -> Vector2i:
+	var x_min: int = 2
+	var x_max: int = GRID_COLUMNS - 3
+	var attempts: int = 0
+	while attempts < 100:
+		attempts += 1
+		var cell := Vector2i(rng.randi_range(x_min, x_max), rng.randi_range(0, GRID_ROWS - 1))
+		if not occupied.has(cell):
+			return cell
+	return Vector2i(-1, -1)
+
+
 func _get_blocked_cells(excluded_unit_id: int) -> Dictionary:
 	var blocked: Dictionary = {}
 	for unit in units:
 		if unit.id == excluded_unit_id:
 			continue
 		blocked[Vector2i(unit.grid_x, unit.grid_y)] = true
-	for obstacle in OBSTACLES:
+	for obstacle in obstacles:
 		blocked[Vector2i(int(obstacle.grid_x), int(obstacle.grid_y))] = true
 	return blocked
 
 
 func _is_cell_obstacle(cell: Vector2i) -> bool:
-	for obstacle in OBSTACLES:
+	for obstacle in obstacles:
 		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y:
 			return true
 	return false
@@ -672,7 +731,7 @@ func _validate_setup() -> void:
 		assert(unit.dmg >= 1)
 		assert(unit.speed >= 1)
 
-	for obstacle in OBSTACLES:
+	for obstacle in obstacles:
 		assert(obstacle.grid_x >= 0 and obstacle.grid_x < GRID_COLUMNS)
 		assert(obstacle.grid_y >= 0 and obstacle.grid_y < GRID_ROWS)
 		assert(obstacle.type in ["woda", "kamienie", "drzewa"])
