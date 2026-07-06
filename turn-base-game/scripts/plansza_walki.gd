@@ -2,6 +2,7 @@ extends Node2D
 
 signal unit_selected(unit_data: Dictionary)
 signal cell_clicked(cell: Vector2i)
+signal cell_left_released(cell: Vector2i)
 signal cell_right_clicked(cell: Vector2i)
 signal cell_hovered(cell: Vector2i)
 signal animation_finished(unit_id: int)
@@ -39,6 +40,13 @@ func set_units(new_units: Array) -> void:
 		units.append(copied_unit)
 		if not visual_positions.has(copied_unit.id):
 			visual_positions[copied_unit.id] = axial_to_pixel(copied_unit.grid_x, copied_unit.grid_y)
+	queue_redraw()
+
+
+func reset_unit_positions(new_units: Array) -> void:
+	visual_positions.clear()
+	for unit in new_units:
+		visual_positions[unit.id] = axial_to_pixel(unit.grid_x, unit.grid_y)
 	queue_redraw()
 
 
@@ -145,6 +153,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			cell_clicked.emit(clicked_cell)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			cell_right_clicked.emit(clicked_cell)
+	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var local_position: Vector2 = to_local(event.position)
+		var released_cell: Vector2i = get_cell_at_position(local_position)
+		cell_left_released.emit(released_cell)
 
 
 func draw_hex_grid() -> void:

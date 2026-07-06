@@ -14,6 +14,7 @@ const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
 @onready var hud: CanvasLayer = $HUD
+@onready var left_content: VBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent
 @onready var turn_queue_list: HBoxContainer = $HUD/Overlay/TopBar/TopMargin/TopQueueScroll/TopQueueList
 @onready var unit_portrait: TextureRect = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitPortrait
 @onready var unit_name_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText/UnitName
@@ -46,18 +47,20 @@ var pending_action := ""
 var pending_skill_id := ""
 var unit_configs: Array[Dictionary] = []
 var skill_library: Dictionary = {}
+var setup_mode := true
+var setup_drag_unit_id := -1
+var setup_controls: HBoxContainer
+var start_battle_button: Button
+var reset_battle_button: Button
+var reload_json_button: Button
 
 
 func _ready() -> void:
-	_load_battle_config()
-	_validate_setup()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_disable_hud_mouse(hud)
-	units = unit_configs.map(func(unit: Dictionary) -> Dictionary: return _prepare_unit(unit.duplicate(true)))
-	board.set_units(units)
-	obstacles = _generate_obstacles()
-	board.set_obstacles(obstacles)
+	_build_setup_controls()
 	board.cell_clicked.connect(_on_cell_clicked)
+	board.cell_left_released.connect(_on_cell_left_released)
 	board.cell_right_clicked.connect(_on_cell_right_clicked)
 	board.cell_hovered.connect(_on_board_cell_hovered)
 	board.animation_finished.connect(_on_board_animation_finished)
@@ -74,9 +77,97 @@ func _ready() -> void:
 	])
 	_clear_unit_details()
 	event_log_label.bbcode_enabled = true
+	_reload_json_into_setup()
+
+
+func _build_setup_controls() -> void:
+	setup_controls = HBoxContainer.new()
+	setup_controls.add_theme_constant_override("separation", 8)
+	left_content.add_child(setup_controls)
+	left_content.move_child(setup_controls, 3)
+
+	start_battle_button = _make_setup_button("START")
+	start_battle_button.pressed.connect(_on_start_battle_pressed)
+	setup_controls.add_child(start_battle_button)
+
+	reset_battle_button = _make_setup_button("RESET")
+	reset_battle_button.pressed.connect(_on_reset_battle_pressed)
+	setup_controls.add_child(reset_battle_button)
+
+	reload_json_button = _make_setup_button("RELOAD JSON")
+	reload_json_button.pressed.connect(_on_reload_json_pressed)
+	setup_controls.add_child(reload_json_button)
+
+
+func _make_setup_button(text: String) -> Button:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(0, 36)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.text = text
+	return button
+
+
+func _reload_json_into_setup() -> void:
+	_load_battle_config()
+	_validate_setup()
+	_enter_setup_mode()
+
+
+func _enter_setup_mode() -> void:
+	setup_mode = true
+	units = unit_configs.map(func(unit: Dictionary) -> Dictionary: return _prepare_unit(unit.duplicate(true)))
+	obstacles = []
+	selected_unit_id = -1
+	setup_drag_unit_id = -1
+	active_unit_id = -1
+	current_turn = ""
+	pending_action = ""
+	pending_skill_id = ""
+	is_animating = false
+	round_number = 1
+	turn_queue_index = -1
+	event_log.clear()
+	board.set_selected_unit(-1)
+	board.set_hovered_move_path([])
+	board.set_units(units)
+	board.reset_unit_positions(units)
+	board.set_obstacles(obstacles)
+	_rebuild_turn_queue()
+	_clear_unit_details()
+	_log_event(_color_log_text("Tryb przygotowania: ustaw jednostki i kliknij START.", LOG_COLOR_YELLOW))
+	_sync_board()
+
+
+func _on_start_battle_pressed() -> void:
+	if not setup_mode:
+		return
+	setup_mode = false
+	selected_unit_id = -1
+	active_unit_id = -1
+	current_turn = ""
+	pending_action = ""
+	pending_skill_id = ""
+	round_number = 1
+	turn_queue_index = -1
+	event_log.clear()
+	obstacles = _generate_obstacles()
+	board.set_obstacles(obstacles)
 	_log_event(_color_log_text("Bitwa rozpoczeta.", LOG_COLOR_YELLOW))
 	_rebuild_turn_queue()
 	_start_next_activation()
+
+
+func _on_reset_battle_pressed() -> void:
+	_enter_setup_mode()
+
+
+func _on_reload_json_pressed() -> void:
+	_load_battle_config()
+	_validate_setup()
+	if setup_mode:
+		_enter_setup_mode()
+		return
+	_apply_live_reload()
 
 
 func _load_battle_config() -> void:
@@ -107,7 +198,7 @@ func _normalize_unit_config(raw_unit: Dictionary) -> Dictionary:
 	var normalized: Dictionary = raw_unit.duplicate(true)
 	for key in ["id", "grid_x", "grid_y", "hp", "dmg", "def", "speed", "count", "move_range", "attack_range"]:
 		normalized[key] = int(normalized.get(key, 0))
-	for key in ["name", "short_name", "role", "side", "resistance", "action_name"]:
+	for key in ["name", "short_name", "role", "side", "resistance"]:
 		normalized[key] = str(normalized.get(key, ""))
 
 	var normalized_skill_ids: Array[String] = []
@@ -156,7 +247,7 @@ func _on_unit_selected(unit_data: Dictionary) -> void:
 func _show_unit_details(unit_data: Dictionary) -> void:
 	selected_unit_id = unit_data.id
 	board.set_selected_unit(unit_data.id)
-	if unit_data.side == "player":
+	if setup_mode or unit_data.side == "player":
 		_update_highlighted_cells(unit_data)
 	else:
 		board.set_highlighted_cells([], [])
@@ -183,11 +274,47 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 		"debuffs": str(unit_data.debuffs),
 	})
 	if actions_label != null:
-		actions_label.text = "\n".join([
-			"Atak podstawowy: %s" % str(unit_data.action_name),
-			"Umiejetnosci: %s" % _format_skill_list(unit_data)
-		])
+		actions_label.text = "Umiejetnosci: %s" % _format_skill_list(unit_data)
 	_update_action_placeholders(unit_data)
+
+
+func _apply_live_reload() -> void:
+	var current_units_by_id: Dictionary = {}
+	for unit in units:
+		current_units_by_id[int(unit.id)] = unit
+
+	var rebuilt_units: Array = []
+	for unit_config in unit_configs:
+		var rebuilt_unit: Dictionary = _prepare_unit(unit_config.duplicate(true))
+		var existing_unit: Dictionary = current_units_by_id.get(int(rebuilt_unit.id), {})
+		if not existing_unit.is_empty():
+			_reapply_runtime_state(rebuilt_unit, existing_unit)
+		rebuilt_units.append(rebuilt_unit)
+
+	units = rebuilt_units
+	selected_unit_id = selected_unit_id if not _find_unit_by_id(selected_unit_id).is_empty() else -1
+	active_unit_id = active_unit_id if not _find_unit_by_id(active_unit_id).is_empty() else -1
+	_rebuild_turn_queue()
+	if not _find_unit_by_id(active_unit_id).is_empty():
+		turn_queue_index = maxi(turn_queue.find(active_unit_id) - 1, -1)
+	board.set_units(units)
+	board.reset_unit_positions(units)
+	_sync_board()
+	_log_event(_color_log_text("Przeladowano JSON w trakcie rozgrywki.", LOG_COLOR_YELLOW))
+
+
+func _reapply_runtime_state(target_unit: Dictionary, existing_unit: Dictionary) -> void:
+	target_unit["grid_x"] = int(existing_unit.grid_x)
+	target_unit["grid_y"] = int(existing_unit.grid_y)
+	var old_max_total_hp: int = max(1, int(existing_unit.get("max_total_hp", target_unit["max_total_hp"])))
+	var old_current_total_hp: int = max(0, int(existing_unit.get("current_total_hp", old_max_total_hp)))
+	var hp_ratio: float = float(old_current_total_hp) / float(old_max_total_hp)
+	target_unit["current_total_hp"] = int(round(float(target_unit["max_total_hp"]) * hp_ratio))
+	target_unit["remaining_move"] = int(existing_unit.get("remaining_move", target_unit.move_range))
+	target_unit["action_points"] = int(existing_unit.get("action_points", 1))
+	target_unit["active_effects"] = existing_unit.get("active_effects", []).duplicate(true)
+	target_unit["skill_cooldowns"] = existing_unit.get("skill_cooldowns", {}).duplicate(true)
+	_recalculate_unit_stats(target_unit)
 
 
 func _format_skill_list(unit_data: Dictionary) -> String:
@@ -217,6 +344,7 @@ func _clear_unit_details() -> void:
 
 func _clear_selected_unit() -> void:
 	selected_unit_id = -1
+	setup_drag_unit_id = -1
 	pending_action = ""
 	pending_skill_id = ""
 	board.set_selected_unit(-1)
@@ -228,6 +356,10 @@ func _clear_selected_unit() -> void:
 
 
 func _on_cell_clicked(cell: Vector2i) -> void:
+	if setup_mode:
+		_handle_setup_cell_pressed(cell)
+		return
+
 	if is_animating or not _is_player_turn():
 		return
 
@@ -278,6 +410,46 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 
 func _on_cell_right_clicked(_cell: Vector2i) -> void:
 	return
+
+
+func _on_cell_left_released(cell: Vector2i) -> void:
+	if not setup_mode or setup_drag_unit_id == -1:
+		return
+
+	var dragged_unit: Dictionary = _find_unit_by_id(setup_drag_unit_id)
+	setup_drag_unit_id = -1
+	if dragged_unit.is_empty():
+		return
+	if cell.x == -1 or not _can_place_setup_unit(dragged_unit, cell):
+		board.set_hovered_move_path([])
+		return
+
+	dragged_unit["grid_x"] = cell.x
+	dragged_unit["grid_y"] = cell.y
+	board.snap_unit_to_cell(int(dragged_unit.id), cell)
+	_show_unit_details(dragged_unit)
+	_sync_board()
+
+
+func _handle_setup_cell_pressed(cell: Vector2i) -> void:
+	var clicked_unit: Dictionary = _find_unit_at_cell(cell)
+	if not clicked_unit.is_empty():
+		setup_drag_unit_id = int(clicked_unit.id)
+		_show_unit_details(clicked_unit)
+		return
+
+	if selected_unit_id == -1:
+		return
+
+	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
+	if selected_unit.is_empty() or not _can_place_setup_unit(selected_unit, cell):
+		return
+
+	selected_unit["grid_x"] = cell.x
+	selected_unit["grid_y"] = cell.y
+	board.snap_unit_to_cell(int(selected_unit.id), cell)
+	_show_unit_details(selected_unit)
+	_sync_board()
 
 
 func _end_current_activation() -> void:
@@ -404,6 +576,9 @@ func _sync_board() -> void:
 
 
 func _update_turn_label() -> void:
+	if setup_mode:
+		general_rule_label.text = "Tryb przygotowania: zlap jednostke lewym przyciskiem, przeciagnij i pusc na wolnym hexie. START rozpoczyna bitwe."
+		return
 	var active_unit := _get_active_unit()
 	var turn_name := "Brak"
 	if current_turn == "player":
@@ -418,7 +593,17 @@ func _update_turn_label() -> void:
 
 
 func _update_highlighted_cells(unit: Dictionary) -> void:
-	if unit.is_empty() or unit.side != "player":
+	if unit.is_empty():
+		board.set_highlighted_cells([], [])
+		board.set_hovered_move_path([])
+		return
+
+	if setup_mode:
+		board.set_highlighted_cells(_get_setup_placeable_cells(unit), [])
+		_on_board_cell_hovered(board.get_hovered_cell())
+		return
+
+	if unit.side != "player":
 		board.set_highlighted_cells([], [])
 		board.set_hovered_move_path([])
 		return
@@ -437,6 +622,17 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 
 
 func _on_board_cell_hovered(cell: Vector2i) -> void:
+	if setup_mode:
+		if selected_unit_id == -1 or cell.x == -1:
+			board.set_hovered_move_path([])
+			return
+		var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
+		if selected_unit.is_empty() or not _can_place_setup_unit(selected_unit, cell):
+			board.set_hovered_move_path([])
+			return
+		board.set_hovered_move_path([cell])
+		return
+
 	if is_animating or pending_action == "attack" or pending_skill_id != "":
 		board.set_hovered_move_path([])
 		return
@@ -483,6 +679,25 @@ func _get_reachable_cells(unit: Dictionary, max_distance: int) -> Array[Vector2i
 			reachable.append(neighbor)
 
 	return reachable
+
+
+func _get_setup_placeable_cells(unit: Dictionary) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for row in GRID_ROWS:
+		for column in GRID_COLUMNS:
+			var cell := Vector2i(column, row)
+			if _can_place_setup_unit(unit, cell):
+				cells.append(cell)
+	return cells
+
+
+func _can_place_setup_unit(unit: Dictionary, cell: Vector2i) -> bool:
+	if cell.x < 0 or cell.x >= GRID_COLUMNS or cell.y < 0 or cell.y >= GRID_ROWS:
+		return false
+	if cell == Vector2i(unit.grid_x, unit.grid_y):
+		return true
+	var occupant: Dictionary = _find_unit_at_cell(cell)
+	return occupant.is_empty()
 
 
 func _get_attackable_cells(unit: Dictionary) -> Array[Vector2i]:
@@ -1137,13 +1352,6 @@ func _validate_setup() -> void:
 		for skill_id in unit.get("skill_ids", []):
 			assert(skill_library.has(skill_id), "Brak skilla w bibliotece: %s" % skill_id)
 
-	for obstacle in obstacles:
-		assert(obstacle.grid_x >= 0 and obstacle.grid_x < GRID_COLUMNS)
-		assert(obstacle.grid_y >= 0 and obstacle.grid_y < GRID_ROWS)
-		assert(obstacle.type in ["woda", "kamienie", "drzewa"])
-		for unit in unit_configs:
-			assert(not (unit.grid_x == obstacle.grid_x and unit.grid_y == obstacle.grid_y), "Przeszkoda pokrywa sie z jednostka")
-
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
 
 
@@ -1153,6 +1361,16 @@ func _on_board_animation_finished(_unit_id: int) -> void:
 
 
 func _update_action_buttons() -> void:
+	if setup_mode:
+		action_attack_button.disabled = true
+		action_attack_button.button_pressed = false
+		action_attack_button.text = "ATAK PODSTAWOWY"
+		action_skill_1_button.disabled = true
+		action_skill_2_button.disabled = true
+		action_skill_3_button.disabled = true
+		end_turn_button.disabled = true
+		return
+
 	var unit := _get_active_unit()
 	var can_act: bool = not unit.is_empty() and _is_player_turn() and unit.side == "player" and selected_unit_id == unit.id
 	var can_use_attack: bool = can_act and _can_unit_attack(unit)

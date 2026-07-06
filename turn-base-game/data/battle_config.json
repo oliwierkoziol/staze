@@ -11,12 +11,11 @@
 	  "hp": 12,
 	  "dmg": 4,
 	  "def": 2,
-	  "speed": 7,
+	  "speed": 2,
 	  "count": 12,
 	  "move_range": 5,
-	  "attack_range": 1,
+	  "attack_range": 2,
 	  "resistance": "Brak",
-	  "action_name": "Cios kontrolny",
 	  "skill_ids": ["prowokacja", "strzal_w_kolano", "zatruty_sztylet"]
 	},
 	{
@@ -35,7 +34,6 @@
 	  "move_range": 4,
 	  "attack_range": 1,
 	  "resistance": "Brak",
-	  "action_name": "Lekki cios",
 	  "skill_ids": ["sokole_oko", "potezne_uderzenie"]
 	},
 	{
@@ -54,7 +52,6 @@
 	  "move_range": 3,
 	  "attack_range": 1,
 	  "resistance": "Brak",
-	  "action_name": "Popychacz",
 	  "skill_ids": []
 	}
   ],
