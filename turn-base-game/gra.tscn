@@ -7,8 +7,8 @@
 [ext_resource type="Script" uid="uid://dv3u7m8d30w8n" path="res://scripts/nine_patch_panel.gd" id="5_npp"]
 [ext_resource type="Texture2D" uid="uid://bhatt12lhf7ik" path="res://assets/ui/divider.png" id="6_tr5l5"]
 [ext_resource type="Texture2D" uid="uid://8rrp7aitsb83" path="res://assets/ui/unit1.png" id="7_unit1"]
-[ext_resource type="Script" path="res://scripts/unit_stats_display.gd" id="8_stats"]
-[ext_resource type="Script" path="res://scripts/unit_status_panel.gd" id="9_status"]
+[ext_resource type="Script" uid="uid://s8nsikmcxtmc" path="res://scripts/unit_stats_display.gd" id="8_stats"]
+[ext_resource type="Script" uid="uid://c7siu6836f4vl" path="res://scripts/unit_status_panel.gd" id="9_status"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_6otim"]
 font_size = 22
@@ -396,15 +396,15 @@ alignment = 1
 
 [node name="UnitPortrait" type="TextureRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent" unique_id=1982736401]
 visible = false
+texture_filter = 1
 custom_minimum_size = Vector2(76, 76)
 layout_mode = 2
 size_flags_vertical = 4
-texture_filter = 1
 texture = ExtResource("7_unit1")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="UnitHeaderText" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent" unique_id=3127845092]
+[node name="UnitHeaderText" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent" unique_id=-1167122204]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4

@@ -50,6 +50,7 @@ var unit_configs: Array[Dictionary] = []
 var skill_library: Dictionary = {}
 var setup_mode := true
 var setup_drag_unit_id := -1
+var last_battle_config_source := ""
 var setup_controls: HBoxContainer
 var start_battle_button: Button
 var reset_battle_button: Button
@@ -172,10 +173,7 @@ func _on_reload_json_pressed() -> void:
 
 
 func _load_battle_config() -> void:
-	var file: FileAccess = FileAccess.open(BATTLE_CONFIG_PATH, FileAccess.READ)
-	assert(file != null, "Nie mozna otworzyc pliku konfiguracyjnego: %s" % BATTLE_CONFIG_PATH)
-
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	var parsed: Variant = JSON.parse_string(_read_battle_config_text())
 	assert(typeof(parsed) == TYPE_DICTIONARY, "Plik konfiguracyjny musi zawierac obiekt JSON.")
 
 	var config: Dictionary = parsed
@@ -193,6 +191,21 @@ func _load_battle_config() -> void:
 		assert(typeof(raw_skill) == TYPE_DICTIONARY, "Kazdy skill w JSON musi byc obiektem.")
 		var skill_data: Dictionary = _normalize_skill_config(str(skill_id), raw_skill)
 		skill_library[str(skill_id)] = skill_data
+
+	_debug_reload_snapshot("JSON", unit_configs)
+
+
+func _read_battle_config_text() -> String:
+	var disk_path: String = ProjectSettings.globalize_path(BATTLE_CONFIG_PATH)
+	var file: FileAccess = FileAccess.open(disk_path, FileAccess.READ)
+	if file != null:
+		last_battle_config_source = disk_path
+		return file.get_as_text()
+
+	file = FileAccess.open(BATTLE_CONFIG_PATH, FileAccess.READ)
+	assert(file != null, "Nie mozna otworzyc pliku konfiguracyjnego: %s" % BATTLE_CONFIG_PATH)
+	last_battle_config_source = BATTLE_CONFIG_PATH
+	return file.get_as_text()
 
 
 func _normalize_unit_config(raw_unit: Dictionary) -> Dictionary:
@@ -292,27 +305,56 @@ func _apply_live_reload() -> void:
 	units = rebuilt_units
 	selected_unit_id = selected_unit_id if not _find_unit_by_id(selected_unit_id).is_empty() else -1
 	active_unit_id = active_unit_id if not _find_unit_by_id(active_unit_id).is_empty() else -1
+	pending_action = ""
+	pending_skill_id = ""
+	is_animating = false
 	_rebuild_turn_queue()
 	if not _find_unit_by_id(active_unit_id).is_empty():
 		turn_queue_index = maxi(turn_queue.find(active_unit_id) - 1, -1)
 	board.set_units(units)
 	board.reset_unit_positions(units)
 	_sync_board()
+	_debug_reload_snapshot("RUNTIME", units)
 	_log_event(_color_log_text("Przeladowano JSON w trakcie rozgrywki.", LOG_COLOR_YELLOW))
 
 
 func _reapply_runtime_state(target_unit: Dictionary, existing_unit: Dictionary) -> void:
 	target_unit["grid_x"] = int(existing_unit.grid_x)
 	target_unit["grid_y"] = int(existing_unit.grid_y)
-	var old_max_total_hp: int = max(1, int(existing_unit.get("max_total_hp", target_unit["max_total_hp"])))
-	var old_current_total_hp: int = max(0, int(existing_unit.get("current_total_hp", old_max_total_hp)))
-	var hp_ratio: float = float(old_current_total_hp) / float(old_max_total_hp)
-	target_unit["current_total_hp"] = int(round(float(target_unit["max_total_hp"]) * hp_ratio))
-	target_unit["remaining_move"] = int(existing_unit.get("remaining_move", target_unit.move_range))
-	target_unit["action_points"] = int(existing_unit.get("action_points", 1))
-	target_unit["active_effects"] = existing_unit.get("active_effects", []).duplicate(true)
-	target_unit["skill_cooldowns"] = existing_unit.get("skill_cooldowns", {}).duplicate(true)
 	_recalculate_unit_stats(target_unit)
+
+
+func _debug_reload_snapshot(stage: String, source_units: Array) -> void:
+	var lines: Array[String] = [
+		"[RELOAD %s] source=%s units=%s skills=%s" % [
+			stage,
+			last_battle_config_source,
+			source_units.size(),
+			skill_library.size()
+		]
+	]
+	for unit_data in source_units:
+		if typeof(unit_data) != TYPE_DICTIONARY:
+			continue
+		var skill_ids: Array = unit_data.get("skill_ids", [])
+		lines.append(
+			"[RELOAD %s] id=%s name=%s hp=%s dmg=%s def=%s spd=%s move=%s range=%s count=%s skills=%s" % [
+				stage,
+				str(unit_data.get("id", -1)),
+				str(unit_data.get("name", "?")),
+				str(unit_data.get("hp", unit_data.get("base_hp", 0))),
+				str(unit_data.get("dmg", unit_data.get("base_dmg", 0))),
+				str(unit_data.get("def", unit_data.get("base_def", 0))),
+				str(unit_data.get("speed", unit_data.get("base_speed", 0))),
+				str(unit_data.get("move_range", unit_data.get("base_move_range", 0))),
+				str(unit_data.get("attack_range", unit_data.get("base_attack_range", 0))),
+				str(unit_data.get("count", 0)),
+				",".join(PackedStringArray(skill_ids))
+			]
+		)
+	for line in lines:
+		print(line)
+	_log_event(_color_log_text("[DIAG] %s %s" % [stage, last_battle_config_source], LOG_COLOR_YELLOW))
 
 
 func _format_skill_list(unit_data: Dictionary) -> String:
