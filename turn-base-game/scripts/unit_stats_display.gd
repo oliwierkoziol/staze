@@ -1,7 +1,7 @@
 extends VBoxContainer
 
 const STAT_COLOR := Color(0.9, 0.87, 0.78, 1.0)
-const ICON_SIZE := Vector2(20, 20)
+const ICON_SIZE := Vector2(25, 25)
 const ROW_V_PADDING := 10
 
 const ICONS := {
@@ -12,10 +12,6 @@ const ICONS := {
 	"count": preload("res://assets/ui/amount.png"),
 	"move": preload("res://assets/ui/speed.png"),
 	"action_points": preload("res://assets/ui/upgrades.png"),
-	"attack_range": preload("res://assets/ui/damage.png"),
-	"resistance": preload("res://assets/ui/resistances.png"),
-	"buffs": preload("res://assets/ui/buffs.png"),
-	"debuffs": preload("res://assets/ui/debuffs.png"),
 }
 
 var _divider_tex: Texture2D = preload("res://assets/ui/divider.png")
@@ -36,10 +32,6 @@ func _build_rows() -> void:
 		{"id": "count", "label": "Liczebnosc"},
 		{"id": "move", "label": "Ruch"},
 		{"id": "action_points", "label": "Punkty akcji"},
-		{"id": "attack_range", "label": "Zasieg ataku"},
-		{"id": "resistance", "label": "Odpornosci"},
-		{"id": "buffs", "label": "Buffy"},
-		{"id": "debuffs", "label": "Debuffy"},
 	]
 	for row in rows:
 		_add_divider()
