@@ -1,3 +1,27 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Godot build/export
+/web/
+*.apk
+*.aab
+*.exe
+*.pck
+*.x86_64
+*.zip
+
+# IDE / edytory
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Agent workspace (local development notes/prompts)
+.agent/

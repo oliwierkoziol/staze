@@ -11,6 +11,8 @@ const LOG_COLOR_YELLOW := Color(0.95, 0.82, 0.25, 1.0)
 const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
 const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
 const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
+const TEAM_SETUP_SCENE: PackedScene = preload("res://scenes/team_setup.tscn")
+const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
 @onready var hud: CanvasLayer = $HUD
@@ -55,6 +57,113 @@ var reload_json_button: Button
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_disable_hud_mouse(hud)
+	_unit_type_library_warn()
+	_show_team_setup()
+
+
+func _unit_type_library_warn() -> void:
+	if UnitTypeLibraryScript.get_faction_ids().is_empty():
+		push_warning("UnitTypeLibrary nie wczytal zadnych frakcji. Sprawdz data/unit_types.json.")
+
+
+func _show_team_setup() -> void:
+	var setup: Control = TEAM_SETUP_SCENE.instantiate()
+	setup.name = "TeamSetup"
+	setup.setup_finished.connect(_on_team_setup_finished)
+	add_child(setup)
+	if hud != null:
+		hud.visible = false
+	if board != null:
+		board.visible = false
+
+
+func _on_team_setup_finished(player_types: Array[String], enemy_types: Array[String]) -> void:
+	_load_battle_config()
+	var setup: Control = get_node_or_null("TeamSetup")
+	if setup != null:
+		setup.queue_free()
+	if hud != null:
+		hud.visible = true
+	if board != null:
+		board.visible = true
+	_build_battle_config_from_selection(player_types, enemy_types)
+	_setup_battle_scene()
+
+
+func _build_battle_config_from_selection(player_types: Array[String], enemy_types: Array[String]) -> void:
+	var next_id := 1
+	var player_positions := _compute_player_positions(player_types.size())
+	var enemy_positions := _compute_enemy_positions(enemy_types.size())
+	unit_configs.clear()
+	for index in player_types.size():
+		var type_id: String = player_types[index]
+		var pos: Vector2i = player_positions[index]
+		unit_configs.append({
+			"id": next_id,
+			"type_id": type_id,
+			"side": "player",
+			"grid_x": pos.x,
+			"grid_y": pos.y,
+		})
+		next_id += 1
+	for index in enemy_types.size():
+		var type_id: String = enemy_types[index]
+		var pos: Vector2i = enemy_positions[index]
+		unit_configs.append({
+			"id": next_id,
+			"type_id": type_id,
+			"side": "enemy",
+			"grid_x": pos.x,
+			"grid_y": pos.y,
+		})
+		next_id += 1
+
+
+func _compute_player_positions(count: int) -> Array[Vector2i]:
+	var center_y := GRID_ROWS / 2
+	var result: Array[Vector2i] = []
+	match count:
+		1:
+			result = [Vector2i(1, center_y)]
+		2:
+			result = [Vector2i(1, center_y - 1), Vector2i(1, center_y + 1)]
+		3:
+			result = [Vector2i(2, center_y), Vector2i(1, center_y - 1), Vector2i(1, center_y + 1)]
+		4:
+			result = [Vector2i(2, center_y - 1), Vector2i(2, center_y + 1), Vector2i(1, center_y - 2), Vector2i(1, center_y + 2)]
+		_:
+			for index in count:
+				result.append(Vector2i(1 + (index % 2), center_y + index - count / 2))
+	return _clamp_positions(result)
+
+
+func _compute_enemy_positions(count: int) -> Array[Vector2i]:
+	var center_y := GRID_ROWS / 2
+	var right_x := GRID_COLUMNS - 2
+	var result: Array[Vector2i] = []
+	match count:
+		1:
+			result = [Vector2i(right_x, center_y)]
+		2:
+			result = [Vector2i(right_x, center_y - 1), Vector2i(right_x, center_y + 1)]
+		3:
+			result = [Vector2i(right_x - 1, center_y), Vector2i(right_x, center_y - 1), Vector2i(right_x, center_y + 1)]
+		4:
+			result = [Vector2i(right_x - 1, center_y - 1), Vector2i(right_x - 1, center_y + 1), Vector2i(right_x, center_y - 2), Vector2i(right_x, center_y + 2)]
+		_:
+			for index in count:
+				result.append(Vector2i(right_x - (index % 2), center_y + index - count / 2))
+	return _clamp_positions(result)
+
+
+func _clamp_positions(positions: Array[Vector2i]) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for pos in positions:
+		result.append(Vector2i(clampi(pos.x, 0, GRID_COLUMNS - 1), clampi(pos.y, 0, GRID_ROWS - 1)))
+	return result
+
+
+func _setup_battle_scene() -> void:
 	_build_setup_controls()
 	board.cell_clicked.connect(_on_cell_clicked)
 	board.cell_left_released.connect(_on_cell_left_released)
@@ -70,7 +179,12 @@ func _ready() -> void:
 	])
 	_clear_unit_details()
 	event_log_label.bbcode_enabled = true
-	_reload_json_into_setup()
+	_load_skill_library()
+	_enter_setup_mode()
+
+
+func _load_skill_library() -> void:
+	skill_library = UnitTypeLibraryScript.get_skill_library()
 
 
 func _build_setup_controls() -> void:
@@ -199,15 +313,10 @@ func _read_battle_config_text() -> String:
 
 func _normalize_unit_config(raw_unit: Dictionary) -> Dictionary:
 	var normalized: Dictionary = raw_unit.duplicate(true)
-	for key in ["id", "grid_x", "grid_y", "hp", "dmg", "def", "speed", "count", "move_range", "attack_range"]:
+	for key in ["id", "grid_x", "grid_y"]:
 		normalized[key] = int(normalized.get(key, 0))
-	for key in ["name", "short_name", "role", "side", "resistance"]:
+	for key in ["type_id", "side"]:
 		normalized[key] = str(normalized.get(key, ""))
-
-	var normalized_skill_ids: Array[String] = []
-	for skill_id in normalized.get("skill_ids", []):
-		normalized_skill_ids.append(str(skill_id))
-	normalized["skill_ids"] = normalized_skill_ids
 	return normalized
 
 
@@ -225,6 +334,19 @@ func _normalize_skill_config(skill_id: String, raw_skill: Dictionary) -> Diction
 
 
 func _prepare_unit(unit: Dictionary) -> Dictionary:
+	var type_id: String = str(unit.get("type_id", ""))
+	if type_id != "":
+		var type_data: Dictionary = UnitTypeLibraryScript.lookup(type_id)
+		if not type_data.is_empty():
+			for key in type_data.keys():
+				if key == "id":
+					continue
+				if not unit.has(key):
+					unit[key] = type_data[key]
+			var type_skill_ids: Array = type_data.get("skill_ids", [])
+			if not unit.has("skill_ids"):
+				unit["skill_ids"] = type_skill_ids.duplicate()
+
 	for stat_name in ["hp", "dmg", "def", "speed", "move_range", "attack_range"]:
 		unit["base_%s" % stat_name] = int(unit[stat_name])
 	unit["max_hp"] = int(unit["base_hp"])
@@ -261,6 +383,9 @@ func _show_unit_details(unit_data: Dictionary) -> void:
 
 func _render_unit_details(unit_data: Dictionary) -> void:
 	unit_portrait.visible = true
+	var tex: Texture2D = _load_unit_portrait(unit_data)
+	if tex != null:
+		unit_portrait.texture = tex
 	unit_name_label.text = unit_data.name.to_upper()
 	unit_meta_label.text = "Poziom 1"
 	unit_stats_display.set_values({
@@ -276,6 +401,16 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 	unit_abilities_panel.set_skills(_build_skill_cards(unit_data))
 	if actions_label != null:
 		actions_label.text = "Umiejetnosci: %s" % _format_skill_list(unit_data)
+
+
+func _load_unit_portrait(unit_data: Dictionary) -> Texture2D:
+	var portrait_path: String = str(unit_data.get("portrait", ""))
+	if portrait_path == "":
+		return null
+	var res: Resource = load(portrait_path)
+	if res is Texture2D:
+		return res
+	return null
 
 
 func _apply_live_reload() -> void:
@@ -1088,6 +1223,7 @@ func _recalculate_unit_stats(unit: Dictionary) -> void:
 	unit["move_range"] = int(unit.get("base_move_range", unit.move_range))
 	unit["attack_range"] = int(unit.get("base_attack_range", unit.attack_range))
 
+
 	var buff_names: Array[String] = []
 	var debuff_names: Array[String] = []
 	for effect in unit.get("active_effects", []):
@@ -1097,6 +1233,7 @@ func _recalculate_unit_stats(unit: Dictionary) -> void:
 			buff_names.append(str(effect.get("name", "")))
 		elif str(effect.get("category", "")) == "debuff":
 			debuff_names.append(str(effect.get("name", "")))
+
 
 	unit["dmg"] = max(1, int(unit.dmg))
 	unit["def"] = max(0, int(unit.def))
@@ -1398,16 +1535,19 @@ func _validate_setup() -> void:
 	for unit in unit_configs:
 		assert(unit.grid_x >= 0 and unit.grid_x < GRID_COLUMNS)
 		assert(unit.grid_y >= 0 and unit.grid_y < GRID_ROWS)
-		assert(unit.dmg >= 1)
-		assert(unit.speed >= 1)
-		for skill_id in unit.get("skill_ids", []):
-			assert(skill_library.has(skill_id), "Brak skilla w bibliotece: %s" % skill_id)
+		var type_data: Dictionary = UnitTypeLibraryScript.lookup(str(unit.get("type_id", "")))
+		if not type_data.is_empty():
+			assert(int(type_data.dmg) >= 1)
+			assert(int(type_data.speed) >= 1)
+			for skill_id in type_data.get("skill_ids", []):
+				assert(skill_library.has(skill_id), "Brak skilla w bibliotece: %s" % skill_id)
 
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
 
 	for unit in unit_configs:
 		var cards: Array = _build_skill_cards(unit)
-		assert(cards.size() == unit.get("skill_ids", []).size(), "Karty umiejetnosci nie pokrywaja sie ze skill_ids jednostki.")
+		var expected_skills: Array = unit.get("skill_ids", [])
+		assert(cards.size() == expected_skills.size(), "Karty umiejetnosci nie pokrywaja sie ze skill_ids jednostki.")
 		for card in cards:
 			assert(str(card.get("name", "")) != "", "Karta umiejetnosci bez nazwy z biblioteki.")
 			assert(int(card.get("remaining_cooldown", -1)) == 0, "Swiezo wczytana jednostka nie powinna miec aktywnego cooldownu.")
@@ -1608,6 +1748,7 @@ func _start_next_activation() -> void:
 		_refresh_turn_queue()
 		return
 
+
 	while true:
 		if turn_queue.is_empty():
 			_rebuild_turn_queue()
@@ -1684,7 +1825,7 @@ func _can_unit_continue_turn(unit: Dictionary) -> bool:
 
 func _has_units_on_side(side: String) -> bool:
 	for unit in units:
-		if unit.side == side:
+		if unit.side == "player" or unit.side == "enemy":
 			return true
 	return false
 
