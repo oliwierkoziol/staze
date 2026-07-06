@@ -42,6 +42,11 @@ func set_units(new_units: Array) -> void:
 	queue_redraw()
 
 
+func snap_unit_to_cell(unit_id: int, cell: Vector2i) -> void:
+	visual_positions[unit_id] = axial_to_pixel(cell.x, cell.y)
+	queue_redraw()
+
+
 func set_obstacles(new_obstacles: Array) -> void:
 	obstacles = []
 	for obstacle in new_obstacles:

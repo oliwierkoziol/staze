@@ -1,0 +1,113 @@
+{
+  "units": [
+	{
+	  "id": 1,
+	  "name": "Piechur",
+	  "short_name": "TST",
+	  "role": "Tester Skilli",
+	  "side": "player",
+	  "grid_x": 2,
+	  "grid_y": 5,
+	  "hp": 12,
+	  "dmg": 4,
+	  "def": 2,
+	  "speed": 7,
+	  "count": 12,
+	  "move_range": 5,
+	  "attack_range": 1,
+	  "resistance": "Brak",
+	  "action_name": "Cios kontrolny",
+	  "skill_ids": ["prowokacja", "strzal_w_kolano", "zatruty_sztylet"]
+	},
+	{
+	  "id": 3,
+	  "name": "Wsparcie Testowe",
+	  "short_name": "SUP",
+	  "role": "Sojusznik Testowy",
+	  "side": "player",
+	  "grid_x": 4,
+	  "grid_y": 5,
+	  "hp": 11,
+	  "dmg": 3,
+	  "def": 1,
+	  "speed": 5,
+	  "count": 8,
+	  "move_range": 4,
+	  "attack_range": 1,
+	  "resistance": "Brak",
+	  "action_name": "Lekki cios",
+	  "skill_ids": ["sokole_oko", "potezne_uderzenie"]
+	},
+	{
+	  "id": 2,
+	  "name": "Manekin Bojowy",
+	  "short_name": "DMY",
+	  "role": "Cel",
+	  "side": "enemy",
+	  "grid_x": 8,
+	  "grid_y": 5,
+	  "hp": 100,
+	  "dmg": 3,
+	  "def": 50,
+	  "speed": 2,
+	  "count": 6,
+	  "move_range": 3,
+	  "attack_range": 1,
+	  "resistance": "Brak",
+	  "action_name": "Popychacz",
+	  "skill_ids": []
+	}
+  ],
+  "skill_library": {
+	"prowokacja": {
+	  "id": "prowokacja",
+	  "name": "Prowokacja",
+	  "description": "Wrogowie w promieniu 2 hexow musza atakowac ta jednostke przez 1 ture i traca 20% DMG.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "taunt_burst"
+	},
+	"strzal_w_kolano": {
+	  "id": "strzal_w_kolano",
+	  "name": "Strzal w Kolano",
+	  "description": "Zadaje 70% obrazen i naklada Unieruchomienie na 1 ture.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 4,
+	  "target_type": "enemy_unit",
+	  "effect_type": "knee_shot"
+	},
+	"zatruty_sztylet": {
+	  "id": "zatruty_sztylet",
+	  "name": "Zatruty Sztylet",
+	  "description": "Zadaje 70% obrazen i naklada Toksyne na 3 tury, obnizajac DEF celu.",
+	  "ap_cost": 1,
+	  "cooldown": 2,
+	  "range": 1,
+	  "target_type": "enemy_unit",
+	  "effect_type": "poison_dagger"
+	},
+	"sokole_oko": {
+	  "id": "sokole_oko",
+	  "name": "Sokole Oko",
+	  "description": "Jednostka traci reszte ruchu w tej turze, ale w nastepnej turze zyskuje +2 zasiegu i +25% DMG.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "eagle_eye"
+	},
+	"potezne_uderzenie": {
+	  "id": "potezne_uderzenie",
+	  "name": "Potezne Uderzenie",
+	  "description": "Zadaje standardowe obrazenia i odpycha cel o 1 hex. Jesli trafi w przeszkode lub blokade, zostaje ogluszony na 1 ture.",
+	  "ap_cost": 1,
+	  "cooldown": 2,
+	  "range": 1,
+	  "target_type": "enemy_unit",
+	  "effect_type": "heavy_strike"
+	}
+  }
+}
