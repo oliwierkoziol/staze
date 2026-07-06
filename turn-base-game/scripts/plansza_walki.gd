@@ -189,29 +189,24 @@ func draw_obstacles() -> void:
 
 func draw_units() -> void:
 	var font: Font = ThemeDB.fallback_font
-	var font_size: int = 20
+	var font_size: int = 22
 	for unit in units:
 		var center: Vector2 = visual_positions.get(unit.id, axial_to_pixel(unit.grid_x, unit.grid_y))
-		var base_color: Color = Color(0.22, 0.45, 0.85) if unit.side == "player" else Color(0.78, 0.28, 0.24)
-
 		var portrait: Texture2D = _load_unit_portrait(unit)
 		if portrait != null:
-			var sprite_size := Vector2(HEX_RADIUS * 1.7, HEX_RADIUS * 2.0)
-			var sprite_rect := Rect2(center - Vector2(sprite_size.x / 2.0, sprite_size.y * 0.72), sprite_size)
+			var sprite_size := Vector2(HEX_RADIUS * 1.9, HEX_RADIUS * 2.2)
+			var sprite_rect := Rect2(center - Vector2(sprite_size.x / 2.0, sprite_size.y * 0.68), sprite_size)
 			draw_texture_rect(portrait, sprite_rect, false)
 
 		if unit.id == selected_unit_id:
-			draw_circle(center, HEX_RADIUS * 0.52, Color(1.0, 0.92, 0.45, 0.95))
-			draw_circle(center, HEX_RADIUS * 0.42, base_color)
-		else:
-			draw_circle(center, HEX_RADIUS * 0.44, base_color)
+			var outline_radius := HEX_RADIUS * 0.55
+			draw_arc(center, outline_radius, 0.0, TAU, 24, Color(1.0, 0.92, 0.45, 0.9), 3.0)
 
-		draw_string(font, center + Vector2(-14, 7), unit.short_name, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 16, Color.WHITE)
-
-		var count_text: String = str(unit.count)
+		var count_text: String = "x" + str(unit.count)
 		var text_size: Vector2 = font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
-		var text_position: Vector2 = center + Vector2(-text_size.x / 2.0, -HEX_RADIUS * 0.80)
-		draw_string(font, text_position, count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color(0.12, 0.12, 0.12))
+		var badge_position: Vector2 = center + Vector2(HEX_RADIUS * 0.35, -HEX_RADIUS * 0.78)
+		draw_circle(badge_position + text_size / 2.0, HEX_RADIUS * 0.32, Color(0.1, 0.1, 0.1, 0.85))
+		draw_string(font, badge_position, count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color.WHITE)
 
 
 func _load_unit_portrait(unit: Dictionary) -> Texture2D:
