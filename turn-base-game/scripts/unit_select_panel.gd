@@ -79,9 +79,16 @@ func _build_ui() -> void:
 	var title := Label.new()
 	title.text = "ARMIA GRACZA" if _side == "player" else "ARMIA KOMPUTERA"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
 	add_child(title)
+
+	var subtitle := Label.new()
+	subtitle.text = "(wybierasz ty)" if _side == "player" else "(przeciwnik sterowany przez komputer)"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 14)
+	subtitle.add_theme_color_override("font_color", Color(0.75, 0.72, 0.62, 1.0))
+	add_child(subtitle)
 
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 12)

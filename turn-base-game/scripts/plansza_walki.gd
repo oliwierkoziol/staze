@@ -21,6 +21,7 @@ const EMPTY_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 
 var units: Array = []
+var unit_textures: Dictionary = {}
 var selected_unit_id := -1
 var highlighted_move_cells: Array[Vector2i] = []
 var highlighted_attack_cells: Array[Vector2i] = []
@@ -37,9 +38,11 @@ func _ready() -> void:
 
 func set_units(new_units: Array) -> void:
 	units = []
+	unit_textures.clear()
 	for unit in new_units:
 		var copied_unit: Dictionary = unit.duplicate(true)
 		units.append(copied_unit)
+		unit_textures[copied_unit.id] = _load_unit_portrait(copied_unit)
 		if not visual_positions.has(copied_unit.id):
 			visual_positions[copied_unit.id] = axial_to_pixel(copied_unit.grid_x, copied_unit.grid_y)
 	queue_redraw()
@@ -194,11 +197,15 @@ func draw_units() -> void:
 	var font_size: int = 22
 	for unit in units:
 		var center: Vector2 = visual_positions.get(unit.id, axial_to_pixel(unit.grid_x, unit.grid_y))
-		var portrait: Texture2D = _load_unit_portrait(unit)
+		var portrait: Texture2D = unit_textures.get(unit.id, null)
 		var texture: Texture2D = portrait if portrait != null else EMPTY_PORTRAIT
 		var sprite_size := Vector2(HEX_RADIUS * 1.9, HEX_RADIUS * 2.2)
 		var sprite_rect := Rect2(center - Vector2(sprite_size.x / 2.0, sprite_size.y * 0.68), sprite_size)
-		draw_texture_rect(texture, sprite_rect, false)
+		if texture != null:
+			draw_texture_rect(texture, sprite_rect, false)
+		else:
+			var fallback_size := Vector2(HEX_RADIUS * 1.2, HEX_RADIUS * 1.2)
+			draw_rect(Rect2(center - fallback_size / 2.0, fallback_size), Color(0.2, 0.2, 0.25, 1.0), false, 2.0)
 
 		if unit.id == selected_unit_id:
 			var outline_radius := HEX_RADIUS * 0.55
