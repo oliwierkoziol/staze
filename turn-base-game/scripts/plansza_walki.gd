@@ -16,6 +16,7 @@ var highlighted_move_cells: Array[Vector2i] = []
 var highlighted_attack_cells: Array[Vector2i] = []
 var visual_positions: Dictionary = {}
 var active_tweens: Dictionary = {}
+var obstacles: Array = []
 
 
 func _ready() -> void:
@@ -30,6 +31,17 @@ func set_units(new_units: Array) -> void:
 		if not visual_positions.has(copied_unit.id):
 			visual_positions[copied_unit.id] = axial_to_pixel(copied_unit.grid_x, copied_unit.grid_y)
 	queue_redraw()
+
+
+func set_obstacles(new_obstacles: Array) -> void:
+	obstacles = []
+	for obstacle in new_obstacles:
+		obstacles.append(obstacle.duplicate(true))
+	queue_redraw()
+
+
+func get_obstacles() -> Array:
+	return obstacles
 
 
 func set_selected_unit(unit_id: int) -> void:
@@ -49,6 +61,7 @@ func set_highlighted_cells(move_cells: Array, attack_cells: Array = []) -> void:
 
 func _draw() -> void:
 	draw_hex_grid()
+	draw_obstacles()
 	draw_highlighted_cells()
 	draw_units()
 
@@ -111,6 +124,34 @@ func draw_hex_grid() -> void:
 			var fill_color: Color = Color(0.86, 0.80, 0.66) if (row + column) % 2 == 0 else Color(0.80, 0.74, 0.61)
 			draw_colored_polygon(points, fill_color)
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(0.33, 0.25, 0.16), 2.0)
+
+
+func draw_obstacles() -> void:
+	var font: Font = ThemeDB.fallback_font
+	var font_size: int = 11
+	var colors: Dictionary = {
+		"woda": Color(0.25, 0.55, 0.85, 0.45),
+		"kamienie": Color(0.45, 0.45, 0.48, 0.50),
+		"drzewa": Color(0.25, 0.70, 0.35, 0.45)
+	}
+	var labels: Dictionary = {
+		"woda": "WODA",
+		"kamienie": "KAMIENIE",
+		"drzewa": "DRZEWA"
+	}
+	for obstacle in obstacles:
+		var cell: Vector2i = Vector2i(int(obstacle.grid_x), int(obstacle.grid_y))
+		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
+		var points: PackedVector2Array = PackedVector2Array()
+		for corner in 6:
+			var angle: float = deg_to_rad(60.0 * corner - 30.0)
+			points.append(center + Vector2(cos(angle), sin(angle)) * (HEX_RADIUS - 3.0))
+		var type: String = str(obstacle.type)
+		draw_colored_polygon(points, colors.get(type, Color(0.5, 0.5, 0.5, 0.4)))
+		var label: String = labels.get(type, "???")
+		var text_size: Vector2 = font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
+		var text_position: Vector2 = center + Vector2(-text_size.x / 2.0, 4.0)
+		draw_string(font, text_position, label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color(0.12, 0.12, 0.12))
 
 
 func draw_units() -> void:

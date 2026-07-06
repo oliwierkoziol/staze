@@ -152,6 +152,13 @@ const SAMPLE_UNITS := [
 
 const GRID_COLUMNS := 15
 const GRID_ROWS := 11
+const OBSTACLES: Array[Dictionary] = [
+	{"grid_x": 3, "grid_y": 3, "type": "woda"},
+	{"grid_x": 7, "grid_y": 5, "type": "kamienie"},
+	{"grid_x": 10, "grid_y": 7, "type": "drzewa"},
+	{"grid_x": 5, "grid_y": 8, "type": "woda"},
+	{"grid_x": 12, "grid_y": 2, "type": "kamienie"}
+]
 const MAX_EVENT_LOG_ENTRIES := 60
 const CARD_FONT_COLOR := Color(0.92, 0.88, 0.78, 1.0)
 const CARD_SELECTED_FONT_COLOR := Color(0.99, 0.95, 0.84, 1.0)
@@ -200,6 +207,7 @@ func _ready() -> void:
 		unit.remaining_move = int(unit.move_range)
 		unit.action_points = 1
 	board.set_units(units)
+	board.set_obstacles(OBSTACLES)
 	board.cell_clicked.connect(_on_cell_clicked)
 	board.cell_right_clicked.connect(_on_cell_right_clicked)
 	board.animation_finished.connect(_on_board_animation_finished)
@@ -393,6 +401,7 @@ func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[
 
 func _sync_board() -> void:
 	board.set_units(units)
+	board.set_obstacles(OBSTACLES)
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
 	if selected_unit.is_empty():
 		board.set_highlighted_cells([], [])
@@ -478,7 +487,9 @@ func _get_attackable_enemy_cells(unit: Dictionary) -> Array[Vector2i]:
 
 
 func _is_in_attack_range(unit: Dictionary, cell: Vector2i) -> bool:
-	return _hex_distance(Vector2i(unit.grid_x, unit.grid_y), cell) <= int(unit.attack_range)
+	if _hex_distance(Vector2i(unit.grid_x, unit.grid_y), cell) > int(unit.attack_range):
+		return false
+	return not _is_attack_blocked(unit, cell)
 
 
 func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_after := true) -> void:
@@ -551,7 +562,68 @@ func _get_blocked_cells(excluded_unit_id: int) -> Dictionary:
 		if unit.id == excluded_unit_id:
 			continue
 		blocked[Vector2i(unit.grid_x, unit.grid_y)] = true
+	for obstacle in OBSTACLES:
+		blocked[Vector2i(int(obstacle.grid_x), int(obstacle.grid_y))] = true
 	return blocked
+
+
+func _is_cell_obstacle(cell: Vector2i) -> bool:
+	for obstacle in OBSTACLES:
+		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y:
+			return true
+	return false
+
+
+func _is_attack_blocked(attacker: Dictionary, target_cell: Vector2i) -> bool:
+	var origin: Vector2i = Vector2i(attacker.grid_x, attacker.grid_y)
+	if origin == target_cell:
+		return false
+	var line_cells: Array[Vector2i] = _get_hex_line(origin, target_cell)
+	for cell in line_cells:
+		if cell == origin or cell == target_cell:
+			continue
+		if _is_cell_obstacle(cell):
+			return true
+	return false
+
+
+func _get_hex_line(start: Vector2i, end: Vector2i) -> Array[Vector2i]:
+	var start_cube: Vector3i = _oddr_to_cube(start)
+	var end_cube: Vector3i = _oddr_to_cube(end)
+	var distance: int = _hex_distance(start, end)
+	if distance == 0:
+		return [start]
+	var line: Array[Vector2i] = []
+	for step in range(distance + 1):
+		var t: float = float(step) / float(distance)
+		var cube: Vector3i = _cube_round(_cube_lerp(start_cube, end_cube, t))
+		line.append(_cube_to_oddr(cube))
+	return line
+
+
+func _cube_lerp(a: Vector3i, b: Vector3i, t: float) -> Vector3:
+	return Vector3(lerpf(a.x, b.x, t), lerpf(a.y, b.y, t), lerpf(a.z, b.z, t))
+
+
+func _cube_round(cube: Vector3) -> Vector3i:
+	var rx: int = int(round(cube.x))
+	var ry: int = int(round(cube.y))
+	var rz: int = int(round(cube.z))
+	var dx: float = absf(rx - cube.x)
+	var dy: float = absf(ry - cube.y)
+	var dz: float = absf(rz - cube.z)
+	if dx > dy and dx > dz:
+		rx = -ry - rz
+	elif dy > dz:
+		ry = -rx - rz
+	else:
+		rz = -rx - ry
+	return Vector3i(rx, ry, rz)
+
+
+func _cube_to_oddr(cube: Vector3i) -> Vector2i:
+	var x: int = cube.x + int((cube.z - (cube.z & 1)) / 2)
+	return Vector2i(x, cube.z)
 
 
 func _get_neighbors(cell: Vector2i) -> Array[Vector2i]:
@@ -599,6 +671,13 @@ func _validate_setup() -> void:
 		assert(unit.grid_y >= 0 and unit.grid_y < GRID_ROWS)
 		assert(unit.dmg >= 1)
 		assert(unit.speed >= 1)
+
+	for obstacle in OBSTACLES:
+		assert(obstacle.grid_x >= 0 and obstacle.grid_x < GRID_COLUMNS)
+		assert(obstacle.grid_y >= 0 and obstacle.grid_y < GRID_ROWS)
+		assert(obstacle.type in ["woda", "kamienie", "drzewa"])
+		for unit in SAMPLE_UNITS:
+			assert(not (unit.grid_x == obstacle.grid_x and unit.grid_y == obstacle.grid_y), "Przeszkoda pokrywa sie z jednostka")
 
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
 	assert(_get_attackable_cells(SAMPLE_UNITS[0]).has(Vector2i(1, 3)))
