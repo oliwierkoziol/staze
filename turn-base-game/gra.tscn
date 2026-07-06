@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://cg6sg1l7cd6su" path="res://scripts/gra.gd" id="1_a1tqk"]
 [ext_resource type="Script" uid="uid://7ofr6sym1gat" path="res://scripts/plansza_walki.gd" id="2_h3x7m"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/battlefield_grass_bg.png" id="3_jh8wd"]
+[ext_resource type="Texture2D" uid="uid://dorgbej1rx6pq" path="res://assets/backgrounds/back.png" id="3_jh8wd"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_frame"]
 content_margin_left = 12.0
@@ -100,7 +100,7 @@ expand_mode = 1
 stretch_mode = 6
 
 [node name="BattleLayer" type="Node2D" parent="." unique_id=1838734481]
-position = Vector2(480, 200)
+position = Vector2(460, 200)
 
 [node name="PlanszaWalki" type="Node2D" parent="BattleLayer" unique_id=1820381021]
 script = ExtResource("2_h3x7m")

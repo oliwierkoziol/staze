@@ -1,6 +1,49 @@
 extends Control
 
-const SAMPLE_UNITS := []
+const SAMPLE_UNITS := [
+	{
+		"id": 1,
+		"name": "Oddzial Testowy",
+		"short_name": "TST",
+		"role": "Piechota",
+		"side": "player",
+		"grid_x": 1,
+		"grid_y": 5,
+		"hp": 12,
+		"dmg": 4,
+		"def": 2,
+		"speed": 7,
+		"count": 12,
+		"move_range": 5,
+		"attack_range": 1,
+		"resistance": "Brak",
+		"buffs": "Brak",
+		"debuffs": "Brak",
+		"action_name": "Cios kontrolny",
+		"skill_names": ["Marsz testowy"]
+	},
+	{
+		"id": 2,
+		"name": "Manekin Bojowy",
+		"short_name": "DMY",
+		"role": "Cel",
+		"side": "enemy",
+		"grid_x": 13,
+		"grid_y": 5,
+		"hp": 10,
+		"dmg": 1,
+		"def": 0,
+		"speed": 1,
+		"count": 1,
+		"move_range": 2,
+		"attack_range": 1,
+		"resistance": "Brak",
+		"buffs": "Brak",
+		"debuffs": "Brak",
+		"action_name": "Popychacz",
+		"skill_names": []
+	}
+]
 
 const GRID_COLUMNS := 15
 const GRID_ROWS := 11
@@ -59,6 +102,7 @@ func _ready() -> void:
 	board.set_obstacles(obstacles)
 	board.cell_clicked.connect(_on_cell_clicked)
 	board.cell_right_clicked.connect(_on_cell_right_clicked)
+	board.cell_hovered.connect(_on_board_cell_hovered)
 	board.animation_finished.connect(_on_board_animation_finished)
 	action_attack_button.pressed.connect(_on_attack_button_pressed)
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
@@ -128,6 +172,17 @@ func _clear_unit_details() -> void:
 	action_skill_3_button.text = "UM. 3"
 
 
+func _clear_selected_unit() -> void:
+	selected_unit_id = -1
+	pending_action = ""
+	board.set_selected_unit(-1)
+	board.set_highlighted_cells([], [])
+	board.set_hovered_move_path([])
+	_clear_unit_details()
+	_update_action_buttons()
+	_refresh_turn_queue()
+
+
 func _on_cell_clicked(cell: Vector2i) -> void:
 	if is_animating or not _is_player_turn():
 		return
@@ -137,15 +192,18 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		return
 
 	var clicked_unit := _find_unit_at_cell(cell)
-	if not clicked_unit.is_empty():
-		if clicked_unit.side == "player":
-			selected_unit_id = clicked_unit.id
-			_show_unit_details(clicked_unit)
-		return
-
 	if pending_action == "attack":
 		if not clicked_unit.is_empty() and clicked_unit.side != active_unit.side and _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
 			_perform_basic_attack(active_unit, clicked_unit)
+		return
+
+	if not clicked_unit.is_empty():
+		if clicked_unit.side == "player":
+			if clicked_unit.id == active_unit.id and selected_unit_id == active_unit.id:
+				_clear_selected_unit()
+				return
+		selected_unit_id = clicked_unit.id
+		_show_unit_details(clicked_unit)
 		return
 
 	if selected_unit_id != active_unit.id:
@@ -179,6 +237,7 @@ func _end_current_activation() -> void:
 	selected_unit_id = -1
 	board.set_selected_unit(-1)
 	board.set_highlighted_cells([], [])
+	board.set_hovered_move_path([])
 	_update_action_buttons()
 	_start_next_activation()
 
@@ -267,6 +326,7 @@ func _sync_board() -> void:
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
 	if selected_unit.is_empty():
 		board.set_highlighted_cells([], [])
+		board.set_hovered_move_path([])
 		_clear_unit_details()
 	else:
 		_update_highlighted_cells(selected_unit)
@@ -293,13 +353,43 @@ func _update_turn_label() -> void:
 func _update_highlighted_cells(unit: Dictionary) -> void:
 	if unit.is_empty() or unit.side != "player":
 		board.set_highlighted_cells([], [])
+		board.set_hovered_move_path([])
 		return
 
 	var move_budget: int = unit.move_range if unit.id != active_unit_id else _get_remaining_move(unit)
+	var move_cells: Array[Vector2i] = _get_reachable_cells(unit, move_budget)
 	var attack_cells: Array[Vector2i] = []
 	if unit.id == active_unit_id and pending_action == "attack":
-		attack_cells = _get_attackable_enemy_cells(unit)
-	board.set_highlighted_cells(_get_reachable_cells(unit, move_budget), attack_cells)
+		attack_cells = _get_attackable_cells(unit)
+		move_cells = []
+	board.set_highlighted_cells(move_cells, attack_cells)
+	_on_board_cell_hovered(board.get_hovered_cell())
+
+
+func _on_board_cell_hovered(cell: Vector2i) -> void:
+	if is_animating or pending_action == "attack":
+		board.set_hovered_move_path([])
+		return
+
+	var active_unit := _get_active_unit()
+	if active_unit.is_empty() or active_unit.side != "player":
+		board.set_hovered_move_path([])
+		return
+
+	if selected_unit_id != active_unit.id:
+		board.set_hovered_move_path([])
+		return
+
+	if cell.x == -1:
+		board.set_hovered_move_path([])
+		return
+
+	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell)
+	if path.is_empty() or path.size() > _get_remaining_move(active_unit):
+		board.set_hovered_move_path([])
+		return
+
+	board.set_hovered_move_path(path)
 
 
 func _get_reachable_cells(unit: Dictionary, max_distance: int) -> Array[Vector2i]:
@@ -333,7 +423,7 @@ func _get_attackable_cells(unit: Dictionary) -> Array[Vector2i]:
 			var cell := Vector2i(column, row)
 			if cell == origin:
 				continue
-			if _hex_distance(origin, cell) <= int(unit.attack_range):
+			if _is_in_attack_range(unit, cell):
 				attackable.append(cell)
 	return attackable
 
@@ -639,7 +729,6 @@ func _update_action_buttons() -> void:
 		and _is_player_turn()
 		and unit.side == "player"
 		and _can_unit_attack(unit)
-		and not _get_attackable_enemy_cells(unit).is_empty()
 		and selected_unit_id == unit.id
 	)
 	action_attack_button.disabled = not can_use_attack
@@ -705,6 +794,10 @@ func _on_turn_queue_pressed(unit_id: int) -> void:
 
 	var unit := _find_unit_by_id(unit_id)
 	if unit.is_empty():
+		return
+
+	if unit.id == active_unit_id and selected_unit_id == active_unit_id:
+		_clear_selected_unit()
 		return
 
 	pending_action = ""
@@ -794,6 +887,7 @@ func _start_next_activation() -> void:
 		selected_unit_id = -1
 		board.set_selected_unit(-1)
 		board.set_highlighted_cells([], [])
+		board.set_hovered_move_path([])
 		_clear_unit_details()
 		_update_turn_label()
 		_update_action_buttons()
