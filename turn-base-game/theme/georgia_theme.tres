@@ -1,0 +1,8 @@
+[gd_resource type="Theme" format=3 load_steps=2]
+
+[sub_resource type="SystemFont" id="SystemFont_georgia"]
+font_names = PackedStringArray("Georgia")
+subpixel_positioning = 0
+
+[resource]
+default_font = SubResource("SystemFont_georgia")

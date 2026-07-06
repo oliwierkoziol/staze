@@ -4,13 +4,6 @@
 [ext_resource type="Script" uid="uid://7ofr6sym1gat" path="res://scripts/plansza_walki.gd" id="2_h3x7m"]
 [ext_resource type="Texture2D" path="res://assets/backgrounds/battlefield_grass_bg.png" id="3_jh8wd"]
 
-[sub_resource type="SystemFont" id="SystemFont_georgia"]
-font_names = PackedStringArray("Georgia")
-subpixel_positioning = 0
-
-[sub_resource type="Theme" id="Theme_georgia"]
-default_font = SubResource("SystemFont_georgia")
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_frame"]
 content_margin_left = 12.0
 content_margin_top = 12.0
@@ -92,7 +85,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme = SubResource("Theme_georgia")
 script = ExtResource("1_a1tqk")
 
 [node name="Background" type="TextureRect" parent="." unique_id=214506001]
