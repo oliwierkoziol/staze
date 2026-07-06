@@ -1,3 +1,4 @@
 01.07.2026 – Wymyślanie głównych mechanik oraz zasad działania gry. Wybranie technologii i tematyki gry. Wymyślanie pomysłów na rozwój gry w przyszłości. Omawianie konceptu ekonomii oraz budynków w grze. Napisanie pierwszego bardzo uproszczonego prototypu.
 02.07.2026 – Podział na grupy i rozwinięcie projektu pod kątem rozwoju miast. Dodanie przejrzystego ui, oraz mechaniki zakładania miast. Dodanie obsługi przeglądarkowej. Dodanie informacji o polu oraz nowego typu budynku.
 03.07.2026 – Uporządkowanie plików gry, dodanie drzewka technologicznego i mechaniki badania.
+06.07.2026 - Dodanie ulepszania budynków, dodanie nowych zasobów, naprawa kamery, dodanie mechaniki populacji, zmiana wyglądu mapy
