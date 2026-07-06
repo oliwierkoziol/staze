@@ -1,158 +1,11 @@
 extends Control
 
-const SAMPLE_UNITS := [
-	{
-		"id": 1,
-		"name": "Miecznicy",
-		"short_name": "MI",
-		"role": "Piechota ciezka",
-		"side": "player",
-		"count": 24,
-		"hp": 35,
-		"dmg": 7,
-		"def": 7,
-		"speed": 5,
-		"move_range": 4,
-		"attack_range": 1,
-		"action_name": "Ciecie",
-		"skill_names": ["Tarcza", "Szarza", "Mur stali"],
-		"resistance": "Ogien 10%",
-		"buffs": "Brak",
-		"debuffs": "Brak",
-		"grid_x": 0,
-		"grid_y": 3
-	},
-	{
-		"id": 2,
-		"name": "Lucznicy",
-		"short_name": "LU",
-		"role": "Strzelcy",
-		"side": "player",
-		"count": 18,
-		"hp": 22,
-		"dmg": 5,
-		"def": 4,
-		"speed": 6,
-		"move_range": 3,
-		"attack_range": 6,
-		"action_name": "Strzal",
-		"skill_names": ["Precyzja", "Grad strzal", "Odskok"],
-		"resistance": "Lod 15%",
-		"buffs": "Brak",
-		"debuffs": "Brak",
-		"grid_x": 0,
-		"grid_y": 7
-	},
-	{
-		"id": 3,
-		"name": "Pikinierzy",
-		"short_name": "PI",
-		"role": "Piechota defensywna",
-		"side": "player",
-		"count": 20,
-		"hp": 30,
-		"dmg": 6,
-		"def": 8,
-		"speed": 4,
-		"move_range": 3,
-		"attack_range": 2,
-		"action_name": "Pchniecie pika",
-		"skill_names": ["Mur pik", "Kontratak", "Utrzymanie linii"],
-		"resistance": "Szarza 25%",
-		"buffs": "Premia przeciw kawalerii",
-		"debuffs": "Slabszy w zwarciu bocznym",
-		"grid_x": 0,
-		"grid_y": 1
-	},
-	{
-		"id": 4,
-		"name": "Kawaleria",
-		"short_name": "KA",
-		"role": "Uderzenie mobilne",
-		"side": "player",
-		"count": 12,
-		"hp": 42,
-		"dmg": 10,
-		"def": 6,
-		"speed": 8,
-		"move_range": 7,
-		"attack_range": 1,
-		"action_name": "Szarza",
-		"skill_names": ["Tratowanie", "Odskok", "Przelamanie"],
-		"resistance": "Morale 15%",
-		"buffs": "Pierwszy atak +2 DMG",
-		"debuffs": "Brak",
-		"grid_x": 0,
-		"grid_y": 5
-	},
-	{
-		"id": 5,
-		"name": "Asasyni",
-		"short_name": "AS",
-		"role": "Zabojcy",
-		"side": "player",
-		"count": 8,
-		"hp": 18,
-		"dmg": 14,
-		"def": 3,
-		"speed": 9,
-		"move_range": 5,
-		"attack_range": 1,
-		"action_name": "Skrytobojstwo",
-		"skill_names": ["Dym", "Krwawienie", "Zanik"],
-		"resistance": "Trucizna 35%",
-		"buffs": "Premia z pierwszego ciosu",
-		"debuffs": "Niska wytrzymalosc",
-		"grid_x": 0,
-		"grid_y": 9
-	},
-	{
-		"id": 6,
-		"name": "Wilczy jezdzcy",
-		"short_name": "WJ",
-		"role": "Najezdzcy",
-		"side": "enemy",
-		"count": 16,
-		"hp": 28,
-		"dmg": 8,
-		"def": 5,
-		"speed": 7,
-		"move_range": 6,
-		"attack_range": 1,
-		"action_name": "Rozdarcie",
-		"skill_names": ["Doskok", "Krzyk", "Szal"],
-		"resistance": "Trucizna 20%",
-		"buffs": "Brak",
-		"debuffs": "Brak",
-		"grid_x": 14,
-		"grid_y": 3
-	},
-	{
-		"id": 7,
-		"name": "Szamani",
-		"short_name": "SZ",
-		"role": "Wsparcie",
-		"side": "enemy",
-		"count": 9,
-		"hp": 26,
-		"dmg": 10,
-		"def": 3,
-		"speed": 6,
-		"move_range": 3,
-		"attack_range": 5,
-		"action_name": "Piorun",
-		"skill_names": ["Totem", "Iskra", "Burza"],
-		"resistance": "Elektrycznosc 25%",
-		"buffs": "Brak",
-		"debuffs": "Brak",
-		"grid_x": 14,
-		"grid_y": 7
-	}
-]
+const SAMPLE_UNITS := []
 
 const GRID_COLUMNS := 15
 const GRID_ROWS := 11
 const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "drzewa"]
+const OBSTACLE_SAFE_BORDER_COLUMNS := 4
 const MAX_EVENT_LOG_ENTRIES := 60
 const CARD_FONT_COLOR := Color(0.92, 0.88, 0.78, 1.0)
 const CARD_SELECTED_FONT_COLOR := Color(0.99, 0.95, 0.84, 1.0)
@@ -215,6 +68,7 @@ func _ready() -> void:
 		"Szarza bojowa: sojusznicy zyskuja +25% DMG na 2 tury.",
 		"Wezwanie bastionu: +3 DEF i odpornosc na oslabienie na 2 tury."
 	])
+	_clear_unit_details()
 	event_log_label.bbcode_enabled = true
 	_log_event(_color_log_text("Bitwa rozpoczeta.", LOG_COLOR_YELLOW))
 	_rebuild_turn_queue()
@@ -262,6 +116,16 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 		"Umiejetnosci: %s" % ", ".join(unit_data.skill_names)
 	])
 	_update_action_placeholders(unit_data)
+
+
+func _clear_unit_details() -> void:
+	unit_name_label.text = "BRAK JEDNOSTEK"
+	unit_meta_label.text = ""
+	unit_stats_label.text = ""
+	actions_label.text = ""
+	action_skill_1_button.text = "UM. 1"
+	action_skill_2_button.text = "UM. 2"
+	action_skill_3_button.text = "UM. 3"
 
 
 func _on_cell_clicked(cell: Vector2i) -> void:
@@ -403,6 +267,7 @@ func _sync_board() -> void:
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
 	if selected_unit.is_empty():
 		board.set_highlighted_cells([], [])
+		_clear_unit_details()
 	else:
 		_update_highlighted_cells(selected_unit)
 		_render_unit_details(selected_unit)
@@ -419,6 +284,9 @@ func _update_turn_label() -> void:
 	elif current_turn == "enemy":
 		turn_name = "Przeciwnik"
 	var active_name: String = active_unit.name if not active_unit.is_empty() else "-"
+	if units.is_empty():
+		general_rule_label.text = "Aktywna jednostka: -\nNa planszy nie ma zadnych jednostek. Tura %s." % round_number
+		return
 	general_rule_label.text = "Aktywna jednostka: %s (%s)\nLPM porusza albo wybiera cel ataku. PPM pokazuje statystyki. Tura %s." % [active_name, turn_name, round_number]
 
 
@@ -557,6 +425,7 @@ func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vect
 func _generate_obstacles() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var occupied: Dictionary = {}
+	var obstacle_types_by_cell: Dictionary = {}
 	for unit in SAMPLE_UNITS:
 		occupied[Vector2i(unit.grid_x, unit.grid_y)] = true
 
@@ -569,33 +438,34 @@ func _generate_obstacles() -> Array[Dictionary]:
 	for type_index in range(type_count):
 		var type: String = shuffled_types[type_index]
 		var cluster_size: int = rng.randi_range(1, 4)
-		var cluster: Array[Vector2i] = _generate_cluster(cluster_size, occupied, rng)
+		var cluster: Array[Vector2i] = _generate_cluster(cluster_size, occupied, obstacle_types_by_cell, type, rng)
 		for cell in cluster:
 			occupied[cell] = true
+			obstacle_types_by_cell[cell] = type
 			result.append({"grid_x": cell.x, "grid_y": cell.y, "type": type})
 	return result
 
 
-func _generate_cluster(target_size: int, occupied: Dictionary, rng: RandomNumberGenerator) -> Array[Vector2i]:
+func _generate_cluster(target_size: int, occupied: Dictionary, obstacle_types_by_cell: Dictionary, obstacle_type: String, rng: RandomNumberGenerator) -> Array[Vector2i]:
 	var attempts: int = 0
 	while attempts < 200:
 		attempts += 1
-		var start: Vector2i = _random_empty_cell(occupied, rng)
+		var start: Vector2i = _random_empty_cell(occupied, obstacle_types_by_cell, obstacle_type, rng)
 		if start == Vector2i(-1, -1):
 			continue
 		var cluster: Array[Vector2i] = [start]
+		var cluster_cells: Dictionary = {start: true}
 		var frontier: Array[Vector2i] = [start]
-		occupied[start] = true
 		while cluster.size() < target_size and not frontier.is_empty():
 			frontier.shuffle()
 			var current: Vector2i = frontier.pop_front()
 			var neighbors: Array[Vector2i] = _get_neighbors(current)
 			neighbors.shuffle()
 			for neighbor in neighbors:
-				if occupied.has(neighbor):
+				if not _can_place_obstacle_cell(neighbor, occupied, obstacle_types_by_cell, obstacle_type, cluster_cells):
 					continue
-				occupied[neighbor] = true
 				cluster.append(neighbor)
+				cluster_cells[neighbor] = true
 				frontier.append(neighbor)
 				if cluster.size() >= target_size:
 					break
@@ -603,16 +473,32 @@ func _generate_cluster(target_size: int, occupied: Dictionary, rng: RandomNumber
 	return []
 
 
-func _random_empty_cell(occupied: Dictionary, rng: RandomNumberGenerator) -> Vector2i:
-	var x_min: int = 2
-	var x_max: int = GRID_COLUMNS - 3
+func _random_empty_cell(occupied: Dictionary, obstacle_types_by_cell: Dictionary, obstacle_type: String, rng: RandomNumberGenerator) -> Vector2i:
+	var x_min: int = OBSTACLE_SAFE_BORDER_COLUMNS
+	var x_max: int = GRID_COLUMNS - OBSTACLE_SAFE_BORDER_COLUMNS - 1
 	var attempts: int = 0
 	while attempts < 100:
 		attempts += 1
 		var cell := Vector2i(rng.randi_range(x_min, x_max), rng.randi_range(0, GRID_ROWS - 1))
-		if not occupied.has(cell):
+		if _can_place_obstacle_cell(cell, occupied, obstacle_types_by_cell, obstacle_type):
 			return cell
 	return Vector2i(-1, -1)
+
+
+func _is_obstacle_column_allowed(column: int) -> bool:
+	return column >= OBSTACLE_SAFE_BORDER_COLUMNS and column < GRID_COLUMNS - OBSTACLE_SAFE_BORDER_COLUMNS
+
+
+func _can_place_obstacle_cell(cell: Vector2i, occupied: Dictionary, obstacle_types_by_cell: Dictionary, obstacle_type: String, cluster_cells: Dictionary = {}) -> bool:
+	if occupied.has(cell) or cluster_cells.has(cell) or not _is_obstacle_column_allowed(cell.x):
+		return false
+	for neighbor in _get_neighbors(cell):
+		if cluster_cells.has(neighbor):
+			continue
+		var neighbor_type: String = str(obstacle_types_by_cell.get(neighbor, ""))
+		if neighbor_type != "" and neighbor_type != obstacle_type:
+			return false
+	return true
 
 
 func _get_blocked_cells(excluded_unit_id: int) -> Dictionary:
@@ -722,7 +608,7 @@ func _disable_hud_mouse(node: Node) -> void:
 
 	for child in node.get_children():
 		_disable_hud_mouse(child)
-
+	
 
 func _validate_setup() -> void:
 	for unit in SAMPLE_UNITS:
@@ -739,9 +625,6 @@ func _validate_setup() -> void:
 			assert(not (unit.grid_x == obstacle.grid_x and unit.grid_y == obstacle.grid_y), "Przeszkoda pokrywa sie z jednostka")
 
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
-	assert(_get_attackable_cells(SAMPLE_UNITS[0]).has(Vector2i(1, 3)))
-	assert(not _get_attackable_cells(SAMPLE_UNITS[0]).has(Vector2i(0, 3)))
-	assert(_calculate_casualties(SAMPLE_UNITS[0], SAMPLE_UNITS[5]) >= 1)
 
 
 func _on_board_animation_finished(_unit_id: int) -> void:
@@ -911,6 +794,7 @@ func _start_next_activation() -> void:
 		selected_unit_id = -1
 		board.set_selected_unit(-1)
 		board.set_highlighted_cells([], [])
+		_clear_unit_details()
 		_update_turn_label()
 		_update_action_buttons()
 		_refresh_turn_queue()
