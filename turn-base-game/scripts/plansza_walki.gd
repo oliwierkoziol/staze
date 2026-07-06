@@ -10,6 +10,8 @@ const GRID_COLUMNS := 15
 const GRID_ROWS := 11
 const SQRT_THREE := 1.7320508
 const GRASS_TEXTURE: Texture2D = preload("res://assets/mapTiles/grass.png")
+const GRASS_VISIBLE_SIZE := Vector2(96.0, 112.0)
+const GRASS_TEXTURE_SIZE := Vector2(128.0, 128.0)
 
 var units: Array = []
 var selected_unit_id := -1
@@ -115,28 +117,17 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func draw_hex_grid() -> void:
-	var texture_size: Vector2 = GRASS_TEXTURE.get_size()
+	var hex_size := Vector2(HEX_RADIUS * SQRT_THREE, HEX_RADIUS * 2.0)
+	var grass_draw_size := Vector2(
+		hex_size.x * GRASS_TEXTURE_SIZE.x / GRASS_VISIBLE_SIZE.x,
+		hex_size.y * GRASS_TEXTURE_SIZE.y / GRASS_VISIBLE_SIZE.y
+	)
 	for row in GRID_ROWS:
 		for column in GRID_COLUMNS:
 			var center: Vector2 = axial_to_pixel(column, row)
-			var points: PackedVector2Array = PackedVector2Array()
-			var uvs: PackedVector2Array = PackedVector2Array()
-			for corner in 6:
-				var angle: float = deg_to_rad(60.0 * corner - 30.0)
-				var offset: Vector2 = Vector2(cos(angle), sin(angle)) * HEX_RADIUS
-				var vertex: Vector2 = center + offset
-				points.append(vertex)
-				uvs.append(_hex_vertex_to_uv(offset, texture_size))
-			draw_colored_polygon(points, Color.WHITE, uvs, GRASS_TEXTURE)
+			var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS)
+			draw_texture_rect(GRASS_TEXTURE, Rect2(center - grass_draw_size / 2.0, grass_draw_size), false)
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(0.33, 0.25, 0.16), 2.0)
-
-
-func _hex_vertex_to_uv(offset: Vector2, texture_size: Vector2) -> Vector2:
-	var half_width: float = HEX_RADIUS * SQRT_THREE / 2.0
-	var half_height: float = HEX_RADIUS
-	var u: float = (offset.x + half_width) / (half_width * 2.0)
-	var v: float = (offset.y + half_height) / (half_height * 2.0)
-	return Vector2(u * texture_size.x, v * texture_size.y)
 
 
 func draw_obstacles() -> void:
@@ -155,10 +146,7 @@ func draw_obstacles() -> void:
 	for obstacle in obstacles:
 		var cell: Vector2i = Vector2i(int(obstacle.grid_x), int(obstacle.grid_y))
 		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
-		var points: PackedVector2Array = PackedVector2Array()
-		for corner in 6:
-			var angle: float = deg_to_rad(60.0 * corner - 30.0)
-			points.append(center + Vector2(cos(angle), sin(angle)) * (HEX_RADIUS - 3.0))
+		var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 3.0)
 		var type: String = str(obstacle.type)
 		draw_colored_polygon(points, colors.get(type, Color(0.5, 0.5, 0.5, 0.4)))
 		var label: String = labels.get(type, "???")
@@ -203,12 +191,17 @@ func draw_highlighted_cells() -> void:
 func _draw_cell_highlights(cells: Array[Vector2i], fill_color: Color, border_color: Color) -> void:
 	for cell in cells:
 		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
-		var points: PackedVector2Array = PackedVector2Array()
-		for corner in 6:
-			var angle: float = deg_to_rad(60.0 * corner - 30.0)
-			points.append(center + Vector2(cos(angle), sin(angle)) * (HEX_RADIUS - 6.0))
+		var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 6.0)
 		draw_colored_polygon(points, fill_color)
 		draw_polyline(points + PackedVector2Array([points[0]]), border_color, 2.0)
+
+
+func _build_hex_points(center: Vector2, radius: float) -> PackedVector2Array:
+	var points: PackedVector2Array = PackedVector2Array()
+	for corner in 6:
+		var angle: float = deg_to_rad(60.0 * corner - 30.0)
+		points.append(center + Vector2(cos(angle), sin(angle)) * radius)
+	return points
 
 
 func get_unit_at_cell(cell: Vector2i) -> Dictionary:
