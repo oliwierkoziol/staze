@@ -21,12 +21,8 @@ const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 @onready var unit_meta_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText/UnitMeta
 @onready var unit_stats_display: VBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin/UnitStats
 @onready var unit_status_panel: HBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatusPanel/UnitStatusMargin/UnitStatus
+@onready var unit_abilities_panel: VBoxContainer = $HUD/Overlay/UnitAbilitiesPanel/UnitAbilitiesMargin/UnitAbilities
 @onready var actions_label: Label = get_node_or_null("HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel/ActionsMargin/ActionsLabel")
-@onready var action_attack_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/AttackActionButton
-@onready var action_skill_1_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill1ActionButton
-@onready var action_skill_2_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill2ActionButton
-@onready var action_skill_3_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/Skill3ActionButton
-@onready var end_turn_button: Button = $HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar/EndTurnButton
 @onready var general_name_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralName
 @onready var general_level_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralLevel
 @onready var general_skills_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel/GeneralSkillsMargin/GeneralSkills
@@ -44,7 +40,6 @@ var event_log: Array[String] = []
 var round_number := 1
 var turn_queue: Array[int] = []
 var turn_queue_index := -1
-var pending_action := ""
 var pending_skill_id := ""
 var unit_configs: Array[Dictionary] = []
 var skill_library: Dictionary = {}
@@ -66,11 +61,7 @@ func _ready() -> void:
 	board.cell_right_clicked.connect(_on_cell_right_clicked)
 	board.cell_hovered.connect(_on_board_cell_hovered)
 	board.animation_finished.connect(_on_board_animation_finished)
-	action_attack_button.pressed.connect(_on_attack_button_pressed)
-	action_skill_1_button.pressed.connect(_on_skill_button_pressed.bind(0))
-	action_skill_2_button.pressed.connect(_on_skill_button_pressed.bind(1))
-	action_skill_3_button.pressed.connect(_on_skill_button_pressed.bind(2))
-	end_turn_button.pressed.connect(_on_end_turn_pressed)
+	unit_abilities_panel.skill_pressed.connect(_on_skill_button_pressed)
 	general_name_label.text = "KAPITAN ALARIC"
 	general_level_label.text = "Poziom 5"
 	general_skills_label.text = "\n".join([
@@ -123,7 +114,6 @@ func _enter_setup_mode() -> void:
 	setup_drag_unit_id = -1
 	active_unit_id = -1
 	current_turn = ""
-	pending_action = ""
 	pending_skill_id = ""
 	is_animating = false
 	round_number = 1
@@ -147,7 +137,6 @@ func _on_start_battle_pressed() -> void:
 	selected_unit_id = -1
 	active_unit_id = -1
 	current_turn = ""
-	pending_action = ""
 	pending_skill_id = ""
 	round_number = 1
 	turn_queue_index = -1
@@ -284,9 +273,9 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 		"action_points": str(_get_display_action_points(unit_data)),
 	})
 	unit_status_panel.set_unit(unit_data)
+	unit_abilities_panel.set_skills(_build_skill_cards(unit_data))
 	if actions_label != null:
 		actions_label.text = "Umiejetnosci: %s" % _format_skill_list(unit_data)
-	_update_action_placeholders(unit_data)
 
 
 func _apply_live_reload() -> void:
@@ -305,7 +294,6 @@ func _apply_live_reload() -> void:
 	units = rebuilt_units
 	selected_unit_id = selected_unit_id if not _find_unit_by_id(selected_unit_id).is_empty() else -1
 	active_unit_id = active_unit_id if not _find_unit_by_id(active_unit_id).is_empty() else -1
-	pending_action = ""
 	pending_skill_id = ""
 	is_animating = false
 	_rebuild_turn_queue()
@@ -367,26 +355,51 @@ func _format_skill_list(unit_data: Dictionary) -> String:
 	return ", ".join(names)
 
 
+func _build_skill_cards(unit_data: Dictionary) -> Array:
+	var cards: Array = []
+	var cooldowns: Dictionary = unit_data.get("skill_cooldowns", {})
+	var can_act := _can_interact_with_unit_skills(unit_data)
+	var skill_ids: Array = unit_data.get("skill_ids", [])
+	for index in skill_ids.size():
+		var skill_id := str(skill_ids[index])
+		var skill: Dictionary = skill_library.get(skill_id, {})
+		if skill.is_empty():
+			continue
+		cards.append({
+			"index": index,
+			"skill_id": skill_id,
+			"name": str(skill.get("name", skill_id)),
+			"description": str(skill.get("description", "")),
+			"cooldown": int(skill.get("cooldown", 0)),
+			"remaining_cooldown": int(cooldowns.get(skill_id, 0)),
+			"can_use": can_act and _can_use_skill(unit_data, skill_id),
+			"selected": pending_skill_id == skill_id,
+			"tooltip": _build_skill_tooltip(unit_data, index),
+		})
+	return cards
+
+
+func _can_interact_with_unit_skills(unit_data: Dictionary) -> bool:
+	if setup_mode or is_animating or not _is_player_turn():
+		return false
+	var active_unit := _get_active_unit()
+	return not active_unit.is_empty() and active_unit.side == "player" and selected_unit_id == active_unit.id and unit_data.id == active_unit.id
+
+
 func _clear_unit_details() -> void:
 	unit_portrait.visible = false
 	unit_name_label.text = "BRAK JEDNOSTEK"
 	unit_meta_label.text = ""
 	unit_stats_display.clear_values()
 	unit_status_panel.clear()
+	unit_abilities_panel.clear()
 	if actions_label != null:
 		actions_label.text = ""
-	action_skill_1_button.text = "UM. 1"
-	action_skill_2_button.text = "UM. 2"
-	action_skill_3_button.text = "UM. 3"
-	action_skill_1_button.tooltip_text = ""
-	action_skill_2_button.tooltip_text = ""
-	action_skill_3_button.tooltip_text = ""
 
 
 func _clear_selected_unit() -> void:
 	selected_unit_id = -1
 	setup_drag_unit_id = -1
-	pending_action = ""
 	pending_skill_id = ""
 	board.set_selected_unit(-1)
 	board.set_highlighted_cells([], [])
@@ -413,10 +426,10 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		return
 
 	var clicked_unit := _find_unit_at_cell(cell)
-	if pending_action == "attack":
-		if not clicked_unit.is_empty() and clicked_unit.side != active_unit.side and _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
-			_perform_basic_attack(active_unit, clicked_unit)
-		return
+	if selected_unit_id == active_unit.id and not clicked_unit.is_empty() and clicked_unit.side != active_unit.side:
+		if _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
+			_perform_basic_attack(active_unit, clicked_unit, false)
+			return
 
 	if not clicked_unit.is_empty():
 		if clicked_unit.id == selected_unit_id:
@@ -438,7 +451,6 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	active_unit.grid_x = cell.x
 	active_unit.grid_y = cell.y
 	active_unit.remaining_move = max(0, _get_remaining_move(active_unit) - path.size())
-	pending_action = ""
 	pending_skill_id = ""
 	_sync_board()
 	board.animate_unit_path(active_unit.id, path)
@@ -497,7 +509,6 @@ func _end_current_activation() -> void:
 	var unit := _get_active_unit()
 	if not unit.is_empty():
 		_advance_unit_effects(unit)
-	pending_action = ""
 	pending_skill_id = ""
 	selected_unit_id = -1
 	board.set_selected_unit(-1)
@@ -630,7 +641,7 @@ func _update_turn_label() -> void:
 	if units.is_empty():
 		general_rule_label.text = "Aktywna jednostka: -\nNa planszy nie ma zadnych jednostek. Tura %s." % round_number
 		return
-	general_rule_label.text = "Aktywna jednostka: %s (%s)\nLPM porusza albo wybiera cel ataku/skilla. Tura %s." % [active_name, turn_name, round_number]
+	general_rule_label.text = "Aktywna jednostka: %s (%s)\nLPM porusza i atakuje. Wybierz umiejetnosc, aby uzyc skilla. Tura %s." % [active_name, turn_name, round_number]
 
 
 func _update_highlighted_cells(unit: Dictionary) -> void:
@@ -652,12 +663,11 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 	var move_budget: int = unit.move_range if unit.id != active_unit_id else _get_remaining_move(unit)
 	var move_cells: Array[Vector2i] = _get_reachable_cells(unit, move_budget)
 	var attack_cells: Array[Vector2i] = []
-	if unit.id == active_unit_id and pending_action == "attack":
-		attack_cells = _get_attackable_cells(unit)
-		move_cells = []
-	elif unit.id == active_unit_id and pending_skill_id != "":
+	if unit.id == active_unit_id and pending_skill_id != "":
 		attack_cells = _get_skill_target_cells(unit, pending_skill_id)
 		move_cells = []
+	elif unit.id == active_unit_id and pending_skill_id == "" and _can_unit_attack(unit):
+		attack_cells = _get_attackable_cells(unit)
 	board.set_highlighted_cells(move_cells, attack_cells)
 	_on_board_cell_hovered(board.get_hovered_cell())
 
@@ -674,7 +684,7 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		board.set_hovered_move_path([cell])
 		return
 
-	if is_animating or pending_action == "attack" or pending_skill_id != "":
+	if is_animating or pending_skill_id != "":
 		board.set_hovered_move_path([])
 		return
 
@@ -784,7 +794,6 @@ func _is_in_attack_range(unit: Dictionary, cell: Vector2i) -> bool:
 
 func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_after := true) -> void:
 	attacker.action_points = max(0, int(attacker.get("action_points", 0)) - 1)
-	pending_action = ""
 	pending_skill_id = ""
 	var total_damage: int = _calculate_damage(attacker, target)
 	var casualties: int = _apply_damage_to_unit(target, total_damage)
@@ -799,6 +808,8 @@ func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_af
 	_cleanup_destroyed_unit(target)
 	_sync_board()
 	if end_turn_after:
+		_end_current_activation()
+	elif not _can_unit_continue_turn(attacker):
 		_end_current_activation()
 
 
@@ -863,7 +874,6 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary) -> void:
 	caster.action_points = max(0, int(caster.action_points) - int(skill.get("ap_cost", 0)))
 	caster.skill_cooldowns[skill.get("id", "")] = int(skill.get("cooldown", 0))
-	pending_action = ""
 	pending_skill_id = ""
 
 	match String(skill.get("effect_type", "")):
@@ -1395,6 +1405,13 @@ func _validate_setup() -> void:
 
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
 
+	for unit in unit_configs:
+		var cards: Array = _build_skill_cards(unit)
+		assert(cards.size() == unit.get("skill_ids", []).size(), "Karty umiejetnosci nie pokrywaja sie ze skill_ids jednostki.")
+		for card in cards:
+			assert(str(card.get("name", "")) != "", "Karta umiejetnosci bez nazwy z biblioteki.")
+			assert(int(card.get("remaining_cooldown", -1)) == 0, "Swiezo wczytana jednostka nie powinna miec aktywnego cooldownu.")
+
 
 func _on_board_animation_finished(_unit_id: int) -> void:
 	is_animating = false
@@ -1402,34 +1419,9 @@ func _on_board_animation_finished(_unit_id: int) -> void:
 
 
 func _update_action_buttons() -> void:
-	if setup_mode:
-		action_attack_button.disabled = true
-		action_attack_button.button_pressed = false
-		action_attack_button.text = "ATAK PODSTAWOWY"
-		action_skill_1_button.disabled = true
-		action_skill_2_button.disabled = true
-		action_skill_3_button.disabled = true
-		end_turn_button.disabled = true
-		return
-
-	var unit := _get_active_unit()
-	var can_act: bool = not unit.is_empty() and _is_player_turn() and unit.side == "player" and selected_unit_id == unit.id
-	var can_use_attack: bool = can_act and _can_unit_attack(unit)
-	action_attack_button.disabled = not can_use_attack
-	action_attack_button.button_pressed = pending_action == "attack"
-	action_attack_button.text = "ATAK PODSTAWOWY" if pending_action != "attack" else "WYBIERZ CEL"
-	_update_skill_button(action_skill_1_button, unit, 0, can_act)
-	_update_skill_button(action_skill_2_button, unit, 1, can_act)
-	_update_skill_button(action_skill_3_button, unit, 2, can_act)
-	end_turn_button.disabled = not _is_player_turn() or unit.is_empty()
-
-
-func _update_skill_button(button: Button, unit: Dictionary, index: int, can_act: bool) -> void:
-	var skill := _get_skill_at(unit, index)
-	if skill.is_empty():
-		button.disabled = true
-		return
-	button.disabled = not can_act or not _can_use_skill(unit, str(skill.get("id", "")))
+	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
+	if not selected_unit.is_empty():
+		unit_abilities_panel.set_skills(_build_skill_cards(selected_unit))
 
 
 func _color_log_text(text: String, color: Color) -> String:
@@ -1495,7 +1487,6 @@ func _on_turn_queue_pressed(unit_id: int) -> void:
 		_clear_selected_unit()
 		return
 
-	pending_action = ""
 	pending_skill_id = ""
 	_on_unit_selected(unit)
 
@@ -1527,29 +1518,6 @@ func _make_turn_queue_card_style(unit: Dictionary, selected: bool, hovered := fa
 	style.content_margin_right = 10.0
 	style.content_margin_bottom = 8.0
 	return style
-
-
-func _update_action_placeholders(unit: Dictionary) -> void:
-	var labels: Array[String] = [
-		_build_skill_button_label(unit, 0),
-		_build_skill_button_label(unit, 1),
-		_build_skill_button_label(unit, 2)
-	]
-	action_skill_1_button.text = labels[0]
-	action_skill_2_button.text = labels[1]
-	action_skill_3_button.text = labels[2]
-	action_skill_1_button.tooltip_text = _build_skill_tooltip(unit, 0)
-	action_skill_2_button.tooltip_text = _build_skill_tooltip(unit, 1)
-	action_skill_3_button.tooltip_text = _build_skill_tooltip(unit, 2)
-
-
-func _build_skill_button_label(unit: Dictionary, index: int) -> String:
-	var skill := _get_skill_at(unit, index)
-	if skill.is_empty():
-		return "UM. %s\nPLACEHOLDER" % str(index + 1)
-	var cooldown: int = int(unit.get("skill_cooldowns", {}).get(skill.get("id", ""), 0))
-	var suffix := "" if cooldown == 0 else "\nCD %s" % cooldown
-	return "UM. %s\n%s%s" % [str(index + 1), str(skill.get("name", "")).to_upper(), suffix]
 
 
 func _build_skill_tooltip(unit: Dictionary, index: int) -> String:
@@ -1667,7 +1635,6 @@ func _start_unit_activation(unit: Dictionary) -> void:
 	current_turn = unit.side
 	unit.remaining_move = int(unit.move_range)
 	unit.action_points = 1
-	pending_action = ""
 	pending_skill_id = ""
 	_process_turn_start(unit)
 	if _find_unit_by_id(unit.id).is_empty():
@@ -1734,45 +1701,25 @@ func _get_visible_turn_queue() -> Array[int]:
 	return visible_queue
 
 
-func _on_attack_button_pressed() -> void:
-	if not _is_player_turn() or is_animating or action_attack_button.disabled:
-		return
-
-	var unit := _get_active_unit()
-	if unit.is_empty():
-		return
-
-	pending_skill_id = ""
-	pending_action = "" if pending_action == "attack" else "attack"
-	selected_unit_id = unit.id
-	_update_highlighted_cells(unit)
-	_update_action_buttons()
-	_refresh_turn_queue()
-
-
 func _on_skill_button_pressed(index: int) -> void:
 	if not _is_player_turn() or is_animating:
 		return
 
 	var unit := _get_active_unit()
 	var skill := _get_skill_at(unit, index)
-	if skill.is_empty() or not _can_use_skill(unit, str(skill.get("id", ""))):
+	if skill.is_empty():
 		return
 
-	pending_action = ""
-	pending_skill_id = "" if pending_skill_id == str(skill.get("id", "")) else str(skill.get("id", ""))
+	var skill_id := str(skill.get("id", ""))
+	if pending_skill_id == skill_id:
+		pending_skill_id = ""
+	elif not _can_use_skill(unit, skill_id):
+		return
+	else:
+		pending_skill_id = skill_id
+
 	selected_unit_id = unit.id
 	_update_highlighted_cells(unit)
 	_update_action_buttons()
+	unit_abilities_panel.set_skills(_build_skill_cards(unit))
 	_refresh_turn_queue()
-
-
-func _on_end_turn_pressed() -> void:
-	if not _is_player_turn() or is_animating:
-		return
-
-	var unit := _get_active_unit()
-	if unit.is_empty():
-		return
-
-	_end_current_activation()

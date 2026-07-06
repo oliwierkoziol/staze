@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://8rrp7aitsb83" path="res://assets/ui/unit1.png" id="7_unit1"]
 [ext_resource type="Script" uid="uid://s8nsikmcxtmc" path="res://scripts/unit_stats_display.gd" id="8_stats"]
 [ext_resource type="Script" uid="uid://c7siu6836f4vl" path="res://scripts/unit_status_panel.gd" id="9_status"]
+[ext_resource type="Script" uid="uid://dcm6ghvn3slyt" path="res://scripts/unit_abilities_panel.gd" id="10_abilities"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_6otim"]
 font_size = 22
@@ -47,22 +48,6 @@ corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_round_button"]
-content_margin_left = 10.0
-content_margin_top = 10.0
-content_margin_right = 10.0
-content_margin_bottom = 10.0
-bg_color = Color(0.1, 0.1, 0.08, 0.96)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.88, 0.75, 0.34, 1)
-corner_radius_top_left = 999
-corner_radius_top_right = 999
-corner_radius_bottom_right = 999
-corner_radius_bottom_left = 999
 
 [node name="Gra" type="Control" unique_id=658525074]
 layout_mode = 3
@@ -114,11 +99,10 @@ offset_right = 431.0
 offset_bottom = 122.0
 grow_horizontal = 2
 texture = ExtResource("4_panel")
-region_rect = Rect2(0, 0, 62, 63)
-patch_margin_left = 4
-patch_margin_top = 4
-patch_margin_right = 4
-patch_margin_bottom = 4
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
 axis_stretch_horizontal = 2
 axis_stretch_vertical = 2
 
@@ -163,10 +147,10 @@ offset_bottom = -64.0
 grow_horizontal = 0
 grow_vertical = 2
 texture = ExtResource("4_panel")
-patch_margin_left = 4
-patch_margin_top = 4
-patch_margin_right = 4
-patch_margin_bottom = 4
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
 
 [node name="RightMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel" unique_id=82583585]
 layout_mode = 1
@@ -194,10 +178,10 @@ horizontal_alignment = 1
 texture_filter = 1
 layout_mode = 2
 texture = ExtResource("4_panel")
-patch_margin_left = 4
-patch_margin_top = 4
-patch_margin_right = 4
-patch_margin_bottom = 4
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
 script = ExtResource("5_npp")
 
 [node name="GeneralPanelMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel" unique_id=804480615]
@@ -244,10 +228,10 @@ horizontal_alignment = 1
 texture_filter = 1
 layout_mode = 2
 texture = ExtResource("4_panel")
-patch_margin_left = 4
-patch_margin_top = 4
-patch_margin_right = 4
-patch_margin_bottom = 4
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
 script = ExtResource("5_npp")
 
 [node name="GeneralSkillsMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel" unique_id=805178180]
@@ -280,10 +264,10 @@ custom_minimum_size = Vector2(0, 240)
 layout_mode = 2
 size_flags_vertical = 3
 texture = ExtResource("4_panel")
-patch_margin_left = 4
-patch_margin_top = 4
-patch_margin_right = 4
-patch_margin_bottom = 4
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
 script = ExtResource("5_npp")
 
 [node name="EventLogScroll" type="ScrollContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel" unique_id=177272283]
@@ -321,10 +305,10 @@ offset_right = 364.0
 offset_bottom = -64.0
 grow_vertical = 2
 texture = ExtResource("4_panel")
-patch_margin_left = 4
-patch_margin_top = 4
-patch_margin_right = 4
-patch_margin_bottom = 4
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
 axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
@@ -370,10 +354,10 @@ texture_filter = 1
 clip_contents = true
 layout_mode = 2
 texture = ExtResource("4_panel")
-patch_margin_left = 4
-patch_margin_top = 4
-patch_margin_right = 4
-patch_margin_bottom = 4
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
 script = ExtResource("5_npp")
 
 [node name="UnitHeaderMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader" unique_id=474921516]
@@ -433,10 +417,10 @@ texture_filter = 1
 layout_mode = 2
 size_flags_vertical = 3
 texture = ExtResource("4_panel")
-patch_margin_left = 4
-patch_margin_top = 4
-patch_margin_right = 4
-patch_margin_bottom = 4
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
 axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 script = ExtResource("5_npp")
@@ -463,10 +447,10 @@ texture_filter = 1
 custom_minimum_size = Vector2(0, 220)
 layout_mode = 2
 texture = ExtResource("4_panel")
-patch_margin_left = 4
-patch_margin_top = 4
-patch_margin_right = 4
-patch_margin_bottom = 4
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
 axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 script = ExtResource("5_npp")
@@ -489,92 +473,44 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("9_status")
 
-[node name="BottomBar" type="NinePatchRect" parent="HUD/Overlay" unique_id=833392484]
+[node name="UnitAbilitiesPanel" type="NinePatchRect" parent="HUD/Overlay" unique_id=910011001]
 texture_filter = 1
-custom_minimum_size = Vector2(760, 126)
+custom_minimum_size = Vector2(0, 170)
+clip_contents = true
 layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
+anchors_preset = 12
 anchor_top = 1.0
-anchor_right = 0.5
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -410.0
-offset_top = -195.0
-offset_right = 410.0
-offset_bottom = -59.0
+offset_left = 364.0
+offset_top = -234.0
+offset_right = -316.0
+offset_bottom = -64.0
 grow_horizontal = 2
 grow_vertical = 0
 texture = ExtResource("4_panel")
-patch_margin_left = 4
-patch_margin_top = 4
-patch_margin_right = 4
-patch_margin_bottom = 4
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+script = ExtResource("5_npp")
 
-[node name="BottomMargin" type="MarginContainer" parent="HUD/Overlay/BottomBar" unique_id=309482735]
+[node name="UnitAbilitiesMargin" type="MarginContainer" parent="HUD/Overlay/UnitAbilitiesPanel" unique_id=910011002]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 24
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
 
-[node name="BottomLayout" type="HBoxContainer" parent="HUD/Overlay/BottomBar/BottomMargin" unique_id=215614661]
+[node name="UnitAbilities" type="VBoxContainer" parent="HUD/Overlay/UnitAbilitiesPanel/UnitAbilitiesMargin" unique_id=910011003]
 layout_mode = 2
-theme_override_constants/separation = 20
-alignment = 1
-
-[node name="ActionBar" type="HBoxContainer" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout" unique_id=1740795550]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="AttackActionButton" type="Button" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar" unique_id=209790440]
-custom_minimum_size = Vector2(132, 94)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.92, 0.88, 0.78, 1)
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button_pressed")
-toggle_mode = true
-text = "ATAK PODSTAWOWY"
-clip_text = true
-
-[node name="Skill1ActionButton" type="Button" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar" unique_id=130952349]
-custom_minimum_size = Vector2(120, 94)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.65, 0.62, 0.54, 1)
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-disabled = true
-text = "UM. 1"
-clip_text = true
-
-[node name="Skill2ActionButton" type="Button" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar" unique_id=2072821186]
-custom_minimum_size = Vector2(120, 94)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.65, 0.62, 0.54, 1)
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-disabled = true
-text = "UM. 2"
-clip_text = true
-
-[node name="Skill3ActionButton" type="Button" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar" unique_id=1864938233]
-custom_minimum_size = Vector2(120, 94)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.65, 0.62, 0.54, 1)
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-disabled = true
-text = "UM. 3"
-clip_text = true
-
-[node name="EndTurnButton" type="Button" parent="HUD/Overlay/BottomBar/BottomMargin/BottomLayout/ActionBar" unique_id=2084938233]
-custom_minimum_size = Vector2(112, 112)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.92, 0.88, 0.78, 1)
-theme_override_styles/normal = SubResource("StyleBoxFlat_round_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_round_button")
-text = "Koniec tury"
-clip_text = true
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("10_abilities")
