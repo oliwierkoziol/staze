@@ -614,13 +614,13 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		return
 
 	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell)
-	if path.size() != 1:
+	if path.is_empty() or path.size() > remaining_move:
 		return
 
 	is_animating = true
 	active_unit.grid_x = cell.x
 	active_unit.grid_y = cell.y
-	active_unit.remaining_move = max(0, remaining_move - 1)
+	active_unit.remaining_move = max(0, remaining_move - path.size())
 	pending_skill_id = ""
 	_sync_board()
 	board.animate_unit_path(active_unit.id, path)
@@ -705,9 +705,9 @@ func _enemy_take_turn() -> void:
 		is_animating = true
 		enemy_unit.grid_x = destination.x
 		enemy_unit.grid_y = destination.y
-		enemy_unit.remaining_move = max(0, _get_remaining_move(enemy_unit) - mini(best_path.size(), 1))
+		enemy_unit.remaining_move = max(0, _get_remaining_move(enemy_unit) - best_path.size())
 		_sync_board()
-		board.animate_unit_path(enemy_unit.id, best_path.slice(0, 1))
+		board.animate_unit_path(enemy_unit.id, best_path)
 		await board.animation_finished
 		_log_event("%s przemieszcza sie." % _unit_name_log_text(enemy_unit))
 
@@ -765,7 +765,7 @@ func _get_forced_target(unit: Dictionary) -> Dictionary:
 
 
 func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[Vector2i]:
-	var reachable_cells: Array[Vector2i] = _get_reachable_cells(enemy_unit, mini(_get_remaining_move(enemy_unit), 1))
+	var reachable_cells: Array[Vector2i] = _get_reachable_cells(enemy_unit, _get_remaining_move(enemy_unit))
 	var best_path: Array[Vector2i] = []
 	var best_distance: int = _hex_distance(Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), Vector2i(target.grid_x, target.grid_y))
 	for cell in reachable_cells:
@@ -831,7 +831,6 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 		return
 
 	var move_budget: int = unit.move_range if unit.id != active_unit_id else _get_remaining_move(unit)
-	move_budget = mini(move_budget, 1)
 	var move_cells: Array[Vector2i] = _get_reachable_cells(unit, move_budget)
 	var attack_cells: Array[Vector2i] = []
 	if unit.id == active_unit_id and pending_skill_id != "":
@@ -873,7 +872,7 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		return
 
 	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell)
-	if path.size() != 1:
+	if path.is_empty() or path.size() > _get_remaining_move(active_unit):
 		board.set_hovered_move_path([])
 		return
 
@@ -1861,7 +1860,7 @@ func _can_unit_continue_turn(unit: Dictionary) -> bool:
 
 func _has_units_on_side(side: String) -> bool:
 	for unit in units:
-		if unit.side == "player" or unit.side == "enemy":
+		if unit.side == side:
 			return true
 	return false
 
