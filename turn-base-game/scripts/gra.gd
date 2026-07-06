@@ -199,27 +199,6 @@ func _show_unit_details(unit_data: Dictionary) -> void:
 func _render_unit_details(unit_data: Dictionary) -> void:
 	unit_portrait.visible = true
 	unit_name_label.text = unit_data.name.to_upper()
-<<<<<<< Updated upstream
-	unit_meta_label.text = "Poziom 1 - %s - %s" % [unit_data.role, "Gracz" if unit_data.side == "player" else "Przeciwnik"]
-	unit_stats_label.text = "\n".join([
-		"HP  %s" % unit_data.hp,
-		"DMG %s" % unit_data.dmg,
-		"DEF %s" % unit_data.def,
-		"Szybkosc %s" % unit_data.speed,
-		"Liczebnosc  %s" % unit_data.count,
-		"Ruch  %s / %s" % [_get_display_move(unit_data), unit_data.move_range],
-		"Punkty akcji  %s" % _get_display_action_points(unit_data),
-		"Zasieg ataku  %s" % unit_data.attack_range,
-		"",
-		"Odpornosci  %s" % unit_data.resistance,
-		"Buffy  %s" % unit_data.buffs,
-		"Debuffy  %s" % unit_data.debuffs
-	])
-	actions_label.text = "\n".join([
-		"Atak podstawowy: %s" % unit_data.action_name,
-		"Umiejetnosci: %s" % _format_skill_list(unit_data)
-	])
-=======
 	unit_meta_label.text = "Poziom 1"
 	unit_stats_display.set_values({
 		"hp": "%s / %s" % [unit_data.hp, unit_data.get("max_hp", unit_data.hp)],
@@ -234,7 +213,6 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 		"buffs": str(unit_data.buffs),
 		"debuffs": str(unit_data.debuffs),
 	})
->>>>>>> Stashed changes
 	_update_action_placeholders(unit_data)
 
 
