@@ -5,9 +5,9 @@ const SAMPLE_UNITS := [
 		"id": 1,
 		"name": "Oddzial Testowy",
 		"short_name": "TST",
-		"role": "Piechota",
+		"role": "Tester Skilli",
 		"side": "player",
-		"grid_x": 1,
+		"grid_x": 2,
 		"grid_y": 5,
 		"hp": 12,
 		"dmg": 4,
@@ -17,10 +17,27 @@ const SAMPLE_UNITS := [
 		"move_range": 5,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"buffs": "Brak",
-		"debuffs": "Brak",
 		"action_name": "Cios kontrolny",
-		"skill_names": ["Marsz testowy"]
+		"skill_ids": ["prowokacja", "strzal_w_kolano", "zatruty_sztylet"]
+	},
+	{
+		"id": 3,
+		"name": "Wsparcie Testowe",
+		"short_name": "SUP",
+		"role": "Sojusznik Testowy",
+		"side": "player",
+		"grid_x": 4,
+		"grid_y": 5,
+		"hp": 11,
+		"dmg": 3,
+		"def": 1,
+		"speed": 5,
+		"count": 8,
+		"move_range": 4,
+		"attack_range": 1,
+		"resistance": "Brak",
+		"action_name": "Lekki cios",
+		"skill_ids": []
 	},
 	{
 		"id": 2,
@@ -28,29 +45,56 @@ const SAMPLE_UNITS := [
 		"short_name": "DMY",
 		"role": "Cel",
 		"side": "enemy",
-		"grid_x": 13,
+		"grid_x": 8,
 		"grid_y": 5,
 		"hp": 10,
-		"dmg": 1,
+		"dmg": 3,
 		"def": 0,
-		"speed": 1,
-		"count": 1,
-		"move_range": 2,
+		"speed": 2,
+		"count": 6,
+		"move_range": 3,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"buffs": "Brak",
-		"debuffs": "Brak",
 		"action_name": "Popychacz",
-		"skill_names": []
+		"skill_ids": []
 	}
 ]
+
+const SKILL_LIBRARY := {
+	"prowokacja": {
+		"id": "prowokacja",
+		"name": "Prowokacja",
+		"ap_cost": 1,
+		"cooldown": 3,
+		"range": 0,
+		"target_type": "self",
+		"effect_type": "taunt_burst"
+	},
+	"strzal_w_kolano": {
+		"id": "strzal_w_kolano",
+		"name": "Strzal w Kolano",
+		"ap_cost": 1,
+		"cooldown": 3,
+		"range": 4,
+		"target_type": "enemy_unit",
+		"effect_type": "knee_shot"
+	},
+	"zatruty_sztylet": {
+		"id": "zatruty_sztylet",
+		"name": "Zatruty Sztylet",
+		"ap_cost": 1,
+		"cooldown": 2,
+		"range": 1,
+		"target_type": "enemy_unit",
+		"effect_type": "poison_dagger"
+	}
+}
 
 const GRID_COLUMNS := 15
 const GRID_ROWS := 11
 const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "drzewa"]
 const OBSTACLE_SAFE_BORDER_COLUMNS := 4
 const MAX_EVENT_LOG_ENTRIES := 60
-const CARD_FONT_COLOR := Color(0.92, 0.88, 0.78, 1.0)
 const CARD_SELECTED_FONT_COLOR := Color(0.99, 0.95, 0.84, 1.0)
 const LOG_COLOR_YELLOW := Color(0.95, 0.82, 0.25, 1.0)
 const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
@@ -87,16 +131,14 @@ var round_number := 1
 var turn_queue: Array[int] = []
 var turn_queue_index := -1
 var pending_action := ""
+var pending_skill_id := ""
 
 
 func _ready() -> void:
 	_validate_setup()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_disable_hud_mouse(hud)
-	units = SAMPLE_UNITS.map(func(unit: Dictionary) -> Dictionary: return unit.duplicate(true))
-	for unit in units:
-		unit.remaining_move = int(unit.move_range)
-		unit.action_points = 1
+	units = SAMPLE_UNITS.map(func(unit: Dictionary) -> Dictionary: return _prepare_unit(unit.duplicate(true)))
 	board.set_units(units)
 	obstacles = _generate_obstacles()
 	board.set_obstacles(obstacles)
@@ -105,12 +147,15 @@ func _ready() -> void:
 	board.cell_hovered.connect(_on_board_cell_hovered)
 	board.animation_finished.connect(_on_board_animation_finished)
 	action_attack_button.pressed.connect(_on_attack_button_pressed)
+	action_skill_1_button.pressed.connect(_on_skill_button_pressed.bind(0))
+	action_skill_2_button.pressed.connect(_on_skill_button_pressed.bind(1))
+	action_skill_3_button.pressed.connect(_on_skill_button_pressed.bind(2))
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	general_name_label.text = "KAPITAN ALARIC"
 	general_level_label.text = "Poziom 5"
 	general_skills_label.text = "\n".join([
-		"Szarza bojowa: sojusznicy zyskuja +25% DMG na 2 tury.",
-		"Wezwanie bastionu: +3 DEF i odpornosc na oslabienie na 2 tury."
+		"Pole testowe skilli: glowna jednostka moze zmieniac skille przez skill_ids.",
+		"Wsparcie Testowe stoi obok do przyszlych testow skilli sojuszniczych."
 	])
 	_clear_unit_details()
 	event_log_label.bbcode_enabled = true
@@ -119,10 +164,22 @@ func _ready() -> void:
 	_start_next_activation()
 
 
+func _prepare_unit(unit: Dictionary) -> Dictionary:
+	for stat_name in ["hp", "dmg", "def", "speed", "move_range", "attack_range"]:
+		unit["base_%s" % stat_name] = int(unit[stat_name])
+	unit["remaining_move"] = int(unit.move_range)
+	unit["action_points"] = 1
+	unit["active_effects"] = []
+	unit["skill_cooldowns"] = {}
+	unit["buffs"] = "Brak"
+	unit["debuffs"] = "Brak"
+	_recalculate_unit_stats(unit)
+	return unit
+
+
 func _on_unit_selected(unit_data: Dictionary) -> void:
 	if is_animating:
 		return
- 
 	_show_unit_details(unit_data)
 
 
@@ -157,9 +214,19 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 	])
 	actions_label.text = "\n".join([
 		"Atak podstawowy: %s" % unit_data.action_name,
-		"Umiejetnosci: %s" % ", ".join(unit_data.skill_names)
+		"Umiejetnosci: %s" % _format_skill_list(unit_data)
 	])
 	_update_action_placeholders(unit_data)
+
+
+func _format_skill_list(unit_data: Dictionary) -> String:
+	var skill_ids: Array = unit_data.get("skill_ids", [])
+	if skill_ids.is_empty():
+		return "Brak"
+	var names: Array[String] = []
+	for skill_id in skill_ids:
+		names.append(_get_skill_name(str(skill_id)))
+	return ", ".join(names)
 
 
 func _clear_unit_details() -> void:
@@ -175,6 +242,7 @@ func _clear_unit_details() -> void:
 func _clear_selected_unit() -> void:
 	selected_unit_id = -1
 	pending_action = ""
+	pending_skill_id = ""
 	board.set_selected_unit(-1)
 	board.set_highlighted_cells([], [])
 	board.set_hovered_move_path([])
@@ -191,6 +259,10 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	if active_unit.is_empty() or active_unit.side != "player":
 		return
 
+	if pending_skill_id != "":
+		_try_use_skill(active_unit, pending_skill_id, cell)
+		return
+
 	var clicked_unit := _find_unit_at_cell(cell)
 	if pending_action == "attack":
 		if not clicked_unit.is_empty() and clicked_unit.side != active_unit.side and _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
@@ -198,10 +270,9 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		return
 
 	if not clicked_unit.is_empty():
-		if clicked_unit.side == "player":
-			if clicked_unit.id == active_unit.id and selected_unit_id == active_unit.id:
-				_clear_selected_unit()
-				return
+		if clicked_unit.id == selected_unit_id:
+			_clear_selected_unit()
+			return
 		selected_unit_id = clicked_unit.id
 		_show_unit_details(clicked_unit)
 		return
@@ -219,6 +290,7 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	active_unit.grid_y = cell.y
 	active_unit.remaining_move = max(0, _get_remaining_move(active_unit) - path.size())
 	pending_action = ""
+	pending_skill_id = ""
 	_sync_board()
 	board.animate_unit_path(active_unit.id, path)
 	await board.animation_finished
@@ -228,12 +300,16 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		_end_current_activation()
 
 
-func _on_cell_right_clicked(cell: Vector2i) -> void:
+func _on_cell_right_clicked(_cell: Vector2i) -> void:
 	return
 
 
 func _end_current_activation() -> void:
+	var unit := _get_active_unit()
+	if not unit.is_empty():
+		_advance_unit_effects(unit)
 	pending_action = ""
+	pending_skill_id = ""
 	selected_unit_id = -1
 	board.set_selected_unit(-1)
 	board.set_highlighted_cells([], [])
@@ -288,12 +364,15 @@ func _find_unit_at_cell(cell: Vector2i) -> Dictionary:
 
 
 func _find_nearest_player_unit(enemy_unit: Dictionary) -> Dictionary:
+	var forced_target := _get_forced_target(enemy_unit)
+	if not forced_target.is_empty():
+		return forced_target
+
 	var nearest: Dictionary = {}
 	var best_distance: float = INF
 	for unit in units:
 		if unit.side != "player":
 			continue
-
 		var distance: int = _hex_distance(
 			Vector2i(enemy_unit.grid_x, enemy_unit.grid_y),
 			Vector2i(unit.grid_x, unit.grid_y)
@@ -304,6 +383,16 @@ func _find_nearest_player_unit(enemy_unit: Dictionary) -> Dictionary:
 	return nearest
 
 
+func _get_forced_target(unit: Dictionary) -> Dictionary:
+	for effect in unit.get("active_effects", []):
+		if effect.get("forced_target_id", -1) == -1:
+			continue
+		var target: Dictionary = _find_unit_by_id(int(effect.forced_target_id))
+		if not target.is_empty():
+			return target
+	return {}
+
+
 func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[Vector2i]:
 	var reachable_cells: Array[Vector2i] = _get_reachable_cells(enemy_unit, _get_remaining_move(enemy_unit))
 	var best_path: Array[Vector2i] = []
@@ -312,7 +401,6 @@ func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[
 		var candidate_path: Array[Vector2i] = _find_path(enemy_unit, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), cell)
 		if candidate_path.is_empty():
 			continue
-
 		var candidate_distance: int = _hex_distance(cell, Vector2i(target.grid_x, target.grid_y))
 		if candidate_distance < best_distance:
 			best_distance = candidate_distance
@@ -321,6 +409,8 @@ func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[
 
 
 func _sync_board() -> void:
+	for unit in units:
+		_recalculate_unit_stats(unit)
 	board.set_units(units)
 	board.set_obstacles(obstacles)
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
@@ -347,7 +437,7 @@ func _update_turn_label() -> void:
 	if units.is_empty():
 		general_rule_label.text = "Aktywna jednostka: -\nNa planszy nie ma zadnych jednostek. Tura %s." % round_number
 		return
-	general_rule_label.text = "Aktywna jednostka: %s (%s)\nLPM porusza albo wybiera cel ataku. PPM pokazuje statystyki. Tura %s." % [active_name, turn_name, round_number]
+	general_rule_label.text = "Aktywna jednostka: %s (%s)\nLPM porusza albo wybiera cel ataku/skilla. Tura %s." % [active_name, turn_name, round_number]
 
 
 func _update_highlighted_cells(unit: Dictionary) -> void:
@@ -362,12 +452,15 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 	if unit.id == active_unit_id and pending_action == "attack":
 		attack_cells = _get_attackable_cells(unit)
 		move_cells = []
+	elif unit.id == active_unit_id and pending_skill_id != "":
+		attack_cells = _get_skill_target_cells(unit, pending_skill_id)
+		move_cells = []
 	board.set_highlighted_cells(move_cells, attack_cells)
 	_on_board_cell_hovered(board.get_hovered_cell())
 
 
 func _on_board_cell_hovered(cell: Vector2i) -> void:
-	if is_animating or pending_action == "attack":
+	if is_animating or pending_action == "attack" or pending_skill_id != "":
 		board.set_hovered_move_path([])
 		return
 
@@ -428,18 +521,24 @@ func _get_attackable_cells(unit: Dictionary) -> Array[Vector2i]:
 	return attackable
 
 
-func _get_attackable_enemy_cells(unit: Dictionary) -> Array[Vector2i]:
-	if not _can_unit_attack(unit):
+func _get_skill_target_cells(unit: Dictionary, skill_id: String) -> Array[Vector2i]:
+	var skill: Dictionary = SKILL_LIBRARY.get(skill_id, {})
+	if skill.is_empty():
 		return []
+	if str(skill.get("target_type", "")) == "self":
+		return [Vector2i(unit.grid_x, unit.grid_y)]
 
-	var attackable: Array[Vector2i] = []
+	var cells: Array[Vector2i] = []
 	for other in units:
-		if other.side == unit.side:
+		var target_type := str(skill.get("target_type", ""))
+		if target_type == "enemy_unit" and other.side == unit.side:
+			continue
+		if target_type == "ally_unit" and (other.side != unit.side or other.id == unit.id):
 			continue
 		var cell := Vector2i(other.grid_x, other.grid_y)
-		if _is_in_attack_range(unit, cell):
-			attackable.append(cell)
-	return attackable
+		if _hex_distance(Vector2i(unit.grid_x, unit.grid_y), cell) <= int(skill.get("range", 0)) and not _is_attack_blocked(unit, cell):
+			cells.append(cell)
+	return cells
 
 
 func _is_in_attack_range(unit: Dictionary, cell: Vector2i) -> bool:
@@ -451,6 +550,7 @@ func _is_in_attack_range(unit: Dictionary, cell: Vector2i) -> bool:
 func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_after := true) -> void:
 	attacker.action_points = max(0, int(attacker.get("action_points", 0)) - 1)
 	pending_action = ""
+	pending_skill_id = ""
 	var casualties: int = _calculate_casualties(attacker, target)
 	target.count = max(0, int(target.count) - casualties)
 	_log_event(
@@ -460,23 +560,266 @@ func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_af
 			_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
 		]
 	)
-	if target.count <= 0:
-		_log_event("%s zostaje rozbite." % _unit_name_log_text(target))
-		units.erase(target)
-		turn_queue.erase(target.id)
-		if turn_queue_index >= turn_queue.size():
-			turn_queue_index = turn_queue.size() - 1
-	if target.id == selected_unit_id:
-		selected_unit_id = attacker.id if attacker.side == "player" else -1
+	_cleanup_destroyed_unit(target)
 	_sync_board()
 	if end_turn_after:
 		_end_current_activation()
 
 
-func _calculate_casualties(attacker: Dictionary, target: Dictionary) -> int:
-	var damage_per_unit: int = max(1, int(attacker.dmg) - int(target.def))
+func _calculate_casualties(attacker: Dictionary, target: Dictionary, damage_multiplier := 1.0) -> int:
+	var scaled_damage: int = max(1, int(ceil(float(attacker.dmg) * damage_multiplier)))
+	var damage_per_unit: int = max(1, scaled_damage - int(target.def))
 	var total_damage: int = damage_per_unit * int(attacker.count)
 	return max(1, int(total_damage / max(1, int(target.hp))))
+
+
+func _calculate_tick_casualties(effect_damage: int, target: Dictionary) -> int:
+	var total_damage: int = max(1, effect_damage)
+	return max(1, int(ceil(float(total_damage) / float(max(1, int(target.hp))))))
+
+
+func _cleanup_destroyed_unit(target: Dictionary) -> void:
+	if target.count > 0:
+		return
+	_log_event("%s zostaje rozbite." % _unit_name_log_text(target))
+	units.erase(target)
+	turn_queue.erase(target.id)
+	if turn_queue_index >= turn_queue.size():
+		turn_queue_index = turn_queue.size() - 1
+	if target.id == selected_unit_id:
+		selected_unit_id = -1
+
+
+func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
+	var skill: Dictionary = SKILL_LIBRARY.get(skill_id, {})
+	if skill.is_empty():
+		return
+	if not _can_use_skill(unit, skill_id):
+		return
+
+	if str(skill.get("target_type", "")) == "self":
+		if cell != Vector2i(unit.grid_x, unit.grid_y):
+			return
+		_execute_skill(unit, unit, skill)
+		return
+
+	var target := _find_unit_at_cell(cell)
+	if target.is_empty():
+		return
+	var target_type := str(skill.get("target_type", ""))
+	if target_type == "enemy_unit" and target.side == unit.side:
+		return
+	if target_type == "ally_unit" and (target.side != unit.side or target.id == unit.id):
+		return
+	if _hex_distance(Vector2i(unit.grid_x, unit.grid_y), cell) > int(skill.get("range", 0)):
+		return
+	if _is_attack_blocked(unit, cell):
+		return
+	_execute_skill(unit, target, skill)
+
+
+func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary) -> void:
+	caster.action_points = max(0, int(caster.action_points) - int(skill.get("ap_cost", 0)))
+	caster.skill_cooldowns[skill.get("id", "")] = int(skill.get("cooldown", 0))
+	pending_action = ""
+	pending_skill_id = ""
+
+	match String(skill.get("effect_type", "")):
+		"taunt_burst":
+			_execute_taunt_burst(caster)
+		"knee_shot":
+			_execute_knee_shot(caster, target)
+		"poison_dagger":
+			_execute_poison_dagger(caster, target)
+
+	_sync_board()
+	_end_current_activation()
+
+
+func _execute_taunt_burst(caster: Dictionary) -> void:
+	var affected := []
+	for other in units:
+		if other.side == caster.side:
+			continue
+		var distance := _hex_distance(Vector2i(caster.grid_x, caster.grid_y), Vector2i(other.grid_x, other.grid_y))
+		if distance > 2:
+			continue
+		_apply_or_refresh_effect(other, {
+			"id": "taunt_%s" % caster.id,
+			"name": "Prowokacja",
+			"category": "debuff",
+			"remaining_turns": 1,
+			"stat_changes": [
+				{"stat": "dmg", "mode": "percent", "value": -20}
+			],
+			"forced_target_id": caster.id
+		})
+		affected.append(other.name)
+	if affected.is_empty():
+		_log_event("%s uzywa Prowokacji, ale nikt nie jest w zasiegu." % _unit_name_log_text(caster))
+		return
+	_log_event("%s prowokuje: %s." % [_unit_name_log_text(caster), ", ".join(affected)])
+
+
+func _execute_knee_shot(caster: Dictionary, target: Dictionary) -> void:
+	var casualties := _calculate_casualties(caster, target, 0.7)
+	target.count = max(0, int(target.count) - casualties)
+	_apply_or_refresh_effect(target, {
+		"id": "immobilize",
+		"name": "Unieruchomienie",
+		"category": "debuff",
+		"remaining_turns": 1,
+		"stat_changes": [
+			{"stat": "move_range", "mode": "set", "value": 0}
+		]
+	})
+	_log_event(
+		"%s trafia %s Strzalem w Kolano za %s strat i unieruchamia cel." % [
+			_unit_name_log_text(caster),
+			_unit_name_log_text(target),
+			_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+		]
+	)
+	_cleanup_destroyed_unit(target)
+
+
+func _execute_poison_dagger(caster: Dictionary, target: Dictionary) -> void:
+	var casualties := _calculate_casualties(caster, target, 0.7)
+	target.count = max(0, int(target.count) - casualties)
+	_apply_or_refresh_effect(target, {
+		"id": "toksyna",
+		"name": "Toksyna",
+		"category": "debuff",
+		"remaining_turns": 3,
+		"stat_changes": [
+			{"stat": "def", "mode": "percent", "value": -15}
+		],
+		"tick_damage": max(1, int(ceil(float(caster.get("base_dmg", caster.dmg)) * 0.5)))
+	})
+	_log_event(
+		"%s zatruwa %s Sztyletem za %s strat." % [
+			_unit_name_log_text(caster),
+			_unit_name_log_text(target),
+			_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+		]
+	)
+	_cleanup_destroyed_unit(target)
+
+
+func _can_use_skill(unit: Dictionary, skill_id: String) -> bool:
+	var skill: Dictionary = SKILL_LIBRARY.get(skill_id, {})
+	if skill.is_empty():
+		return false
+	if int(unit.get("action_points", 0)) < int(skill.get("ap_cost", 0)):
+		return false
+	return int(unit.get("skill_cooldowns", {}).get(skill_id, 0)) == 0
+
+
+func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void:
+	var effects: Array = unit.get("active_effects", [])
+	for existing in effects:
+		if str(existing.get("id", "")) != str(effect_data.get("id", "")):
+			continue
+		existing["remaining_turns"] = int(effect_data.get("remaining_turns", 0))
+		existing["stat_changes"] = effect_data.get("stat_changes", [])
+		if effect_data.has("tick_damage"):
+			existing["tick_damage"] = int(effect_data.get("tick_damage", 0))
+		if effect_data.has("forced_target_id"):
+			existing["forced_target_id"] = int(effect_data.get("forced_target_id", -1))
+		_recalculate_unit_stats(unit)
+		return
+	effects.append(effect_data.duplicate(true))
+	unit["active_effects"] = effects
+	_recalculate_unit_stats(unit)
+
+
+func _process_turn_start(unit: Dictionary) -> void:
+	_advance_skill_cooldowns(unit)
+	var effects: Array = unit.get("active_effects", [])
+	for effect in effects:
+		var tick_damage: int = int(effect.get("tick_damage", 0))
+		if tick_damage <= 0:
+			continue
+		var casualties := _calculate_tick_casualties(tick_damage, unit)
+		unit.count = max(0, int(unit.count) - casualties)
+		_log_event(
+			"%s cierpi przez %s i traci %s." % [
+				_unit_name_log_text(unit),
+				str(effect.get("name", "efekt")),
+				_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+			]
+		)
+		if unit.count <= 0:
+			_cleanup_destroyed_unit(unit)
+			return
+	_recalculate_unit_stats(unit)
+
+
+func _advance_skill_cooldowns(unit: Dictionary) -> void:
+	var cooldowns: Dictionary = unit.get("skill_cooldowns", {})
+	for skill_id in cooldowns.keys():
+		var remaining: int = int(cooldowns[skill_id])
+		if remaining > 0:
+			cooldowns[skill_id] = remaining - 1
+	unit["skill_cooldowns"] = cooldowns
+
+
+func _advance_unit_effects(unit: Dictionary) -> void:
+	var kept_effects: Array = []
+	for effect in unit.get("active_effects", []):
+		effect["remaining_turns"] = int(effect.get("remaining_turns", 0)) - 1
+		if int(effect["remaining_turns"]) > 0:
+			kept_effects.append(effect)
+	unit["active_effects"] = kept_effects
+	_recalculate_unit_stats(unit)
+
+
+func _recalculate_unit_stats(unit: Dictionary) -> void:
+	unit["hp"] = int(unit.get("base_hp", unit.hp))
+	unit["dmg"] = int(unit.get("base_dmg", unit.dmg))
+	unit["def"] = int(unit.get("base_def", unit.def))
+	unit["speed"] = int(unit.get("base_speed", unit.speed))
+	unit["move_range"] = int(unit.get("base_move_range", unit.move_range))
+	unit["attack_range"] = int(unit.get("base_attack_range", unit.attack_range))
+
+	var buff_names: Array[String] = []
+	var debuff_names: Array[String] = []
+	for effect in unit.get("active_effects", []):
+		for change in effect.get("stat_changes", []):
+			_apply_stat_change(unit, change)
+		if str(effect.get("category", "")) == "buff":
+			buff_names.append(str(effect.get("name", "")))
+		elif str(effect.get("category", "")) == "debuff":
+			debuff_names.append(str(effect.get("name", "")))
+
+	unit["dmg"] = max(1, int(unit.dmg))
+	unit["def"] = max(0, int(unit.def))
+	unit["speed"] = max(0, int(unit.speed))
+	unit["move_range"] = max(0, int(unit.move_range))
+	unit["attack_range"] = max(1, int(unit.attack_range))
+	unit["buffs"] = "Brak" if buff_names.is_empty() else ", ".join(buff_names)
+	unit["debuffs"] = "Brak" if debuff_names.is_empty() else ", ".join(debuff_names)
+
+
+func _apply_stat_change(unit: Dictionary, change: Dictionary) -> void:
+	var stat_name := str(change.get("stat", ""))
+	if stat_name == "" or not unit.has(stat_name):
+		return
+
+	var current_value: int = int(unit.get(stat_name, 0))
+	var mode := str(change.get("mode", "flat"))
+	var next_value := current_value
+
+	match mode:
+		"flat":
+			next_value = current_value + int(change.get("value", 0))
+		"percent":
+			var multiplier := 1.0 + float(change.get("value", 0)) / 100.0
+			next_value = int(ceil(float(current_value) * multiplier))
+		"set":
+			next_value = int(change.get("value", current_value))
+
+	unit[stat_name] = next_value
 
 
 func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
@@ -516,7 +859,7 @@ func _generate_obstacles() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var occupied: Dictionary = {}
 	var obstacle_types_by_cell: Dictionary = {}
-	for unit in SAMPLE_UNITS:
+	for unit in units:
 		occupied[Vector2i(unit.grid_x, unit.grid_y)] = true
 
 	var rng := RandomNumberGenerator.new()
@@ -698,7 +1041,7 @@ func _disable_hud_mouse(node: Node) -> void:
 
 	for child in node.get_children():
 		_disable_hud_mouse(child)
-	
+
 
 func _validate_setup() -> void:
 	for unit in SAMPLE_UNITS:
@@ -706,6 +1049,8 @@ func _validate_setup() -> void:
 		assert(unit.grid_y >= 0 and unit.grid_y < GRID_ROWS)
 		assert(unit.dmg >= 1)
 		assert(unit.speed >= 1)
+		for skill_id in unit.get("skill_ids", []):
+			assert(SKILL_LIBRARY.has(skill_id), "Brak skilla w bibliotece: %s" % skill_id)
 
 	for obstacle in obstacles:
 		assert(obstacle.grid_x >= 0 and obstacle.grid_x < GRID_COLUMNS)
@@ -724,17 +1069,23 @@ func _on_board_animation_finished(_unit_id: int) -> void:
 
 func _update_action_buttons() -> void:
 	var unit := _get_active_unit()
-	var can_use_attack: bool = (
-		not unit.is_empty()
-		and _is_player_turn()
-		and unit.side == "player"
-		and _can_unit_attack(unit)
-		and selected_unit_id == unit.id
-	)
+	var can_act: bool = not unit.is_empty() and _is_player_turn() and unit.side == "player" and selected_unit_id == unit.id
+	var can_use_attack: bool = can_act and _can_unit_attack(unit)
 	action_attack_button.disabled = not can_use_attack
 	action_attack_button.button_pressed = pending_action == "attack"
 	action_attack_button.text = "ATAK PODSTAWOWY" if pending_action != "attack" else "WYBIERZ CEL"
+	_update_skill_button(action_skill_1_button, unit, 0, can_act)
+	_update_skill_button(action_skill_2_button, unit, 1, can_act)
+	_update_skill_button(action_skill_3_button, unit, 2, can_act)
 	end_turn_button.disabled = not _is_player_turn() or unit.is_empty()
+
+
+func _update_skill_button(button: Button, unit: Dictionary, index: int, can_act: bool) -> void:
+	var skill := _get_skill_at(unit, index)
+	if skill.is_empty():
+		button.disabled = true
+		return
+	button.disabled = not can_act or not _can_use_skill(unit, str(skill.get("id", "")))
 
 
 func _color_log_text(text: String, color: Color) -> String:
@@ -796,15 +1147,16 @@ func _on_turn_queue_pressed(unit_id: int) -> void:
 	if unit.is_empty():
 		return
 
-	if unit.id == active_unit_id and selected_unit_id == active_unit_id:
+	if unit.id == selected_unit_id:
 		_clear_selected_unit()
 		return
 
 	pending_action = ""
+	pending_skill_id = ""
 	_on_unit_selected(unit)
 
 
-func _on_turn_queue_gui_input(event: InputEvent, unit_id: int) -> void:
+func _on_turn_queue_gui_input(_event: InputEvent, _unit_id: int) -> void:
 	return
 
 
@@ -834,21 +1186,37 @@ func _make_turn_queue_card_style(unit: Dictionary, selected: bool, hovered := fa
 
 
 func _update_action_placeholders(unit: Dictionary) -> void:
-	var skills: Array = unit.get("skill_names", [])
 	var labels: Array[String] = [
-		"UM. 1\n%s" % _skill_name_at(skills, 0),
-		"UM. 2\n%s" % _skill_name_at(skills, 1),
-		"UM. 3\n%s" % _skill_name_at(skills, 2)
+		_build_skill_button_label(unit, 0),
+		_build_skill_button_label(unit, 1),
+		_build_skill_button_label(unit, 2)
 	]
 	action_skill_1_button.text = labels[0]
 	action_skill_2_button.text = labels[1]
 	action_skill_3_button.text = labels[2]
 
 
-func _skill_name_at(skills: Array, index: int) -> String:
-	if index >= 0 and index < skills.size():
-		return str(skills[index]).to_upper()
-	return "PLACEHOLDER"
+func _build_skill_button_label(unit: Dictionary, index: int) -> String:
+	var skill := _get_skill_at(unit, index)
+	if skill.is_empty():
+		return "UM. %s\nPLACEHOLDER" % str(index + 1)
+	var cooldown: int = int(unit.get("skill_cooldowns", {}).get(skill.get("id", ""), 0))
+	var suffix := "" if cooldown == 0 else "\nCD %s" % cooldown
+	return "UM. %s\n%s%s" % [str(index + 1), str(skill.get("name", "")).to_upper(), suffix]
+
+
+func _get_skill_at(unit: Dictionary, index: int) -> Dictionary:
+	if unit.is_empty():
+		return {}
+	var skill_ids: Array = unit.get("skill_ids", [])
+	if index < 0 or index >= skill_ids.size():
+		return {}
+	return SKILL_LIBRARY.get(str(skill_ids[index]), {})
+
+
+func _get_skill_name(skill_id: String) -> String:
+	var skill: Dictionary = SKILL_LIBRARY.get(skill_id, {})
+	return str(skill.get("name", skill_id))
 
 
 func _hex_distance(a: Vector2i, b: Vector2i) -> int:
@@ -922,6 +1290,12 @@ func _start_unit_activation(unit: Dictionary) -> void:
 	unit.remaining_move = int(unit.move_range)
 	unit.action_points = 1
 	pending_action = ""
+	pending_skill_id = ""
+	_process_turn_start(unit)
+	if _find_unit_by_id(unit.id).is_empty():
+		_sync_board()
+		_start_next_activation()
+		return
 	selected_unit_id = unit.id if unit.side == "player" else -1
 	board.set_selected_unit(selected_unit_id)
 	_sync_board()
@@ -938,7 +1312,9 @@ func _is_player_turn() -> bool:
 
 
 func _get_remaining_move(unit: Dictionary) -> int:
-	return int(unit.get("remaining_move", unit.get("move_range", 0)))
+	if int(unit.move_range) <= 0:
+		return 0
+	return min(int(unit.get("remaining_move", unit.get("move_range", 0))), int(unit.move_range))
 
 
 func _get_display_move(unit: Dictionary) -> int:
@@ -984,7 +1360,25 @@ func _on_attack_button_pressed() -> void:
 	if unit.is_empty():
 		return
 
+	pending_skill_id = ""
 	pending_action = "" if pending_action == "attack" else "attack"
+	selected_unit_id = unit.id
+	_update_highlighted_cells(unit)
+	_update_action_buttons()
+	_refresh_turn_queue()
+
+
+func _on_skill_button_pressed(index: int) -> void:
+	if not _is_player_turn() or is_animating:
+		return
+
+	var unit := _get_active_unit()
+	var skill := _get_skill_at(unit, index)
+	if skill.is_empty() or not _can_use_skill(unit, str(skill.get("id", ""))):
+		return
+
+	pending_action = ""
+	pending_skill_id = "" if pending_skill_id == str(skill.get("id", "")) else str(skill.get("id", ""))
 	selected_unit_id = unit.id
 	_update_highlighted_cells(unit)
 	_update_action_buttons()

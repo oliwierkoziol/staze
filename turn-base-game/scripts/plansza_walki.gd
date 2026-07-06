@@ -10,12 +10,12 @@ const HEX_RADIUS := 42.0
 const GRID_COLUMNS := 15
 const GRID_ROWS := 11
 const SQRT_THREE := 1.7320508
-const GRASS_TEXTURE: Texture2D = preload("res://assets/mapTiles/grass.png")
+const HEX_FILL_COLOR := Color(0.07, 0.05, 0.02, 0.20)
+const HEX_OUTER_BORDER_COLOR := Color(0.14, 0.08, 0.03, 0.86)
+const HEX_INNER_BORDER_COLOR := Color(0.76, 0.62, 0.36, 0.42)
 const ROCK_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock.png")
 const TREE_TEXTURE: Texture2D = preload("res://assets/mapTiles/tree.png")
 const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
-const GRASS_VISIBLE_SIZE := Vector2(96.0, 112.0)
-const GRASS_TEXTURE_SIZE := Vector2(128.0, 128.0)
 
 var units: Array = []
 var selected_unit_id := -1
@@ -143,17 +143,14 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func draw_hex_grid() -> void:
-	var hex_size := Vector2(HEX_RADIUS * SQRT_THREE, HEX_RADIUS * 2.0)
-	var grass_draw_size := Vector2(
-		hex_size.x * GRASS_TEXTURE_SIZE.x / GRASS_VISIBLE_SIZE.x,
-		hex_size.y * GRASS_TEXTURE_SIZE.y / GRASS_VISIBLE_SIZE.y
-	)
 	for row in GRID_ROWS:
 		for column in GRID_COLUMNS:
 			var center: Vector2 = axial_to_pixel(column, row)
 			var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS)
-			draw_texture_rect(GRASS_TEXTURE, Rect2(center - grass_draw_size / 2.0, grass_draw_size), false)
-			draw_polyline(points + PackedVector2Array([points[0]]), Color(0.33, 0.25, 0.16), 2.0)
+			var inner_points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 2.0)
+			draw_colored_polygon(points, HEX_FILL_COLOR)
+			draw_polyline(points + PackedVector2Array([points[0]]), HEX_OUTER_BORDER_COLOR, 2.6)
+			draw_polyline(inner_points + PackedVector2Array([inner_points[0]]), HEX_INNER_BORDER_COLOR, 1.5)
 
 
 func draw_obstacles() -> void:
