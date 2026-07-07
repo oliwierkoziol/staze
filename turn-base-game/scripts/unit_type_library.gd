@@ -14,6 +14,11 @@ static func _ensure_loaded() -> void:
 	_load()
 
 
+static func reload() -> void:
+	_loaded = false
+	_load()
+
+
 static func _load() -> void:
 	_loaded = true
 	var file: FileAccess = FileAccess.open(UNIT_TYPES_PATH, FileAccess.READ)

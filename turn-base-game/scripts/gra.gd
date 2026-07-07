@@ -246,6 +246,7 @@ func _make_setup_button(text: String) -> Button:
 
 
 func _reload_json_into_setup() -> void:
+	UnitTypeLibraryScript.reload()
 	_load_battle_config()
 	_validate_setup()
 	_enter_setup_mode()
@@ -298,6 +299,7 @@ func _on_reset_battle_pressed() -> void:
 
 
 func _on_reload_json_pressed() -> void:
+	UnitTypeLibraryScript.reload()
 	_load_battle_config()
 	_validate_setup()
 	if setup_mode:
@@ -319,7 +321,7 @@ func _load_battle_config() -> void:
 		unit_configs.append(unit_data)
 
 	var raw_skill_library: Dictionary = config.get("skill_library", {})
-	skill_library.clear()
+	skill_library = UnitTypeLibraryScript.get_skill_library()
 	for skill_id in raw_skill_library.keys():
 		var raw_skill: Variant = raw_skill_library[skill_id]
 		assert(typeof(raw_skill) == TYPE_DICTIONARY, "Kazdy skill w JSON musi byc obiektem.")
