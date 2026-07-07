@@ -19,7 +19,7 @@
 		  "attack_range": 1,
 		  "resistance": "Brak",
 		  "portrait": "res://assets/characters/humans/ChatGPT Image 6 lip 2026, 12_21_05.png",
-		  "skill_ids": ["potezne_uderzenie"]
+		  "skill_ids": ["potezne_uderzenie", "zelazna_kurtyna"]
 		},
 		{
 		  "id": "human_cavalry",
@@ -53,7 +53,7 @@
 		  "attack_range": 4,
 		  "resistance": "Brak",
 		  "portrait": "res://assets/characters/humans/ChatGPT Image 6 lip 2026, 12_28_29.png",
-		  "skill_ids": ["strzal_w_kolano"]
+		  "skill_ids": ["strzal_w_kolano", "sokole_oko", "zwinnosc"]
 		},
 		{
 		  "id": "human_mages",
@@ -70,7 +70,7 @@
 		  "attack_range": 3,
 		  "resistance": "Brak",
 		  "portrait": "res://assets/characters/humans/replicate-prediction-mehwr8c30nrmw0cz6wfadpar2m-1.png",
-		  "skill_ids": ["sokole_oko", "zatruty_sztylet"]
+		  "skill_ids": ["kula_ognia", "lodowe_podloze", "bariera_energetyczna"]
 		}
 	  ]
 	},
@@ -167,7 +167,7 @@
 		  "attack_range": 1,
 		  "resistance": "Brak",
 		  "portrait": "res://assets/characters/humans/goblinTheft.png",
-		  "skill_ids": ["zatruty_sztylet"]
+		  "skill_ids": ["zatruty_sztylet", "chmura_toksyczna", "mistrz_trucizn"]
 		},
 		{
 		  "id": "goblin_warrior",
@@ -218,7 +218,7 @@
 		  "attack_range": 2,
 		  "resistance": "Brak",
 		  "portrait": "res://assets/characters/humans/goblinTrapper.png",
-		  "skill_ids": ["strzal_w_kolano"]
+		  "skill_ids": ["strzal_w_kolano", "sokole_oko", "zwinnosc"]
 		}
 	  ]
 	},
@@ -275,7 +275,7 @@
 		  "attack_range": 3,
 		  "resistance": "Brak",
 		  "portrait": "res://assets/characters/humans/elfMague.png",
-		  "skill_ids": ["sokole_oko", "zatruty_sztylet"]
+		  "skill_ids": ["kula_ognia", "lodowe_podloze", "bariera_energetyczna"]
 		},
 		{
 		  "id": "elf_arcanotechnic",
@@ -315,7 +315,7 @@
 		  "attack_range": 1,
 		  "resistance": "Brak",
 		  "portrait": "res://assets/characters/humans/dwarfWarrior.png",
-		  "skill_ids": ["potezne_uderzenie"]
+		  "skill_ids": ["potezne_uderzenie", "zelazna_kurtyna"]
 		},
 		{
 		  "id": "dwarf_guardian",
@@ -366,6 +366,46 @@
 		  "attack_range": 2,
 		  "resistance": "Brak",
 		  "portrait": "res://assets/characters/humans/dwarfDigger.png",
+		  "skill_ids": ["strzal_w_kolano"]
+		}
+	  ]
+	},
+	{
+	  "id": "testowa",
+	  "name": "Frakcja testowa",
+	  "units": [
+		{
+		  "id": "test_ally_1",
+		  "name": "Testowy Sojusznik 1",
+		  "short_name": "TS1",
+		  "role": "Jednostka testowa bez grafiki",
+		  "hp": 18,
+		  "dmg": 6,
+		  "def": 5,
+		  "speed": 500,
+		  "action_points": 100,
+		  "count": 6,
+		  "move_range": 4,
+		  "attack_range": 1,
+		  "resistance": "Brak",
+		  "portrait": "",
+		  "skill_ids": ["bariera_energetyczna","mistrz_trucizn","chmura_toksyczna"]
+		},
+		{
+		  "id": "test_ally_2",
+		  "name": "Testowy Sojusznik 2",
+		  "short_name": "TS2",
+		  "role": "Jednostka testowa bez grafiki",
+		  "hp": 14,
+		  "dmg": 5,
+		  "def": 3,
+		  "speed": 8,
+		  "action_points": 1,
+		  "count": 8,
+		  "move_range": 5,
+		  "attack_range": 3,
+		  "resistance": "Brak",
+		  "portrait": "",
 		  "skill_ids": ["strzal_w_kolano"]
 		}
 	  ]
@@ -421,6 +461,76 @@
 	  "range": 1,
 	  "target_type": "enemy_unit",
 	  "effect_type": "heavy_strike"
+	},
+	"kula_ognia": {
+	  "id": "kula_ognia",
+	  "name": "Kula Ognia",
+	  "description": "Zadaje 100% obrazen w centrum i 50% obrazen na 6 sasiednich hexach.",
+	  "ap_cost": 1,
+	  "cooldown": 2,
+	  "range": 7,
+	  "target_type": "cell",
+	  "effect_type": "fireball"
+	},
+	"lodowe_podloze": {
+	  "id": "lodowe_podloze",
+	  "name": "Lodowe Podloze",
+	  "description": "Zamraza 3 sasiednie hexy na 2 tury. Jednostki na lodzie traca Szybkosc i 2 punkty ruchu.",
+	  "ap_cost": 1,
+	  "cooldown": 6,
+	  "range": 10,
+	  "target_type": "cell",
+	  "effect_type": "ice_ground"
+	},
+	"chmura_toksyczna": {
+	  "id": "chmura_toksyczna",
+	  "name": "Chmura Toksyczna",
+	  "description": "Tworzy trujaca chmure na wybranym hexie i 6 sasiednich hexach na 2 tury.",
+	  "ap_cost": 1,
+	  "cooldown": 4,
+	  "range": 2,
+	  "target_type": "cell",
+	  "effect_type": "poison_cloud"
+	},
+	"bariera_energetyczna": {
+	  "id": "bariera_energetyczna",
+	  "name": "Bariera Energetyczna",
+	  "description": "Automatycznie blokuje pierwszy otrzymany atak. Po zniszczeniu odnawia sie 5 tur.",
+	  "ap_cost": 0,
+	  "cooldown": 5,
+	  "range": 0,
+	  "target_type": "passive",
+	  "effect_type": "energy_barrier"
+	},
+	"zelazna_kurtyna": {
+	  "id": "zelazna_kurtyna",
+	  "name": "Zelazna Kurtyna",
+	  "description": "Chroni sojusznika w zasiegu 3. Atak wrecz trafia Rycerza z redukcja 20% obrazen.",
+	  "ap_cost": 1,
+	  "cooldown": 2,
+	  "range": 3,
+	  "target_type": "ally_unit",
+	  "effect_type": "iron_curtain"
+	},
+	"zwinnosc": {
+	  "id": "zwinnosc",
+	  "name": "Zwinnosc",
+	  "description": "Gdy wrog podejdzie na sasiedni hex, jednostka odskakuje o 1 hex, jesli pole jest wolne.",
+	  "ap_cost": 0,
+	  "cooldown": 4,
+	  "range": 0,
+	  "target_type": "passive",
+	  "effect_type": "agility"
+	},
+	"mistrz_trucizn": {
+	  "id": "mistrz_trucizn",
+	  "name": "Mistrz Trucizn",
+	  "description": "Zwykle ataki maja 50% szansy na Zatrucie, gdy aktywne umiejetnosci sa na cooldownie. Jednostka jest odporna na trucizny.",
+	  "ap_cost": 0,
+	  "cooldown": 0,
+	  "range": 0,
+	  "target_type": "passive",
+	  "effect_type": "poison_master"
 	}
   }
 }

@@ -4,7 +4,6 @@ extends VBoxContainer
 signal selection_changed(side: String, faction: String)
 signal randomize_requested(side: String)
 
-const EMPTY_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 
 const SQUARE_SIZE := 120
@@ -100,10 +99,10 @@ func _ensure_portraits_for_factions() -> void:
 func _pick_random_portrait(faction: String) -> Texture2D:
 	var units: Array[Dictionary] = UnitTypeLibraryScript.get_faction_units(faction)
 	if units.is_empty():
-		return EMPTY_PORTRAIT
+		return null
 	var random_unit: Dictionary = units[randi() % units.size()]
 	var tex: Texture2D = _load_texture(str(random_unit.get("portrait", "")))
-	return tex if tex != null else EMPTY_PORTRAIT
+	return tex
 
 
 func _rebuild_rows() -> void:
@@ -198,7 +197,7 @@ func _make_faction_button(faction: String) -> Button:
 	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	portrait.texture = _faction_portraits.get(faction, EMPTY_PORTRAIT)
+	portrait.texture = _faction_portraits.get(faction, null)
 	inner.add_child(portrait)
 
 	var name_label := Label.new()
@@ -258,6 +257,7 @@ func _faction_display_name(faction: String) -> String:
 		"orcs": "Orkowie",
 		"goblins": "Gobliny",
 		"elves": "Elfy",
-		"dwarves": "Krasnoludy"
+		"dwarves": "Krasnoludy",
+		"testowa": "Frakcja testowa"
 	}
 	return str(names.get(faction, faction))

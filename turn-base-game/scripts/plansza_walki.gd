@@ -9,15 +9,20 @@ signal animation_finished(unit_id: int)
 
 const HEX_RADIUS := 42.0
 const GRID_COLUMNS := 15
-const GRID_ROWS := 11
+const GRID_ROWS := 10
 const SQRT_THREE := 1.7320508
 const HEX_FILL_COLOR := Color(0.07, 0.05, 0.02, 0.20)
 const HEX_OUTER_BORDER_COLOR := Color(0.14, 0.08, 0.03, 0.86)
 const HEX_INNER_BORDER_COLOR := Color(0.76, 0.62, 0.36, 0.42)
-const ROCK_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock.png")
-const TREE_TEXTURE: Texture2D = preload("res://assets/mapTiles/tree.png")
+const UNIT_COUNT_BADGE_BG := Color(0.10, 0.10, 0.08, 0.96)
+const UNIT_COUNT_BADGE_BORDER := Color(0.65, 0.52, 0.20, 0.90)
+const UNIT_COUNT_BADGE_TEXT := Color(0.95, 0.90, 0.78, 1.0)
+const ROCK1_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock1.png")
+const ROCK2_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2.png")
+const ROCK2K_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2k.png")
+const ROCK3_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock3.png")
+const FOREST1_TEXTURE: Texture2D = preload("res://assets/mapTiles/forest1.png")
 const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
-const EMPTY_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 
 var units: Array = []
@@ -30,6 +35,7 @@ var hovered_attack_cell := Vector2i(-1, -1)
 var visual_positions: Dictionary = {}
 var active_tweens: Dictionary = {}
 var obstacles: Array = []
+var terrain_effects: Array[Dictionary] = []
 var hovered_cell := Vector2i(-1, -1)
 
 
@@ -65,6 +71,13 @@ func set_obstacles(new_obstacles: Array) -> void:
 	obstacles = []
 	for obstacle in new_obstacles:
 		obstacles.append(obstacle.duplicate(true))
+	queue_redraw()
+
+
+func set_terrain_effects(new_effects: Array) -> void:
+	terrain_effects = []
+	for effect in new_effects:
+		terrain_effects.append(effect.duplicate(true))
 	queue_redraw()
 
 
@@ -107,6 +120,7 @@ func set_hovered_attack_cell(cell: Vector2i) -> void:
 
 func _draw() -> void:
 	draw_hex_grid()
+	draw_terrain_effects()
 	draw_obstacles()
 	draw_highlighted_cells()
 	draw_units()
@@ -185,18 +199,43 @@ func draw_hex_grid() -> void:
 func draw_obstacles() -> void:
 	var textures: Dictionary = {
 		"woda": WATER_TEXTURE,
-		"kamienie": ROCK_TEXTURE,
-		"drzewa": TREE_TEXTURE
+		"drzewa": FOREST1_TEXTURE,
+		"kamienie": ROCK1_TEXTURE,
+		"water": WATER_TEXTURE,
+		"forest1": FOREST1_TEXTURE,
+		"rock1": ROCK1_TEXTURE,
+		"rock2": ROCK2_TEXTURE,
+		"rock2k": ROCK2K_TEXTURE,
+		"rock3": ROCK3_TEXTURE
 	}
 	var texture_draw_size := Vector2(HEX_RADIUS * 2.0, HEX_RADIUS * 2.0)
 	for obstacle in obstacles:
 		var cell: Vector2i = Vector2i(int(obstacle.grid_x), int(obstacle.grid_y))
 		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
-		var type: String = str(obstacle.type)
-		var texture: Texture2D = textures.get(type)
+		var variant: String = str(obstacle.get("variant", obstacle.get("type", "")))
+		var texture: Texture2D = textures.get(variant)
 		if texture == null:
 			continue
 		draw_texture_rect(texture, Rect2(center - texture_draw_size / 2.0, texture_draw_size), false)
+
+
+func draw_terrain_effects() -> void:
+	for effect in terrain_effects:
+		var cell := Vector2i(int(effect.get("grid_x", -1)), int(effect.get("grid_y", -1)))
+		if cell.x < 0:
+			continue
+		var color := Color(0.35, 0.80, 1.0, 0.28)
+		match str(effect.get("id", "")):
+			"fire":
+				color = Color(1.0, 0.30, 0.05, 0.34)
+			"ice":
+				color = Color(0.45, 0.85, 1.0, 0.32)
+			"poison_cloud":
+				color = Color(0.20, 0.85, 0.25, 0.30)
+		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
+		var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 4.0)
+		draw_colored_polygon(points, color)
+		draw_polyline(points + PackedVector2Array([points[0]]), color.lightened(0.35), 2.0)
 
 
 func draw_units() -> void:
@@ -205,24 +244,26 @@ func draw_units() -> void:
 	for unit in units:
 		var center: Vector2 = visual_positions.get(unit.id, axial_to_pixel(unit.grid_x, unit.grid_y))
 		var portrait: Texture2D = unit_textures.get(unit.id, null)
-		var texture: Texture2D = portrait if portrait != null else EMPTY_PORTRAIT
 		var sprite_size := Vector2(HEX_RADIUS * 1.9, HEX_RADIUS * 2.2)
 		var sprite_rect := Rect2(center - Vector2(sprite_size.x / 2.0, sprite_size.y * 0.68), sprite_size)
-		if texture != null:
-			draw_texture_rect(texture, sprite_rect, false)
-		else:
-			var fallback_size := Vector2(HEX_RADIUS * 1.2, HEX_RADIUS * 1.2)
-			draw_rect(Rect2(center - fallback_size / 2.0, fallback_size), Color(0.2, 0.2, 0.25, 1.0), false, 2.0)
+		if portrait != null:
+			draw_texture_rect(portrait, sprite_rect, false)
 
 		if unit.id == selected_unit_id:
 			var outline_radius := HEX_RADIUS * 0.55
 			draw_arc(center, outline_radius, 0.0, TAU, 24, Color(1.0, 0.92, 0.45, 0.9), 3.0)
 
-		var count_text: String = "x" + str(unit.count)
+		var count_text: String = str(unit.count)
 		var text_size: Vector2 = font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
-		var badge_position: Vector2 = center + Vector2(HEX_RADIUS * 0.35, -HEX_RADIUS * 0.78)
-		draw_circle(badge_position + text_size / 2.0, HEX_RADIUS * 0.32, Color(0.1, 0.1, 0.1, 0.85))
-		draw_string(font, badge_position, count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color.WHITE)
+		var badge_size := Vector2(HEX_RADIUS * 0.95, text_size.y + 10.0)
+		var badge_rect := Rect2(center + Vector2(-badge_size.x / 2.0, HEX_RADIUS * 0.28), badge_size)
+		var text_position := Vector2(
+			badge_rect.position.x + (badge_rect.size.x - text_size.x) / 2.0,
+			badge_rect.position.y + (badge_rect.size.y + text_size.y) / 2.0 - 2.0
+		)
+		draw_rect(badge_rect, UNIT_COUNT_BADGE_BG, true)
+		draw_rect(badge_rect, UNIT_COUNT_BADGE_BORDER, false, 2.0)
+		draw_string(font, text_position, count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, UNIT_COUNT_BADGE_TEXT)
 
 
 func _load_unit_portrait(unit: Dictionary) -> Texture2D:
