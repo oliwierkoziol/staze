@@ -8,3 +8,6 @@ Dzień 2  (02.07.2026)
 - umożliwienie wybierania postaci (nie jest zawsze zaznaczona)
 Dzień 3 (03.07.2026)
 - ukazanie wymagań budowli przez ui (jakie materiały są potrzebne oraz na jakim polu musi się znajdować)
+Dzień 4 (06.07.2026)
+- stworzenie drzewka kultury adekwatnego do drzewka technologii
+- dodanie użytku dla punktów technologii i punktów kultury, by mogły zostać użyte w ich odpowiednich drzewkach 
