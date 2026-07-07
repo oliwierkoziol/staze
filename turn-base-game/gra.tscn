@@ -10,12 +10,31 @@
 [ext_resource type="Script" uid="uid://s8nsikmcxtmc" path="res://scripts/unit_stats_display.gd" id="8_stats"]
 [ext_resource type="Script" uid="uid://c7siu6836f4vl" path="res://scripts/unit_status_panel.gd" id="9_status"]
 [ext_resource type="Script" uid="uid://dcm6ghvn3slyt" path="res://scripts/unit_abilities_panel.gd" id="10_abilities"]
+[ext_resource type="Texture2D" uid="uid://q6isvretb06q" path="res://assets/ui/general1.png" id="11_general1"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_6otim"]
 font_size = 22
 font_color = Color(0.76862746, 0.61960787, 0.2901961, 1)
 outline_size = 3
 outline_color = Color(0.11256667, 0.09398364, 0.056831576, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_end_turn"]
+texture = ExtResource("4_panel")
+texture_margin_left = 8.0
+texture_margin_top = 8.0
+texture_margin_right = 8.0
+texture_margin_bottom = 8.0
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_end_turn_hover"]
+texture = ExtResource("4_panel")
+texture_margin_left = 8.0
+texture_margin_top = 8.0
+texture_margin_right = 8.0
+texture_margin_bottom = 8.0
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
 content_margin_left = 10.0
@@ -133,14 +152,14 @@ alignment = 1
 
 [node name="RightPanel" type="NinePatchRect" parent="HUD/Overlay" unique_id=23082911]
 texture_filter = 1
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(348, 0)
 clip_contents = true
 layout_mode = 1
 anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -316.0
+offset_left = -364.0
 offset_top = 16.0
 offset_right = -16.0
 offset_bottom = -64.0
@@ -151,6 +170,8 @@ patch_margin_left = 8
 patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="RightMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel" unique_id=82583585]
 layout_mode = 1
@@ -166,13 +187,19 @@ theme_override_constants/margin_bottom = 24
 
 [node name="RightContent" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin" unique_id=46290738]
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="GeneralTitle" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=10370558]
+[node name="RightTitle" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=8533149]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
-text = "STATYSTYKI GENERALA"
+text = "STATYSTYKI JEDNOSTKI"
+label_settings = SubResource("LabelSettings_6otim")
 horizontal_alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=1992870655]
+layout_mode = 2
+texture = ExtResource("6_tr5l5")
 
 [node name="GeneralPanel" type="NinePatchRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=1591106099]
 texture_filter = 1
@@ -182,6 +209,8 @@ patch_margin_left = 8
 patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 script = ExtResource("5_npp")
 
 [node name="GeneralPanelMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel" unique_id=804480615]
@@ -191,30 +220,52 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 22
-theme_override_constants/margin_top = 22
-theme_override_constants/margin_right = 22
-theme_override_constants/margin_bottom = 22
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
 
 [node name="GeneralPanelContent" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin" unique_id=1246087797]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 12
 
-[node name="GeneralName" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent" unique_id=1222497093]
+[node name="GeneralHeader" type="HBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent" unique_id=760100101]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 15
+
+[node name="GeneralPortrait" type="TextureRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader" unique_id=760100102]
+texture_filter = 1
+custom_minimum_size = Vector2(84, 84)
+layout_mode = 2
+texture = ExtResource("11_general1")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="GeneralHeaderText" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader" unique_id=760100103]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="GeneralName" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText" unique_id=1222497093]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 18
 text = "KAPITAN ALARIC"
 autowrap_mode = 2
 
-[node name="GeneralLevel" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent" unique_id=1925425070]
+[node name="GeneralLevel" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText" unique_id=1925425070]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.44, 0.78, 0.35, 1)
+theme_override_font_sizes/font_size = 14
 text = "Poziom 5"
 
 [node name="GeneralRule" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent" unique_id=812989351]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
+theme_override_font_sizes/font_size = 12
 text = "-"
 autowrap_mode = 2
 
@@ -232,6 +283,8 @@ patch_margin_left = 8
 patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 script = ExtResource("5_npp")
 
 [node name="GeneralSkillsMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel" unique_id=805178180]
@@ -241,14 +294,16 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
 
 [node name="GeneralSkills" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel/GeneralSkillsMargin" unique_id=84610017]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
+theme_override_font_sizes/font_size = 12
 text = "-"
 autowrap_mode = 2
 
@@ -260,7 +315,7 @@ horizontal_alignment = 1
 
 [node name="EventLogPanel" type="NinePatchRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=726158766]
 texture_filter = 1
-custom_minimum_size = Vector2(0, 240)
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_vertical = 3
 texture = ExtResource("4_panel")
@@ -268,6 +323,8 @@ patch_margin_left = 8
 patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 script = ExtResource("5_npp")
 
 [node name="EventLogScroll" type="ScrollContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel" unique_id=177272283]
@@ -275,22 +332,34 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 10.0
-offset_top = 10.0
-offset_right = -10.0
-offset_bottom = -10.0
+offset_left = 15.0
+offset_top = 15.0
+offset_right = -13.0
+offset_bottom = -15.0
 grow_horizontal = 2
 grow_vertical = 2
 horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
 
 [node name="EventLog" type="RichTextLabel" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll" unique_id=2002893563]
-custom_minimum_size = Vector2(0, 240)
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
 theme_override_colors/default_color = Color(0.9, 0.87, 0.78, 1)
 text = "-"
 fit_content = true
 scroll_active = false
+
+[node name="EndTurnButton" type="Button" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=760100201]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.88, 0.78, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxTexture_end_turn")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_end_turn_hover")
+theme_override_styles/hover = SubResource("StyleBoxTexture_end_turn_hover")
+text = "ZAKOŃCZ TURĘ"
 
 [node name="LeftPanel" type="NinePatchRect" parent="HUD/Overlay" unique_id=198121168]
 texture_filter = 1
@@ -358,6 +427,8 @@ patch_margin_left = 8
 patch_margin_top = 8
 patch_margin_right = 8
 patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 script = ExtResource("5_npp")
 
 [node name="UnitHeaderMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader" unique_id=474921516]
@@ -484,7 +555,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 364.0
 offset_top = -234.0
-offset_right = -316.0
+offset_right = -364.0
 offset_bottom = -64.0
 grow_horizontal = 2
 grow_vertical = 0

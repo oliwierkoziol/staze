@@ -25,12 +25,13 @@ const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 @onready var unit_status_panel: HBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatusPanel/UnitStatusMargin/UnitStatus
 @onready var unit_abilities_panel: VBoxContainer = $HUD/Overlay/UnitAbilitiesPanel/UnitAbilitiesMargin/UnitAbilities
 @onready var actions_label: Label = get_node_or_null("HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel/ActionsMargin/ActionsLabel")
-@onready var general_name_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralName
-@onready var general_level_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralLevel
+@onready var general_name_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText/GeneralName
+@onready var general_level_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText/GeneralLevel
 @onready var general_skills_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel/GeneralSkillsMargin/GeneralSkills
 @onready var general_rule_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralRule
 @onready var event_log_scroll: ScrollContainer = $HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll
 @onready var event_log_label: RichTextLabel = $HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll/EventLog
+@onready var end_turn_button: Button = $HUD/Overlay/RightPanel/RightMargin/RightContent/EndTurnButton
 
 var units: Array = []
 var obstacles: Array[Dictionary] = []
@@ -202,6 +203,7 @@ func _setup_battle_scene() -> void:
 	board.cell_hovered.connect(_on_board_cell_hovered)
 	board.animation_finished.connect(_on_board_animation_finished)
 	unit_abilities_panel.skill_pressed.connect(_on_skill_button_pressed)
+	end_turn_button.pressed.connect(_on_end_turn_button_pressed)
 	general_name_label.text = "KAPITAN ALARIC"
 	general_level_label.text = "Poziom 5"
 	general_skills_label.text = "\n".join([
@@ -1559,7 +1561,7 @@ func _get_neighbors(cell: Vector2i) -> Array[Vector2i]:
 
 func _disable_hud_mouse(node: Node) -> void:
 	if node is Control:
-		if node is BaseButton:
+		if node is BaseButton or node is ScrollContainer:
 			node.mouse_filter = Control.MOUSE_FILTER_STOP
 		else:
 			node.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1599,6 +1601,17 @@ func _update_action_buttons() -> void:
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
 	if not selected_unit.is_empty():
 		unit_abilities_panel.set_skills(_build_skill_cards(selected_unit))
+	var active_unit: Dictionary = _get_active_unit()
+	end_turn_button.disabled = setup_mode or is_animating or not _is_player_turn() or active_unit.is_empty() or active_unit.side != "player"
+
+
+func _on_end_turn_button_pressed() -> void:
+	if setup_mode or is_animating or not _is_player_turn():
+		return
+	var active_unit: Dictionary = _get_active_unit()
+	if active_unit.is_empty() or active_unit.side != "player":
+		return
+	_end_current_activation()
 
 
 func _color_log_text(text: String, color: Color) -> String:
@@ -1619,7 +1632,13 @@ func _log_event(text: String) -> void:
 
 
 func _scroll_event_log_to_bottom() -> void:
-	event_log_scroll.scroll_vertical = int(event_log_label.get_content_height())
+	if event_log_scroll == null:
+		return
+	await get_tree().process_frame
+	var scrollbar: VScrollBar = event_log_scroll.get_v_scroll_bar()
+	if scrollbar == null:
+		return
+	event_log_scroll.scroll_vertical = int(scrollbar.max_value)
 
 
 func _refresh_turn_queue() -> void:
