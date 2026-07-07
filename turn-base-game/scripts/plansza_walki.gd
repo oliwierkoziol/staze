@@ -26,6 +26,7 @@ var selected_unit_id := -1
 var highlighted_move_cells: Array[Vector2i] = []
 var highlighted_attack_cells: Array[Vector2i] = []
 var hovered_move_path: Array[Vector2i] = []
+var hovered_attack_cell := Vector2i(-1, -1)
 var visual_positions: Dictionary = {}
 var active_tweens: Dictionary = {}
 var obstacles: Array = []
@@ -84,6 +85,7 @@ func set_highlighted_cells(move_cells: Array, attack_cells: Array = []) -> void:
 	highlighted_move_cells.clear()
 	highlighted_attack_cells.clear()
 	hovered_move_path.clear()
+	hovered_attack_cell = Vector2i(-1, -1)
 	for cell in move_cells:
 		highlighted_move_cells.append(cell)
 	for cell in attack_cells:
@@ -95,6 +97,11 @@ func set_hovered_move_path(path: Array) -> void:
 	hovered_move_path.clear()
 	for cell in path:
 		hovered_move_path.append(cell)
+	queue_redraw()
+
+
+func set_hovered_attack_cell(cell: Vector2i) -> void:
+	hovered_attack_cell = cell
 	queue_redraw()
 
 
@@ -245,6 +252,7 @@ func draw_highlighted_cells() -> void:
 		Color(0.82, 0.20, 0.20, 0.0),
 		Color(0.62, 0.10, 0.10, 0.95)
 	)
+	_draw_hovered_attack_cell()
 
 
 func _draw_cell_highlights(cells: Array[Vector2i], fill_color: Color, border_color: Color) -> void:
@@ -269,6 +277,16 @@ func _draw_hovered_move_path() -> void:
 
 	for index in range(path_points.size() - 1):
 		_draw_dotted_segment(path_points[index], path_points[index + 1], Color(0.45, 0.82, 1.0, 0.85))
+
+
+func _draw_hovered_attack_cell() -> void:
+	if hovered_attack_cell.x == -1:
+		return
+	if not highlighted_attack_cells.has(hovered_attack_cell):
+		return
+	var center: Vector2 = axial_to_pixel(hovered_attack_cell.x, hovered_attack_cell.y)
+	var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 8.0)
+	draw_polyline(points + PackedVector2Array([points[0]]), Color(1.0, 0.30, 0.30, 1.0), 3.0)
 
 
 func _draw_dotted_segment(start: Vector2, finish: Vector2, color: Color) -> void:

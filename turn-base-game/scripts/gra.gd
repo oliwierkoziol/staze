@@ -17,6 +17,7 @@ const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
 @onready var hud: CanvasLayer = $HUD
 @onready var left_content: VBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent
+@onready var top_bar: NinePatchRect = $HUD/Overlay/TopBar
 @onready var turn_queue_list: HBoxContainer = $HUD/Overlay/TopBar/TopMargin/TopQueueScroll/TopQueueList
 @onready var unit_portrait: TextureRect = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitPortrait
 @onready var unit_name_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText/UnitName
@@ -851,31 +852,44 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 			board.set_hovered_move_path([])
 			return
 		board.set_hovered_move_path([cell])
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		return
 
 	if is_animating or pending_skill_id != "":
 		board.set_hovered_move_path([])
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		return
 
 	var active_unit := _get_active_unit()
 	if active_unit.is_empty() or active_unit.side != "player":
 		board.set_hovered_move_path([])
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		return
 
 	if selected_unit_id != active_unit.id:
 		board.set_hovered_move_path([])
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		return
 
 	if cell.x == -1:
 		board.set_hovered_move_path([])
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		return
+
+	var hovered_unit: Dictionary = _find_unit_at_cell(cell)
+	if not hovered_unit.is_empty() and hovered_unit.side != active_unit.side and _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
+		board.set_hovered_move_path([])
+		board.set_hovered_attack_cell(cell)
 		return
 
 	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell)
 	if path.is_empty() or path.size() > _get_remaining_move(active_unit):
 		board.set_hovered_move_path([])
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		return
 
 	board.set_hovered_move_path(path)
+	board.set_hovered_attack_cell(Vector2i(-1, -1))
 
 
 func _get_reachable_cells(unit: Dictionary, max_distance: int) -> Array[Vector2i]:
@@ -1640,7 +1654,8 @@ func _refresh_turn_queue() -> void:
 	for child in turn_queue_list.get_children():
 		child.queue_free()
 
-	for unit_id in _get_visible_turn_queue():
+	var visible_queue: Array[int] = _get_visible_turn_queue()
+	for unit_id in visible_queue:
 		var unit := _find_unit_by_id(unit_id)
 		if unit.is_empty():
 			continue
@@ -1664,6 +1679,27 @@ func _refresh_turn_queue() -> void:
 		button.pressed.connect(_on_turn_queue_pressed.bind(unit.id))
 		button.gui_input.connect(_on_turn_queue_gui_input.bind(unit.id))
 		turn_queue_list.add_child(button)
+
+	_update_top_bar_width(visible_queue.size())
+
+
+func _update_top_bar_width(card_count: int) -> void:
+	if top_bar == null or turn_queue_list == null:
+		return
+	if card_count <= 0:
+		return
+	var card_width := 124
+	var card_height := 60
+	var card_spacing := turn_queue_list.get_theme_constant("separation")
+	var margin_left := 28
+	var margin_right := 28
+	var target_width: float = float(card_count * card_width + maxi(0, card_count - 1) * card_spacing + margin_left + margin_right)
+	# ponytail: ograniczenie szerokosci bazuje na obecnym ukladzie paneli bocznych; przy redesignie HUD mozna policzyc je z rzeczywistych offsetow paneli.
+	var max_width: float = maxf(280.0, get_viewport_rect().size.x - 2.0 * 364.0)
+	var final_width: float = minf(target_width, max_width)
+	top_bar.offset_left = -final_width * 0.5
+	top_bar.offset_right = final_width * 0.5
+	top_bar.offset_bottom = top_bar.offset_top + float(card_height + 22 + 22)
 
 
 func _on_turn_queue_pressed(unit_id: int) -> void:
