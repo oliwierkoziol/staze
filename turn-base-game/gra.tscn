@@ -11,12 +11,31 @@
 [ext_resource type="Script" uid="uid://c7siu6836f4vl" path="res://scripts/unit_status_panel.gd" id="9_status"]
 [ext_resource type="Script" uid="uid://dcm6ghvn3slyt" path="res://scripts/unit_abilities_panel.gd" id="10_abilities"]
 [ext_resource type="Texture2D" uid="uid://q6isvretb06q" path="res://assets/ui/general1.png" id="11_general1"]
+[ext_resource type="Texture2D" uid="uid://cymiq2f6b8k8c" path="res://assets/ui/general_ability1.png" id="12_general_ability1"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_6otim"]
 font_size = 22
 font_color = Color(0.76862746, 0.61960787, 0.2901961, 1)
 outline_size = 3
 outline_color = Color(0.11256667, 0.09398364, 0.056831576, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_general_ability"]
+texture = ExtResource("4_panel")
+texture_margin_left = 8.0
+texture_margin_top = 8.0
+texture_margin_right = 8.0
+texture_margin_bottom = 8.0
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_general_ability_hover"]
+texture = ExtResource("4_panel")
+texture_margin_left = 8.0
+texture_margin_top = 8.0
+texture_margin_right = 8.0
+texture_margin_bottom = 8.0
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_end_turn"]
 texture = ExtResource("4_panel")
@@ -275,37 +294,131 @@ theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
 text = "UMIEJETNOSCI GENERALA"
 horizontal_alignment = 1
 
-[node name="GeneralSkillsPanel" type="NinePatchRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=18234707]
-texture_filter = 1
+[node name="GeneralSkillsButtons" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=170510001]
 layout_mode = 2
-texture = ExtResource("4_panel")
-patch_margin_left = 8
-patch_margin_top = 8
-patch_margin_right = 8
-patch_margin_bottom = 8
-axis_stretch_horizontal = 1
-axis_stretch_vertical = 1
-script = ExtResource("5_npp")
+theme_override_constants/separation = 10
 
-[node name="GeneralSkillsMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel" unique_id=805178180]
+[node name="GeneralAbilityButton1" type="Button" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons" unique_id=170510002]
+custom_minimum_size = Vector2(0, 88)
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
+theme_override_styles/normal = SubResource("StyleBoxTexture_general_ability")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_general_ability_hover")
+theme_override_styles/hover = SubResource("StyleBoxTexture_general_ability_hover")
+
+[node name="AbilityContent" type="HBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1" unique_id=170510003]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
+theme_override_constants/separation = 10
 
-[node name="GeneralSkills" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsPanel/GeneralSkillsMargin" unique_id=84610017]
+[node name="AbilityIcon" type="TextureRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent" unique_id=170510004]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("12_general_ability1")
+stretch_mode = 5
+
+[node name="AbilityText" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent" unique_id=170510005]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="AbilityName" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent/AbilityText" unique_id=170510006]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 15
+text = "SZARZA BOJOWA"
+
+[node name="AbilityDesc" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent/AbilityText" unique_id=170510007]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
-theme_override_font_sizes/font_size = 12
-text = "-"
-autowrap_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Sojusznicy w aurze zadaja +25% DMG przez 2 tury."
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="AbilityCooldown" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent/AbilityText" unique_id=170510014]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.68, 0.5, 1)
+theme_override_font_sizes/font_size = 11
+text = "CD: 4 tury."
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="GeneralAbilityButton2" type="Button" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons" unique_id=170510008]
+custom_minimum_size = Vector2(0, 88)
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
+theme_override_styles/normal = SubResource("StyleBoxTexture_general_ability")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_general_ability_hover")
+theme_override_styles/hover = SubResource("StyleBoxTexture_general_ability_hover")
+
+[node name="AbilityContent" type="HBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2" unique_id=170510009]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = 11.0
+offset_right = -18.0
+offset_bottom = -11.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="AbilityIcon" type="TextureRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent" unique_id=170510010]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("12_general_ability1")
+stretch_mode = 5
+
+[node name="AbilityText" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent" unique_id=170510011]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="AbilityName" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent/AbilityText" unique_id=170510012]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 15
+text = "WEZWANIE BASTIONU"
+
+[node name="AbilityDesc" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent/AbilityText" unique_id=170510013]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Wszyscy sojusznicy dostaja +3 DEF i odpornosc na oslabienia."
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="AbilityCooldown" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent/AbilityText" unique_id=170510015]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.68, 0.5, 1)
+theme_override_font_sizes/font_size = 11
+text = "CD: 5 tur."
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="EventLogTitle" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=281413411]
 layout_mode = 2
