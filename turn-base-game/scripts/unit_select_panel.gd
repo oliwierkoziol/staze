@@ -7,13 +7,21 @@ signal randomize_requested(side: String)
 const EMPTY_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 
+const SQUARE_SIZE := 120
+const INNER_PADDING := 18
+const TEXT_GAP := 12
+const ROW_H_SEPARATION := 20
+const ROW_V_SEPARATION := 18
+const BUTTON_SIZE := SQUARE_SIZE + INNER_PADDING * 2
+
 var _side: String = "player"
 var _faction_options: Array[String] = []
 var _current_faction: String = ""
-var _faction_button: OptionButton
-var _main_portrait: TextureRect
-var _class_icons: Array[TextureRect] = []
-var _classes_container: HBoxContainer
+var _faction_portraits: Dictionary = {}
+var _faction_buttons: Array[Button] = []
+var _rows_container: VBoxContainer
+var _title_label: Label
+var _subtitle_label: Label
 var _random_button: Button
 
 
@@ -27,6 +35,7 @@ func _ready() -> void:
 func setup(side: String, faction_options: Array[String], initial_faction: String) -> void:
 	_side = side
 	_faction_options = faction_options
+	_ensure_portraits_for_factions()
 	_set_faction(initial_faction)
 
 
@@ -51,164 +60,180 @@ func randomize_faction() -> void:
 
 
 func _build_ui() -> void:
-	add_theme_constant_override("separation", 16)
-	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_title_label = Label.new()
+	_title_label.text = "ARMIA GRACZA" if _side == "player" else "ARMIA KOMPUTERA"
+	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
+	add_child(_title_label)
 
-	var panel := Panel.new()
-	panel.anchor_right = 1.0
-	panel.anchor_bottom = 1.0
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.12, 0.12, 0.16, 1.0)
-	style.border_color = Color(0.45, 0.38, 0.24, 1.0)
-	style.border_width_left = 3
-	style.border_width_top = 3
-	style.border_width_right = 3
-	style.border_width_bottom = 3
-	style.content_margin_left = 20.0
-	style.content_margin_top = 20.0
-	style.content_margin_right = 20.0
-	style.content_margin_bottom = 20.0
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	panel.add_theme_stylebox_override("panel", style)
-	add_child(panel)
+	_subtitle_label = Label.new()
+	_subtitle_label.text = "(wybierasz ty)" if _side == "player" else "(przeciwnik sterowany przez komputer)"
+	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_subtitle_label.add_theme_font_size_override("font_size", 14)
+	_subtitle_label.add_theme_color_override("font_color", Color(0.75, 0.72, 0.62, 1.0))
+	add_child(_subtitle_label)
 
-	var title := Label.new()
-	title.text = "ARMIA GRACZA" if _side == "player" else "ARMIA KOMPUTERA"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
-	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
-	add_child(title)
-
-	var subtitle := Label.new()
-	subtitle.text = "(wybierasz ty)" if _side == "player" else "(przeciwnik sterowany przez komputer)"
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_size_override("font_size", 14)
-	subtitle.add_theme_color_override("font_color", Color(0.75, 0.72, 0.62, 1.0))
-	add_child(subtitle)
-
-	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 12)
-	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	add_child(header)
-
-	_faction_button = OptionButton.new()
-	_faction_button.custom_minimum_size = Vector2(180, 40)
-	_faction_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_faction_button.item_selected.connect(_on_faction_changed)
-	header.add_child(_faction_button)
+	_rows_container = VBoxContainer.new()
+	_rows_container.name = "RowsContainer"
+	_rows_container.add_theme_constant_override("separation", ROW_V_SEPARATION)
+	_rows_container.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_rows_container.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_rows_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	add_child(_rows_container)
 
 	_random_button = Button.new()
 	_random_button.text = "LOSOWO"
-	_random_button.custom_minimum_size = Vector2(100, 40)
+	_random_button.custom_minimum_size = Vector2(140, 44)
+	_random_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_random_button.add_theme_font_size_override("font_size", 18)
 	_random_button.pressed.connect(_on_randomize_pressed)
-	header.add_child(_random_button)
+	add_child(_random_button)
 
-	_main_portrait = TextureRect.new()
-	_main_portrait.name = "MainPortrait"
-	_main_portrait.custom_minimum_size = Vector2(260, 260)
-	_main_portrait.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_main_portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_main_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_main_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 
-	var portrait_border := Panel.new()
-	portrait_border.custom_minimum_size = Vector2(260, 260)
-	portrait_border.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var border_style := StyleBoxFlat.new()
-	border_style.bg_color = Color(0.08, 0.08, 0.1, 1.0)
-	border_style.border_color = Color(0.55, 0.48, 0.3, 1.0)
-	border_style.border_width_left = 2
-	border_style.border_width_top = 2
-	border_style.border_width_right = 2
-	border_style.border_width_bottom = 2
-	border_style.corner_radius_top_left = 6
-	border_style.corner_radius_top_right = 6
-	border_style.corner_radius_bottom_left = 6
-	border_style.corner_radius_bottom_right = 6
-	portrait_border.add_theme_stylebox_override("panel", border_style)
-	portrait_border.add_child(_main_portrait)
-	add_child(portrait_border)
+func _ensure_portraits_for_factions() -> void:
+	for faction in _faction_options:
+		if not _faction_portraits.has(faction):
+			_faction_portraits[faction] = _pick_random_portrait(faction)
 
-	var classes_label := Label.new()
-	classes_label.text = "Jednostki armii:"
-	classes_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	classes_label.add_theme_color_override("font_color", Color(0.85, 0.82, 0.72, 1.0))
-	add_child(classes_label)
 
-	_classes_container = HBoxContainer.new()
-	_classes_container.add_theme_constant_override("separation", 10)
-	_classes_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_classes_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	add_child(_classes_container)
+func _pick_random_portrait(faction: String) -> Texture2D:
+	var units: Array[Dictionary] = UnitTypeLibraryScript.get_faction_units(faction)
+	if units.is_empty():
+		return EMPTY_PORTRAIT
+	var random_unit: Dictionary = units[randi() % units.size()]
+	var tex: Texture2D = _load_texture(str(random_unit.get("portrait", "")))
+	return tex if tex != null else EMPTY_PORTRAIT
+
+
+func _rebuild_rows() -> void:
+	for child in _rows_container.get_children():
+		child.queue_free()
+	_faction_buttons.clear()
+
+	var row1 := HBoxContainer.new()
+	row1.name = "Row1"
+	row1.add_theme_constant_override("separation", ROW_H_SEPARATION)
+	row1.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	row1.alignment = BoxContainer.ALIGNMENT_CENTER
+	_rows_container.add_child(row1)
+
+	var row2 := HBoxContainer.new()
+	row2.name = "Row2"
+	row2.add_theme_constant_override("separation", ROW_H_SEPARATION)
+	row2.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	row2.alignment = BoxContainer.ALIGNMENT_CENTER
+	_rows_container.add_child(row2)
+
+	for index in _faction_options.size():
+		var faction: String = _faction_options[index]
+		var button := _make_faction_button(faction)
+		_faction_buttons.append(button)
+		if index < 2:
+			row1.add_child(button)
+		elif index < 4:
+			row2.add_child(button)
+		else:
+			var row3 := HBoxContainer.new()
+			row3.name = "Row3"
+			row3.add_theme_constant_override("separation", ROW_H_SEPARATION)
+			row3.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row3.alignment = BoxContainer.ALIGNMENT_CENTER
+			_rows_container.add_child(row3)
+			row3.add_child(button)
+
+	_update_selection_visuals()
+
+
+func _make_faction_button(faction: String) -> Button:
+	var button := Button.new()
+	button.name = "FactionButton_%s" % faction
+	button.custom_minimum_size = Vector2(BUTTON_SIZE, BUTTON_SIZE)
+	button.toggle_mode = true
+	button.pressed.connect(_on_faction_button_pressed.bind(faction))
+	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+	var style_normal := StyleBoxFlat.new()
+	style_normal.bg_color = Color(0.12, 0.12, 0.16, 1.0)
+	style_normal.border_color = Color(0.45, 0.38, 0.24, 1.0)
+	style_normal.border_width_left = 3
+	style_normal.border_width_top = 3
+	style_normal.border_width_right = 3
+	style_normal.border_width_bottom = 3
+	style_normal.content_margin_left = INNER_PADDING
+	style_normal.content_margin_top = INNER_PADDING
+	style_normal.content_margin_right = INNER_PADDING
+	style_normal.content_margin_bottom = INNER_PADDING
+	style_normal.corner_radius_top_left = 8
+	style_normal.corner_radius_top_right = 8
+	style_normal.corner_radius_bottom_left = 8
+	style_normal.corner_radius_bottom_right = 8
+	button.add_theme_stylebox_override("normal", style_normal)
+
+	var style_hover := style_normal.duplicate()
+	style_hover.bg_color = Color(0.18, 0.17, 0.22, 1.0)
+	button.add_theme_stylebox_override("hover", style_hover)
+
+	var style_pressed := style_normal.duplicate()
+	style_pressed.bg_color = Color(0.22, 0.20, 0.28, 1.0)
+	style_pressed.border_color = Color(0.88, 0.75, 0.34, 1.0)
+	button.add_theme_stylebox_override("pressed", style_pressed)
+
+	var container := CenterContainer.new()
+	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	button.add_child(container)
+
+	var inner := VBoxContainer.new()
+	inner.alignment = BoxContainer.ALIGNMENT_CENTER
+	inner.add_theme_constant_override("separation", TEXT_GAP)
+	container.add_child(inner)
+
+	var portrait := TextureRect.new()
+	portrait.name = "Portrait"
+	portrait.custom_minimum_size = Vector2(SQUARE_SIZE, SQUARE_SIZE)
+	portrait.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.texture = _faction_portraits.get(faction, EMPTY_PORTRAIT)
+	inner.add_child(portrait)
+
+	var name_label := Label.new()
+	name_label.name = "FactionName"
+	name_label.text = _faction_display_name(faction)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	name_label.add_theme_font_size_override("font_size", 16)
+	name_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
+	inner.add_child(name_label)
+
+	return button
 
 
 func _set_faction(faction: String) -> void:
-	if _faction_button == null:
+	if _faction_options.is_empty():
+		_current_faction = faction
 		return
 	_current_faction = faction
-	_faction_button.clear()
-	for index in _faction_options.size():
-		_faction_button.add_item(_faction_display_name(_faction_options[index]))
-		if _faction_options[index] == faction:
-			_faction_button.select(index)
-	_refresh_view()
-
-
-func _refresh_view() -> void:
-	var units: Array[Dictionary] = UnitTypeLibraryScript.get_faction_units(_current_faction)
-
-	if units.is_empty():
-		_main_portrait.texture = EMPTY_PORTRAIT
-	else:
-		var random_unit: Dictionary = units[randi() % units.size()]
-		var tex: Texture2D = _load_texture(str(random_unit.get("portrait", "")))
-		_main_portrait.texture = tex if tex != null else EMPTY_PORTRAIT
-
-	for icon_border in _classes_container.get_children():
-		icon_border.queue_free()
-	_class_icons.clear()
-
-	for unit in units:
-		var icon := TextureRect.new()
-		icon.custom_minimum_size = Vector2(80, 80)
-		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		var tex: Texture2D = _load_texture(str(unit.get("portrait", "")))
-		icon.texture = tex if tex != null else EMPTY_PORTRAIT
-		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-
-		var icon_border := Panel.new()
-		icon_border.custom_minimum_size = Vector2(80, 80)
-		icon_border.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		var icon_style := StyleBoxFlat.new()
-		icon_style.bg_color = Color(0.08, 0.08, 0.1, 1.0)
-		icon_style.border_color = Color(0.4, 0.35, 0.22, 1.0)
-		icon_style.border_width_left = 2
-		icon_style.border_width_top = 2
-		icon_style.border_width_right = 2
-		icon_style.border_width_bottom = 2
-		icon_style.corner_radius_top_left = 4
-		icon_style.corner_radius_top_right = 4
-		icon_style.corner_radius_bottom_left = 4
-		icon_style.corner_radius_bottom_right = 4
-		icon_border.add_theme_stylebox_override("panel", icon_style)
-		icon_border.add_child(icon)
-		_classes_container.add_child(icon_border)
-		_class_icons.append(icon)
-
+	_ensure_portraits_for_factions()
+	if _rows_container == null:
+		return
+	if _faction_buttons.is_empty() or _faction_buttons.size() != _faction_options.size():
+		_rebuild_rows()
+	_update_selection_visuals()
 	selection_changed.emit(_side, _current_faction)
 
 
-func _on_faction_changed(_index: int) -> void:
-	var selected: int = _faction_button.selected
-	if selected < 0 or selected >= _faction_options.size():
-		return
-	var faction: String = _faction_options[selected]
+func _update_selection_visuals() -> void:
+	for index in _faction_buttons.size():
+		var button: Button = _faction_buttons[index]
+		button.button_pressed = _faction_options[index] == _current_faction
+
+
+func _on_faction_button_pressed(faction: String) -> void:
 	if faction == _current_faction:
 		return
 	_set_faction(faction)

@@ -61,34 +61,49 @@ func _build_ui() -> void:
 	column.add_child(title)
 
 	var subtitle := Label.new()
-	subtitle.text = "Wybierz armie gracza i przeciwnika"
+	subtitle.text = "Wybierz armie do bitwy"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_font_size_override("font_size", 18)
 	subtitle.add_theme_color_override("font_color", Color(0.75, 0.72, 0.62, 1.0))
 	column.add_child(subtitle)
 
 	var panels_row := HBoxContainer.new()
+	panels_row.name = "PanelsRow"
 	panels_row.add_theme_constant_override("separation", 80)
 	panels_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panels_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panels_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_child(panels_row)
 
+	var left_spacer := Control.new()
+	left_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panels_row.add_child(left_spacer)
+
 	var faction_ids: Array[String] = UnitTypeLibraryScript.get_faction_ids()
 	var default_faction: String = UnitTypeLibraryScript.get_default_faction()
 
 	_player_panel = UnitSelectPanelScene.instantiate()
 	_player_panel.name = "PlayerPanel"
+	_player_panel.custom_minimum_size = Vector2(260, 0)
 	_player_panel.randomize_requested.connect(_on_randomize_requested)
 	panels_row.add_child(_player_panel)
 
+	var center_spacer := Control.new()
+	center_spacer.custom_minimum_size = Vector2(60, 0)
+	panels_row.add_child(center_spacer)
+
 	_enemy_panel = UnitSelectPanelScene.instantiate()
 	_enemy_panel.name = "EnemyPanel"
+	_enemy_panel.custom_minimum_size = Vector2(260, 0)
 	_enemy_panel.randomize_requested.connect(_on_randomize_requested)
 	panels_row.add_child(_enemy_panel)
 
+	var right_spacer := Control.new()
+	right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panels_row.add_child(right_spacer)
+
 	_player_panel.setup("player", faction_ids, default_faction)
-	_enemy_panel.setup("enemy", faction_ids, _random_fiction())
+	_enemy_panel.setup("enemy", faction_ids, _random_faction())
 
 	_start_button = Button.new()
 	_start_button.text = "START"
@@ -99,7 +114,7 @@ func _build_ui() -> void:
 	column.add_child(_start_button)
 
 
-func _random_fiction() -> String:
+func _random_faction() -> String:
 	var faction_ids: Array[String] = UnitTypeLibraryScript.get_faction_ids()
 	if faction_ids.is_empty():
 		return ""
