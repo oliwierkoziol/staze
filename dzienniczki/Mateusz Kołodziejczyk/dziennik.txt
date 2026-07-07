@@ -2,3 +2,4 @@
 02.07.2026 - Dopracowywanie konceptu, omówienie szczegółów projektu. Początkowe prace nad wyglądem mapy w grze i nad jej funkcjonalnością.
 03.07.2026 - Dodanie możliwości budowania budynków na mapie, podzielenie budynków na kategorie. Praca nad wyglądu paneli ze statystykami, menu budowy. Poprawa funkcjonalności tworzenia budynków, ustalenie ograniczeń, wymogów co do stworzenia struktur miasta.
 06.07.2026 - Poprawa wyglądu menu budowanian budynków na mapie a także jego funkcjonalności. Stworzenie struktur w plikach, tak aby były przygotowane pod dodanie grafik.
+07.07.2026 - Dodanie grafik do projektu, m.in. grafik surowców, pól mapy. Dodanie budynków wojskowych, wstępnej ich logiki tj. rekrutowania jednostek, wyświetlania armii.
