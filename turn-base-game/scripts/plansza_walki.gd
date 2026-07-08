@@ -303,7 +303,6 @@ func draw_hex_grid() -> void:
 func draw_obstacles() -> void:
 	var textures: Dictionary = {
 		"woda": WATER_TEXTURE,
-		"krzok": KRZOK_TEXTURE,
 		"kamienie": ROCK1_TEXTURE,
 		"water": WATER_TEXTURE,
 		"krzok": KRZOK_TEXTURE,
