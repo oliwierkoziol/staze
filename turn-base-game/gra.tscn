@@ -124,6 +124,41 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="SetupHint" type="VBoxContainer" parent="HUD/Overlay" unique_id=711220001]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = -76.0
+offset_right = 340.0
+offset_bottom = 22.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="SetupHintTitle" type="Label" parent="HUD/Overlay/SetupHint" unique_id=711220002]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 0.92)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 33
+text = "Tryb rozstawiania jednostek"
+horizontal_alignment = 1
+
+[node name="SetupHintSubtitle" type="Label" parent="HUD/Overlay/SetupHint" unique_id=711220003]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.82, 0.73, 1)
+theme_override_colors/font_outline_color = Color(0.08, 0.07, 0.04, 0.9)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 21
+text = "Kliknij START aby rozpoczac gre"
+horizontal_alignment = 1
+
 [node name="TopBar" type="NinePatchRect" parent="HUD/Overlay" unique_id=1348661909]
 oversampling_with_scale = 1
 texture_filter = 1

@@ -30,6 +30,7 @@ var unit_textures: Dictionary = {}
 var selected_unit_id := -1
 var highlighted_move_cells: Array[Vector2i] = []
 var highlighted_attack_cells: Array[Vector2i] = []
+var move_highlight_opacity_mult: float = 1.0
 var hovered_move_path: Array[Vector2i] = []
 var hovered_attack_cell := Vector2i(-1, -1)
 var visual_positions: Dictionary = {}
@@ -104,11 +105,12 @@ func set_selected_unit(unit_id: int) -> void:
 	queue_redraw()
 
 
-func set_highlighted_cells(move_cells: Array, attack_cells: Array = []) -> void:
+func set_highlighted_cells(move_cells: Array, attack_cells: Array = [], move_opacity_mult: float = 1.0) -> void:
 	highlighted_move_cells.clear()
 	highlighted_attack_cells.clear()
 	hovered_move_path.clear()
 	hovered_attack_cell = Vector2i(-1, -1)
+	move_highlight_opacity_mult = move_opacity_mult
 	for cell in move_cells:
 		highlighted_move_cells.append(cell)
 	for cell in attack_cells:
@@ -332,26 +334,47 @@ func _load_unit_portrait(unit: Dictionary) -> Texture2D:
 
 
 func draw_highlighted_cells() -> void:
+	var overlapping_cells: Array[Vector2i] = _get_overlapping_highlight_cells()
 	_draw_cell_highlights(
 		highlighted_move_cells,
 		Color(0.35, 0.72, 0.95, 0.0),
-		Color(0.45, 0.82, 1.0, 0.58)
+		Color(0.45, 0.82, 1.0, 0.58 * move_highlight_opacity_mult)
 	)
 	_draw_hovered_move_path()
+	var attack_only_cells: Array[Vector2i] = []
+	for cell in highlighted_attack_cells:
+		if overlapping_cells.has(cell):
+			continue
+		attack_only_cells.append(cell)
 	_draw_cell_highlights(
-		highlighted_attack_cells,
+		attack_only_cells,
 		Color(0.82, 0.20, 0.20, 0.0),
 		Color(0.62, 0.10, 0.10, 0.95)
+	)
+	# Dla pól wspólnych: duży (niebieski) rysuje się z ruchu, a w środku rysujemy mniejszy czerwony.
+	_draw_cell_highlights(
+		overlapping_cells,
+		Color(0.82, 0.20, 0.20, 0.0),
+		Color(0.62, 0.10, 0.10, 0.95),
+		HEX_RADIUS - 12.0
 	)
 	_draw_hovered_attack_cell()
 
 
-func _draw_cell_highlights(cells: Array[Vector2i], fill_color: Color, border_color: Color) -> void:
+func _draw_cell_highlights(cells: Array[Vector2i], fill_color: Color, border_color: Color, radius: float = HEX_RADIUS - 6.0) -> void:
 	for cell in cells:
 		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
-		var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 6.0)
+		var points: PackedVector2Array = _build_hex_points(center, radius)
 		draw_colored_polygon(points, fill_color)
 		draw_polyline(points + PackedVector2Array([points[0]]), border_color, 2.0)
+
+
+func _get_overlapping_highlight_cells() -> Array[Vector2i]:
+	var overlapping: Array[Vector2i] = []
+	for cell in highlighted_move_cells:
+		if highlighted_attack_cells.has(cell):
+			overlapping.append(cell)
+	return overlapping
 
 
 func _draw_hovered_move_path() -> void:

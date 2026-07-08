@@ -22,6 +22,7 @@ const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 @onready var left_content: VBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent
 @onready var top_bar: NinePatchRect = $HUD/Overlay/TopBar
 @onready var turn_queue_list: HBoxContainer = $HUD/Overlay/TopBar/TopMargin/TopQueueScroll/TopQueueList
+@onready var setup_hint: VBoxContainer = $HUD/Overlay/SetupHint
 @onready var unit_portrait: TextureRect = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitPortrait
 @onready var unit_name_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText/UnitName
 @onready var unit_meta_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText/UnitMeta
@@ -65,6 +66,7 @@ var reload_json_button: Button
 var current_player_faction := ""
 var current_enemy_faction := ""
 var help_popup: PanelContainer
+var tutorial_acknowledged := false
 
 
 func _ready() -> void:
@@ -290,6 +292,8 @@ func _make_setup_button(text: String) -> Button:
 
 func _enter_setup_mode() -> void:
 	setup_mode = true
+	tutorial_acknowledged = false
+	_update_setup_hint_visibility()
 	units = unit_configs.map(func(unit: Dictionary) -> Dictionary: return _prepare_unit(unit.duplicate(true)))
 	obstacles = _generate_obstacles()
 	terrain_effects = []
@@ -320,6 +324,7 @@ func _on_start_battle_pressed() -> void:
 	if not setup_mode:
 		return
 	setup_mode = false
+	_update_setup_hint_visibility()
 	selected_unit_id = -1
 	active_unit_id = -1
 	current_turn = ""
@@ -336,6 +341,7 @@ func _on_start_battle_pressed() -> void:
 
 func _on_reset_battle_pressed() -> void:
 	setup_mode = true
+	_update_setup_hint_visibility()
 	current_player_faction = ""
 	current_enemy_faction = ""
 	selected_unit_id = -1
@@ -678,6 +684,9 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	if selected_unit_id != active_unit.id:
 		selected_unit_id = active_unit.id
 		_show_unit_details(active_unit)
+		# Nie wykonuj ruchu, dopóki użytkownik nie ma zaznaczonej jednostki.
+		# Pierwszy klik tylko zaznacza, kolejny dopiero rusza.
+		return
 
 	var remaining_move: int = _get_remaining_move(active_unit)
 	if remaining_move <= 0:
@@ -896,6 +905,12 @@ func _update_turn_label() -> void:
 	general_rule_label.text = "Aktywna jednostka: %s (%s)\nLPM wybiera i porusza. PPM atakuje. Tab pokazuje pomoc. Tura %s." % [active_name, turn_name, round_number]
 
 
+func _update_setup_hint_visibility() -> void:
+	if setup_hint == null:
+		return
+	setup_hint.visible = setup_mode and tutorial_acknowledged
+
+
 func _update_highlighted_cells(unit: Dictionary) -> void:
 	if unit.is_empty():
 		board.set_highlighted_cells([], [])
@@ -920,7 +935,8 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 		move_cells = []
 	elif unit.id == active_unit_id and pending_skill_id == "" and _can_unit_attack(unit):
 		attack_cells = _get_attackable_cells(unit)
-	board.set_highlighted_cells(move_cells, attack_cells)
+	var move_opacity_mult: float = 0.5 if unit.id != active_unit_id else 1.0
+	board.set_highlighted_cells(move_cells, attack_cells, move_opacity_mult)
 	_on_board_cell_hovered(board.get_hovered_cell())
 
 
@@ -2032,9 +2048,16 @@ func _build_help_popup() -> void:
 	column.add_child(body)
 
 	var close_button := Button.new()
-	close_button.text = "ZAMKNIJ"
-	close_button.pressed.connect(_toggle_help_popup)
+	close_button.text = "OK"
+	close_button.pressed.connect(_on_tutorial_ok_pressed)
 	column.add_child(close_button)
+
+
+func _on_tutorial_ok_pressed() -> void:
+	tutorial_acknowledged = true
+	if help_popup != null:
+		help_popup.visible = false
+	_update_setup_hint_visibility()
 
 
 func _toggle_help_popup() -> void:
@@ -2272,17 +2295,13 @@ func _get_turn_queue_border_color(unit: Dictionary, selected: bool, active: bool
 	var player_border := Color(0.35, 0.65, 0.95, 0.95)
 	var enemy_border := Color(0.92, 0.35, 0.30, 0.95)
 	var selected_border := Color(0.90, 0.77, 0.34, 1.0)
-	var active_player_border := Color(0.55, 0.82, 1.0, 1.0)
-	var active_enemy_border := Color(1.0, 0.48, 0.42, 1.0)
 	if selected:
 		return selected_border
-	if active:
-		return active_player_border if unit.side == "player" else active_enemy_border
 	return player_border if unit.side == "player" else enemy_border
 
 
 func _get_turn_queue_border_width(selected: bool, active: bool) -> int:
-	return 2 if active and not selected else 1
+	return 1
 
 
 func _make_turn_queue_card_style(unit: Dictionary, selected: bool, hovered := false, active := false) -> StyleBoxFlat:
@@ -2310,6 +2329,9 @@ func _make_turn_queue_card_style(unit: Dictionary, selected: bool, hovered := fa
 	style.border_width_top = border_width
 	style.border_width_right = border_width
 	style.border_width_bottom = border_width
+	style.shadow_size = 0
+	style.shadow_offset = Vector2.ZERO
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.0)
 	style.content_margin_left = 8.0
 	style.content_margin_top = 6.0
 	style.content_margin_right = 10.0
