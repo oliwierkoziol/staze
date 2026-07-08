@@ -776,10 +776,6 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	if active_unit.is_empty() or active_unit.side != "player":
 		return
 
-	if _is_cell_obstacle(cell):
-		_show_obstacle_details(cell)
-		return
-
 	if pending_skill_id != "":
 		_try_use_skill(active_unit, pending_skill_id, cell)
 		return
@@ -807,7 +803,11 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 
 	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell)
 	var path_cost: int = _get_path_cost(path)
-	if path.is_empty() or path_cost > remaining_move:
+	if path.is_empty():
+		if _is_cell_obstacle(cell):
+			_show_obstacle_details(cell)
+		return
+	if path_cost > remaining_move:
 		return
 
 	is_animating = true
