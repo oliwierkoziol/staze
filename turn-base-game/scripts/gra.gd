@@ -18,6 +18,22 @@ const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 const TEAM_SETUP_SCENE: PackedScene = preload("res://scenes/team_setup.tscn")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 
+const OBSTACLE_PORTRAITS: Dictionary = {
+	"woda": preload("res://assets/mapTiles/water.png"),
+	"kamienie": preload("res://assets/mapTiles/rock1.png"),
+	"drzewa": preload("res://assets/mapTiles/forest1.png"),
+}
+const OBSTACLE_NAMES: Dictionary = {
+	"woda": "Woda",
+	"kamienie": "Kamienie",
+	"drzewa": "Las",
+}
+const OBSTACLE_DESCRIPTIONS: Dictionary = {
+	"woda": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
+	"kamienie": "Przez kamienie nie da sie przejsc. Blokuja linie strzalu.",
+	"drzewa": "Jednostka w lesie znika na 1 ture i traci ture.",
+}
+
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
 @onready var hud: CanvasLayer = $HUD
 @onready var left_content: VBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent
@@ -71,6 +87,7 @@ var current_enemy_faction := ""
 var help_popup: PanelContainer
 var tutorial_acknowledged := false
 var displayed_path_cost := -1
+var selected_obstacle_cell := Vector2i(-1, -1)
 
 
 func _ready() -> void:
@@ -349,8 +366,7 @@ func _enter_setup_mode() -> void:
 	board.reset_unit_positions(units)
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
-	_rebuild_turn_queue()
-	_clear_unit_details()
+	selected_obstacle_cell = Vector2i(-1, -1)
 	_log_event(_color_log_text("Tryb przygotowania: ustaw jednostki i kliknij START.", LOG_COLOR_YELLOW))
 	_sync_board()
 	if help_popup != null and hud.visible:
@@ -363,6 +379,7 @@ func _on_start_battle_pressed() -> void:
 	setup_mode = false
 	_update_setup_hint_visibility()
 	selected_unit_id = -1
+	selected_obstacle_cell = Vector2i(-1, -1)
 	active_unit_id = -1
 	current_turn = ""
 	pending_skill_id = ""
@@ -386,6 +403,7 @@ func _on_reset_battle_pressed() -> void:
 	active_unit_id = -1
 	current_turn = ""
 	pending_skill_id = ""
+	selected_obstacle_cell = Vector2i(-1, -1)
 	is_animating = false
 	turn_queue_index = -1
 	event_log.clear()
@@ -672,6 +690,7 @@ func _can_interact_with_unit_skills(unit_data: Dictionary) -> bool:
 
 
 func _clear_unit_details() -> void:
+	selected_obstacle_cell = Vector2i(-1, -1)
 	unit_portrait.visible = false
 	unit_name_label.text = "BRAK JEDNOSTEK"
 	unit_meta_label.text = ""
@@ -681,11 +700,38 @@ func _clear_unit_details() -> void:
 	if actions_label != null:
 		actions_label.text = ""
 
+func _render_obstacle_details(cell: Vector2i) -> void:
+	var terrain: Dictionary = _get_terrain_at(cell)
+	if terrain.is_empty():
+		return
+	var type_id: String = str(terrain.get("id", ""))
+	unit_portrait.visible = true
+	var tex: Texture2D = OBSTACLE_PORTRAITS.get(type_id, null)
+	if tex != null:
+		unit_portrait.texture = tex
+	unit_name_label.text = str(OBSTACLE_NAMES.get(type_id, type_id)).to_upper()
+	unit_meta_label.text = "Przeszkoda terenowa"
+	unit_stats_display.set_values({})
+	unit_status_panel.clear()
+	unit_abilities_panel.clear()
+	if actions_label != null:
+		actions_label.text = str(OBSTACLE_DESCRIPTIONS.get(type_id, ""))
+
+func _show_obstacle_details(cell: Vector2i) -> void:
+	selected_unit_id = -1
+	selected_obstacle_cell = cell
+	board.set_selected_unit(-1)
+	board.set_highlighted_cells([], [])
+	board.set_hovered_move_path([])
+	_render_obstacle_details(cell)
+	_refresh_turn_queue()
+
 
 func _clear_selected_unit() -> void:
 	selected_unit_id = -1
 	setup_drag_unit_id = -1
 	pending_skill_id = ""
+	selected_obstacle_cell = Vector2i(-1, -1)
 	board.set_selected_unit(-1)
 	board.set_highlighted_cells([], [])
 	board.set_hovered_move_path([])
@@ -730,6 +776,10 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	if active_unit.is_empty() or active_unit.side != "player":
 		return
 
+	if _is_cell_obstacle(cell):
+		_show_obstacle_details(cell)
+		return
+
 	if pending_skill_id != "":
 		_try_use_skill(active_unit, pending_skill_id, cell)
 		return
@@ -740,6 +790,7 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 			_clear_selected_unit()
 			return
 		selected_unit_id = clicked_unit.id
+		selected_obstacle_cell = Vector2i(-1, -1)
 		_show_unit_details(clicked_unit)
 		return
 
@@ -835,6 +886,7 @@ func _end_current_activation() -> void:
 		_advance_unit_effects(unit)
 	pending_skill_id = ""
 	selected_unit_id = -1
+	selected_obstacle_cell = Vector2i(-1, -1)
 	board.set_selected_unit(-1)
 	board.set_highlighted_cells([], [])
 	board.set_hovered_move_path([])
@@ -1696,6 +1748,8 @@ func _process_turn_start(unit: Dictionary) -> void:
 			skipped_turn = true
 			unit["remaining_move"] = 0
 			unit["action_points"] = 0
+		if bool(effect.get("hides_unit", false)):
+			unit["is_hidden"] = true
 		if tick_damage <= 0:
 			continue
 		var total_damage := _calculate_tick_damage(unit, tick_damage)
