@@ -18,20 +18,20 @@ const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 const TEAM_SETUP_SCENE: PackedScene = preload("res://scenes/team_setup.tscn")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 
-const OBSTACLE_PORTRAITS: Dictionary = {
+var OBSTACLE_PORTRAITS: Dictionary = {
 	"woda": preload("res://assets/mapTiles/water.png"),
 	"kamienie": preload("res://assets/mapTiles/rock1.png"),
-	"krzok": preload("res://assets/mapTiles/krzok.png"),
+	"krzok": load("res://assets/mapTiles/bush.png"),
 }
 const OBSTACLE_NAMES: Dictionary = {
 	"woda": "Woda",
 	"kamienie": "Kamienie",
-	"krzok": "Krzok",
+	"krzok": "Krzak",
 }
 const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"woda": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
 	"kamienie": "Przez kamienie nie da sie przejsc. Blokuja linie strzalu.",
-	"krzok": "Jednostka w krzoku znika na 1 ture i traci ture.",
+	"krzok": "Jednostka w krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
 }
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
@@ -836,6 +836,8 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 	var target := _find_unit_at_cell(cell)
 	if target.is_empty() or target.side == active_unit.side:
 		return
+	if not _can_see_target(active_unit, target):
+		return
 	if _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
 		_perform_basic_attack(active_unit, target, false)
 
@@ -948,13 +950,15 @@ func _find_unit_at_cell(cell: Vector2i) -> Dictionary:
 
 func _find_nearest_player_unit(enemy_unit: Dictionary) -> Dictionary:
 	var forced_target := _get_forced_target(enemy_unit)
-	if not forced_target.is_empty():
+	if not forced_target.is_empty() and _can_see_target(enemy_unit, forced_target):
 		return forced_target
 
 	var nearest: Dictionary = {}
 	var best_distance: float = INF
 	for unit in units:
 		if unit.side != "player":
+			continue
+		if not _can_see_target(enemy_unit, unit):
 			continue
 		var distance: int = _hex_distance(
 			Vector2i(enemy_unit.grid_x, enemy_unit.grid_y),
@@ -1101,7 +1105,7 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		return
 
 	var hovered_unit: Dictionary = _find_unit_at_cell(cell)
-	if not hovered_unit.is_empty() and hovered_unit.side != active_unit.side and _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
+	if not hovered_unit.is_empty() and hovered_unit.side != active_unit.side and _can_see_target(active_unit, hovered_unit) and _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(cell)
 		_clear_move_cost_label()
@@ -1188,6 +1192,9 @@ func _get_attackable_cells(unit: Dictionary) -> Array[Vector2i]:
 			var cell := Vector2i(column, row)
 			if cell == origin:
 				continue
+			var target: Dictionary = _find_unit_at_cell(cell)
+			if not target.is_empty() and target.side != unit.side and not _can_see_target(unit, target):
+				continue
 			if _is_in_attack_range(unit, cell):
 				attackable.append(cell)
 	return attackable
@@ -1212,7 +1219,7 @@ func _get_skill_target_cells(unit: Dictionary, skill_id: String) -> Array[Vector
 				continue
 			if _is_attack_blocked(unit, cell):
 				continue
-			if str(skill.get("target_type", "")) == "cell" and _is_cell_obstacle(cell):
+			if str(skill.get("target_type", "")) == "cell" and _blocks_cell_skill_target(cell):
 				continue
 			cells.append(cell)
 	return cells
@@ -1349,7 +1356,7 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 	if str(skill.get("target_type", "")) == "cell":
 		if _hex_distance(Vector2i(unit.grid_x, unit.grid_y), cell) > int(skill.get("range", 0)):
 			return
-		if _is_attack_blocked(unit, cell) or _is_cell_obstacle(cell):
+		if _is_attack_blocked(unit, cell) or _blocks_cell_skill_target(cell):
 			return
 		_execute_skill(unit, {}, skill, cell)
 		return
@@ -1359,6 +1366,8 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 		return
 	var target_type := str(skill.get("target_type", ""))
 	if target_type == "enemy_unit" and target.side == unit.side:
+		return
+	if target_type == "enemy_unit" and not _can_see_target(unit, target):
 		return
 	if target_type == "ally_unit" and (target.side != unit.side or target.id == unit.id):
 		return
@@ -1748,7 +1757,7 @@ func _process_turn_start(unit: Dictionary) -> void:
 			skipped_turn = true
 			unit["remaining_move"] = 0
 			unit["action_points"] = 0
-		if bool(effect.get("hides_unit", false)):
+		if bool(effect.get("hides_unit", false)) and _terrain_hides_unit(Vector2i(unit.grid_x, unit.grid_y)):
 			unit["is_hidden"] = true
 		if tick_damage <= 0:
 			continue
@@ -1920,6 +1929,8 @@ func _try_push_unit_away(source: Dictionary, target: Dictionary) -> bool:
 func _try_trigger_agility(moved_unit: Dictionary) -> void:
 	for unit in units:
 		if unit.side == moved_unit.side or not _has_skill_id(unit, "zwinnosc"):
+			continue
+		if not _can_see_target(unit, moved_unit):
 			continue
 		if int(unit.get("skill_cooldowns", {}).get("zwinnosc", 0)) > 0:
 			continue
@@ -2140,6 +2151,14 @@ func _terrain_skips_turn(cell: Vector2i) -> bool:
 	return bool(effect.get("skip_turn", false))
 
 
+func _can_see_target(observer: Dictionary, target: Dictionary) -> bool:
+	if not bool(target.get("is_hidden", false)):
+		return true
+	var observer_cell := Vector2i(observer.grid_x, observer.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	return _terrain_hides_unit(observer_cell) and _terrain_hides_unit(target_cell) and _hex_distance(observer_cell, target_cell) == 1
+
+
 func _get_blocked_cells(excluded_unit_id: int) -> Dictionary:
 	var blocked: Dictionary = {}
 	for unit in units:
@@ -2155,6 +2174,10 @@ func _get_blocked_cells(excluded_unit_id: int) -> Dictionary:
 
 func _is_cell_obstacle(cell: Vector2i) -> bool:
 	return not _get_terrain_at(cell).is_empty()
+
+
+func _blocks_cell_skill_target(cell: Vector2i) -> bool:
+	return _is_cell_obstacle(cell) and str(_get_terrain_at(cell).get("id", "")) != "krzok"
 
 
 func _is_attack_blocked(attacker: Dictionary, target_cell: Vector2i) -> bool:
@@ -2340,6 +2363,48 @@ func _validate_setup() -> void:
 
 	assert(_calculate_tick_damage({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna"), "Umiejetnosci bierne nie moga byc uzywane recznie.")
+	var previous_obstacles: Array[Dictionary] = obstacles.duplicate(true)
+	var previous_terrain_effects: Array[Dictionary] = terrain_effects.duplicate(true)
+	obstacles = [
+		{"grid_x": 4, "grid_y": 4, "type": "kamienie"},
+		{"grid_x": 5, "grid_y": 3, "type": "krzok"},
+		{"grid_x": 5, "grid_y": 4, "type": "krzok"},
+		{"grid_x": 5, "grid_y": 5, "type": "krzok"}
+	]
+	assert(not _blocks_cell_skill_target(Vector2i(5, 4)), "Skill obszarowy musi moc celowac w krzak.")
+	assert(_blocks_cell_skill_target(Vector2i(4, 4)), "Skill obszarowy nie powinien celowac w blokujace przeszkody.")
+	var bush_unit := {
+		"id": 999,
+		"name": "Test",
+		"side": "player",
+		"grid_x": 5,
+		"grid_y": 4,
+		"hp": 10,
+		"base_hp": 10,
+		"dmg": 1,
+		"base_dmg": 1,
+		"def": 0,
+		"base_def": 0,
+		"speed": 1,
+		"base_speed": 1,
+		"move_range": 1,
+		"base_move_range": 1,
+		"attack_range": 1,
+		"base_attack_range": 1,
+		"count": 1,
+		"current_total_hp": 10,
+		"max_total_hp": 10,
+		"active_effects": [],
+		"skill_ids": []
+	}
+	terrain_effects = [{"id": "poison_cloud", "grid_x": 5, "grid_y": 4, "remaining_turns": 2, "tick_damage": 1}]
+	_apply_terrain_effects_to_unit(bush_unit)
+	assert(_has_effect(bush_unit, "zatrucie"), "Toksyczna chmura musi dzialac na jednostke stojaca w krzaku.")
+	assert(not _can_see_target({"grid_x": 0, "grid_y": 0}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Ukryty cel w krzaku nie moze byc widoczny z normalnego pola.")
+	assert(_can_see_target({"grid_x": 5, "grid_y": 4}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Jednostki w sasiadujacych krzakach musza sie widziec.")
+	assert(not _can_see_target({"grid_x": 5, "grid_y": 3}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Krzak widzi ukryty cel tylko z sasiedniego krzaka.")
+	obstacles = previous_obstacles
+	terrain_effects = previous_terrain_effects
 
 
 func _on_board_animation_finished(_unit_id: int) -> void:

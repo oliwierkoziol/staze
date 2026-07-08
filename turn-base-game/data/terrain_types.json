@@ -27,17 +27,16 @@
     },
     "krzok": {
       "id": "krzok",
-      "name": "Krzok",
-      "description": "Jednostka w krzoku znika na 1 ture i traci ture.",
+      "name": "Krzak",
+      "description": "Jednostka w krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
       "movement_cost": 1,
       "blocks_movement": false,
       "blocks_line_of_sight": true,
       "entry_effect": {
         "id": "krzok",
-        "name": "Krzok",
-        "category": "debuff",
+        "name": "Krzak",
+        "category": "buff",
         "remaining_turns": 2,
-        "skip_turn": true,
         "hides_unit": true,
         "stat_changes": []
       }

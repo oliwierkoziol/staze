@@ -19,11 +19,12 @@ const UNIT_COUNT_BADGE_BORDER := Color(0.65, 0.52, 0.20, 0.90)
 const UNIT_COUNT_BADGE_TEXT := Color(0.95, 0.90, 0.78, 1.0)
 const PLAYER_OUTLINE_COLOR := Color(0.35, 0.65, 0.95, 0.95)
 const ENEMY_OUTLINE_COLOR := Color(0.92, 0.35, 0.30, 0.95)
+const HIDDEN_UNIT_ALPHA := 0.45
 const ROCK1_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock1.png")
 const ROCK2_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2.png")
 const ROCK2K_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2k.png")
 const ROCK3_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock3.png")
-const KRZOK_TEXTURE: Texture2D = preload("res://assets/mapTiles/krzok.png")
+var KRZOK_TEXTURE: Texture2D = load("res://assets/mapTiles/bush.png")
 const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
@@ -139,8 +140,8 @@ func set_hovered_attack_cell(cell: Vector2i) -> void:
 
 func _draw() -> void:
 	draw_hex_grid()
-	draw_terrain_effects()
 	draw_obstacles()
+	draw_terrain_effects()
 	draw_highlighted_cells()
 	draw_units()
 	draw_projectiles()
@@ -306,7 +307,6 @@ func draw_obstacles() -> void:
 		"krzok": KRZOK_TEXTURE,
 		"kamienie": ROCK1_TEXTURE,
 		"water": WATER_TEXTURE,
-		"krzok": KRZOK_TEXTURE,
 		"rock1": ROCK1_TEXTURE,
 		"rock2": ROCK2_TEXTURE,
 		"rock2k": ROCK2K_TEXTURE,
@@ -346,8 +346,10 @@ func draw_units() -> void:
 	var font: Font = GEORGIA_FONT
 	var font_size: int = 22
 	for unit in units:
-		if bool(unit.get("is_hidden", false)):
+		var hidden := bool(unit.get("is_hidden", false))
+		if hidden and not _should_draw_hidden_unit(unit):
 			continue
+		var alpha := HIDDEN_UNIT_ALPHA if hidden else 1.0
 		var center: Vector2 = visual_positions.get(unit.id, axial_to_pixel(unit.grid_x, unit.grid_y))
 		center += unit_attack_offsets.get(unit.id, Vector2.ZERO)
 		var portrait: Texture2D = unit_textures.get(unit.id, null)
@@ -355,15 +357,16 @@ func draw_units() -> void:
 		var sprite_rect := Rect2(center - Vector2(sprite_size.x / 2.0, sprite_size.y * 0.68), sprite_size)
 		var damage_tint_alpha: float = float(unit_damage_tint_alpha.get(unit.id, 0.0))
 		if portrait != null:
-			var tint: Color = Color(1.0, 1.0 - damage_tint_alpha * 0.82, 1.0 - damage_tint_alpha * 0.82, 1.0)
+			var tint: Color = Color(1.0, 1.0 - damage_tint_alpha * 0.82, 1.0 - damage_tint_alpha * 0.82, alpha)
 			draw_texture_rect(portrait, sprite_rect, false, tint)
 
 		if unit.id == selected_unit_id:
 			var outline_radius := HEX_RADIUS * 0.55
-			draw_arc(center, outline_radius, 0.0, TAU, 24, Color(1.0, 0.92, 0.45, 0.9), 3.0)
+			draw_arc(center, outline_radius, 0.0, TAU, 24, Color(1.0, 0.92, 0.45, 0.9 * alpha), 3.0)
 		else:
 			var team_radius := HEX_RADIUS * 0.52
 			var team_color := PLAYER_OUTLINE_COLOR if unit.side == "player" else ENEMY_OUTLINE_COLOR
+			team_color.a *= alpha
 			draw_arc(center, team_radius, 0.0, TAU, 24, team_color, 2.5)
 
 		var count_text: String = str(unit.count)
@@ -374,9 +377,39 @@ func draw_units() -> void:
 			badge_rect.position.x + (badge_rect.size.x - text_size.x) / 2.0,
 			badge_rect.position.y + (badge_rect.size.y + text_size.y) / 2.0 - 2.0
 		)
-		draw_rect(badge_rect, UNIT_COUNT_BADGE_BG, true)
-		draw_rect(badge_rect, UNIT_COUNT_BADGE_BORDER, false, 2.0)
-		draw_string(font, text_position, count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, UNIT_COUNT_BADGE_TEXT)
+		var badge_bg := UNIT_COUNT_BADGE_BG
+		var badge_border := UNIT_COUNT_BADGE_BORDER
+		var badge_text := UNIT_COUNT_BADGE_TEXT
+		badge_bg.a *= alpha
+		badge_border.a *= alpha
+		badge_text.a *= alpha
+		draw_rect(badge_rect, badge_bg, true)
+		draw_rect(badge_rect, badge_border, false, 2.0)
+		draw_string(font, text_position, count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, badge_text)
+
+
+func _should_draw_hidden_unit(unit: Dictionary) -> bool:
+	if unit.side == "player":
+		return true
+	for other in units:
+		if other.side != "player":
+			continue
+		if _units_share_adjacent_bushes(other, unit):
+			return true
+	return false
+
+
+func _units_share_adjacent_bushes(observer: Dictionary, target: Dictionary) -> bool:
+	var observer_cell := Vector2i(observer.grid_x, observer.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	return _is_bush_cell(observer_cell) and _is_bush_cell(target_cell) and _hex_distance(observer_cell, target_cell) == 1
+
+
+func _is_bush_cell(cell: Vector2i) -> bool:
+	for obstacle in obstacles:
+		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y and str(obstacle.get("type", "")) == "krzok":
+			return true
+	return false
 
 
 func draw_projectiles() -> void:
@@ -535,3 +568,16 @@ func axial_to_pixel(column: int, row: int) -> Vector2:
 	var x: float = column * horizontal_spacing + (row % 2) * (horizontal_spacing / 2.0)
 	var y: float = row * vertical_spacing
 	return Vector2(x, y)
+
+
+func _hex_distance(a: Vector2i, b: Vector2i) -> int:
+	var ac: Vector3i = _oddr_to_cube(a)
+	var bc: Vector3i = _oddr_to_cube(b)
+	return int((abs(ac.x - bc.x) + abs(ac.y - bc.y) + abs(ac.z - bc.z)) / 2)
+
+
+func _oddr_to_cube(cell: Vector2i) -> Vector3i:
+	var x: int = cell.x - int((cell.y - (cell.y & 1)) / 2)
+	var z: int = cell.y
+	var y: int = -x - z
+	return Vector3i(x, y, z)
