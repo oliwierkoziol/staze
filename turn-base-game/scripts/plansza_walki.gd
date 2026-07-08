@@ -34,6 +34,8 @@ var hovered_move_path: Array[Vector2i] = []
 var hovered_attack_cell := Vector2i(-1, -1)
 var visual_positions: Dictionary = {}
 var active_tweens: Dictionary = {}
+var unit_attack_offsets: Dictionary = {}
+var unit_damage_tint_alpha: Dictionary = {}
 var obstacles: Array = []
 var terrain_effects: Array[Dictionary] = []
 var hovered_cell := Vector2i(-1, -1)
@@ -46,12 +48,20 @@ func _ready() -> void:
 func set_units(new_units: Array) -> void:
 	units = []
 	unit_textures.clear()
+	var valid_unit_ids: Dictionary = {}
 	for unit in new_units:
 		var copied_unit: Dictionary = unit.duplicate(true)
 		units.append(copied_unit)
 		unit_textures[copied_unit.id] = _load_unit_portrait(copied_unit)
+		valid_unit_ids[copied_unit.id] = true
 		if not visual_positions.has(copied_unit.id):
 			visual_positions[copied_unit.id] = axial_to_pixel(copied_unit.grid_x, copied_unit.grid_y)
+	for unit_id in unit_attack_offsets.keys():
+		if not valid_unit_ids.has(unit_id):
+			unit_attack_offsets.erase(unit_id)
+	for unit_id in unit_damage_tint_alpha.keys():
+		if not valid_unit_ids.has(unit_id):
+			unit_damage_tint_alpha.erase(unit_id)
 	queue_redraw()
 
 
@@ -160,6 +170,43 @@ func _on_unit_tween_finished(unit_id: int) -> void:
 	animation_finished.emit(unit_id)
 
 
+func play_attack_animation(attacker_id: int, target_id: int) -> void:
+	var attacker_position: Vector2 = visual_positions.get(attacker_id, Vector2.ZERO)
+	var target_position: Vector2 = visual_positions.get(target_id, Vector2.ZERO)
+	var direction: Vector2 = target_position - attacker_position
+	if direction.length_squared() <= 0.001:
+		return
+	var dash_offset: Vector2 = direction.normalized() * 12.0
+	var tween: Tween = create_tween()
+	tween.tween_method(_set_unit_attack_offset.bind(attacker_id), Vector2.ZERO, dash_offset, 0.08)
+	tween.tween_method(_set_unit_attack_offset.bind(attacker_id), dash_offset, Vector2.ZERO, 0.10)
+
+
+func play_damage_animation(unit_id: int) -> void:
+	var tween: Tween = create_tween()
+	var shake := 0.0
+	tween.parallel().tween_method(_set_unit_damage_tint_alpha.bind(unit_id), 0.0, 0.72, 0.03)
+	tween.tween_method(_set_unit_attack_offset.bind(unit_id), Vector2.ZERO, Vector2(-shake, -shake * 0.35), 0.018)
+	tween.tween_method(_set_unit_attack_offset.bind(unit_id), Vector2(-shake, -shake * 0.35), Vector2(shake, -shake * 0.2), 0.018)
+	tween.tween_method(_set_unit_attack_offset.bind(unit_id), Vector2(shake, -shake * 0.2), Vector2(shake * 0.2, shake), 0.018)
+	tween.tween_method(_set_unit_attack_offset.bind(unit_id), Vector2(shake * 0.2, shake), Vector2(-shake, shake * 0.6), 0.018)
+	tween.tween_method(_set_unit_attack_offset.bind(unit_id), Vector2(-shake, shake * 0.6), Vector2(shake * 0.85, -shake * 0.85), 0.018)
+	tween.tween_method(_set_unit_attack_offset.bind(unit_id), Vector2(shake * 0.85, -shake * 0.85), Vector2(-shake * 0.65, shake * 0.3), 0.018)
+	tween.tween_method(_set_unit_attack_offset.bind(unit_id), Vector2(-shake * 0.65, shake * 0.3), Vector2(shake * 0.4, -shake * 0.35), 0.018)
+	tween.tween_method(_set_unit_attack_offset.bind(unit_id), Vector2(shake * 0.4, -shake * 0.35), Vector2.ZERO, 0.03)
+	tween.parallel().tween_method(_set_unit_damage_tint_alpha.bind(unit_id), 0.72, 0.0, 0.14)
+
+
+func _set_unit_attack_offset(offset: Vector2, unit_id: int) -> void:
+	unit_attack_offsets[unit_id] = offset
+	queue_redraw()
+
+
+func _set_unit_damage_tint_alpha(alpha: float, unit_id: int) -> void:
+	unit_damage_tint_alpha[unit_id] = alpha
+	queue_redraw()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		var local_position: Vector2 = to_local(event.position)
@@ -243,11 +290,14 @@ func draw_units() -> void:
 	var font_size: int = 22
 	for unit in units:
 		var center: Vector2 = visual_positions.get(unit.id, axial_to_pixel(unit.grid_x, unit.grid_y))
+		center += unit_attack_offsets.get(unit.id, Vector2.ZERO)
 		var portrait: Texture2D = unit_textures.get(unit.id, null)
 		var sprite_size := Vector2(HEX_RADIUS * 1.9, HEX_RADIUS * 2.2)
 		var sprite_rect := Rect2(center - Vector2(sprite_size.x / 2.0, sprite_size.y * 0.68), sprite_size)
+		var damage_tint_alpha: float = float(unit_damage_tint_alpha.get(unit.id, 0.0))
 		if portrait != null:
-			draw_texture_rect(portrait, sprite_rect, false)
+			var tint: Color = Color(1.0, 1.0 - damage_tint_alpha * 0.82, 1.0 - damage_tint_alpha * 0.82, 1.0)
+			draw_texture_rect(portrait, sprite_rect, false, tint)
 
 		if unit.id == selected_unit_id:
 			var outline_radius := HEX_RADIUS * 0.55

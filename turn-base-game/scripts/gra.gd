@@ -1103,6 +1103,8 @@ func _calculate_damage(attacker: Dictionary, target: Dictionary, damage_multipli
 func _apply_damage_to_unit(target: Dictionary, total_damage: int) -> int:
 	var previous_count: int = int(target.count)
 	var current_total_hp: int = int(target.get("current_total_hp", int(target.get("base_hp", target.hp)) * previous_count))
+	if total_damage > 0:
+		board.play_damage_animation(int(target.id))
 	target["current_total_hp"] = max(0, current_total_hp - max(1, total_damage))
 	_refresh_unit_health_state(target)
 	return max(0, previous_count - int(target.count))
@@ -1117,10 +1119,12 @@ func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage
 			hit_target = guardian
 			damage = max(1, int(ceil(float(damage) * 0.8)))
 			_log_event("%s zaslania %s Zelazna Kurtyna." % [_unit_name_log_text(guardian), _unit_name_log_text(target)])
+	board.play_attack_animation(int(attacker.id), int(hit_target.id))
 	if _consume_energy_barrier(hit_target):
 		_log_event("Bariera Energetyczna blokuje atak na %s." % _unit_name_log_text(hit_target))
 		return {"target": hit_target, "damage": 0, "casualties": 0}
-	return {"target": hit_target, "damage": damage, "casualties": _apply_damage_to_unit(hit_target, damage)}
+	var casualties: int = _apply_damage_to_unit(hit_target, damage)
+	return {"target": hit_target, "damage": damage, "casualties": casualties}
 
 
 func _get_guardian_for(target: Dictionary) -> Dictionary:
