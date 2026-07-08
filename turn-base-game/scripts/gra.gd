@@ -7,6 +7,9 @@ const SETUP_COLUMNS := 3
 const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "drzewa"]
 const MAX_EVENT_LOG_ENTRIES := 60
 const CARD_SELECTED_FONT_COLOR := Color(0.99, 0.95, 0.84, 1.0)
+const TURN_QUEUE_CARD_SIZE := Vector2(128.0, 56.0)
+const TURN_QUEUE_PORTRAIT_SIZE := Vector2(42.0, 50.0)
+const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const LOG_COLOR_YELLOW := Color(0.95, 0.82, 0.25, 1.0)
 const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
 const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
@@ -503,6 +506,11 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 
 func _load_unit_portrait(unit_data: Dictionary) -> Texture2D:
 	var portrait_path: String = str(unit_data.get("portrait", ""))
+	if portrait_path == "":
+		var type_id: String = str(unit_data.get("type_id", ""))
+		if type_id != "":
+			var type_data: Dictionary = UnitTypeLibraryScript.lookup(type_id)
+			portrait_path = str(type_data.get("portrait", ""))
 	if portrait_path == "":
 		return null
 	var res: Resource = load(portrait_path)
@@ -2135,28 +2143,85 @@ func _refresh_turn_queue() -> void:
 		var unit := _find_unit_by_id(unit_id)
 		if unit.is_empty():
 			continue
-
-		var button := Button.new()
-		button.custom_minimum_size = Vector2(124, 60)
-		button.clip_text = true
-		button.text = "%s\n%s %s\nSPD %s RUCH %s" % [
-			unit.count,
-			unit.short_name,
-			unit.name,
-			unit.speed,
-			_get_display_move(unit)
-		]
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.disabled = is_animating
-		button.add_theme_color_override("font_color", CARD_SELECTED_FONT_COLOR if unit.id == selected_unit_id else Color(0.95, 0.95, 0.92, 1.0))
-		button.add_theme_stylebox_override("normal", _make_turn_queue_card_style(unit, unit.id == selected_unit_id))
-		button.add_theme_stylebox_override("hover", _make_turn_queue_card_style(unit, unit.id == selected_unit_id, true))
-		button.add_theme_stylebox_override("pressed", _make_turn_queue_card_style(unit, true, true))
-		button.pressed.connect(_on_turn_queue_pressed.bind(unit.id))
-		button.gui_input.connect(_on_turn_queue_gui_input.bind(unit.id))
-		turn_queue_list.add_child(button)
+		turn_queue_list.add_child(_create_turn_queue_card(unit))
 
 	_update_top_bar_width(visible_queue.size())
+
+
+func _create_turn_queue_card(unit: Dictionary) -> Button:
+	var is_selected: bool = int(unit.id) == selected_unit_id
+	var is_active: bool = int(unit.id) == active_unit_id
+
+	var button := Button.new()
+	button.text = ""
+	button.custom_minimum_size = TURN_QUEUE_CARD_SIZE
+	button.clip_contents = true
+	button.disabled = is_animating
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_stylebox_override("normal", _make_turn_queue_card_style(unit, is_selected, false, is_active))
+	button.add_theme_stylebox_override("hover", _make_turn_queue_card_style(unit, is_selected, true, is_active))
+	button.add_theme_stylebox_override("pressed", _make_turn_queue_card_style(unit, true, true, is_active))
+	button.add_theme_stylebox_override("disabled", _make_turn_queue_card_style(unit, is_selected, false, is_active))
+	button.pressed.connect(_on_turn_queue_pressed.bind(unit.id))
+	button.gui_input.connect(_on_turn_queue_gui_input.bind(unit.id))
+
+	var border_color: Color = _get_turn_queue_border_color(unit, is_selected, is_active)
+	var border_width: int = _get_turn_queue_border_width(is_selected, is_active)
+
+	var row := HBoxContainer.new()
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	row.add_theme_constant_override("separation", 0)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(row)
+
+	var portrait_frame := PanelContainer.new()
+	portrait_frame.custom_minimum_size = TURN_QUEUE_PORTRAIT_SIZE
+	portrait_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_frame.add_theme_stylebox_override("panel", _make_turn_queue_portrait_frame_style(unit))
+	row.add_child(portrait_frame)
+
+	var portrait := TextureRect.new()
+	portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var portrait_tex: Texture2D = _load_unit_portrait(unit)
+	portrait.texture = portrait_tex if portrait_tex != null else TURN_QUEUE_PLACEHOLDER_PORTRAIT
+	portrait_frame.add_child(portrait)
+
+	var divider := ColorRect.new()
+	divider.custom_minimum_size = Vector2(border_width, 0)
+	divider.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	divider.color = border_color
+	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(divider)
+
+	var text_wrap := MarginContainer.new()
+	text_wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	text_wrap.add_theme_constant_override("margin_left", 6)
+	text_wrap.add_theme_constant_override("margin_right", 2)
+	text_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(text_wrap)
+
+	var name_label := Label.new()
+	name_label.text = str(unit.name)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_label.max_lines_visible = 2
+	name_label.clip_text = true
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_label.add_theme_font_size_override("font_size", 13)
+	name_label.add_theme_color_override("font_color", CARD_SELECTED_FONT_COLOR if is_selected else Color(0.95, 0.93, 0.88, 1.0))
+	text_wrap.add_child(name_label)
+
+	return button
 
 
 func _update_top_bar_width(card_count: int) -> void:
@@ -2164,18 +2229,19 @@ func _update_top_bar_width(card_count: int) -> void:
 		return
 	if card_count <= 0:
 		return
-	var card_width := 124
-	var card_height := 60
+	var card_width := int(TURN_QUEUE_CARD_SIZE.x)
+	var card_height := int(TURN_QUEUE_CARD_SIZE.y)
 	var card_spacing := turn_queue_list.get_theme_constant("separation")
 	var margin_left := 28
 	var margin_right := 28
+	var margin_vertical := 16
 	var target_width: float = float(card_count * card_width + maxi(0, card_count - 1) * card_spacing + margin_left + margin_right)
 	# ponytail: ograniczenie szerokosci bazuje na obecnym ukladzie paneli bocznych; przy redesignie HUD mozna policzyc je z rzeczywistych offsetow paneli.
 	var max_width: float = maxf(280.0, get_viewport_rect().size.x - 2.0 * 364.0)
 	var final_width: float = minf(target_width, max_width)
 	top_bar.offset_left = -final_width * 0.5
 	top_bar.offset_right = final_width * 0.5
-	top_bar.offset_bottom = top_bar.offset_top + float(card_height + 22 + 22)
+	top_bar.offset_bottom = top_bar.offset_top + float(card_height + margin_vertical * 2)
 
 
 func _on_turn_queue_pressed(unit_id: int) -> void:
@@ -2198,28 +2264,69 @@ func _on_turn_queue_gui_input(_event: InputEvent, _unit_id: int) -> void:
 	return
 
 
-func _make_turn_queue_card_style(unit: Dictionary, selected: bool, hovered := false) -> StyleBoxFlat:
+func _get_turn_queue_border_color(unit: Dictionary, selected: bool, active: bool) -> Color:
+	var player_border := Color(0.35, 0.65, 0.95, 0.95)
+	var enemy_border := Color(0.92, 0.35, 0.30, 0.95)
+	var selected_border := Color(0.90, 0.77, 0.34, 1.0)
+	var active_player_border := Color(0.55, 0.82, 1.0, 1.0)
+	var active_enemy_border := Color(1.0, 0.48, 0.42, 1.0)
+	if selected:
+		return selected_border
+	if active:
+		return active_player_border if unit.side == "player" else active_enemy_border
+	return player_border if unit.side == "player" else enemy_border
+
+
+func _get_turn_queue_border_width(selected: bool, active: bool) -> int:
+	return 2 if active and not selected else 1
+
+
+func _make_turn_queue_card_style(unit: Dictionary, selected: bool, hovered := false, active := false) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	var player_bg := Color(0.09, 0.16, 0.26, 0.96)
 	var enemy_bg := Color(0.24, 0.10, 0.10, 0.96)
 	var selected_bg := Color(0.23, 0.19, 0.08, 0.98)
-	var player_border := Color(0.35, 0.65, 0.95, 0.95)
-	var enemy_border := Color(0.92, 0.35, 0.30, 0.95)
-	var selected_border := Color(0.90, 0.77, 0.34, 1.0)
+	var active_player_bg := Color(0.12, 0.20, 0.32, 0.98)
+	var active_enemy_bg := Color(0.30, 0.12, 0.12, 0.98)
 
-	style.bg_color = selected_bg if selected else player_bg if unit.side == "player" else enemy_bg
-	style.border_color = selected_border if selected else player_border if unit.side == "player" else enemy_border
+	if selected:
+		style.bg_color = selected_bg
+	elif active:
+		style.bg_color = active_player_bg if unit.side == "player" else active_enemy_bg
+	else:
+		style.bg_color = player_bg if unit.side == "player" else enemy_bg
+
+	style.border_color = _get_turn_queue_border_color(unit, selected, active)
 	if hovered and not selected:
 		style.bg_color = style.bg_color.lightened(0.08)
 		style.border_color = style.border_color.lightened(0.08)
+
+	var border_width: int = _get_turn_queue_border_width(selected, active)
+	style.border_width_left = border_width
+	style.border_width_top = border_width
+	style.border_width_right = border_width
+	style.border_width_bottom = border_width
+	style.content_margin_left = 8.0
+	style.content_margin_top = 6.0
+	style.content_margin_right = 10.0
+	style.content_margin_bottom = 6.0
+	return style
+
+
+func _make_turn_queue_portrait_frame_style(unit: Dictionary) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	var player_tint := Color(0.06, 0.10, 0.16, 0.92)
+	var enemy_tint := Color(0.16, 0.06, 0.06, 0.92)
+	style.bg_color = player_tint if unit.side == "player" else enemy_tint
+	style.border_color = Color(0.0, 0.0, 0.0, 0.35)
 	style.border_width_left = 1
 	style.border_width_top = 1
 	style.border_width_right = 1
 	style.border_width_bottom = 1
-	style.content_margin_left = 10.0
-	style.content_margin_top = 8.0
-	style.content_margin_right = 10.0
-	style.content_margin_bottom = 8.0
+	style.content_margin_left = 2.0
+	style.content_margin_top = 2.0
+	style.content_margin_right = 2.0
+	style.content_margin_bottom = 2.0
 	return style
 
 

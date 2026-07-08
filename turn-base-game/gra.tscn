@@ -134,7 +134,7 @@ anchor_right = 0.5
 offset_left = -389.0
 offset_top = 17.0
 offset_right = 431.0
-offset_bottom = 122.0
+offset_bottom = 105.0
 grow_horizontal = 2
 texture = ExtResource("4_panel")
 patch_margin_left = 8
@@ -153,9 +153,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 28
-theme_override_constants/margin_top = 22
+theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 28
-theme_override_constants/margin_bottom = 22
+theme_override_constants/margin_bottom = 16
 
 [node name="TopQueueScroll" type="ScrollContainer" parent="HUD/Overlay/TopBar/TopMargin" unique_id=1105193033]
 layout_mode = 2
@@ -166,7 +166,7 @@ vertical_scroll_mode = 0
 [node name="TopQueueList" type="HBoxContainer" parent="HUD/Overlay/TopBar/TopMargin/TopQueueScroll" unique_id=1495193033]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 14
+theme_override_constants/separation = 12
 alignment = 1
 
 [node name="RightPanel" type="NinePatchRect" parent="HUD/Overlay" unique_id=23082911]
