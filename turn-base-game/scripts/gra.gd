@@ -1217,6 +1217,10 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_energy_barrier(caster)
 		"iron_curtain":
 			_execute_iron_curtain(caster, target)
+		"self_buff":
+			_execute_self_buff(caster, skill)
+		"focused_strike":
+			_execute_focused_strike(caster, target)
 
 	_sync_board()
 
@@ -1388,6 +1392,30 @@ func _execute_iron_curtain(caster: Dictionary, target: Dictionary) -> void:
 		"guarded_by_id": int(caster.id)
 	})
 	_log_event("%s chroni %s Zelazna Kurtyna." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
+
+
+func _execute_self_buff(caster: Dictionary, skill: Dictionary) -> void:
+	var effect: Dictionary = skill.get("effect", {})
+	if effect.is_empty():
+		return
+	_apply_or_refresh_effect(caster, effect.duplicate(true))
+	_log_event("%s uzywa %s." % [_unit_name_log_text(caster), str(skill.get("name", skill.get("id", "")))])
+
+
+func _execute_focused_strike(caster: Dictionary, target: Dictionary) -> void:
+	var total_damage := _calculate_damage(caster, target)
+	var result := _apply_attack_damage(caster, target, total_damage)
+	var hit_target: Dictionary = result.get("target", target)
+	var casualties := int(result.get("casualties", 0))
+	_log_event(
+		"%s trafia %s za %s obrazen i %s strat." % [
+			_unit_name_log_text(caster),
+			_unit_name_log_text(hit_target),
+			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
+			_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+		]
+	)
+	_cleanup_destroyed_unit(hit_target)
 
 
 func _get_area_cells(center: Vector2i) -> Array[Vector2i]:

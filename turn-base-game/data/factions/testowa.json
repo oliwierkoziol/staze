@@ -21,7 +21,8 @@
         "skill_ids": [
           "bariera_energetyczna",
           "mistrz_trucizn",
-          "chmura_toksyczna"
+          "chmura_toksyczna",
+          "medytacja"
         ]
       },
       {
@@ -40,7 +41,9 @@
         "resistance": "Brak",
         "portrait": "",
         "skill_ids": [
-          "strzal_w_kolano"
+          "strzal_w_kolano",
+          "precyzyjny_strzal",
+          "sokole_oko"
         ]
       }
     ]

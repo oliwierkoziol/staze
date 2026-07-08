@@ -19,7 +19,9 @@
         "resistance": "Brak",
         "portrait": "res://assets/characters/humans/elfArcher.png",
         "skill_ids": [
-          "strzal_w_kolano"
+          "strzal_w_kolano",
+          "sokole_oko",
+          "precyzyjny_strzal"
         ]
       },
       {
@@ -38,7 +40,9 @@
         "resistance": "Brak",
         "portrait": "res://assets/characters/humans/elfSwordsman.png",
         "skill_ids": [
-          "potezne_uderzenie"
+          "potezne_uderzenie",
+          "skupiony_cios",
+          "runiczna_ochrona"
         ]
       },
       {
@@ -59,7 +63,8 @@
         "skill_ids": [
           "kula_ognia",
           "lodowe_podloze",
-          "bariera_energetyczna"
+          "bariera_energetyczna",
+          "medytacja"
         ]
       },
       {
@@ -78,7 +83,9 @@
         "resistance": "Brak",
         "portrait": "res://assets/characters/humans/elfArcheMague.png",
         "skill_ids": [
-          "sokole_oko"
+          "sokole_oko",
+          "runiczna_ochrona",
+          "przyspieszenie"
         ]
       }
     ]

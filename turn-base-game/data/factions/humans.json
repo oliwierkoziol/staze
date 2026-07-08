@@ -20,7 +20,8 @@
         "portrait": "res://assets/characters/humans/ChatGPT Image 6 lip 2026, 12_21_05.png",
         "skill_ids": [
           "potezne_uderzenie",
-          "zelazna_kurtyna"
+          "zelazna_kurtyna",
+          "tarcza"
         ]
       },
       {
@@ -39,7 +40,9 @@
         "resistance": "Brak",
         "portrait": "res://assets/characters/humans/ChatGPT Image 6 lip 2026, 12_31_33.png",
         "skill_ids": [
-          "prowokacja"
+          "prowokacja",
+          "szarza",
+          "przyspieszenie"
         ]
       },
       {
@@ -60,7 +63,8 @@
         "skill_ids": [
           "strzal_w_kolano",
           "sokole_oko",
-          "zwinnosc"
+          "zwinnosc",
+          "precyzyjny_strzal"
         ]
       },
       {
@@ -81,7 +85,8 @@
         "skill_ids": [
           "kula_ognia",
           "lodowe_podloze",
-          "bariera_energetyczna"
+          "bariera_energetyczna",
+          "medytacja"
         ]
       }
     ]

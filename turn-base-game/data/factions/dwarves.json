@@ -20,7 +20,8 @@
         "portrait": "res://assets/characters/humans/dwarfWarrior.png",
         "skill_ids": [
           "potezne_uderzenie",
-          "zelazna_kurtyna"
+          "zelazna_kurtyna",
+          "tarcza"
         ]
       },
       {
@@ -39,7 +40,9 @@
         "resistance": "Brak",
         "portrait": "res://assets/characters/humans/dwarfShield.png",
         "skill_ids": [
-          "prowokacja"
+          "prowokacja",
+          "tarcza",
+          "zelazna_kurtyna"
         ]
       },
       {
@@ -58,7 +61,9 @@
         "resistance": "Brak",
         "portrait": "res://assets/characters/humans/dwarfHammer.png",
         "skill_ids": [
-          "potezne_uderzenie"
+          "potezne_uderzenie",
+          "skupiony_cios",
+          "berserk"
         ]
       },
       {
@@ -77,7 +82,9 @@
         "resistance": "Brak",
         "portrait": "res://assets/characters/humans/dwarfDigger.png",
         "skill_ids": [
-          "strzal_w_kolano"
+          "strzal_w_kolano",
+          "precyzyjny_strzal",
+          "zatruta_strzala"
         ]
       }
     ]

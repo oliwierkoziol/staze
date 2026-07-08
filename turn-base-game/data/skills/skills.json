@@ -119,6 +119,159 @@
 	  "range": 0,
 	  "target_type": "passive",
 	  "effect_type": "poison_master"
+	},
+	"skupiony_cios": {
+	  "id": "skupiony_cios",
+	  "name": "Skupiony Cios",
+	  "description": "Precyzyjny atak wręcz zadający 100% obrażeń bez dodatkowych efektów.",
+	  "ap_cost": 1,
+	  "cooldown": 1,
+	  "range": 1,
+	  "target_type": "enemy_unit",
+	  "effect_type": "focused_strike"
+	},
+	"zatruta_strzala": {
+	  "id": "zatruta_strzala",
+	  "name": "Zatruta Strzala",
+	  "description": "Strzal z dystansu zadający 70% obrażeń i nakładający Toksynnę na 3 tury.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 4,
+	  "target_type": "enemy_unit",
+	  "effect_type": "poison_dagger"
+	},
+	"precyzyjny_strzal": {
+	  "id": "precyzyjny_strzal",
+	  "name": "Precyzyjny Strzal",
+	  "description": "Celny strzal z dystansu zadający 100% obrażeń.",
+	  "ap_cost": 1,
+	  "cooldown": 2,
+	  "range": 5,
+	  "target_type": "enemy_unit",
+	  "effect_type": "focused_strike"
+	},
+	"berserk": {
+	  "id": "berserk",
+	  "name": "Berserk",
+	  "description": "Jednostka wpadza w szał bojowy: +30% DMG i -15% DEF przez 2 tury.",
+	  "ap_cost": 1,
+	  "cooldown": 4,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "self_buff",
+	  "effect": {
+		"category": "buff",
+		"remaining_turns": 2,
+		"stat_changes": [
+		  {"stat": "dmg", "mode": "percent", "value": 30},
+		  {"stat": "def", "mode": "percent", "value": -15}
+		]
+	  }
+	},
+	"tarcza": {
+	  "id": "tarcza",
+	  "name": "Tarcza",
+	  "description": "Jednostka zwiększa obronę o 25% przez 2 tury.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "self_buff",
+	  "effect": {
+		"category": "buff",
+		"remaining_turns": 2,
+		"stat_changes": [
+		  {"stat": "def", "mode": "percent", "value": 25}
+		]
+	  }
+	},
+	"przyspieszenie": {
+	  "id": "przyspieszenie",
+	  "name": "Przyspieszenie",
+	  "description": "Jednostka zyskuje +2 do szybkości na 1 turę.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "self_buff",
+	  "effect": {
+		"category": "buff",
+		"remaining_turns": 1,
+		"stat_changes": [
+		  {"stat": "speed", "mode": "flat", "value": 2}
+		]
+	  }
+	},
+	"medytacja": {
+	  "id": "medytacja",
+	  "name": "Medytacja",
+	  "description": "Jednostka skupia się: +25% DMG przez 2 tury, ale traci resztę ruchu.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "self_buff",
+	  "effect": {
+		"category": "buff",
+		"remaining_turns": 2,
+		"stat_changes": [
+		  {"stat": "dmg", "mode": "percent", "value": 25}
+		]
+	  }
+	},
+	"runiczna_ochrona": {
+	  "id": "runiczna_ochrona",
+	  "name": "Runiczna Ochrona",
+	  "description": "Magia run zwiększa DEF o 2 i zasięg ataku o 1 na 2 tury.",
+	  "ap_cost": 1,
+	  "cooldown": 4,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "self_buff",
+	  "effect": {
+		"category": "buff",
+		"remaining_turns": 2,
+		"stat_changes": [
+		  {"stat": "def", "mode": "flat", "value": 2},
+		  {"stat": "attack_range", "mode": "flat", "value": 1}
+		]
+	  }
+	},
+	"szarza": {
+	  "id": "szarza",
+	  "name": "Szarza",
+	  "description": "Jednostka rzuca się do przodu: +2 do zasięgu ruchu i +15% DMG na 1 turę.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "self_buff",
+	  "effect": {
+		"category": "buff",
+		"remaining_turns": 1,
+		"stat_changes": [
+		  {"stat": "move_range", "mode": "flat", "value": 2},
+		  {"stat": "dmg", "mode": "percent", "value": 15}
+		]
+	  }
+	},
+	"krwawa_ofiara": {
+	  "id": "krwawa_ofiara",
+	  "name": "Krwawa Ofiara",
+	  "description": "Jednostka poświęca obronę za siłę: +40% DMG i -20% DEF na 1 turę.",
+	  "ap_cost": 1,
+	  "cooldown": 4,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "self_buff",
+	  "effect": {
+		"category": "buff",
+		"remaining_turns": 1,
+		"stat_changes": [
+		  {"stat": "dmg", "mode": "percent", "value": 40},
+		  {"stat": "def", "mode": "percent", "value": -20}
+		]
+	  }
 	}
   }
 }
