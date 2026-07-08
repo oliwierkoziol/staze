@@ -29,6 +29,8 @@ const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 @onready var general_name_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText/GeneralName
 @onready var general_level_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText/GeneralLevel
 @onready var general_rule_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralRule
+@onready var general_ability_button_1: Button = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1
+@onready var general_ability_button_2: Button = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2
 @onready var event_log_scroll: ScrollContainer = $HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll
 @onready var event_log_label: RichTextLabel = $HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll/EventLog
 @onready var end_turn_button: Button = $HUD/Overlay/RightPanel/RightMargin/RightContent/EndTurnButton
@@ -46,6 +48,9 @@ var turn_queue_index := -1
 var pending_skill_id := ""
 var unit_configs: Array[Dictionary] = []
 var skill_library: Dictionary = {}
+var general_skills: Dictionary = {}
+var general_skill_ids: Array[String] = []
+var general_cooldowns: Dictionary = {}
 var terrain_effects: Array[Dictionary] = []
 var setup_mode := true
 var setup_drag_unit_id := -1
@@ -96,6 +101,7 @@ func _on_team_setup_finished(player_faction: String, enemy_faction: String) -> v
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
 	skill_library = UnitTypeLibraryScript.get_skill_library()
+	_load_general_skills()
 	var setup: Control = get_node_or_null("TeamSetup")
 	if setup != null:
 		setup.queue_free()
@@ -105,6 +111,16 @@ func _on_team_setup_finished(player_faction: String, enemy_faction: String) -> v
 		board.visible = true
 	_build_battle_config_from_factions(player_faction, enemy_faction)
 	_setup_battle_scene()
+
+
+func _load_general_skills() -> void:
+	general_skills = UnitTypeLibraryScript.get_general_skills()
+	general_skill_ids = []
+	for skill_id in general_skills.keys():
+		general_skill_ids.append(str(skill_id))
+	general_cooldowns.clear()
+	for skill_id in general_skill_ids:
+		general_cooldowns[skill_id] = 0
 
 
 func _build_battle_config_from_factions(player_faction: String, enemy_faction: String) -> void:
@@ -220,8 +236,11 @@ func _setup_battle_scene() -> void:
 	_connect_signal_once(board.animation_finished, _on_board_animation_finished)
 	_connect_signal_once(unit_abilities_panel.skill_pressed, _on_skill_button_pressed)
 	_connect_signal_once(end_turn_button.pressed, _on_end_turn_button_pressed)
+	_connect_signal_once(general_ability_button_1.pressed, _on_general_ability_1_pressed)
+	_connect_signal_once(general_ability_button_2.pressed, _on_general_ability_2_pressed)
 	general_name_label.text = "KAPITAN ALARIC"
 	general_level_label.text = "Poziom 5"
+	_refresh_general_ability_buttons()
 	_clear_unit_details()
 	event_log_label.bbcode_enabled = true
 	_load_skill_library()
@@ -344,12 +363,14 @@ func _on_reload_json_pressed() -> void:
 
 func _reload_selected_factions() -> void:
 	skill_library = UnitTypeLibraryScript.get_skill_library()
+	_load_general_skills()
 	last_battle_config_source = ProjectSettings.globalize_path(UnitTypeLibraryScript.UNIT_TYPES_PATH)
 	if current_player_faction == "" or current_enemy_faction == "":
 		_load_battle_config()
 		return
 	_build_battle_config_from_factions(current_player_faction, current_enemy_faction)
 	_debug_reload_snapshot("JSON", unit_configs)
+	_refresh_general_ability_buttons()
 
 
 func _load_battle_config() -> void:
@@ -2038,6 +2059,7 @@ func _update_action_buttons() -> void:
 		unit_abilities_panel.set_skills(_build_skill_cards(selected_unit))
 	var active_unit: Dictionary = _get_active_unit()
 	end_turn_button.disabled = setup_mode or is_animating or not _is_player_turn() or active_unit.is_empty() or active_unit.side != "player"
+	_refresh_general_ability_buttons()
 
 
 func _on_end_turn_button_pressed() -> void:
@@ -2296,6 +2318,9 @@ func _start_unit_activation(unit: Dictionary) -> void:
 	unit.action_points = int(unit.get("base_action_points", unit.get("action_points", 1)))
 	pending_skill_id = ""
 	_process_turn_start(unit)
+	if unit.side == "player":
+		_advance_general_cooldowns()
+		_refresh_general_ability_buttons()
 	_apply_terrain_effects_to_unit(unit)
 	if _find_unit_by_id(unit.id).is_empty():
 		_sync_board()
@@ -2383,3 +2408,65 @@ func _on_skill_button_pressed(index: int) -> void:
 	_update_action_buttons()
 	unit_abilities_panel.set_skills(_build_skill_cards(unit))
 	_refresh_turn_queue()
+
+
+func _on_general_ability_1_pressed() -> void:
+	_use_general_skill_by_index(0)
+
+
+func _on_general_ability_2_pressed() -> void:
+	_use_general_skill_by_index(1)
+
+
+func _use_general_skill_by_index(index: int) -> void:
+	if setup_mode or is_animating or not _is_player_turn():
+		return
+	if index < 0 or index >= general_skill_ids.size():
+		return
+	var skill_id: String = general_skill_ids[index]
+	var skill: Dictionary = general_skills.get(skill_id, {})
+	if skill.is_empty():
+		return
+	if int(general_cooldowns.get(skill_id, 0)) > 0:
+		return
+	var effect: Dictionary = skill.get("effect", {})
+	if effect.is_empty():
+		return
+	for unit in units:
+		if unit.side != "player":
+			continue
+		_apply_or_refresh_effect(unit, effect.duplicate(true))
+	general_cooldowns[skill_id] = int(skill.get("cooldown", 0))
+	_log_event("%s uzywa %s." % [general_name_label.text, str(skill.get("name", skill_id))])
+	_refresh_general_ability_buttons()
+	_sync_board()
+
+
+func _advance_general_cooldowns() -> void:
+	for skill_id in general_cooldowns.keys():
+		var remaining: int = int(general_cooldowns[skill_id])
+		if remaining > 0:
+			general_cooldowns[skill_id] = remaining - 1
+
+
+func _refresh_general_ability_buttons() -> void:
+	var buttons: Array[Button] = [general_ability_button_1, general_ability_button_2]
+	for index in buttons.size():
+		var button: Button = buttons[index]
+		var name_label: Label = button.get_node("AbilityContent/AbilityText/AbilityName")
+		var desc_label: Label = button.get_node("AbilityContent/AbilityText/AbilityDesc")
+		var cd_label: Label = button.get_node("AbilityContent/AbilityText/AbilityCooldown")
+		if index >= general_skill_ids.size():
+			button.disabled = true
+			name_label.text = "-"
+			desc_label.text = "Brak umiejetnosci"
+			cd_label.text = ""
+			continue
+		var skill_id: String = general_skill_ids[index]
+		var skill: Dictionary = general_skills.get(skill_id, {})
+		var remaining_cd: int = int(general_cooldowns.get(skill_id, 0))
+		var can_use := not setup_mode and not is_animating and _is_player_turn() and remaining_cd == 0
+		button.disabled = not can_use
+		name_label.text = str(skill.get("name", skill_id)).to_upper()
+		desc_label.text = str(skill.get("description", ""))
+		cd_label.text = "CD: %s tury." % remaining_cd if remaining_cd > 0 else "Gotowe"

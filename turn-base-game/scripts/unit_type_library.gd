@@ -1,10 +1,12 @@
 class_name UnitTypeLibrary
 
 const UNIT_TYPES_PATH := "res://data/unit_types.json"
+const GENERAL_SKILLS_PATH := "res://data/general_skills.json"
 
 static var _factions: Array[Dictionary] = []
 static var _unit_lookup: Dictionary = {}
 static var _skill_library: Dictionary = {}
+static var _general_skills: Dictionary = {}
 static var _loaded := false
 
 
@@ -41,6 +43,15 @@ static func _load() -> void:
 	_factions.clear()
 	_unit_lookup.clear()
 	_skill_library.clear()
+	_general_skills.clear()
+
+	var general_data: Dictionary = _load_json_file(GENERAL_SKILLS_PATH)
+	var raw_general_skills: Dictionary = general_data.get("general_skills", {})
+	for skill_id in raw_general_skills.keys():
+		var raw_skill: Variant = raw_general_skills[skill_id]
+		if typeof(raw_skill) != TYPE_DICTIONARY:
+			continue
+		_general_skills[str(skill_id)] = _normalize_general_skill(str(skill_id), raw_skill)
 
 	var skills_path: String = str(config.get("skill_library_path", "res://data/skills/skills.json"))
 	var skills_data: Dictionary = _load_json_file(skills_path)
@@ -100,6 +111,34 @@ static func _normalize_skill_config(skill_id: String, raw_skill: Dictionary) -> 
 	return skill
 
 
+static func _normalize_general_skill(skill_id: String, raw_skill: Dictionary) -> Dictionary:
+	var skill: Dictionary = raw_skill.duplicate(true)
+	skill["id"] = str(skill.get("id", skill_id))
+	skill["name"] = str(skill.get("name", skill_id))
+	skill["description"] = str(skill.get("description", ""))
+	skill["cooldown"] = int(skill.get("cooldown", 0))
+	var raw_effect: Variant = skill.get("effect", {})
+	if typeof(raw_effect) != TYPE_DICTIONARY:
+		raw_effect = {}
+	var effect: Dictionary = raw_effect.duplicate(true)
+	effect["id"] = str(effect.get("id", skill_id))
+	effect["name"] = str(effect.get("name", skill.get("name", skill_id)))
+	effect["category"] = str(effect.get("category", "buff"))
+	effect["remaining_turns"] = int(effect.get("remaining_turns", 1))
+	var stat_changes: Array[Dictionary] = []
+	for change in effect.get("stat_changes", []):
+		if typeof(change) != TYPE_DICTIONARY:
+			continue
+		stat_changes.append({
+			"stat": str(change.get("stat", "")),
+			"mode": str(change.get("mode", "flat")),
+			"value": int(change.get("value", 0))
+		})
+	effect["stat_changes"] = stat_changes
+	skill["effect"] = effect
+	return skill
+
+
 static func get_factions() -> Array[Dictionary]:
 	_ensure_loaded()
 	return _factions.duplicate(true)
@@ -132,6 +171,18 @@ static func get_skill(skill_id: String) -> Dictionary:
 	_ensure_loaded()
 	if _skill_library.has(skill_id):
 		return _skill_library[skill_id].duplicate(true)
+	return {}
+
+
+static func get_general_skills() -> Dictionary:
+	_ensure_loaded()
+	return _general_skills.duplicate(true)
+
+
+static func get_general_skill(skill_id: String) -> Dictionary:
+	_ensure_loaded()
+	if _general_skills.has(skill_id):
+		return _general_skills[skill_id].duplicate(true)
 	return {}
 
 
