@@ -1,0 +1,2 @@
+Dodaliśmy również pomniejsze animacje ataków, zarówno dystansowych, jak i w zwarciu. 
+Poprawiliśmy działanie specjalnych heksów na mapie oraz ukończyliśmy najważniejsze elementy UI.

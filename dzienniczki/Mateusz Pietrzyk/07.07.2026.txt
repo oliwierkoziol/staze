@@ -1,0 +1,2 @@
+Dodaliśmy po 3 umiejętności dla każdego konkretnego typu jednostki (ludzi) oraz wprowadziliśmy zupełnie nowe umiejętności generała. 
+Dodatkowo zaimplementowaliśmy efekty statusowe dla specjalnych heksów, takich jak woda czy też krzaki.
