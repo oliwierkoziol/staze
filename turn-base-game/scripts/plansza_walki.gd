@@ -26,6 +26,7 @@ const ROCK3_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock3.png")
 const FOREST1_TEXTURE: Texture2D = preload("res://assets/mapTiles/forest1.png")
 const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
+const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
 const PROJECTILE_PATH_ARROWS := "res://assets/arrows_projectile.png"
 const PROJECTILE_PATH_SPELL := "res://assets/spell_projectile.png"
 
@@ -342,7 +343,7 @@ func draw_terrain_effects() -> void:
 
 
 func draw_units() -> void:
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = GEORGIA_FONT
 	var font_size: int = 22
 	for unit in units:
 		if bool(unit.get("is_hidden", false)):
