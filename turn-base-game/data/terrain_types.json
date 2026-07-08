@@ -11,7 +11,7 @@
         "id": "woda",
         "name": "Woda",
         "category": "debuff",
-        "remaining_turns": 1,
+        "remaining_turns": 2,
         "skip_turn": true,
         "stat_changes": []
       }
@@ -36,7 +36,7 @@
         "id": "las",
         "name": "Las",
         "category": "debuff",
-        "remaining_turns": 1,
+        "remaining_turns": 2,
         "skip_turn": true,
         "hides_unit": true,
         "stat_changes": []
