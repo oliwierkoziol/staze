@@ -4,7 +4,6 @@
 	  "id": "silna_motywacja",
 	  "name": "Silna Motywacja",
 	  "description": "Sojusznicy zadaja +25% obrazen przez 2 tury.",
-	  "cooldown": 4,
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 2,
@@ -17,7 +16,6 @@
 	  "id": "szybkie_manewry",
 	  "name": "Szybkie Manewry",
 	  "description": "Wszyscy sojusznicy zyskuja +1 do zasiegu ruchu na 1 ture.",
-	  "cooldown": 3,
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 1,
@@ -30,7 +28,6 @@
 	  "id": "tarcza_bastionu",
 	  "name": "Tarcza Bastionu",
 	  "description": "Wszyscy sojusznicy otrzymuja +20% obrony przez 2 tury.",
-	  "cooldown": 5,
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 2,
@@ -43,7 +40,6 @@
 	  "id": "sokole_oko",
 	  "name": "Sokole Oko",
 	  "description": "Sojusznicy zyskuja +1 do zasiegu ataku na 2 tury.",
-	  "cooldown": 4,
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 2,
@@ -56,7 +52,6 @@
 	  "id": "wola_przetrwania",
 	  "name": "Wola Przetrwania",
 	  "description": "Sojusznicy otrzymuja +10% DMG i +10% DEF przez 2 tury.",
-	  "cooldown": 5,
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 2,
@@ -70,7 +65,6 @@
 	  "id": "zimna_krew",
 	  "name": "Zimna Krew",
 	  "description": "Sojusznicy sa odporni na ogluszenie przez 1 ture.",
-	  "cooldown": 4,
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 1,
@@ -81,7 +75,6 @@
 	  "id": "zmasowany_atak",
 	  "name": "Zmasowany Atak",
 	  "description": "Sojusznicy zadaja +15% obrazen i maja +1 zasieg ataku na 1 ture.",
-	  "cooldown": 4,
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 1,
@@ -95,7 +88,6 @@
 	  "id": "twardy_zakaz",
 	  "name": "Twardy Zakaz",
 	  "description": "Wszyscy sojusznicy zyskuja +2 DEF na 2 tury.",
-	  "cooldown": 4,
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 2,
@@ -108,7 +100,6 @@
 	  "id": "bitewny_trucht",
 	  "name": "Bitewny Trucht",
 	  "description": "Wszyscy sojusznicy zyskuja +1 do szybkosci i +1 do zasiegu ruchu na 2 tury.",
-	  "cooldown": 4,
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 2,
@@ -122,7 +113,6 @@
 	  "id": "krzyk_wodza",
 	  "name": "Krzyk Wodza",
 	  "description": "Wszyscy sojusznicy zyskuja +10% DMG, +10% DEF i +1 zasieg ataku na 1 ture.",
-	  "cooldown": 6,
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 1,

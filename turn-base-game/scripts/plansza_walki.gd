@@ -356,18 +356,20 @@ func draw_units() -> void:
 		var sprite_size := Vector2(HEX_RADIUS * 1.9, HEX_RADIUS * 2.2)
 		var sprite_rect := Rect2(center - Vector2(sprite_size.x / 2.0, sprite_size.y * 0.68), sprite_size)
 		var damage_tint_alpha: float = float(unit_damage_tint_alpha.get(unit.id, 0.0))
-		if portrait != null:
-			var tint: Color = Color(1.0, 1.0 - damage_tint_alpha * 0.82, 1.0 - damage_tint_alpha * 0.82, alpha)
-			draw_texture_rect(portrait, sprite_rect, false, tint)
 
+		var marker_center := center + Vector2(0.0, HEX_RADIUS * 0.18)
 		if unit.id == selected_unit_id:
 			var outline_radius := HEX_RADIUS * 0.55
-			draw_arc(center, outline_radius, 0.0, TAU, 24, Color(1.0, 0.92, 0.45, 0.9 * alpha), 3.0)
+			draw_arc(marker_center, outline_radius, 0.0, TAU, 24, Color(1.0, 0.92, 0.45, 0.9 * alpha), 3.0)
 		else:
 			var team_radius := HEX_RADIUS * 0.52
 			var team_color := PLAYER_OUTLINE_COLOR if unit.side == "player" else ENEMY_OUTLINE_COLOR
 			team_color.a *= alpha
-			draw_arc(center, team_radius, 0.0, TAU, 24, team_color, 2.5)
+			draw_arc(marker_center, team_radius, 0.0, TAU, 24, team_color, 2.5)
+
+		if portrait != null:
+			var tint: Color = Color(1.0, 1.0 - damage_tint_alpha * 0.82, 1.0 - damage_tint_alpha * 0.82, alpha)
+			draw_texture_rect(portrait, sprite_rect, false, tint)
 
 		var count_text: String = str(unit.count)
 		var text_size: Vector2 = font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
