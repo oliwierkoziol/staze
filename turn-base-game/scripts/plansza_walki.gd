@@ -17,6 +17,8 @@ const HEX_INNER_BORDER_COLOR := Color(0.76, 0.62, 0.36, 0.42)
 const UNIT_COUNT_BADGE_BG := Color(0.10, 0.10, 0.08, 0.96)
 const UNIT_COUNT_BADGE_BORDER := Color(0.65, 0.52, 0.20, 0.90)
 const UNIT_COUNT_BADGE_TEXT := Color(0.95, 0.90, 0.78, 1.0)
+const PLAYER_OUTLINE_COLOR := Color(0.35, 0.65, 0.95, 0.95)
+const ENEMY_OUTLINE_COLOR := Color(0.92, 0.35, 0.30, 0.95)
 const ROCK1_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock1.png")
 const ROCK2_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2.png")
 const ROCK2K_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2k.png")
@@ -343,6 +345,8 @@ func draw_units() -> void:
 	var font: Font = ThemeDB.fallback_font
 	var font_size: int = 22
 	for unit in units:
+		if bool(unit.get("is_hidden", false)):
+			continue
 		var center: Vector2 = visual_positions.get(unit.id, axial_to_pixel(unit.grid_x, unit.grid_y))
 		center += unit_attack_offsets.get(unit.id, Vector2.ZERO)
 		var portrait: Texture2D = unit_textures.get(unit.id, null)
@@ -356,6 +360,10 @@ func draw_units() -> void:
 		if unit.id == selected_unit_id:
 			var outline_radius := HEX_RADIUS * 0.55
 			draw_arc(center, outline_radius, 0.0, TAU, 24, Color(1.0, 0.92, 0.45, 0.9), 3.0)
+		else:
+			var team_radius := HEX_RADIUS * 0.52
+			var team_color := PLAYER_OUTLINE_COLOR if unit.side == "player" else ENEMY_OUTLINE_COLOR
+			draw_arc(center, team_radius, 0.0, TAU, 24, team_color, 2.5)
 
 		var count_text: String = str(unit.count)
 		var text_size: Vector2 = font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
