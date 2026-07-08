@@ -19,24 +19,46 @@ static func reload() -> void:
 	_load()
 
 
-static func _load() -> void:
-	_loaded = true
-	var file: FileAccess = FileAccess.open(UNIT_TYPES_PATH, FileAccess.READ)
+static func _load_json_file(path: String) -> Dictionary:
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		push_error("Nie mozna otworzyc %s" % UNIT_TYPES_PATH)
-		return
+		push_error("Nie mozna otworzyc %s" % path)
+		return {}
 	var text: String = file.get_as_text()
 	var parsed: Variant = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
-		push_error("Plik %s musi zawierac obiekt JSON." % UNIT_TYPES_PATH)
+		push_error("Plik %s musi zawierac obiekt JSON." % path)
+		return {}
+	return parsed
+
+
+static func _load() -> void:
+	_loaded = true
+	var config: Dictionary = _load_json_file(UNIT_TYPES_PATH)
+	if config.is_empty():
 		return
-	var config: Dictionary = parsed
+
 	_factions.clear()
 	_unit_lookup.clear()
 	_skill_library.clear()
 
-	var raw_factions: Array = config.get("factions", [])
-	for raw_faction in raw_factions:
+	var skills_path: String = str(config.get("skill_library_path", "res://data/skills/skills.json"))
+	var skills_data: Dictionary = _load_json_file(skills_path)
+	var raw_skills: Dictionary = skills_data.get("skill_library", {})
+	for skill_id in raw_skills.keys():
+		var raw_skill: Variant = raw_skills[skill_id]
+		if typeof(raw_skill) != TYPE_DICTIONARY:
+			continue
+		_skill_library[str(skill_id)] = _normalize_skill_config(str(skill_id), raw_skill)
+
+	var factions_dir: String = str(config.get("factions_path", "res://data/factions/"))
+	var faction_files: Array = config.get("factions", [])
+	for faction_file in faction_files:
+		if typeof(faction_file) != TYPE_STRING:
+			continue
+		var faction_path: String = factions_dir.path_join(str(faction_file))
+		var faction_data: Dictionary = _load_json_file(faction_path)
+		var raw_faction: Variant = faction_data.get("faction", {})
 		if typeof(raw_faction) != TYPE_DICTIONARY:
 			continue
 		var faction: Dictionary = raw_faction.duplicate(true)
@@ -50,13 +72,6 @@ static func _load() -> void:
 			_unit_lookup[unit_data.id] = unit_data
 		faction["units"] = normalized_units
 		_factions.append(faction)
-
-	var raw_skills: Dictionary = config.get("skill_library", {})
-	for skill_id in raw_skills.keys():
-		var raw_skill: Variant = raw_skills[skill_id]
-		if typeof(raw_skill) != TYPE_DICTIONARY:
-			continue
-		_skill_library[str(skill_id)] = _normalize_skill_config(str(skill_id), raw_skill)
 
 
 static func _normalize_unit_type(raw_unit: Dictionary) -> Dictionary:
