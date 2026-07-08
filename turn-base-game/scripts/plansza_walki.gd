@@ -343,6 +343,8 @@ func draw_units() -> void:
 	var font: Font = ThemeDB.fallback_font
 	var font_size: int = 22
 	for unit in units:
+		if bool(unit.get("is_hidden", false)):
+			continue
 		var center: Vector2 = visual_positions.get(unit.id, axial_to_pixel(unit.grid_x, unit.grid_y))
 		center += unit_attack_offsets.get(unit.id, Vector2.ZERO)
 		var portrait: Texture2D = unit_textures.get(unit.id, null)
