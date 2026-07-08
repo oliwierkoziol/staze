@@ -1135,12 +1135,26 @@ func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage
 			hit_target = guardian
 			damage = max(1, int(ceil(float(damage) * 0.8)))
 			_log_event("%s zaslania %s Zelazna Kurtyna." % [_unit_name_log_text(guardian), _unit_name_log_text(target)])
-	board.play_attack_animation(int(attacker.id), int(hit_target.id))
+	board.play_attack_animation(int(attacker.id), int(hit_target.id), _get_attack_projectile_kind(attacker))
 	if _consume_energy_barrier(hit_target):
 		_log_event("Bariera Energetyczna blokuje atak na %s." % _unit_name_log_text(hit_target))
 		return {"target": hit_target, "damage": 0, "casualties": 0}
 	var casualties: int = _apply_damage_to_unit(hit_target, damage)
 	return {"target": hit_target, "damage": damage, "casualties": casualties}
+
+
+func _get_attack_projectile_kind(attacker: Dictionary) -> String:
+	if int(attacker.get("attack_range", 1)) <= 1:
+		return ""
+	var descriptor: String = "%s %s %s" % [
+		str(attacker.get("type_id", "")),
+		str(attacker.get("name", "")),
+		str(attacker.get("role", ""))
+	]
+	var descriptor_lower: String = descriptor.to_lower()
+	if descriptor_lower.contains("mag") or descriptor_lower.contains("mage") or descriptor_lower.contains("shaman") or descriptor_lower.contains("arkan") or descriptor_lower.contains("arcano"):
+		return "spell"
+	return "arrows"
 
 
 func _get_guardian_for(target: Dictionary) -> Dictionary:

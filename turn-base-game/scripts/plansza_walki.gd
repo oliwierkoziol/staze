@@ -24,6 +24,8 @@ const ROCK3_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock3.png")
 const FOREST1_TEXTURE: Texture2D = preload("res://assets/mapTiles/forest1.png")
 const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
+const PROJECTILE_PATH_ARROWS := "res://assets/arrows_projectile.png"
+const PROJECTILE_PATH_SPELL := "res://assets/spell_projectile.png"
 
 var units: Array = []
 var unit_textures: Dictionary = {}
@@ -37,6 +39,8 @@ var visual_positions: Dictionary = {}
 var active_tweens: Dictionary = {}
 var unit_attack_offsets: Dictionary = {}
 var unit_damage_tint_alpha: Dictionary = {}
+var projectile_textures: Dictionary = {}
+var active_projectiles: Array[Dictionary] = []
 var obstacles: Array = []
 var terrain_effects: Array[Dictionary] = []
 var hovered_cell := Vector2i(-1, -1)
@@ -136,6 +140,7 @@ func _draw() -> void:
 	draw_obstacles()
 	draw_highlighted_cells()
 	draw_units()
+	draw_projectiles()
 
 
 func animate_unit_path(unit_id: int, path: Array) -> void:
@@ -172,9 +177,12 @@ func _on_unit_tween_finished(unit_id: int) -> void:
 	animation_finished.emit(unit_id)
 
 
-func play_attack_animation(attacker_id: int, target_id: int) -> void:
+func play_attack_animation(attacker_id: int, target_id: int, projectile_kind: String = "") -> void:
 	var attacker_position: Vector2 = visual_positions.get(attacker_id, Vector2.ZERO)
 	var target_position: Vector2 = visual_positions.get(target_id, Vector2.ZERO)
+	if projectile_kind != "":
+		_spawn_projectile(attacker_position, target_position, projectile_kind)
+		return
 	var direction: Vector2 = target_position - attacker_position
 	if direction.length_squared() <= 0.001:
 		return
@@ -207,6 +215,50 @@ func _set_unit_attack_offset(offset: Vector2, unit_id: int) -> void:
 func _set_unit_damage_tint_alpha(alpha: float, unit_id: int) -> void:
 	unit_damage_tint_alpha[unit_id] = alpha
 	queue_redraw()
+
+
+func _spawn_projectile(start_position: Vector2, target_position: Vector2, projectile_kind: String) -> void:
+	var texture: Texture2D = _get_projectile_texture(projectile_kind)
+	if texture == null:
+		return
+	var travel_direction: Vector2 = target_position - start_position
+	var projectile: Dictionary = {
+		"position": start_position,
+		"texture": texture,
+		"rotation": travel_direction.angle()
+	}
+	active_projectiles.append(projectile)
+	var tween: Tween = create_tween()
+	tween.tween_method(_set_projectile_position.bind(projectile), start_position, target_position, 0.14)
+	tween.finished.connect(_on_projectile_tween_finished.bind(projectile))
+
+
+func _set_projectile_position(position: Vector2, projectile: Dictionary) -> void:
+	projectile["position"] = position
+	queue_redraw()
+
+
+func _on_projectile_tween_finished(projectile: Dictionary) -> void:
+	active_projectiles.erase(projectile)
+	queue_redraw()
+
+
+func _get_projectile_texture(projectile_kind: String) -> Texture2D:
+	if projectile_textures.has(projectile_kind):
+		return projectile_textures[projectile_kind]
+	var path: String = ""
+	match projectile_kind:
+		"spell":
+			path = PROJECTILE_PATH_SPELL
+		"arrows":
+			path = PROJECTILE_PATH_ARROWS
+		_:
+			return null
+	var resource: Resource = load(path)
+	var texture: Texture2D = resource as Texture2D
+	if texture != null:
+		projectile_textures[projectile_kind] = texture
+	return texture
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -316,6 +368,19 @@ func draw_units() -> void:
 		draw_rect(badge_rect, UNIT_COUNT_BADGE_BG, true)
 		draw_rect(badge_rect, UNIT_COUNT_BADGE_BORDER, false, 2.0)
 		draw_string(font, text_position, count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, UNIT_COUNT_BADGE_TEXT)
+
+
+func draw_projectiles() -> void:
+	var projectile_size := Vector2(42.0, 42.0)
+	for projectile in active_projectiles:
+		var texture: Texture2D = projectile.get("texture", null)
+		if texture == null:
+			continue
+		var position: Vector2 = projectile.get("position", Vector2.ZERO)
+		var rotation: float = float(projectile.get("rotation", 0.0))
+		draw_set_transform(position, rotation, Vector2.ONE)
+		draw_texture_rect(texture, Rect2(-projectile_size / 2.0, projectile_size), false)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _load_unit_portrait(unit: Dictionary) -> Texture2D:

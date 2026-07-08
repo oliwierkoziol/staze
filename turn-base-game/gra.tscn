@@ -12,6 +12,7 @@
 [ext_resource type="Script" uid="uid://dcm6ghvn3slyt" path="res://scripts/unit_abilities_panel.gd" id="10_abilities"]
 [ext_resource type="Texture2D" uid="uid://q6isvretb06q" path="res://assets/ui/general1.png" id="11_general1"]
 [ext_resource type="Texture2D" uid="uid://cymiq2f6b8k8c" path="res://assets/ui/general_ability1.png" id="12_general_ability1"]
+[ext_resource type="Theme" uid="uid://cna4ihybudjlx" path="res://theme/georgia_theme.tres" id="13_georgia_theme"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_6otim"]
 font_size = 22
@@ -94,6 +95,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("13_georgia_theme")
 script = ExtResource("1_a1tqk")
 
 [node name="Background" type="TextureRect" parent="." unique_id=214506001]
