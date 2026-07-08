@@ -1,46 +1,45 @@
 {
   "terrain_types": {
-    "woda": {
-      "id": "woda",
-      "name": "Woda",
-      "description": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
-      "movement_cost": 1,
-      "blocks_movement": false,
-      "blocks_line_of_sight": false,
-      "entry_effect": {
-        "id": "woda",
-        "name": "Woda",
-        "category": "debuff",
-        "remaining_turns": 2,
-        "skip_turn": true,
-        "stat_changes": []
-      }
-    },
-    "kamienie": {
-      "id": "kamienie",
-      "name": "Kamienie",
-      "description": "Przez kamienie nie da sie przejsc.",
-      "movement_cost": 999,
-      "blocks_movement": true,
-      "blocks_line_of_sight": true,
-      "entry_effect": null
-    },
-    "krzok": {
-      "id": "krzok",
-      "name": "Krzok",
-      "description": "Jednostka w krzoku znika na 1 ture i traci ture.",
-      "movement_cost": 1,
-      "blocks_movement": false,
-      "blocks_line_of_sight": true,
-      "entry_effect": {
-        "id": "krzok",
-        "name": "Krzok",
-        "category": "debuff",
-        "remaining_turns": 2,
-        "skip_turn": true,
-        "hides_unit": true,
-        "stat_changes": []
-      }
-    }
+	"woda": {
+	  "id": "woda",
+	  "name": "Woda",
+	  "description": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": false,
+	  "entry_effect": {
+		"id": "woda",
+		"name": "Woda",
+		"category": "debuff",
+		"remaining_turns": 2,
+		"skip_turn": true,
+		"stat_changes": []
+	  }
+	},
+	"kamienie": {
+	  "id": "kamienie",
+	  "name": "Kamienie",
+	  "description": "Przez kamienie nie da sie przejsc.",
+	  "movement_cost": 999,
+	  "blocks_movement": true,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": null
+	},
+	"krzok": {
+	  "id": "krzok",
+	  "name": "Krzak",
+	  "description": "Jednostka w krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": {
+		"id": "krzok",
+		"name": "Krzak",
+		"category": "buff",
+		"remaining_turns": 2,
+		"hides_unit": true,
+		"stat_changes": []
+	  }
+	}
   }
 }

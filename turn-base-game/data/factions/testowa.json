@@ -17,7 +17,7 @@
         "move_range": 4,
         "attack_range": 1,
         "resistance": "Brak",
-        "portrait": "",
+        "portrait": "res://assets/characters/humans/elfSwordsman.png",
         "skill_ids": [
           "bariera_energetyczna",
           "mistrz_trucizn",
@@ -38,7 +38,7 @@
         "move_range": 5,
         "attack_range": 3,
         "resistance": "Brak",
-        "portrait": "",
+        "portrait": "res://assets/characters/humans/elfArcher.png",
         "skill_ids": [
           "strzal_w_kolano",
           "precyzyjny_strzal",

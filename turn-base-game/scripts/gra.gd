@@ -18,20 +18,20 @@ const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 const TEAM_SETUP_SCENE: PackedScene = preload("res://scenes/team_setup.tscn")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 
-const OBSTACLE_PORTRAITS: Dictionary = {
+var OBSTACLE_PORTRAITS: Dictionary = {
 	"woda": preload("res://assets/mapTiles/water.png"),
 	"kamienie": preload("res://assets/mapTiles/rock1.png"),
-	"krzok": preload("res://assets/mapTiles/krzok.png"),
+	"krzok": load("res://assets/mapTiles/bush.png"),
 }
 const OBSTACLE_NAMES: Dictionary = {
 	"woda": "Woda",
 	"kamienie": "Kamienie",
-	"krzok": "Krzok",
+	"krzok": "Krzak",
 }
 const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"woda": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
 	"kamienie": "Przez kamienie nie da sie przejsc. Blokuja linie strzalu.",
-	"krzok": "Jednostka w krzoku znika na 1 ture i traci ture.",
+	"krzok": "Jednostka w krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
 }
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
@@ -73,7 +73,7 @@ var unit_configs: Array[Dictionary] = []
 var skill_library: Dictionary = {}
 var general_skills: Dictionary = {}
 var general_skill_ids: Array[String] = []
-var general_cooldowns: Dictionary = {}
+var general_skill_used := false
 var terrain_effects: Array[Dictionary] = []
 var setup_mode := true
 var setup_drag_unit_id := -1
@@ -177,9 +177,7 @@ func _load_general_skills() -> void:
 	general_skill_ids = []
 	for skill_id in general_skills.keys():
 		general_skill_ids.append(str(skill_id))
-	general_cooldowns.clear()
-	for skill_id in general_skill_ids:
-		general_cooldowns[skill_id] = 0
+	general_skill_used = false
 
 
 func _build_battle_config_from_factions(player_faction: String, enemy_faction: String) -> void:
@@ -810,14 +808,17 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	if path_cost > remaining_move:
 		return
 
+	var move_path: Array[Vector2i] = _get_executable_move_path(path)
+	var move_cost: int = _get_path_cost(move_path)
 	is_animating = true
-	active_unit.grid_x = cell.x
-	active_unit.grid_y = cell.y
-	active_unit.remaining_move = max(0, remaining_move - path_cost)
+	var destination: Vector2i = move_path[move_path.size() - 1]
+	active_unit.grid_x = destination.x
+	active_unit.grid_y = destination.y
+	active_unit.remaining_move = max(0, remaining_move - move_cost)
 	pending_skill_id = ""
 	_sync_board()
-	_show_move_cost_label(path_cost, active_unit.remaining_move)
-	board.animate_unit_path(active_unit.id, path)
+	_show_move_cost_label(move_cost, active_unit.remaining_move)
+	board.animate_unit_path(active_unit.id, move_path)
 	await board.animation_finished
 	_clear_move_cost_label()
 	_log_event("%s przemieszcza sie." % _unit_name_log_text(active_unit))
@@ -835,6 +836,8 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 		return
 	var target := _find_unit_at_cell(cell)
 	if target.is_empty() or target.side == active_unit.side:
+		return
+	if not _can_see_target(active_unit, target):
 		return
 	if _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
 		_perform_basic_attack(active_unit, target, false)
@@ -907,6 +910,7 @@ func _enemy_take_turn() -> void:
 
 	var best_path := _find_best_enemy_path(enemy_unit, target)
 	if not best_path.is_empty():
+		best_path = _get_executable_move_path(best_path)
 		var destination: Vector2i = best_path[best_path.size() - 1]
 		var path_cost: int = _get_path_cost(best_path)
 		is_animating = true
@@ -948,13 +952,15 @@ func _find_unit_at_cell(cell: Vector2i) -> Dictionary:
 
 func _find_nearest_player_unit(enemy_unit: Dictionary) -> Dictionary:
 	var forced_target := _get_forced_target(enemy_unit)
-	if not forced_target.is_empty():
+	if not forced_target.is_empty() and _can_see_target(enemy_unit, forced_target):
 		return forced_target
 
 	var nearest: Dictionary = {}
 	var best_distance: float = INF
 	for unit in units:
 		if unit.side != "player":
+			continue
+		if not _can_see_target(enemy_unit, unit):
 			continue
 		var distance: int = _hex_distance(
 			Vector2i(enemy_unit.grid_x, enemy_unit.grid_y),
@@ -1101,7 +1107,7 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		return
 
 	var hovered_unit: Dictionary = _find_unit_at_cell(cell)
-	if not hovered_unit.is_empty() and hovered_unit.side != active_unit.side and _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
+	if not hovered_unit.is_empty() and hovered_unit.side != active_unit.side and _can_see_target(active_unit, hovered_unit) and _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(cell)
 		_clear_move_cost_label()
@@ -1188,6 +1194,9 @@ func _get_attackable_cells(unit: Dictionary) -> Array[Vector2i]:
 			var cell := Vector2i(column, row)
 			if cell == origin:
 				continue
+			var target: Dictionary = _find_unit_at_cell(cell)
+			if not target.is_empty() and target.side != unit.side and not _can_see_target(unit, target):
+				continue
 			if _is_in_attack_range(unit, cell):
 				attackable.append(cell)
 	return attackable
@@ -1212,7 +1221,7 @@ func _get_skill_target_cells(unit: Dictionary, skill_id: String) -> Array[Vector
 				continue
 			if _is_attack_blocked(unit, cell):
 				continue
-			if str(skill.get("target_type", "")) == "cell" and _is_cell_obstacle(cell):
+			if str(skill.get("target_type", "")) == "cell" and _blocks_cell_skill_target(cell):
 				continue
 			cells.append(cell)
 	return cells
@@ -1349,7 +1358,7 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 	if str(skill.get("target_type", "")) == "cell":
 		if _hex_distance(Vector2i(unit.grid_x, unit.grid_y), cell) > int(skill.get("range", 0)):
 			return
-		if _is_attack_blocked(unit, cell) or _is_cell_obstacle(cell):
+		if _is_attack_blocked(unit, cell) or _blocks_cell_skill_target(cell):
 			return
 		_execute_skill(unit, {}, skill, cell)
 		return
@@ -1359,6 +1368,8 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 		return
 	var target_type := str(skill.get("target_type", ""))
 	if target_type == "enemy_unit" and target.side == unit.side:
+		return
+	if target_type == "enemy_unit" and not _can_see_target(unit, target):
 		return
 	if target_type == "ally_unit" and (target.side != unit.side or target.id == unit.id):
 		return
@@ -1717,6 +1728,7 @@ func _can_use_skill(unit: Dictionary, skill_id: String) -> bool:
 
 func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void:
 	var effects: Array = unit.get("active_effects", [])
+	var previous_move_range: int = int(unit.get("move_range", 0))
 	for existing in effects:
 		if str(existing.get("id", "")) != str(effect_data.get("id", "")):
 			continue
@@ -1731,10 +1743,19 @@ func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void
 		if effect_data.has("block_next_attack"):
 			existing["block_next_attack"] = bool(effect_data.get("block_next_attack", false))
 		_recalculate_unit_stats(unit)
+		_add_current_move_gain(unit, previous_move_range)
 		return
 	effects.append(effect_data.duplicate(true))
 	unit["active_effects"] = effects
 	_recalculate_unit_stats(unit)
+	_add_current_move_gain(unit, previous_move_range)
+
+
+func _add_current_move_gain(unit: Dictionary, previous_move_range: int) -> void:
+	var gained_move: int = int(unit.get("move_range", 0)) - previous_move_range
+	if gained_move <= 0:
+		return
+	unit["remaining_move"] = int(unit.get("remaining_move", 0)) + gained_move
 
 
 func _process_turn_start(unit: Dictionary) -> void:
@@ -1748,7 +1769,7 @@ func _process_turn_start(unit: Dictionary) -> void:
 			skipped_turn = true
 			unit["remaining_move"] = 0
 			unit["action_points"] = 0
-		if bool(effect.get("hides_unit", false)):
+		if bool(effect.get("hides_unit", false)) and _terrain_hides_unit(Vector2i(unit.grid_x, unit.grid_y)):
 			unit["is_hidden"] = true
 		if tick_damage <= 0:
 			continue
@@ -1920,6 +1941,8 @@ func _try_push_unit_away(source: Dictionary, target: Dictionary) -> bool:
 func _try_trigger_agility(moved_unit: Dictionary) -> void:
 	for unit in units:
 		if unit.side == moved_unit.side or not _has_skill_id(unit, "zwinnosc"):
+			continue
+		if not _can_see_target(unit, moved_unit):
 			continue
 		if int(unit.get("skill_cooldowns", {}).get("zwinnosc", 0)) > 0:
 			continue
@@ -2120,6 +2143,15 @@ func _get_path_cost(path: Array[Vector2i]) -> int:
 	return cost
 
 
+func _get_executable_move_path(path: Array[Vector2i]) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for cell in path:
+		result.append(cell)
+		if _terrain_skips_turn(cell):
+			break
+	return result
+
+
 func _get_terrain_entry_effect(cell: Vector2i) -> Dictionary:
 	var terrain: Dictionary = _get_terrain_at(cell)
 	if terrain.is_empty():
@@ -2140,6 +2172,14 @@ func _terrain_skips_turn(cell: Vector2i) -> bool:
 	return bool(effect.get("skip_turn", false))
 
 
+func _can_see_target(observer: Dictionary, target: Dictionary) -> bool:
+	if not bool(target.get("is_hidden", false)):
+		return true
+	var observer_cell := Vector2i(observer.grid_x, observer.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	return _terrain_hides_unit(observer_cell) and _terrain_hides_unit(target_cell) and _hex_distance(observer_cell, target_cell) == 1
+
+
 func _get_blocked_cells(excluded_unit_id: int) -> Dictionary:
 	var blocked: Dictionary = {}
 	for unit in units:
@@ -2155,6 +2195,10 @@ func _get_blocked_cells(excluded_unit_id: int) -> Dictionary:
 
 func _is_cell_obstacle(cell: Vector2i) -> bool:
 	return not _get_terrain_at(cell).is_empty()
+
+
+func _blocks_cell_skill_target(cell: Vector2i) -> bool:
+	return _is_cell_obstacle(cell) and str(_get_terrain_at(cell).get("id", "")) != "krzok"
 
 
 func _is_attack_blocked(attacker: Dictionary, target_cell: Vector2i) -> bool:
@@ -2340,6 +2384,75 @@ func _validate_setup() -> void:
 
 	assert(_calculate_tick_damage({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna"), "Umiejetnosci bierne nie moga byc uzywane recznie.")
+	var previous_obstacles: Array[Dictionary] = obstacles.duplicate(true)
+	var previous_terrain_effects: Array[Dictionary] = terrain_effects.duplicate(true)
+	obstacles = [
+		{"grid_x": 4, "grid_y": 4, "type": "kamienie"},
+		{"grid_x": 5, "grid_y": 3, "type": "krzok"},
+		{"grid_x": 5, "grid_y": 4, "type": "krzok"},
+		{"grid_x": 5, "grid_y": 5, "type": "krzok"}
+	]
+	assert(not _blocks_cell_skill_target(Vector2i(5, 4)), "Skill obszarowy musi moc celowac w krzak.")
+	assert(_blocks_cell_skill_target(Vector2i(4, 4)), "Skill obszarowy nie powinien celowac w blokujace przeszkody.")
+	var bush_unit := {
+		"id": 999,
+		"name": "Test",
+		"side": "player",
+		"grid_x": 5,
+		"grid_y": 4,
+		"hp": 10,
+		"base_hp": 10,
+		"dmg": 1,
+		"base_dmg": 1,
+		"def": 0,
+		"base_def": 0,
+		"speed": 1,
+		"base_speed": 1,
+		"move_range": 1,
+		"base_move_range": 1,
+		"attack_range": 1,
+		"base_attack_range": 1,
+		"count": 1,
+		"current_total_hp": 10,
+		"max_total_hp": 10,
+		"active_effects": [],
+		"skill_ids": []
+	}
+	terrain_effects = [{"id": "poison_cloud", "grid_x": 5, "grid_y": 4, "remaining_turns": 2, "tick_damage": 1}]
+	_apply_terrain_effects_to_unit(bush_unit)
+	assert(_has_effect(bush_unit, "zatrucie"), "Toksyczna chmura musi dzialac na jednostke stojaca w krzaku.")
+	assert(not _can_see_target({"grid_x": 0, "grid_y": 0}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Ukryty cel w krzaku nie moze byc widoczny z normalnego pola.")
+	assert(_can_see_target({"grid_x": 5, "grid_y": 4}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Jednostki w sasiadujacych krzakach musza sie widziec.")
+	assert(not _can_see_target({"grid_x": 5, "grid_y": 3}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Krzak widzi ukryty cel tylko z sasiedniego krzaka.")
+	var water_start := Vector2i(4, 4)
+	var first_water := Vector2i(5, 4)
+	var second_water := Vector2i(6, 4)
+	obstacles = [
+		{"grid_x": first_water.x, "grid_y": first_water.y, "type": "woda"},
+		{"grid_x": second_water.x, "grid_y": second_water.y, "type": "woda"}
+	]
+	for neighbor in _get_neighbors(second_water):
+		if neighbor != first_water and neighbor != water_start:
+			obstacles.append({"grid_x": neighbor.x, "grid_y": neighbor.y, "type": "kamienie"})
+	bush_unit.grid_x = water_start.x
+	bush_unit.grid_y = water_start.y
+	var water_path: Array[Vector2i] = _find_path(bush_unit, water_start, second_water)
+	assert(water_path.size() == 2 and water_path[0] == first_water and water_path[1] == second_water, "Pathfinding moze prowadzic przez kolejne pola wody.")
+	var executable_water_path: Array[Vector2i] = _get_executable_move_path(water_path)
+	assert(executable_water_path.size() == 1 and executable_water_path[0] == first_water, "Ruch musi zatrzymac sie na pierwszym polu wody.")
+	bush_unit.remaining_move = 1
+	_apply_or_refresh_effect(bush_unit, {
+		"id": "test_ruchu",
+		"name": "Test Ruchu",
+		"category": "buff",
+		"remaining_turns": 1,
+		"stat_changes": [
+			{"stat": "move_range", "mode": "flat", "value": 2}
+		]
+	})
+	assert(int(bush_unit.move_range) == 3 and _get_remaining_move(bush_unit) == 3, "Buff ruchu musi od razu dodac ruch do tej tury.")
+	obstacles = previous_obstacles
+	terrain_effects = previous_terrain_effects
 
 
 func _on_board_animation_finished(_unit_id: int) -> void:
@@ -2711,7 +2824,6 @@ func _start_unit_activation(unit: Dictionary) -> void:
 	pending_skill_id = ""
 	_process_turn_start(unit)
 	if unit.side == "player":
-		_advance_general_cooldowns()
 		_refresh_general_ability_buttons()
 	_apply_terrain_effects_to_unit(unit)
 	if _find_unit_by_id(unit.id).is_empty():
@@ -2819,7 +2931,7 @@ func _use_general_skill_by_index(index: int) -> void:
 	var skill: Dictionary = general_skills.get(skill_id, {})
 	if skill.is_empty():
 		return
-	if int(general_cooldowns.get(skill_id, 0)) > 0:
+	if general_skill_used:
 		return
 	var effect: Dictionary = skill.get("effect", {})
 	if effect.is_empty():
@@ -2828,17 +2940,10 @@ func _use_general_skill_by_index(index: int) -> void:
 		if unit.side != "player":
 			continue
 		_apply_or_refresh_effect(unit, effect.duplicate(true))
-	general_cooldowns[skill_id] = int(skill.get("cooldown", 0))
+	general_skill_used = true
 	_log_event("%s uzywa %s." % [general_name_label.text, str(skill.get("name", skill_id))])
 	_refresh_general_ability_buttons()
 	_sync_board()
-
-
-func _advance_general_cooldowns() -> void:
-	for skill_id in general_cooldowns.keys():
-		var remaining: int = int(general_cooldowns[skill_id])
-		if remaining > 0:
-			general_cooldowns[skill_id] = remaining - 1
 
 
 func _refresh_general_ability_buttons() -> void:
@@ -2856,9 +2961,9 @@ func _refresh_general_ability_buttons() -> void:
 			continue
 		var skill_id: String = general_skill_ids[index]
 		var skill: Dictionary = general_skills.get(skill_id, {})
-		var remaining_cd: int = int(general_cooldowns.get(skill_id, 0))
-		var can_use := not setup_mode and not is_animating and _is_player_turn() and remaining_cd == 0
+		var can_use := not setup_mode and not is_animating and _is_player_turn() and not general_skill_used
 		button.disabled = not can_use
+		button.modulate = Color(0.45, 0.45, 0.45, 0.75) if general_skill_used else Color.WHITE
 		name_label.text = str(skill.get("name", skill_id)).to_upper()
 		desc_label.text = str(skill.get("description", ""))
-		cd_label.text = "CD: %s tury." % remaining_cd if remaining_cd > 0 else "Gotowe"
+		cd_label.text = ""
