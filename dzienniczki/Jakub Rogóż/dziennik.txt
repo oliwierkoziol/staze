@@ -17,3 +17,27 @@ Stworzyliśmy pierwszy prototyp systemu walki
 Dodaliśmy możliwość poruszania się i atakowania jednostek
 
 Ustaliliśmy sposób zaznaczania jednostek oraz wyświetlania ich statystyk
+
+6 lipca
+
+    Rozpoczęto implementację nowego interfejsu użytkownika.
+
+    Dodano bazowe umiejętności jednostek.
+
+    Zaimplementowano przeszkody terenowe, w tym kamienie, krzaki oraz pola wodne.
+
+7 lipca
+
+    Wprowadzono system buffów i debuffów.
+
+    Dodano mechanikę specjalnych hexów; krzaki zapewniają ukrycie jednostek, natomiast woda zatrzymuje ruch.
+
+    Zaimplementowano obsługę wczytywania i edycji plików JSON.
+
+8 lipca
+
+    Dodano animacje i efekty wizualne ataków jednostek dystansowych.
+
+    Wprowadzono umiejętność generała.
+
+    Ukończono kluczowe komponenty interfejsu użytkownika.
