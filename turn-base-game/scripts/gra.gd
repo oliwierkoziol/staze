@@ -5,7 +5,7 @@ const TERRAIN_TYPES_PATH := "res://data/terrain_types.json"
 const GRID_COLUMNS := 15
 const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
-const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "drzewa"]
+const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "krzok"]
 const MAX_EVENT_LOG_ENTRIES := 60
 const CARD_SELECTED_FONT_COLOR := Color(0.99, 0.95, 0.84, 1.0)
 const TURN_QUEUE_CARD_SIZE := Vector2(128.0, 56.0)
@@ -21,17 +21,17 @@ const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const OBSTACLE_PORTRAITS: Dictionary = {
 	"woda": preload("res://assets/mapTiles/water.png"),
 	"kamienie": preload("res://assets/mapTiles/rock1.png"),
-	"drzewa": preload("res://assets/mapTiles/forest1.png"),
+	"krzok": preload("res://assets/mapTiles/krzok.png"),
 }
 const OBSTACLE_NAMES: Dictionary = {
 	"woda": "Woda",
 	"kamienie": "Kamienie",
-	"drzewa": "Las",
+	"krzok": "Krzok",
 }
 const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"woda": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
 	"kamienie": "Przez kamienie nie da sie przejsc. Blokuja linie strzalu.",
-	"drzewa": "Jednostka w lesie znika na 1 ture i traci ture.",
+	"krzok": "Jednostka w krzoku znika na 1 ture i traci ture.",
 }
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
@@ -2028,8 +2028,8 @@ func _pick_obstacle_variant(obstacle_type: String, rng: RandomNumberGenerator) -
 			return "rock2k"
 		var rock_variants: Array[String] = ["rock1", "rock2", "rock3"]
 		return rock_variants[rng.randi_range(0, rock_variants.size() - 1)]
-	if obstacle_type == "drzewa":
-		return "forest1"
+	if obstacle_type == "krzok":
+		return "krzok"
 	if obstacle_type == "woda":
 		return "water"
 	return ""

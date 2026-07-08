@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://doa32eqev20bh"
-path="res://.godot/imported/forest1.png-920b61c8478811e0c4610bffeec32bc9.ctex"
+uid="uid://bsukkmaqo0c5x"
+path="res://.godot/imported/krzok.png-a8029eeb87416d46779ac874594316f6.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/mapTiles/forest1.png"
-dest_files=["res://.godot/imported/forest1.png-920b61c8478811e0c4610bffeec32bc9.ctex"]
+source_file="res://assets/mapTiles/krzok.png"
+dest_files=["res://.godot/imported/krzok.png-a8029eeb87416d46779ac874594316f6.ctex"]
 
 [params]
 

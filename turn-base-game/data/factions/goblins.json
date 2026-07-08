@@ -21,8 +21,7 @@
         "skill_ids": [
           "zatruty_sztylet",
           "chmura_toksyczna",
-          "mistrz_trucizn",
-          "zwinnosc"
+          "mistrz_trucizn"
         ]
       },
       {
@@ -42,7 +41,8 @@
         "portrait": "res://assets/characters/humans/goblinWarrior.png",
         "skill_ids": [
           "potezne_uderzenie",
-          "skupiony_cios"
+          "skupiony_cios",
+          "tarcza"
         ]
       },
       {
@@ -62,7 +62,8 @@
         "portrait": "res://assets/characters/humans/goblinShaman.png",
         "skill_ids": [
           "sokole_oko",
-          "medytacja"
+          "medytacja",
+          "przyspieszenie"
         ]
       },
       {
@@ -82,7 +83,6 @@
         "portrait": "res://assets/characters/humans/goblinTrapper.png",
         "skill_ids": [
           "strzal_w_kolano",
-          "sokole_oko",
           "zatruta_strzala",
           "zwinnosc"
         ]

@@ -23,7 +23,7 @@ const ROCK1_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock1.png")
 const ROCK2_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2.png")
 const ROCK2K_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2k.png")
 const ROCK3_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock3.png")
-const FOREST1_TEXTURE: Texture2D = preload("res://assets/mapTiles/forest1.png")
+const KRZOK_TEXTURE: Texture2D = preload("res://assets/mapTiles/krzok.png")
 const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
@@ -303,10 +303,10 @@ func draw_hex_grid() -> void:
 func draw_obstacles() -> void:
 	var textures: Dictionary = {
 		"woda": WATER_TEXTURE,
-		"drzewa": FOREST1_TEXTURE,
+		"krzok": KRZOK_TEXTURE,
 		"kamienie": ROCK1_TEXTURE,
 		"water": WATER_TEXTURE,
-		"forest1": FOREST1_TEXTURE,
+		"krzok": KRZOK_TEXTURE,
 		"rock1": ROCK1_TEXTURE,
 		"rock2": ROCK2_TEXTURE,
 		"rock2k": ROCK2K_TEXTURE,
