@@ -10,3 +10,18 @@
 3 lipca
 - Dodalismy mozliwosc ruszania się oraz atakowania jednostek
 - Ustaliliśmy sposób zaznaczania jednostek i wyświetlania ich statystyk
+
+6 lipca
+- Rozpoczęcie dodawania nowego UI
+- Dodanie początkowych umiejętności do jednostek
+- Dodaliśmy przeszkody do terenu (kamienie, krzaki, woda)
+
+7 lipca
+- Dodanie buffów i debuffów
+- Dodanie funkcjonalności do specjalnych hexów (krzak chowa jednostki, woda zatrzymuje mozliwosc ruchu) 
+- Dodanie wczytywania i edytowania pliku JSON
+
+8 lipca
+- Dodanie animacji i efektów ataku jednostek zasięgowych (strzały, zaklęcia)
+- Dodanie umiejętności generała
+- Ukończone najważniejsze elementy UI
