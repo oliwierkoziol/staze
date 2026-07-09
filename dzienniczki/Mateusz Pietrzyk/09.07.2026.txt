@@ -1,0 +1,13 @@
+Dodano i rozbudowano system przeszkód terenowych: las/krzak, woda, koszt ruchu, możliwość wejścia na pola specjalne.
+Poprawiono działanie ukrycia w krzaku/lesie, w tym znikanie efektu po wyjściu z pola.
+Dodano podstawowe animacje ataku oraz animacje pocisków dla strzał i zaklęć.
+Usprawniono ruch jednostek i widoczność siatki heksów.
+Zmieniono pasek kolejności ruchu oraz dodano licznik tur na przycisku końca tury.
+Zrestrukturyzowano dane jednostek: podział dużego JSON-a na frakcje i osobny plik skilli.
+Dodano nowe umiejętności jednostek i dopasowano je do ról/frakcji.
+Dodano 10 umiejętności generała jako ogólne buffy dla sojuszników.
+Wprowadzono zmiany balansujące w danych frakcji i umiejętności.
+Rozbudowano system buffów/debuffów: dane statusów, wizualizacje, panel statusów i ikonki.
+Dodano ikonki/statusy oraz assety dla  pułapek.
+Poprawiono obliczanie obrażeń.
+Poprawiono błędy związane z polem wody i dostępem do statystyk jednostek.
