@@ -1600,10 +1600,14 @@ func _execute_iron_curtain(caster: Dictionary, target: Dictionary) -> void:
 
 
 func _execute_self_buff(caster: Dictionary, skill: Dictionary) -> void:
-	var effect: Dictionary = skill.get("effect", {})
+	var effect: Dictionary = skill.get("effect", {}).duplicate(true)
 	if effect.is_empty():
 		return
-	_apply_or_refresh_effect(caster, effect.duplicate(true))
+	if str(effect.get("id", "")) == "":
+		effect["id"] = str(skill.get("id", ""))
+	if str(effect.get("name", "")) == "":
+		effect["name"] = str(skill.get("name", skill.get("id", "")))
+	_apply_or_refresh_effect(caster, effect)
 	_log_event("%s uzywa %s." % [_unit_name_log_text(caster), str(skill.get("name", skill.get("id", "")))])
 
 
