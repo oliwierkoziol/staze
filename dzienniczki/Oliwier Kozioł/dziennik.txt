@@ -25,3 +25,9 @@
 - Dodanie animacji i efektów ataku jednostek zasięgowych (strzały, zaklęcia)
 - Dodanie umiejętności generała
 - Ukończone najważniejsze elementy UI
+
+9 lipca
+- Wygenerowano nowe assety dla hexów i buffów/debuffów
+- Rozbudowano system buffów/debuffów
+- Dodano nowe umiejętności charakterystyczne dla klas, np. pułapka, dynamit
+- Zmieniono pasek kolejności ruchu
