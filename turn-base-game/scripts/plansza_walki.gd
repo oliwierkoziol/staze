@@ -31,6 +31,8 @@ const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
 const PROJECTILE_PATH_ARROWS := "res://assets/arrows_projectile.png"
 const PROJECTILE_PATH_SPELL := "res://assets/spell_projectile.png"
+const PROJECTILE_PATH_DYNAMITE := "res://assets/dynamite.png"
+var TRAP_TEXTURE: Texture2D = load("res://assets/trap-removebg-preview.png")
 
 var units: Array = []
 var unit_textures: Dictionary = {}
@@ -270,6 +272,8 @@ func _get_projectile_texture(projectile_kind: String) -> Texture2D:
 			path = PROJECTILE_PATH_SPELL
 		"arrows":
 			path = PROJECTILE_PATH_ARROWS
+		"dynamite":
+			path = PROJECTILE_PATH_DYNAMITE
 		_:
 			return null
 	var resource: Resource = load(path)
@@ -372,11 +376,10 @@ func _should_draw_bear_trap(effect: Dictionary) -> bool:
 
 func _draw_bear_trap(cell: Vector2i) -> void:
 	var center: Vector2 = axial_to_pixel(cell.x, cell.y)
-	var color := Color(0.75, 0.76, 0.72, 0.48)
-	draw_arc(center + Vector2(-10.0, 0.0), 14.0, -1.2, 1.2, 12, color, 3.0)
-	draw_arc(center + Vector2(10.0, 0.0), 14.0, PI - 1.2, PI + 1.2, 12, color, 3.0)
-	draw_line(center + Vector2(-20.0, 12.0), center + Vector2(20.0, 12.0), color, 3.0)
-	draw_circle(center, 4.0, color)
+	if TRAP_TEXTURE == null:
+		return
+	var texture_size := Vector2(HEX_RADIUS * 1.9, HEX_RADIUS * 1.9)
+	draw_texture_rect(TRAP_TEXTURE, Rect2(center - texture_size / 2.0, texture_size), false)
 
 
 func draw_units() -> void:

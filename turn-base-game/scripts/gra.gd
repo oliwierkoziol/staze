@@ -1439,6 +1439,8 @@ func _get_attack_projectile_kind(attacker: Dictionary) -> String:
 		str(attacker.get("role", ""))
 	]
 	var descriptor_lower: String = descriptor.to_lower()
+	if descriptor_lower.contains("digger") or descriptor_lower.contains("kopacz") or descriptor_lower.contains("dynamit"):
+		return "dynamite"
 	if descriptor_lower.contains("mag") or descriptor_lower.contains("mage") or descriptor_lower.contains("shaman") or descriptor_lower.contains("arkan") or descriptor_lower.contains("arcano"):
 		return "spell"
 	return "arrows"
