@@ -36,6 +36,7 @@ const OBSTACLE_DESCRIPTIONS: Dictionary = {
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
 @onready var hud: CanvasLayer = $HUD
+@onready var left_panel: NinePatchRect = $HUD/Overlay/LeftPanel
 @onready var left_content: VBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent
 @onready var top_bar: NinePatchRect = $HUD/Overlay/TopBar
 @onready var turn_queue_list: HBoxContainer = $HUD/Overlay/TopBar/TopMargin/TopQueueScroll/TopQueueList
@@ -45,6 +46,7 @@ const OBSTACLE_DESCRIPTIONS: Dictionary = {
 @onready var unit_meta_label: Label = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText/UnitMeta
 @onready var unit_stats_display: VBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin/UnitStats
 @onready var unit_status_panel: HBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatusPanel/UnitStatusMargin/UnitStatus
+@onready var unit_abilities_panel_frame: NinePatchRect = $HUD/Overlay/UnitAbilitiesPanel
 @onready var unit_abilities_panel: VBoxContainer = $HUD/Overlay/UnitAbilitiesPanel/UnitAbilitiesMargin/UnitAbilities
 @onready var actions_label: Label = get_node_or_null("HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel/ActionsMargin/ActionsLabel")
 @onready var general_name_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText/GeneralName
@@ -533,6 +535,7 @@ func _on_unit_selected(unit_data: Dictionary) -> void:
 func _show_unit_details(unit_data: Dictionary) -> void:
 	selected_unit_id = unit_data.id
 	board.set_selected_unit(unit_data.id)
+	_update_selection_visibility()
 	if setup_mode or unit_data.side == "player":
 		_update_highlighted_cells(unit_data)
 	else:
@@ -689,6 +692,7 @@ func _can_interact_with_unit_skills(unit_data: Dictionary) -> bool:
 
 func _clear_unit_details() -> void:
 	selected_obstacle_cell = Vector2i(-1, -1)
+	_update_selection_visibility()
 	unit_portrait.visible = false
 	unit_name_label.text = "BRAK JEDNOSTEK"
 	unit_meta_label.text = ""
@@ -719,6 +723,7 @@ func _show_obstacle_details(cell: Vector2i) -> void:
 	selected_unit_id = -1
 	selected_obstacle_cell = cell
 	board.set_selected_unit(-1)
+	_update_selection_visibility()
 	board.set_highlighted_cells([], [])
 	board.set_hovered_move_path([])
 	_render_obstacle_details(cell)
@@ -731,6 +736,7 @@ func _clear_selected_unit() -> void:
 	pending_skill_id = ""
 	selected_obstacle_cell = Vector2i(-1, -1)
 	board.set_selected_unit(-1)
+	_update_selection_visibility()
 	board.set_highlighted_cells([], [])
 	board.set_hovered_move_path([])
 	_clear_unit_details()
@@ -1003,6 +1009,7 @@ func _sync_board() -> void:
 	board.set_units(units)
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
+	_update_selection_visibility()
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
 	if selected_unit.is_empty():
 		board.set_highlighted_cells([], [])
@@ -1014,6 +1021,15 @@ func _sync_board() -> void:
 	_update_turn_label()
 	_update_action_buttons()
 	_refresh_turn_queue()
+
+
+func _update_selection_visibility() -> void:
+	var has_unit_selection := not _find_unit_by_id(selected_unit_id).is_empty()
+	var has_obstacle_selection := selected_obstacle_cell.x != -1
+	if board.has_method("set_grid_visible"):
+		board.set_grid_visible(setup_mode or has_unit_selection)
+	left_panel.visible = setup_mode or has_unit_selection or has_obstacle_selection
+	unit_abilities_panel_frame.visible = has_unit_selection
 
 
 func _update_turn_label() -> void:
@@ -2384,6 +2400,7 @@ func _validate_setup() -> void:
 
 	assert(_calculate_tick_damage({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna"), "Umiejetnosci bierne nie moga byc uzywane recznie.")
+	var previous_units: Array = units.duplicate(true)
 	var previous_obstacles: Array[Dictionary] = obstacles.duplicate(true)
 	var previous_terrain_effects: Array[Dictionary] = terrain_effects.duplicate(true)
 	obstacles = [
@@ -2431,6 +2448,7 @@ func _validate_setup() -> void:
 		{"grid_x": first_water.x, "grid_y": first_water.y, "type": "woda"},
 		{"grid_x": second_water.x, "grid_y": second_water.y, "type": "woda"}
 	]
+	units = [bush_unit]
 	for neighbor in _get_neighbors(second_water):
 		if neighbor != first_water and neighbor != water_start:
 			obstacles.append({"grid_x": neighbor.x, "grid_y": neighbor.y, "type": "kamienie"})
@@ -2451,6 +2469,7 @@ func _validate_setup() -> void:
 		]
 	})
 	assert(int(bush_unit.move_range) == 3 and _get_remaining_move(bush_unit) == 3, "Buff ruchu musi od razu dodac ruch do tej tury.")
+	units = previous_units
 	obstacles = previous_obstacles
 	terrain_effects = previous_terrain_effects
 
@@ -2784,6 +2803,7 @@ func _start_next_activation() -> void:
 		current_turn = ""
 		selected_unit_id = -1
 		board.set_selected_unit(-1)
+		_update_selection_visibility()
 		board.set_highlighted_cells([], [])
 		board.set_hovered_move_path([])
 		_clear_unit_details()
