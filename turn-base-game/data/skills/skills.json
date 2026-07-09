@@ -80,6 +80,16 @@
 	  "target_type": "cell",
 	  "effect_type": "poison_cloud"
 	},
+	"pulapka_na_niedzwiedzie": {
+	  "id": "pulapka_na_niedzwiedzie",
+	  "name": "Pulapka na Niedzwiedzie",
+	  "description": "Zaklada pulapke w zasiegu 3. Wejscie zadaje male obrazenia, unieruchamia i naklada Krwawienie.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 3,
+	  "target_type": "cell",
+	  "effect_type": "bear_trap"
+	},
 	"bariera_energetyczna": {
 	  "id": "bariera_energetyczna",
 	  "name": "Bariera Energetyczna",
