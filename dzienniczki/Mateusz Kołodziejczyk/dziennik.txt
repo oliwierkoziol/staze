@@ -4,3 +4,4 @@
 06.07.2026 - Poprawa wyglądu menu budowanian budynków na mapie a także jego funkcjonalności. Stworzenie struktur w plikach, tak aby były przygotowane pod dodanie grafik.
 07.07.2026 - Dodanie grafik do projektu, m.in. grafik surowców, pól mapy. Dodanie budynków wojskowych, wstępnej ich logiki tj. rekrutowania jednostek, wyświetlania armii.
 08.07.2026 - Dodanie pozostałych grafik, dodanie nowych funkcjonalności do baraków, zrealizowanie zamysłu wojskowości miasta. Stworzenie planu na dalszy rozwój gry.
+09.07.2026 - Wprowadzenie większej dynamiki do gry. Stworzenie wrogich obozowisk na mapie, dodanie ich statystyk, armii. Restrukturyzacja całego projektu, rozłożenie plików i folderów na mniejsze, co ułatwia przegląd projektu i czytleność.
