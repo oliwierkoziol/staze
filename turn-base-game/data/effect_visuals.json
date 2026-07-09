@@ -1,0 +1,35 @@
+{
+  "buffs": {
+	"bariera_energetyczna": { "icon": "res://assets/ui/energy_shield.png", "tint": [0.34, 0.78, 0.96, 1.0] },
+	"berserk": { "icon": "res://assets/ui/berserk.png", "tint": [0.86, 0.35, 0.35, 1.0] },
+	"bitewny_trucht": { "icon": "res://assets/ui/speed.png", "tint": [0.6, 0.9, 0.4, 1.0] },
+	"krwawa_ofiara": { "icon": "res://assets/ui/blood_offering.png", "tint": [0.88, 0.2, 0.2, 1.0] },
+	"krzok": { "icon": "res://assets/ui/invisibility.png", "tint": [0.34, 0.78, 0.34, 1.0] },
+	"medytacja": { "icon": "res://assets/ui/meditation.png", "tint": [0.54, 0.46, 0.92, 1.0] },
+	"przyspieszenie": { "icon": "res://assets/ui/speed.png", "tint": [0.64, 0.94, 0.35, 1.0] },
+	"runiczna_ochrona": { "icon": "res://assets/ui/aura.png", "tint": [0.5, 0.8, 1.0, 1.0] },
+	"silna_motywacja": { "icon": "res://assets/ui/focus.png", "tint": [0.98, 0.72, 0.28, 1.0] },
+	"sokole_oko": { "icon": "res://assets/ui/eagle_eye.png", "tint": [0.95, 0.86, 0.36, 1.0] },
+	"szarza": { "icon": "res://assets/ui/speed.png", "tint": [0.97, 0.62, 0.2, 1.0] },
+	"szybkie_manewry": { "icon": "res://assets/ui/speed.png", "tint": [0.72, 0.9, 0.34, 1.0] },
+	"tarcza": { "icon": "res://assets/ui/defence.png", "tint": [0.56, 0.74, 0.98, 1.0] },
+	"tarcza_bastionu": { "icon": "res://assets/ui/defence.png", "tint": [0.56, 0.74, 0.98, 1.0] },
+	"twardy_zakaz": { "icon": "res://assets/ui/armor_break.png", "tint": [0.4, 0.72, 0.94, 1.0] },
+	"wola_przetrwania": { "icon": "res://assets/ui/immunity.png", "tint": [0.9, 0.78, 0.38, 1.0] },
+	"zelazna_kurtyna": { "icon": "res://assets/ui/iron_curtain.png", "tint": [0.66, 0.74, 0.82, 1.0] },
+	"zimna_krew": { "icon": "res://assets/ui/immunity.png", "tint": [0.62, 0.86, 1.0, 1.0] },
+	"zmasowany_atak": { "icon": "res://assets/ui/focus.png", "tint": [0.96, 0.5, 0.24, 1.0] },
+	"krzyk_wodza": { "icon": "res://assets/ui/focus.png", "tint": [0.96, 0.5, 0.24, 1.0] }
+  },
+  "debuffs": {
+	"immobilize": { "icon": "res://assets/ui/root.png", "tint": [0.4, 0.72, 0.96, 1.0], "description": "Jednostka jest unieruchomiona i nie moze sie przemiescic." },
+	"krwawienie": { "icon": "res://assets/ui/damage.png", "tint": [0.9, 0.14, 0.16, 1.0], "description": "Jednostka traci HP na poczatku swojej tury." },
+	"lodowe_podloze": { "icon": "res://assets/ui/frost.png", "tint": [0.5, 0.84, 1.0, 1.0], "description": "Lodowe podloze ogranicza mobilnosc: -2 do szybkosci i -2 do zasiegu ruchu." },
+	"ogluszenie": { "icon": "res://assets/ui/stun.png", "tint": [0.96, 0.84, 0.3, 1.0], "description": "Jednostka traci ture: nie moze sie ruszyc ani wykonac akcji." },
+	"taunt": { "icon": "res://assets/ui/charm.png", "tint": [0.98, 0.62, 0.2, 1.0], "description": "Jednostka musi atakowac prowokujacego przeciwnika i zadaje mniej obrazen." },
+	"toksyna": { "icon": "res://assets/ui/poison.png", "tint": [0.42, 0.86, 0.3, 1.0], "description": "Silna trucizna zadaje obrazenia w turach i oslabia obrone celu." },
+	"woda": { "icon": "res://assets/ui/exhaust.png", "tint": [0.36, 0.68, 0.98, 1.0], "description": "Wejscie do wody konczy ruch jednostki w tej turze." },
+	"wykrycie": { "icon": "res://assets/ui/reveal.png", "tint": [0.98, 0.62, 0.24, 1.0], "description": "Jednostka zostaje ujawniona i traci przewage ukrycia." },
+	"zatrucie": { "icon": "res://assets/ui/poison_cloud.png", "tint": [0.32, 0.78, 0.28, 1.0], "description": "Zatrucie zadaje obrazenia okresowe przez kolejne tury." }
+  }
+}

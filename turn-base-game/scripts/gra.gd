@@ -1959,6 +1959,12 @@ func _can_use_skill(unit: Dictionary, skill_id: String) -> bool:
 
 
 func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void:
+	var metadata: Dictionary = UnitTypeLibrary.get_status_effect(str(effect_data.get("id", "")))
+	if not metadata.is_empty():
+		effect_data["name"] = str(metadata.get("name", effect_data.get("name", "")))
+		var category: String = str(metadata.get("category", ""))
+		if category != "":
+			effect_data["category"] = category
 	var effects: Array = unit.get("active_effects", [])
 	var previous_move_range: int = int(unit.get("move_range", 0))
 	for existing in effects:

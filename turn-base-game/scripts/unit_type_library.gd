@@ -2,11 +2,13 @@ class_name UnitTypeLibrary
 
 const UNIT_TYPES_PATH := "res://data/unit_types.json"
 const GENERAL_SKILLS_PATH := "res://data/general_skills.json"
+const STATUS_EFFECTS_PATH := "res://data/status_effects.json"
 
 static var _factions: Array[Dictionary] = []
 static var _unit_lookup: Dictionary = {}
 static var _skill_library: Dictionary = {}
 static var _general_skills: Dictionary = {}
+static var _status_effects: Dictionary = {}
 static var _loaded := false
 
 
@@ -44,6 +46,15 @@ static func _load() -> void:
 	_unit_lookup.clear()
 	_skill_library.clear()
 	_general_skills.clear()
+	_status_effects.clear()
+
+	var status_effects_data: Dictionary = _load_json_file(STATUS_EFFECTS_PATH)
+	var raw_status_effects: Dictionary = status_effects_data.get("status_effects", {})
+	for effect_id in raw_status_effects.keys():
+		var raw_effect: Variant = raw_status_effects[effect_id]
+		if typeof(raw_effect) != TYPE_DICTIONARY:
+			continue
+		_status_effects[str(effect_id)] = _normalize_status_effect_config(str(effect_id), raw_effect)
 
 	var general_data: Dictionary = _load_json_file(GENERAL_SKILLS_PATH)
 	var raw_general_skills: Dictionary = general_data.get("general_skills", {})
@@ -145,6 +156,17 @@ static func _normalize_general_skill(skill_id: String, raw_skill: Dictionary) ->
 	return skill
 
 
+static func _normalize_status_effect_config(effect_id: String, raw_effect: Dictionary) -> Dictionary:
+	var effect: Dictionary = raw_effect.duplicate(true)
+	effect["id"] = str(effect.get("id", effect_id))
+	effect["name"] = str(effect.get("name", effect_id))
+	effect["description"] = str(effect.get("description", ""))
+	effect["category"] = str(effect.get("category", ""))
+	effect["icon"] = str(effect.get("icon", ""))
+	effect["color"] = str(effect.get("color", ""))
+	return effect
+
+
 static func get_factions() -> Array[Dictionary]:
 	_ensure_loaded()
 	return _factions.duplicate(true)
@@ -189,6 +211,21 @@ static func get_general_skill(skill_id: String) -> Dictionary:
 	_ensure_loaded()
 	if _general_skills.has(skill_id):
 		return _general_skills[skill_id].duplicate(true)
+	return {}
+
+
+static func get_status_effects() -> Dictionary:
+	_ensure_loaded()
+	return _status_effects.duplicate(true)
+
+
+static func get_status_effect(effect_id: String) -> Dictionary:
+	_ensure_loaded()
+	var lookup_id: String = effect_id
+	if effect_id.begins_with("taunt_"):
+		lookup_id = "taunt"
+	if _status_effects.has(lookup_id):
+		return _status_effects[lookup_id].duplicate(true)
 	return {}
 
 

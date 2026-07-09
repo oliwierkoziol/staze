@@ -1,0 +1,236 @@
+{
+  "status_effects": {
+	"bariera_energetyczna": {
+	  "id": "bariera_energetyczna",
+	  "name": "Bariera Energetyczna",
+	  "description": "Blokuje kolejny otrzymany atak (1 raz), efekt utrzymuje sie do zuzycia.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/energy_shield.png",
+	  "color": "#57C7F5"
+	},
+	"berserk": {
+	  "id": "berserk",
+	  "name": "Berserk",
+	  "description": "Przez 2 tury zadaje o 30% wiecej obrazen, ale ma o 15% mniej obrony.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/berserk.png",
+	  "color": "#DB5959"
+	},
+	"bitewny_trucht": {
+	  "id": "bitewny_trucht",
+	  "name": "Bitewny Trucht",
+	  "description": "+1 do szybkosci i +1 do zasiegu ruchu przez 2 tury.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/speed.png",
+	  "color": "#99E65C"
+	},
+	"immobilize": {
+	  "id": "immobilize",
+	  "name": "Unieruchomienie",
+	  "description": "Zasieg ruchu ustawiony na 0 przez 1 ture.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/root.png",
+	  "color": "#66B8F5"
+	},
+	"krwawa_ofiara": {
+	  "id": "krwawa_ofiara",
+	  "name": "Krwawa Ofiara",
+	  "description": "Przez 1 ture zadaje o 40% wiecej obrazen, ale ma o 20% mniej obrony.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/blood_offering.png",
+	  "color": "#E03333"
+	},
+	"krwawienie": {
+	  "id": "krwawienie",
+	  "name": "Krwawienie",
+	  "description": "Zadaje obrazenia na poczatku tury przez 2 tury (wartosc zrodla, np. pulapki).",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/damage.png",
+	  "color": "#E62429"
+	},
+	"krzok": {
+	  "id": "krzok",
+	  "name": "Krzak",
+	  "description": "Jednostka pozostaje ukryta, dopoki stoi w krzaku.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/invisibility.png",
+	  "color": "#57C757"
+	},
+	"lodowe_podloze": {
+	  "id": "lodowe_podloze",
+	  "name": "Lodowe Podloze",
+	  "description": "-2 do szybkosci i -2 do zasiegu ruchu przez 1 ture.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/frost.png",
+	  "color": "#80D6FF"
+	},
+	"medytacja": {
+	  "id": "medytacja",
+	  "name": "Medytacja",
+	  "description": "Przez 2 tury zadaje o 25% wiecej obrazen.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/meditation.png",
+	  "color": "#8A75EB"
+	},
+	"ogluszenie": {
+	  "id": "ogluszenie",
+	  "name": "Ogluszenie",
+	  "description": "Jednostka traci najblizsza ture.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/stun.png",
+	  "color": "#F5D64D"
+	},
+	"przyspieszenie": {
+	  "id": "przyspieszenie",
+	  "name": "Przyspieszenie",
+	  "description": "+2 do szybkosci przez 1 ture.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/speed.png",
+	  "color": "#A3F05A"
+	},
+	"runiczna_ochrona": {
+	  "id": "runiczna_ochrona",
+	  "name": "Runiczna Ochrona",
+	  "description": "+2 do obrony i +1 do zasiegu ataku przez 2 tury.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/aura.png",
+	  "color": "#80CCFF"
+	},
+	"silna_motywacja": {
+	  "id": "silna_motywacja",
+	  "name": "Silna Motywacja",
+	  "description": "Przez 2 tury zadaje o 25% wiecej obrazen.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/focus.png",
+	  "color": "#FABA47"
+	},
+	"sokole_oko": {
+	  "id": "sokole_oko",
+	  "name": "Sokole Oko",
+	  "description": "+2 do zasiegu ataku i +25% obrazen przez 2 tury.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/eagle_eye.png",
+	  "color": "#F2DB5C"
+	},
+	"szarza": {
+	  "id": "szarza",
+	  "name": "Szarza",
+	  "description": "+2 do zasiegu ruchu i +15% obrazen przez 1 ture.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/speed.png",
+	  "color": "#F79E33"
+	},
+	"szybkie_manewry": {
+	  "id": "szybkie_manewry",
+	  "name": "Szybkie Manewry",
+	  "description": "+1 do zasiegu ruchu przez 1 ture.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/speed.png",
+	  "color": "#B8E65C"
+	},
+	"tarcza": {
+	  "id": "tarcza",
+	  "name": "Tarcza",
+	  "description": "Przez 2 tury ma o 25% wiecej obrony.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/defence.png",
+	  "color": "#8FBDFB"
+	},
+	"tarcza_bastionu": {
+	  "id": "tarcza_bastionu",
+	  "name": "Tarcza Bastionu",
+	  "description": "Przez 2 tury ma o 20% wiecej obrony.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/defence.png",
+	  "color": "#8FBDFB"
+	},
+	"taunt": {
+	  "id": "taunt",
+	  "name": "Prowokacja",
+	  "description": "Przez 1 ture zmusza do atakowania prowokujacego celu i zmniejsza zadawane obrazenia o 20%.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/reveal.png",
+	  "color": "#FA9E33"
+	},
+	"toksyna": {
+	  "id": "toksyna",
+	  "name": "Toksyna",
+	  "description": "Przez 3 tury zadaje obrazenia co ture i dodatkowo zmniejsza obrone o 15%.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/poison.png",
+	  "color": "#6BE04D"
+	},
+	"twardy_zakaz": {
+	  "id": "twardy_zakaz",
+	  "name": "Twardy Zakaz",
+	  "description": "Przez 2 tury zwieksza obrone o 2.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/armor_break.png",
+	  "color": "#66B8F0"
+	},
+	"woda": {
+	  "id": "woda",
+	  "name": "Woda",
+	  "description": "Po wejsciu do wody zuzywa caly pozostaly ruch.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/exhaust.png",
+	  "color": "#5CAEFB"
+	},
+	"wola_przetrwania": {
+	  "id": "wola_przetrwania",
+	  "name": "Wola Przetrwania",
+	  "description": "Przez 2 tury zwieksza obrazenia o 10% i obrone o 10%.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/immunity.png",
+	  "color": "#E6C761"
+	},
+	"wykrycie": {
+	  "id": "wykrycie",
+	  "name": "Wykrycie",
+	  "description": "Przez 2 tury ujawnia ukryta jednostke.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/reveal.png",
+	  "color": "#FA9E3D"
+	},
+	"zatrucie": {
+	  "id": "zatrucie",
+	  "name": "Zatrucie",
+	  "description": "Zadaje obrazenia co ture przez ograniczony czas.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/poison_cloud.png",
+	  "color": "#52C747"
+	},
+	"zelazna_kurtyna": {
+	  "id": "zelazna_kurtyna",
+	  "name": "Zelazna Kurtyna",
+	  "description": "Przez 2 tury oslona przejmuje ataki wymierzone w chronionego sojusznika.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/iron_curtain.png",
+	  "color": "#A8BDD1"
+	},
+	"zimna_krew": {
+	  "id": "zimna_krew",
+	  "name": "Zimna Krew",
+	  "description": "Krotkotrwaly efekt wspierajacy bez bezposredniej zmiany statystyk.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/immunity.png",
+	  "color": "#9EDBFF"
+	},
+	"zmasowany_atak": {
+	  "id": "zmasowany_atak",
+	  "name": "Zmasowany Atak",
+	  "description": "+15% obrazen i +1 do zasiegu ataku przez 1 ture.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/focus.png",
+	  "color": "#F77F3D"
+	},
+	"krzyk_wodza": {
+	  "id": "krzyk_wodza",
+	  "name": "Krzyk Wodza",
+	  "description": "+10% obrazen, +10% obrony i +1 do zasiegu ataku przez 1 ture.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/focus.png",
+	  "color": "#F77F3D"
+	}
+  }
+}
