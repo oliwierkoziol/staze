@@ -45,7 +45,7 @@
 	  "name": "Krwawienie",
 	  "description": "Zadaje obrazenia na poczatku tury przez 2 tury (wartosc zrodla, np. pulapki).",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/damage.png",
+	  "icon": "res://assets/ui/bleed.png",
 	  "color": "#E62429"
 	},
 	"krzok": {
@@ -157,7 +157,7 @@
 	  "name": "Toksyna",
 	  "description": "Przez 3 tury zadaje obrazenia co ture i dodatkowo zmniejsza obrone o 15%.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/poison.png",
+	  "icon": "res://assets/ui/poison_cloud.png",
 	  "color": "#6BE04D"
 	},
 	"twardy_zakaz": {
@@ -173,7 +173,7 @@
 	  "name": "Woda",
 	  "description": "Po wejsciu do wody zuzywa caly pozostaly ruch.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/exhaust.png",
+	  "icon": "res://assets/ui/water.png",
 	  "color": "#5CAEFB"
 	},
 	"wola_przetrwania": {
