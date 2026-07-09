@@ -522,6 +522,7 @@ func _prepare_unit(unit: Dictionary) -> Dictionary:
 	unit["buffs"] = "Brak"
 	unit["debuffs"] = "Brak"
 	unit["is_hidden"] = false
+	unit["is_revealed"] = false
 	_recalculate_unit_stats(unit)
 	return unit
 
@@ -913,6 +914,11 @@ func _enemy_take_turn() -> void:
 	if target.is_empty():
 		_end_current_activation()
 		return
+	if _try_enemy_use_skill(enemy_unit, target):
+		target = _find_nearest_player_unit(enemy_unit)
+		if enemy_unit.is_empty() or target.is_empty():
+			_end_current_activation()
+			return
 
 	var best_path := _find_best_enemy_path(enemy_unit, target)
 	if not best_path.is_empty():
@@ -934,7 +940,10 @@ func _enemy_take_turn() -> void:
 		_try_trigger_agility(enemy_unit)
 
 	target = _find_nearest_player_unit(enemy_unit)
-	if not enemy_unit.is_empty() and not target.is_empty() and _can_unit_attack(enemy_unit) and _is_in_attack_range(enemy_unit, Vector2i(target.grid_x, target.grid_y)):
+	if not enemy_unit.is_empty() and not target.is_empty() and _try_enemy_use_skill(enemy_unit, target):
+		_end_current_activation()
+		return
+	if not enemy_unit.is_empty() and not target.is_empty() and _can_see_target(enemy_unit, target) and _can_unit_attack(enemy_unit) and _is_in_attack_range(enemy_unit, Vector2i(target.grid_x, target.grid_y)):
 		_perform_basic_attack(enemy_unit, target, false)
 		_end_current_activation()
 		return
@@ -962,20 +971,25 @@ func _find_nearest_player_unit(enemy_unit: Dictionary) -> Dictionary:
 		return forced_target
 
 	var nearest: Dictionary = {}
+	var nearest_unseen: Dictionary = {}
 	var best_distance: float = INF
+	var best_unseen_distance: float = INF
 	for unit in units:
 		if unit.side != "player":
-			continue
-		if not _can_see_target(enemy_unit, unit):
 			continue
 		var distance: int = _hex_distance(
 			Vector2i(enemy_unit.grid_x, enemy_unit.grid_y),
 			Vector2i(unit.grid_x, unit.grid_y)
 		)
+		if not _can_see_target(enemy_unit, unit):
+			if distance < best_unseen_distance:
+				best_unseen_distance = distance
+				nearest_unseen = unit
+			continue
 		if distance < best_distance:
 			best_distance = distance
 			nearest = unit
-	return nearest
+	return nearest if not nearest.is_empty() else nearest_unseen
 
 
 func _get_forced_target(unit: Dictionary) -> Dictionary:
@@ -989,18 +1003,119 @@ func _get_forced_target(unit: Dictionary) -> Dictionary:
 
 
 func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[Vector2i]:
+	var origin := Vector2i(enemy_unit.grid_x, enemy_unit.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	if _can_see_target(enemy_unit, target) and _can_unit_attack(enemy_unit) and _is_in_attack_range(enemy_unit, target_cell):
+		return []
 	var reachable_cells: Array[Vector2i] = _get_reachable_cells(enemy_unit, _get_remaining_move(enemy_unit))
 	var best_path: Array[Vector2i] = []
-	var best_distance: int = _hex_distance(Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), Vector2i(target.grid_x, target.grid_y))
+	var preferred_distance: int = 1 if not _can_see_target(enemy_unit, target) else min(int(enemy_unit.get("attack_range", 1)), _hex_distance(origin, target_cell))
+	var best_score: int = abs(_hex_distance(origin, target_cell) - preferred_distance) * 10
 	for cell in reachable_cells:
-		var candidate_path: Array[Vector2i] = _find_path(enemy_unit, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), cell)
+		var candidate_path: Array[Vector2i] = _find_path(enemy_unit, origin, cell)
 		if candidate_path.is_empty():
 			continue
-		var candidate_distance: int = _hex_distance(cell, Vector2i(target.grid_x, target.grid_y))
-		if candidate_distance < best_distance:
-			best_distance = candidate_distance
+		var candidate_distance: int = _hex_distance(cell, target_cell)
+		var candidate_score: int = abs(candidate_distance - preferred_distance) * 10 + _get_path_hazard_penalty(enemy_unit, candidate_path)
+		if _can_unit_attack(enemy_unit) and not _is_attack_blocked({"grid_x": cell.x, "grid_y": cell.y}, target_cell) and candidate_distance <= int(enemy_unit.get("attack_range", 1)):
+			candidate_score -= 5
+		if candidate_score < best_score:
+			best_score = candidate_score
 			best_path = candidate_path
 	return best_path
+
+
+func _get_path_hazard_penalty(unit: Dictionary, path: Array[Vector2i]) -> int:
+	var penalty := 0
+	for cell in path:
+		if _is_known_bear_trap_for_unit(unit, cell):
+			penalty += 1000
+		if _is_hostile_terrain_effect_for_unit(unit, cell):
+			penalty += 200
+		if _terrain_skips_turn(cell):
+			penalty += 100
+	return penalty
+
+
+func _is_hostile_terrain_effect_for_unit(unit: Dictionary, cell: Vector2i) -> bool:
+	for effect in terrain_effects:
+		if int(effect.get("grid_x", -1)) != cell.x or int(effect.get("grid_y", -1)) != cell.y:
+			continue
+		if str(effect.get("caster_side", "")) == str(unit.side):
+			continue
+		if ["fire", "ice", "poison_cloud", "bear_trap"].has(str(effect.get("id", ""))):
+			return true
+	return false
+
+
+func _is_known_bear_trap_for_unit(unit: Dictionary, cell: Vector2i) -> bool:
+	var trap: Dictionary = _get_terrain_effect_at(cell, "bear_trap")
+	if trap.is_empty():
+		return false
+	var caster_side: String = str(trap.get("caster_side", ""))
+	if caster_side == str(unit.side):
+		return not _terrain_hides_unit(cell)
+	if Time.get_ticks_msec() <= int(trap.get("visible_until_ms", 0)):
+		return true
+	return unit.side == "enemy" and int(trap.get("enemy_memory_until_round", 0)) >= round_number
+
+
+func _try_enemy_use_bear_trap(enemy_unit: Dictionary, target: Dictionary) -> bool:
+	if not _can_use_skill(enemy_unit, "pulapka_na_niedzwiedzie"):
+		return false
+	var origin := Vector2i(enemy_unit.grid_x, enemy_unit.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	for cell in _get_neighbors(target_cell):
+		if _hex_distance(origin, cell) > 3:
+			continue
+		if _is_attack_blocked(enemy_unit, cell) or _blocks_cell_skill_target(cell):
+			continue
+		if not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, "bear_trap").is_empty():
+			continue
+		_execute_skill(enemy_unit, {}, skill_library.get("pulapka_na_niedzwiedzie", {}), cell)
+		return true
+	return false
+
+
+func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
+	if not _can_see_target(enemy_unit, target):
+		return false
+	if _try_enemy_use_bear_trap(enemy_unit, target):
+		return true
+	for skill_id in enemy_unit.get("skill_ids", []):
+		var skill: Dictionary = skill_library.get(str(skill_id), {})
+		if skill.is_empty() or not _can_use_skill(enemy_unit, str(skill_id)):
+			continue
+		var target_type := str(skill.get("target_type", ""))
+		var target_cell := Vector2i(target.grid_x, target.grid_y)
+		if target_type == "self" and not _has_effect(enemy_unit, str(skill.get("id", ""))):
+			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
+			return true
+		if target_type == "enemy_unit" and _hex_distance(Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), target_cell) <= int(skill.get("range", 0)) and not _is_attack_blocked(enemy_unit, target_cell):
+			_execute_skill(enemy_unit, target, skill, target_cell)
+			return true
+		if target_type == "cell" and str(skill.get("effect_type", "")) != "bear_trap":
+			var cell := _find_enemy_area_skill_cell(enemy_unit, skill)
+			if cell != Vector2i(-1, -1):
+				_execute_skill(enemy_unit, {}, skill, cell)
+				return true
+	return false
+
+
+func _find_enemy_area_skill_cell(enemy_unit: Dictionary, skill: Dictionary) -> Vector2i:
+	var best_cell := Vector2i(-1, -1)
+	var best_score := 0
+	for cell in _get_skill_target_cells(enemy_unit, str(skill.get("id", ""))):
+		var score := 0
+		for area_cell in _get_area_cells(cell):
+			var unit := _find_unit_at_cell(area_cell)
+			if unit.is_empty():
+				continue
+			score += 2 if unit.side != enemy_unit.side else -3
+		if score > best_score:
+			best_score = score
+			best_cell = cell
+	return best_cell
 
 
 func _sync_board() -> void:
@@ -1009,6 +1124,8 @@ func _sync_board() -> void:
 	board.set_units(units)
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
+	if board.has_method("set_viewer_side"):
+		board.set_viewer_side("player")
 	_update_selection_visibility()
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
 	if selected_unit.is_empty():
@@ -1252,6 +1369,7 @@ func _is_in_attack_range(unit: Dictionary, cell: Vector2i) -> bool:
 func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_after := true) -> void:
 	attacker.action_points = max(0, int(attacker.get("action_points", 0)) - 1)
 	pending_skill_id = ""
+	_reveal_if_in_bush(attacker)
 	var total_damage: int = _calculate_damage(attacker, target)
 	var result: Dictionary = _apply_attack_damage(attacker, target, total_damage, _hex_distance(Vector2i(attacker.grid_x, attacker.grid_y), Vector2i(target.grid_x, target.grid_y)) == 1)
 	var hit_target: Dictionary = result.get("target", target)
@@ -1282,6 +1400,7 @@ func _apply_damage_to_unit(target: Dictionary, total_damage: int) -> int:
 	var current_total_hp: int = int(target.get("current_total_hp", int(target.get("base_hp", target.hp)) * previous_count))
 	if total_damage > 0:
 		board.play_damage_animation(int(target.id))
+		_reveal_if_in_bush(target)
 	target["current_total_hp"] = max(0, current_total_hp - max(1, total_damage))
 	_refresh_unit_health_state(target)
 	return max(0, previous_count - int(target.count))
@@ -1376,6 +1495,8 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 			return
 		if _is_attack_blocked(unit, cell) or _blocks_cell_skill_target(cell):
 			return
+		if str(skill.get("effect_type", "")) == "bear_trap" and (not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, "bear_trap").is_empty()):
+			return
 		_execute_skill(unit, {}, skill, cell)
 		return
 
@@ -1400,6 +1521,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 	caster.action_points = max(0, int(caster.action_points) - int(skill.get("ap_cost", 0)))
 	caster.skill_cooldowns[skill.get("id", "")] = int(skill.get("cooldown", 0))
 	pending_skill_id = ""
+	if str(skill.get("target_type", "")) != "self":
+		_reveal_if_in_bush(caster)
 
 	match String(skill.get("effect_type", "")):
 		"taunt_burst":
@@ -1418,6 +1541,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_ice_ground(caster, target_cell)
 		"poison_cloud":
 			_execute_poison_cloud(caster, target_cell)
+		"bear_trap":
+			_execute_bear_trap(caster, target_cell)
 		"energy_barrier":
 			_execute_energy_barrier(caster)
 		"iron_curtain":
@@ -1582,6 +1707,15 @@ func _execute_poison_cloud(caster: Dictionary, center: Vector2i) -> void:
 	_log_event("%s tworzy Chmure Toksyczna przy hexie %s." % [_unit_name_log_text(caster), str(center)])
 
 
+func _execute_bear_trap(caster: Dictionary, cell: Vector2i) -> void:
+	_add_terrain_effect(cell, "bear_trap", 99, int(caster.id), max(1, int(ceil(float(caster.dmg) * 0.25))))
+	var trap: Dictionary = _get_terrain_effect_at(cell, "bear_trap")
+	trap["caster_side"] = str(caster.side)
+	trap["visible_until_ms"] = Time.get_ticks_msec() + 5000
+	trap["enemy_memory_until_round"] = round_number + 1 if caster.side == "player" else round_number
+	_log_event("%s zaklada Pulapke na Niedzwiedzie na hexie %s." % [_unit_name_log_text(caster), str(cell)])
+
+
 func _execute_energy_barrier(caster: Dictionary) -> void:
 	_apply_energy_barrier(caster)
 	_log_event("%s otacza sie Bariera Energetyczna." % _unit_name_log_text(caster))
@@ -1634,6 +1768,8 @@ func _add_terrain_effect(cell: Vector2i, effect_id: String, turns: int, caster_i
 	for effect in terrain_effects:
 		if int(effect.get("grid_x", -1)) == cell.x and int(effect.get("grid_y", -1)) == cell.y and str(effect.get("id", "")) == effect_id:
 			effect["remaining_turns"] = turns
+			effect["caster_id"] = caster_id
+			effect["tick_damage"] = tick_damage
 			return
 	terrain_effects.append({
 		"id": effect_id,
@@ -1643,6 +1779,13 @@ func _add_terrain_effect(cell: Vector2i, effect_id: String, turns: int, caster_i
 		"caster_id": caster_id,
 		"tick_damage": tick_damage
 	})
+
+
+func _get_terrain_effect_at(cell: Vector2i, effect_id: String) -> Dictionary:
+	for effect in terrain_effects:
+		if int(effect.get("grid_x", -1)) == cell.x and int(effect.get("grid_y", -1)) == cell.y and str(effect.get("id", "")) == effect_id:
+			return effect
+	return {}
 
 
 func _apply_terrain_effects_to_unit(unit: Dictionary) -> void:
@@ -1666,7 +1809,34 @@ func _apply_terrain_effects_to_unit(unit: Dictionary) -> void:
 			"poison_cloud":
 				if _apply_poison_effect(unit, "zatrucie", "Zatrucie", 2, int(effect.get("tick_damage", 1))):
 					_log_event("%s wdycha toksyczna chmure." % _unit_name_log_text(unit))
+			"bear_trap":
+				_trigger_bear_trap(unit, effect)
 	_apply_terrain_entry_effect(unit)
+
+
+func _trigger_bear_trap(unit: Dictionary, trap: Dictionary) -> void:
+	var damage: int = _calculate_tick_damage(unit, int(trap.get("tick_damage", 1)))
+	var casualties := _apply_damage_to_unit(unit, damage)
+	_apply_or_refresh_effect(unit, {
+		"id": "immobilize",
+		"name": "Unieruchomienie",
+		"category": "debuff",
+		"remaining_turns": 1,
+		"stat_changes": [
+			{"stat": "move_range", "mode": "set", "value": 0}
+		]
+	})
+	_apply_or_refresh_effect(unit, {
+		"id": "krwawienie",
+		"name": "Krwawienie",
+		"category": "debuff",
+		"remaining_turns": 2,
+		"stat_changes": [],
+		"tick_damage": max(1, int(trap.get("tick_damage", 1)))
+	})
+	terrain_effects.erase(trap)
+	_log_event("%s wpada w Pulapke na Niedzwiedzie za %s obrazen i %s strat." % [_unit_name_log_text(unit), _color_log_text(str(damage), LOG_COLOR_DAMAGE), _color_log_text(str(casualties), LOG_COLOR_DAMAGE)])
+	_cleanup_destroyed_unit(unit)
 
 
 func _apply_terrain_entry_effect(unit: Dictionary) -> void:
@@ -1683,6 +1853,22 @@ func _apply_terrain_entry_effect(unit: Dictionary) -> void:
 	else:
 		unit["is_hidden"] = false
 		_log_event("%s wchodzi w %s i traci reszte ruchu." % [_unit_name_log_text(unit), terrain_name])
+
+
+func _reveal_if_in_bush(unit: Dictionary) -> void:
+	if not _terrain_hides_unit(Vector2i(int(unit.grid_x), int(unit.grid_y))):
+		return
+	if _has_effect(unit, "wykrycie"):
+		return
+	_apply_or_refresh_effect(unit, {
+		"id": "wykrycie",
+		"name": "Wykrycie",
+		"category": "debuff",
+		"remaining_turns": 2,
+		"stat_changes": []
+	})
+	unit["is_revealed"] = true
+
 
 func _apply_poison_effect(unit: Dictionary, id: String, name: String, turns: int, tick_damage: int, reduce_def := false) -> bool:
 	if _is_poison_immune(unit):
@@ -1828,6 +2014,8 @@ func _advance_unit_effects(unit: Dictionary) -> void:
 			kept_effects.append(effect)
 		elif bool(effect.get("hides_unit", false)):
 			unit["is_hidden"] = false
+		elif str(effect.get("id", "")) == "wykrycie":
+			unit["is_revealed"] = false
 	unit["active_effects"] = kept_effects
 	if was_hidden and not bool(unit.get("is_hidden", false)):
 		_log_event("%s wychodzi z ukrycia." % _unit_name_log_text(unit))
@@ -2163,7 +2351,7 @@ func _get_executable_move_path(path: Array[Vector2i]) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for cell in path:
 		result.append(cell)
-		if _terrain_skips_turn(cell):
+		if _terrain_skips_turn(cell) or not _get_terrain_effect_at(cell, "bear_trap").is_empty():
 			break
 	return result
 
@@ -2189,6 +2377,8 @@ func _terrain_skips_turn(cell: Vector2i) -> bool:
 
 
 func _can_see_target(observer: Dictionary, target: Dictionary) -> bool:
+	if bool(target.get("is_revealed", false)) or _has_effect(target, "wykrycie"):
+		return true
 	if not bool(target.get("is_hidden", false)):
 		return true
 	var observer_cell := Vector2i(observer.grid_x, observer.grid_y)
@@ -2441,6 +2631,41 @@ func _validate_setup() -> void:
 	assert(not _can_see_target({"grid_x": 0, "grid_y": 0}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Ukryty cel w krzaku nie moze byc widoczny z normalnego pola.")
 	assert(_can_see_target({"grid_x": 5, "grid_y": 4}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Jednostki w sasiadujacych krzakach musza sie widziec.")
 	assert(not _can_see_target({"grid_x": 5, "grid_y": 3}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Krzak widzi ukryty cel tylko z sasiedniego krzaka.")
+	assert(_can_see_target({"grid_x": 0, "grid_y": 0}, {"grid_x": 5, "grid_y": 5, "is_hidden": true, "is_revealed": true}), "Wykrycie musi pokazywac jednostke ukryta w krzaku.")
+	bush_unit["active_effects"] = [{"id": "wykrycie", "name": "Wykrycie", "category": "debuff", "remaining_turns": 1, "stat_changes": []}]
+	_reveal_if_in_bush(bush_unit)
+	assert(int(bush_unit.active_effects[0].remaining_turns) == 1, "Wykrycie nie moze odnawiac czasu, dopoki trwa.")
+	var ai_archer := {
+		"id": 1001,
+		"name": "AI Archer",
+		"side": "enemy",
+		"grid_x": 7,
+		"grid_y": 5,
+		"attack_range": 4,
+		"action_points": 1,
+		"remaining_move": 3
+	}
+	var ai_target := {
+		"id": 1002,
+		"name": "AI Target",
+		"side": "player",
+		"grid_x": 3,
+		"grid_y": 5,
+		"attack_range": 1,
+		"action_points": 1,
+		"remaining_move": 0
+	}
+	units = [ai_archer, ai_target]
+	obstacles = []
+	terrain_effects = []
+	assert(_find_best_enemy_path(ai_archer, ai_target).is_empty(), "Dystansowy wróg nie powinien podchodzic, gdy ma czysty strzal.")
+	ai_target["is_hidden"] = true
+	assert(int(_find_nearest_player_unit(ai_archer).id) == int(ai_target.id), "AI musi miec cel do ruchu, nawet gdy wszyscy gracze sa ukryci.")
+	assert(not _find_best_enemy_path(ai_archer, ai_target).is_empty(), "AI powinno isc w strone ukrytego gracza zamiast konczyc ture.")
+	ai_target["is_hidden"] = false
+	assert(_get_path_hazard_penalty(ai_archer, [Vector2i(6, 5)]) == 0, "Pusta sciezka AI nie powinna miec kary.")
+	terrain_effects = [{"id": "fire", "grid_x": 6, "grid_y": 5, "remaining_turns": 1, "caster_side": "player"}]
+	assert(_get_path_hazard_penalty(ai_archer, [Vector2i(6, 5)]) >= 200, "AI musi traktowac wrogie efekty terenu jako zagrozenie.")
 	var water_start := Vector2i(4, 4)
 	var first_water := Vector2i(5, 4)
 	var second_water := Vector2i(6, 4)
