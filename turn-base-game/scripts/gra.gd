@@ -51,7 +51,6 @@ const OBSTACLE_DESCRIPTIONS: Dictionary = {
 @onready var actions_label: Label = get_node_or_null("HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel/ActionsMargin/ActionsLabel")
 @onready var general_name_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText/GeneralName
 @onready var general_level_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText/GeneralLevel
-@onready var general_rule_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralRule
 @onready var general_ability_button_1: Button = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1
 @onready var general_ability_button_2: Button = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2
 @onready var event_log_scroll: ScrollContainer = $HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll
@@ -367,7 +366,6 @@ func _enter_setup_mode() -> void:
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
 	selected_obstacle_cell = Vector2i(-1, -1)
-	_update_end_turn_button_text()
 	_log_event(_color_log_text("Tryb przygotowania: ustaw jednostki i kliknij START.", LOG_COLOR_YELLOW))
 	_sync_board()
 	if help_popup != null and hud.visible:
@@ -387,7 +385,6 @@ func _on_start_battle_pressed() -> void:
 	round_number = 1
 	turn_queue_index = -1
 	event_log.clear()
-	_update_end_turn_button_text()
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
 	_log_event(_color_log_text("Bitwa rozpoczeta.", LOG_COLOR_YELLOW))
@@ -1141,7 +1138,6 @@ func _sync_board() -> void:
 	else:
 		_update_highlighted_cells(selected_unit)
 		_render_unit_details(selected_unit)
-	_update_turn_label()
 	_update_action_buttons()
 	_refresh_turn_queue()
 
@@ -1153,23 +1149,6 @@ func _update_selection_visibility() -> void:
 		board.set_grid_visible(true)
 	left_panel.visible = setup_mode or has_unit_selection or has_obstacle_selection
 	unit_abilities_panel_frame.visible = has_unit_selection
-
-
-func _update_turn_label() -> void:
-	if setup_mode:
-		general_rule_label.text = "Tryb przygotowania: zlap jednostke lewym przyciskiem, przeciagnij i pusc na wolnym hexie. START rozpoczyna bitwe."
-		return
-	var active_unit := _get_active_unit()
-	var turn_name := "Brak"
-	if current_turn == "player":
-		turn_name = "Gracz"
-	elif current_turn == "enemy":
-		turn_name = "Przeciwnik"
-	var active_name: String = active_unit.name if not active_unit.is_empty() else "-"
-	if units.is_empty():
-		general_rule_label.text = "Aktywna jednostka: -\nNa planszy nie ma zadnych jednostek. Tura %s." % round_number
-		return
-	general_rule_label.text = "Aktywna jednostka: %s (%s)\nLPM wybiera i porusza. PPM atakuje. Tab pokazuje pomoc. Tura %s." % [active_name, turn_name, round_number]
 
 
 func _update_setup_hint_visibility() -> void:
@@ -2749,12 +2728,7 @@ func _update_action_buttons() -> void:
 		unit_abilities_panel.set_skills(_build_skill_cards(selected_unit))
 	var active_unit: Dictionary = _get_active_unit()
 	end_turn_button.disabled = setup_mode or is_animating or not _is_player_turn() or active_unit.is_empty() or active_unit.side != "player"
-	_update_end_turn_button_text()
 	_refresh_general_ability_buttons()
-
-
-func _update_end_turn_button_text() -> void:
-	end_turn_button.text = "ZAKOŃCZ TURĘ  (TURA %d)" % round_number
 
 
 func _on_end_turn_button_pressed() -> void:
@@ -3076,7 +3050,6 @@ func _start_next_activation() -> void:
 		board.set_highlighted_cells([], [])
 		board.set_hovered_move_path([])
 		_clear_unit_details()
-		_update_turn_label()
 		_update_action_buttons()
 		_refresh_turn_queue()
 		return
@@ -3091,7 +3064,6 @@ func _start_next_activation() -> void:
 		turn_queue_index += 1
 		if turn_queue_index >= turn_queue.size():
 			round_number += 1
-			_update_end_turn_button_text()
 			_advance_terrain_effects()
 			_rebuild_turn_queue()
 			continue
