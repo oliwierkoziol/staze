@@ -92,12 +92,19 @@ var selected_obstacle_cell := Vector2i(-1, -1)
 
 
 func _ready() -> void:
+	_configure_web_viewport()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_disable_hud_mouse(hud)
 	_build_help_popup()
 	_load_terrain_types()
 	_unit_type_library_warn()
 	_show_team_setup()
+
+
+func _configure_web_viewport() -> void:
+	if not OS.has_feature("web"):
+		return
+	get_window().content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
 
 
 func _load_terrain_types() -> void:
