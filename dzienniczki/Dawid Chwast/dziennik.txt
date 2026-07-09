@@ -4,3 +4,4 @@
 06.07.2026 - Dodanie ulepszania budynków, dodanie nowych zasobów, naprawa kamery, dodanie mechaniki populacji, zmiana wyglądu mapy
 07.07.2026 - Generowanie assetów do gry, dodanie kategorii wojskowej i budynków z nią związanej
 08.07.2026 - Dalsze generowanie assetów do gry, dodanie tooltipa, poprawienie mechaniki werbowania
+09.07.2026 - Dodanie ustawień, ulepszenie ui, inicjacja walki, daodanie przypisywanie armii do generałów
