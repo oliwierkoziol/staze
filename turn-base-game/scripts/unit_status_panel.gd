@@ -10,6 +10,8 @@ const EFFECT_ROW_SEPARATION := 2
 const EFFECT_ENTRY_SEPARATION := 1
 const EFFECTS_PER_ROW := 6
 const EFFECT_PLACEHOLDER_ICON: Texture2D = preload("res://assets/ui/fire.png")
+const EFFECT_BUFF_FALLBACK_ICON: Texture2D = preload("res://assets/ui/buffs.png")
+const EFFECT_DEBUFF_FALLBACK_ICON: Texture2D = preload("res://assets/ui/debuffs.png")
 const PANEL_TEXTURE: Texture2D = preload("res://assets/ui/panel.png")
 const NINE_PATCH_PANEL_SCRIPT: Script = preload("res://scripts/nine_patch_panel.gd")
 const PANEL_PATCH_MARGIN := 8
@@ -17,10 +19,68 @@ const EFFECT_PANEL_MARGIN_H := 4
 const EFFECT_PANEL_MARGIN_V := 6
 const BUFF_ICON_TINT := Color(0.35, 0.72, 0.32, 1.0)
 const DEFAULT_DEBUFF_ICON_TINT := Color(0.55, 0.32, 0.72, 1.0)
+const BUFF_ICON_TINT_BY_ID := {
+	"bariera_energetyczna": Color(0.34, 0.78, 0.96, 1.0),
+	"berserk": Color(0.86, 0.35, 0.35, 1.0),
+	"bitewny_trucht": Color(0.6, 0.9, 0.4, 1.0),
+	"krwawa_ofiara": Color(0.88, 0.2, 0.2, 1.0),
+	"krzok": Color(0.34, 0.78, 0.34, 1.0),
+	"medytacja": Color(0.54, 0.46, 0.92, 1.0),
+	"przyspieszenie": Color(0.64, 0.94, 0.35, 1.0),
+	"runiczna_ochrona": Color(0.5, 0.8, 1.0, 1.0),
+	"silna_motywacja": Color(0.98, 0.72, 0.28, 1.0),
+	"sokole_oko": Color(0.95, 0.86, 0.36, 1.0),
+	"szarza": Color(0.97, 0.62, 0.2, 1.0),
+	"szybkie_manewry": Color(0.72, 0.9, 0.34, 1.0),
+	"tarcza": Color(0.56, 0.74, 0.98, 1.0),
+	"tarcza_bastionu": Color(0.56, 0.74, 0.98, 1.0),
+	"twardy_zakaz": Color(0.4, 0.72, 0.94, 1.0),
+	"wola_przetrwania": Color(0.9, 0.78, 0.38, 1.0),
+	"zelazna_kurtyna": Color(0.66, 0.74, 0.82, 1.0),
+	"zimna_krew": Color(0.62, 0.86, 1.0, 1.0),
+	"zmasowany_atak": Color(0.96, 0.5, 0.24, 1.0),
+	"krzyk_wodza": Color(0.96, 0.5, 0.24, 1.0),
+}
 const DEBUFF_ICON_TINT_BY_ID := {
-	"immobilize": Color(0.44, 0.7, 0.95, 1.0),
-	"toksyna": Color(0.42, 0.82, 0.32, 1.0),
-	"ogluszenie": Color(0.92, 0.82, 0.28, 1.0),
+	"immobilize": Color(0.4, 0.72, 0.96, 1.0),
+	"krwawienie": Color(0.9, 0.14, 0.16, 1.0),
+	"lodowe_podloze": Color(0.5, 0.84, 1.0, 1.0),
+	"ogluszenie": Color(0.96, 0.84, 0.3, 1.0),
+	"taunt": Color(0.98, 0.62, 0.2, 1.0),
+	"toksyna": Color(0.42, 0.86, 0.3, 1.0),
+	"woda": Color(0.36, 0.68, 0.98, 1.0),
+	"wykrycie": Color(0.98, 0.62, 0.24, 1.0),
+	"zatrucie": Color(0.32, 0.78, 0.28, 1.0),
+}
+const EFFECT_ICON_BY_ID := {
+	"bariera_energetyczna": preload("res://assets/ui/energy_shield.png"),
+	"berserk": preload("res://assets/ui/berserk.png"),
+	"bitewny_trucht": preload("res://assets/ui/speed.png"),
+	"immobilize": preload("res://assets/ui/root.png"),
+	"krwawa_ofiara": preload("res://assets/ui/blood_offering.png"),
+	"krwawienie": preload("res://assets/ui/damage.png"),
+	"krzok": preload("res://assets/ui/invisibility.png"),
+	"lodowe_podloze": preload("res://assets/ui/frost.png"),
+	"medytacja": preload("res://assets/ui/meditation.png"),
+	"ogluszenie": preload("res://assets/ui/stun.png"),
+	"przyspieszenie": preload("res://assets/ui/speed.png"),
+	"runiczna_ochrona": preload("res://assets/ui/aura.png"),
+	"silna_motywacja": preload("res://assets/ui/focus.png"),
+	"sokole_oko": preload("res://assets/ui/eagle_eye.png"),
+	"szarza": preload("res://assets/ui/speed.png"),
+	"szybkie_manewry": preload("res://assets/ui/speed.png"),
+	"tarcza": preload("res://assets/ui/defence.png"),
+	"tarcza_bastionu": preload("res://assets/ui/defence.png"),
+	"toksyna": preload("res://assets/ui/poison.png"),
+	"twardy_zakaz": preload("res://assets/ui/armor_break.png"),
+	"woda": preload("res://assets/ui/exhaust.png"),
+	"wola_przetrwania": preload("res://assets/ui/immunity.png"),
+	"wykrycie": preload("res://assets/ui/reveal.png"),
+	"zatrucie": preload("res://assets/ui/poison_cloud.png"),
+	"zelazna_kurtyna": preload("res://assets/ui/iron_curtain.png"),
+	"zimna_krew": preload("res://assets/ui/immunity.png"),
+	"zmasowany_atak": preload("res://assets/ui/focus.png"),
+	"krzyk_wodza": preload("res://assets/ui/focus.png"),
 }
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const EFFECT_SKILL_FALLBACKS := {
@@ -137,10 +197,8 @@ func _make_empty_label() -> Label:
 
 
 func _make_effect_entry(effect: Dictionary) -> Control:
-	var category := str(effect.get("category", ""))
-	var icon_tint: Color = BUFF_ICON_TINT if category == "buff" else DEFAULT_DEBUFF_ICON_TINT
-	if category == "debuff":
-		icon_tint = DEBUFF_ICON_TINT_BY_ID.get(str(effect.get("id", "")), DEFAULT_DEBUFF_ICON_TINT)
+	var icon_tint: Color = _resolve_effect_tint(effect)
+	var effect_icon: Texture2D = _resolve_effect_icon(effect)
 
 	var tooltip := _build_effect_tooltip(effect)
 
@@ -152,7 +210,7 @@ func _make_effect_entry(effect: Dictionary) -> Control:
 	column.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var icon := TextureRect.new()
-	icon.texture = EFFECT_PLACEHOLDER_ICON
+	icon.texture = effect_icon
 	icon.modulate = icon_tint
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	icon.custom_minimum_size = EFFECT_ICON_SIZE
@@ -170,6 +228,33 @@ func _make_effect_entry(effect: Dictionary) -> Control:
 	column.add_child(turns_label)
 
 	return _wrap_in_panel(column, tooltip)
+
+
+func _resolve_effect_tint(effect: Dictionary) -> Color:
+	var category := str(effect.get("category", ""))
+	var effect_id := _normalize_effect_visual_id(str(effect.get("id", "")))
+	if category == "buff":
+		return BUFF_ICON_TINT_BY_ID.get(effect_id, BUFF_ICON_TINT)
+	return DEBUFF_ICON_TINT_BY_ID.get(effect_id, DEFAULT_DEBUFF_ICON_TINT)
+
+
+func _resolve_effect_icon(effect: Dictionary) -> Texture2D:
+	var effect_id := _normalize_effect_visual_id(str(effect.get("id", "")))
+	var icon_variant: Variant = EFFECT_ICON_BY_ID.get(effect_id, null)
+	if icon_variant is Texture2D:
+		return icon_variant
+	var category := str(effect.get("category", ""))
+	if category == "buff":
+		return EFFECT_BUFF_FALLBACK_ICON
+	if category == "debuff":
+		return EFFECT_DEBUFF_FALLBACK_ICON
+	return EFFECT_PLACEHOLDER_ICON
+
+
+func _normalize_effect_visual_id(effect_id: String) -> String:
+	if effect_id.begins_with("taunt_"):
+		return "taunt"
+	return effect_id
 
 
 func _wrap_in_panel(content: Control, tooltip: String) -> NinePatchRect:
