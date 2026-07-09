@@ -367,6 +367,7 @@ func _enter_setup_mode() -> void:
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
 	selected_obstacle_cell = Vector2i(-1, -1)
+	_update_end_turn_button_text()
 	_log_event(_color_log_text("Tryb przygotowania: ustaw jednostki i kliknij START.", LOG_COLOR_YELLOW))
 	_sync_board()
 	if help_popup != null and hud.visible:
@@ -386,6 +387,7 @@ func _on_start_battle_pressed() -> void:
 	round_number = 1
 	turn_queue_index = -1
 	event_log.clear()
+	_update_end_turn_button_text()
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
 	_log_event(_color_log_text("Bitwa rozpoczeta.", LOG_COLOR_YELLOW))
@@ -1144,7 +1146,7 @@ func _update_selection_visibility() -> void:
 	var has_unit_selection := not _find_unit_by_id(selected_unit_id).is_empty()
 	var has_obstacle_selection := selected_obstacle_cell.x != -1
 	if board.has_method("set_grid_visible"):
-		board.set_grid_visible(setup_mode or has_unit_selection)
+		board.set_grid_visible(true)
 	left_panel.visible = setup_mode or has_unit_selection or has_obstacle_selection
 	unit_abilities_panel_frame.visible = has_unit_selection
 
@@ -2710,7 +2712,12 @@ func _update_action_buttons() -> void:
 		unit_abilities_panel.set_skills(_build_skill_cards(selected_unit))
 	var active_unit: Dictionary = _get_active_unit()
 	end_turn_button.disabled = setup_mode or is_animating or not _is_player_turn() or active_unit.is_empty() or active_unit.side != "player"
+	_update_end_turn_button_text()
 	_refresh_general_ability_buttons()
+
+
+func _update_end_turn_button_text() -> void:
+	end_turn_button.text = "ZAKOŃCZ TURĘ  (TURA %d)" % round_number
 
 
 func _on_end_turn_button_pressed() -> void:
@@ -3047,6 +3054,7 @@ func _start_next_activation() -> void:
 		turn_queue_index += 1
 		if turn_queue_index >= turn_queue.size():
 			round_number += 1
+			_update_end_turn_button_text()
 			_advance_terrain_effects()
 			_rebuild_turn_queue()
 			continue
