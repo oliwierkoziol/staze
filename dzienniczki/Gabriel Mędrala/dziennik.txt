@@ -28,3 +28,9 @@ Dzień 6 (08.07.2026)
 - analiza nodów i scen
 - modyfikacja projektu zawartego w poradniku zarówno zgodnie z poradnikiem, jak i według własnego uznanie, by nauczyć się korzystania ze scen, a zarówno modyfikacji ich poza rodzicem
 - eksportowanie owego projektu do wersji webowej
+Dzień 7 (09.07.2026)
+- nauka pobierania inputów od gracza na rózne sposoby
+- nauka posługiwania się sygnałami przez edytor lub kod, oraz tworzenia własnych sygnałów 
+- stworzenie małego projektu na podstawie sygnałów (patrz podpunkt 6 w notatkach)
+- zapoznanie się animowanymi spritami 
+- rozpoczęcie pracy nad kolejnym małym projektem, miejącym pokazać co dotychczas się nauczyłem
