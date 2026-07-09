@@ -108,19 +108,14 @@ static func _normalize_skill_config(skill_id: String, raw_skill: Dictionary) -> 
 	skill["range"] = int(skill.get("range", 0))
 	skill["target_type"] = str(skill.get("target_type", ""))
 	skill["effect_type"] = str(skill.get("effect_type", ""))
+	var raw_effect: Variant = skill.get("effect", {})
+	if typeof(raw_effect) == TYPE_DICTIONARY and not raw_effect.is_empty():
+		skill["effect"] = _normalize_skill_effect(str(skill.get("id", skill_id)), skill, raw_effect)
 	return skill
 
 
-static func _normalize_general_skill(skill_id: String, raw_skill: Dictionary) -> Dictionary:
-	var skill: Dictionary = raw_skill.duplicate(true)
-	skill["id"] = str(skill.get("id", skill_id))
-	skill["name"] = str(skill.get("name", skill_id))
-	skill["description"] = str(skill.get("description", ""))
-	skill["cooldown"] = int(skill.get("cooldown", 0))
-	var raw_effect: Variant = skill.get("effect", {})
-	if typeof(raw_effect) != TYPE_DICTIONARY:
-		raw_effect = {}
-	var effect: Dictionary = raw_effect.duplicate(true)
+static func _normalize_skill_effect(skill_id: String, skill: Dictionary, raw_effect: Variant) -> Dictionary:
+	var effect: Dictionary = (raw_effect as Dictionary).duplicate(true)
 	effect["id"] = str(effect.get("id", skill_id))
 	effect["name"] = str(effect.get("name", skill.get("name", skill_id)))
 	effect["category"] = str(effect.get("category", "buff"))
@@ -135,7 +130,18 @@ static func _normalize_general_skill(skill_id: String, raw_skill: Dictionary) ->
 			"value": int(change.get("value", 0))
 		})
 	effect["stat_changes"] = stat_changes
-	skill["effect"] = effect
+	return effect
+
+
+static func _normalize_general_skill(skill_id: String, raw_skill: Dictionary) -> Dictionary:
+	var skill: Dictionary = raw_skill.duplicate(true)
+	skill["id"] = str(skill.get("id", skill_id))
+	skill["name"] = str(skill.get("name", skill_id))
+	skill["description"] = str(skill.get("description", ""))
+	skill["cooldown"] = int(skill.get("cooldown", 0))
+	var raw_effect: Variant = skill.get("effect", {})
+	if typeof(raw_effect) == TYPE_DICTIONARY and not raw_effect.is_empty():
+		skill["effect"] = _normalize_skill_effect(str(skill.get("id", skill_id)), skill, raw_effect)
 	return skill
 
 

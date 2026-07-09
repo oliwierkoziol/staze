@@ -668,9 +668,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
+theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_bottom = 10
 
 [node name="UnitStats" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin" unique_id=1311480050]
 layout_mode = 2
@@ -679,7 +679,8 @@ script = ExtResource("8_stats")
 
 [node name="UnitStatusPanel" type="NinePatchRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=1981211681]
 texture_filter = 1
-custom_minimum_size = Vector2(0, 220)
+custom_minimum_size = Vector2(0, 260)
+clip_contents = true
 layout_mode = 2
 texture = ExtResource("4_panel")
 patch_margin_left = 8
