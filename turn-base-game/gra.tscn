@@ -264,17 +264,6 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="RightTitle" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=8533149]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
-text = "STATYSTYKI JEDNOSTKI"
-label_settings = SubResource("LabelSettings_6otim")
-horizontal_alignment = 1
-
-[node name="TextureRect" type="TextureRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=1992870655]
-layout_mode = 2
-texture = ExtResource("6_tr5l5")
-
 [node name="GeneralPanel" type="NinePatchRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=1591106099]
 texture_filter = 1
 layout_mode = 2

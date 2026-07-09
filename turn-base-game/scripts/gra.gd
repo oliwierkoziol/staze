@@ -65,6 +65,7 @@ var selected_unit_id := -1
 var active_unit_id := -1
 var current_turn := ""
 var is_animating := false
+var active_turn_has_log := false
 var event_log: Array[String] = []
 var round_number := 1
 var turn_queue: Array[int] = []
@@ -776,7 +777,6 @@ func _stop_unit_on_terrain(unit: Dictionary) -> void:
 	if not _terrain_skips_turn(cell):
 		return
 	unit.remaining_move = 0
-	unit.action_points = 0
 
 
 func _on_cell_clicked(cell: Vector2i) -> void:
@@ -838,7 +838,7 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	board.animate_unit_path(active_unit.id, move_path)
 	await board.animation_finished
 	_clear_move_cost_label()
-	_log_event("%s przemieszcza sie." % _unit_name_log_text(active_unit))
+	_log_event("%s porusza sie." % _unit_name_log_text(active_unit))
 	_apply_terrain_effects_to_unit(active_unit)
 	_stop_unit_on_terrain(active_unit)
 	_try_trigger_agility(active_unit)
@@ -904,6 +904,8 @@ func _end_current_activation() -> void:
 	var unit := _get_active_unit()
 	if not unit.is_empty():
 		_advance_unit_effects(unit)
+		if not active_turn_has_log:
+			_log_event("%s pasuje w tej turze." % _unit_name_log_text(unit))
 	pending_skill_id = ""
 	selected_unit_id = -1
 	selected_obstacle_cell = Vector2i(-1, -1)
@@ -944,7 +946,7 @@ func _enemy_take_turn() -> void:
 		board.animate_unit_path(enemy_unit.id, best_path)
 		await board.animation_finished
 		_clear_move_cost_label()
-		_log_event("%s przemieszcza sie." % _unit_name_log_text(enemy_unit))
+		_log_event("%s porusza sie." % _unit_name_log_text(enemy_unit))
 		_apply_terrain_effects_to_unit(enemy_unit)
 		_stop_unit_on_terrain(enemy_unit)
 		_try_trigger_agility(enemy_unit)
@@ -980,26 +982,51 @@ func _find_nearest_player_unit(enemy_unit: Dictionary) -> Dictionary:
 	if not forced_target.is_empty() and _can_see_target(enemy_unit, forced_target):
 		return forced_target
 
-	var nearest: Dictionary = {}
-	var nearest_unseen: Dictionary = {}
-	var best_distance: float = INF
-	var best_unseen_distance: float = INF
+	var best_visible: Dictionary = {}
+	var best_unseen: Dictionary = {}
+	var best_visible_score: int = 1000000
+	var best_unseen_score: int = 1000000
 	for unit in units:
 		if unit.side != "player":
 			continue
-		var distance: int = _hex_distance(
-			Vector2i(enemy_unit.grid_x, enemy_unit.grid_y),
-			Vector2i(unit.grid_x, unit.grid_y)
-		)
+		var score: int = _score_enemy_target(enemy_unit, unit)
 		if not _can_see_target(enemy_unit, unit):
-			if distance < best_unseen_distance:
-				best_unseen_distance = distance
-				nearest_unseen = unit
+			if score < best_unseen_score:
+				best_unseen_score = score
+				best_unseen = unit
 			continue
-		if distance < best_distance:
-			best_distance = distance
-			nearest = unit
-	return nearest if not nearest.is_empty() else nearest_unseen
+		if score < best_visible_score:
+			best_visible_score = score
+			best_visible = unit
+	return best_visible if not best_visible.is_empty() else best_unseen
+
+
+func _score_enemy_target(enemy_unit: Dictionary, target: Dictionary) -> int:
+	var origin := Vector2i(enemy_unit.grid_x, enemy_unit.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	var score: int = _hex_distance(origin, target_cell) * 10
+	if int(enemy_unit.get("attack_range", 1)) <= 1:
+		score += _count_adjacent_units_for_side(target_cell, str(enemy_unit.side), int(enemy_unit.id)) * 12
+		score -= _count_free_neighbors_for_unit(enemy_unit, target_cell) * 2
+	return score
+
+
+func _count_adjacent_units_for_side(cell: Vector2i, side: String, excluded_unit_id := -1) -> int:
+	var count := 0
+	for neighbor in _get_neighbors(cell):
+		var unit := _find_unit_at_cell(neighbor)
+		if not unit.is_empty() and int(unit.id) != excluded_unit_id and str(unit.side) == side:
+			count += 1
+	return count
+
+
+func _count_free_neighbors_for_unit(unit: Dictionary, cell: Vector2i) -> int:
+	var blocked: Dictionary = _get_blocked_cells(int(unit.id))
+	var count := 0
+	for neighbor in _get_neighbors(cell):
+		if not blocked.has(neighbor) and _is_cell_passable(neighbor):
+			count += 1
+	return count
 
 
 func _get_forced_target(unit: Dictionary) -> Dictionary:
@@ -1027,6 +1054,8 @@ func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[
 			continue
 		var candidate_distance: int = _hex_distance(cell, target_cell)
 		var candidate_score: int = abs(candidate_distance - preferred_distance) * 10 + _get_path_hazard_penalty(enemy_unit, candidate_path)
+		if int(enemy_unit.get("attack_range", 1)) <= 1:
+			candidate_score += _count_adjacent_units_for_side(cell, str(enemy_unit.side), int(enemy_unit.id)) * 4
 		if _can_unit_attack(enemy_unit) and not _is_attack_blocked({"grid_x": cell.x, "grid_y": cell.y}, target_cell) and candidate_distance <= int(enemy_unit.get("attack_range", 1)):
 			candidate_score -= 5
 		if candidate_score < best_score:
@@ -1073,8 +1102,12 @@ func _is_known_bear_trap_for_unit(unit: Dictionary, cell: Vector2i) -> bool:
 func _try_enemy_use_bear_trap(enemy_unit: Dictionary, target: Dictionary) -> bool:
 	if not _can_use_skill(enemy_unit, "pulapka_na_niedzwiedzie"):
 		return false
-	var origin := Vector2i(enemy_unit.grid_x, enemy_unit.grid_y)
 	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	if _can_see_target(enemy_unit, target) and _can_unit_attack(enemy_unit) and _is_in_attack_range(enemy_unit, target_cell):
+		return false
+	if _has_bear_trap_near_cell_for_side(target_cell, str(enemy_unit.side)):
+		return false
+	var origin := Vector2i(enemy_unit.grid_x, enemy_unit.grid_y)
 	for cell in _get_neighbors(target_cell):
 		if _hex_distance(origin, cell) > 3:
 			continue
@@ -1084,6 +1117,14 @@ func _try_enemy_use_bear_trap(enemy_unit: Dictionary, target: Dictionary) -> boo
 			continue
 		_execute_skill(enemy_unit, {}, skill_library.get("pulapka_na_niedzwiedzie", {}), cell)
 		return true
+	return false
+
+
+func _has_bear_trap_near_cell_for_side(center: Vector2i, side: String) -> bool:
+	for cell in _get_area_cells(center):
+		var trap: Dictionary = _get_terrain_effect_at(cell, "bear_trap")
+		if not trap.is_empty() and str(trap.get("caster_side", "")) == side:
+			return true
 	return false
 
 
@@ -1382,8 +1423,9 @@ func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_af
 
 
 func _calculate_damage(attacker: Dictionary, target: Dictionary, damage_multiplier := 1.0) -> int:
-	var scaled_damage: int = max(1, int(ceil(float(attacker.get("dmg", 1)) * damage_multiplier)))
-	var damage_per_unit: int = max(1, scaled_damage - int(target.get("def", 0)))
+	var scaled_damage: float = max(1.0, float(attacker.get("dmg", 1)) * damage_multiplier)
+	var defense: float = max(0.0, float(target.get("def", 0)))
+	var damage_per_unit: int = max(1, int(ceil(scaled_damage * (100.0 / (100.0 + defense * 12.0)))))
 	return max(1, damage_per_unit * int(attacker.get("count", 1)))
 
 
@@ -1681,7 +1723,7 @@ func _execute_fireball(caster: Dictionary, center: Vector2i) -> void:
 		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
 		_cleanup_destroyed_unit(hit_target)
 	_add_terrain_effect(center, "fire", 1)
-	_log_event("%s rzuca Kule Ognia na hex %s: %s." % [_unit_name_log_text(caster), str(center), "brak trafien" if hit_names.is_empty() else ", ".join(hit_names)])
+	_log_event("%s rzuca Kule Ognia: %s." % [_unit_name_log_text(caster), "brak trafien" if hit_names.is_empty() else ", ".join(hit_names)])
 
 
 func _execute_ice_ground(caster: Dictionary, center: Vector2i) -> void:
@@ -1693,7 +1735,7 @@ func _execute_ice_ground(caster: Dictionary, center: Vector2i) -> void:
 	for cell in cells:
 		_add_terrain_effect(cell, "ice", 2)
 	_apply_terrain_effects_in_cells(cells)
-	_log_event("%s zamraza podloze przy hexie %s." % [_unit_name_log_text(caster), str(center)])
+	_log_event("%s zamraza podloze." % _unit_name_log_text(caster))
 
 
 func _execute_poison_cloud(caster: Dictionary, center: Vector2i) -> void:
@@ -1701,7 +1743,7 @@ func _execute_poison_cloud(caster: Dictionary, center: Vector2i) -> void:
 	for cell in cells:
 		_add_terrain_effect(cell, "poison_cloud", 2, int(caster.id), max(1, int(ceil(float(caster.dmg) * 0.25))))
 	_apply_terrain_effects_in_cells(cells)
-	_log_event("%s tworzy Chmure Toksyczna przy hexie %s." % [_unit_name_log_text(caster), str(center)])
+	_log_event("%s tworzy Chmure Toksyczna." % _unit_name_log_text(caster))
 
 
 func _execute_bear_trap(caster: Dictionary, cell: Vector2i) -> void:
@@ -1710,7 +1752,7 @@ func _execute_bear_trap(caster: Dictionary, cell: Vector2i) -> void:
 	trap["caster_side"] = str(caster.side)
 	trap["visible_until_ms"] = Time.get_ticks_msec() + 5000
 	trap["enemy_memory_until_round"] = round_number + 1 if caster.side == "player" else round_number
-	_log_event("%s zaklada Pulapke na Niedzwiedzie na hexie %s." % [_unit_name_log_text(caster), str(cell)])
+	_log_event("%s zaklada Pulapke na Niedzwiedzie." % _unit_name_log_text(caster))
 
 
 func _execute_energy_barrier(caster: Dictionary) -> void:
@@ -1789,8 +1831,7 @@ func _get_terrain_effect_at(cell: Vector2i, effect_id: String) -> Dictionary:
 	return {}
 
 
-func _apply_terrain_effects_to_unit(unit: Dictionary) -> void:
-	var cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
+func _apply_terrain_effects_to_unit(unit: Dictionary, apply_entry_effect := true) -> void:
 	for effect in terrain_effects:
 		if int(effect.get("grid_x", -1)) != int(unit.grid_x) or int(effect.get("grid_y", -1)) != int(unit.grid_y):
 			continue
@@ -1812,7 +1853,8 @@ func _apply_terrain_effects_to_unit(unit: Dictionary) -> void:
 					_log_event("%s wdycha toksyczna chmure." % _unit_name_log_text(unit))
 			"bear_trap":
 				_trigger_bear_trap(unit, effect)
-	_apply_terrain_entry_effect(unit)
+	if apply_entry_effect:
+		_apply_terrain_entry_effect(unit)
 
 
 func _trigger_bear_trap(unit: Dictionary, trap: Dictionary) -> void:
@@ -1846,9 +1888,9 @@ func _apply_terrain_entry_effect(unit: Dictionary) -> void:
 	if effect.is_empty():
 		_remove_hiding_effects(unit)
 		return
-	_apply_or_refresh_effect(unit, effect)
 	var terrain_name: String = str(effect.get("name", "teren"))
 	if _terrain_hides_unit(cell):
+		_apply_or_refresh_effect(unit, effect)
 		unit["is_hidden"] = true
 		_log_event("%s wchodzi w %s i znika z pola widzenia." % [_unit_name_log_text(unit), terrain_name])
 	else:
@@ -1937,6 +1979,8 @@ func _can_use_skill(unit: Dictionary, skill_id: String) -> bool:
 	var skill: Dictionary = skill_library.get(skill_id, {})
 	if skill.is_empty():
 		return false
+	if not _has_skill_id(unit, skill_id):
+		return false
 	if str(skill.get("target_type", "")) == "passive":
 		return false
 	if int(unit.get("action_points", 0)) < int(skill.get("ap_cost", 0)):
@@ -1985,6 +2029,7 @@ func _add_current_move_gain(unit: Dictionary, previous_move_range: int) -> void:
 func _process_turn_start(unit: Dictionary) -> void:
 	_advance_skill_cooldowns(unit)
 	_ensure_energy_barrier(unit)
+	_remove_effect(unit, "woda")
 	var effects: Array = unit.get("active_effects", [])
 	var skipped_turn := false
 	for effect in effects:
@@ -2227,6 +2272,20 @@ func _has_effect(unit: Dictionary, effect_id: String) -> bool:
 		if str(effect.get("id", "")) == effect_id:
 			return true
 	return false
+
+
+func _remove_effect(unit: Dictionary, effect_id: String) -> void:
+	var kept_effects: Array = []
+	var removed := false
+	for effect in unit.get("active_effects", []):
+		if str(effect.get("id", "")) == effect_id:
+			removed = true
+			continue
+		kept_effects.append(effect)
+	if not removed:
+		return
+	unit["active_effects"] = kept_effects
+	_recalculate_unit_stats(unit)
 
 
 func _has_skill_id(unit: Dictionary, skill_id: String) -> bool:
@@ -2614,7 +2673,9 @@ func _validate_setup() -> void:
 		assert(int(prepared.get("base_action_points", 0)) == int(prepared.get("action_points", 0)), "AP z JSON musi byc startowym AP jednostki.")
 
 	assert(_calculate_tick_damage({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
+	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 8}) == 4, "DEF ma redukowac obrazenia miekko, bez zbijania typowego ataku do minimum.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna"), "Umiejetnosci bierne nie moga byc uzywane recznie.")
+	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}, "skill_ids": []}, "pulapka_na_niedzwiedzie"), "Jednostka nie moze uzywac umiejetnosci spoza skill_ids.")
 	var previous_units: Array = units.duplicate(true)
 	var previous_obstacles: Array[Dictionary] = obstacles.duplicate(true)
 	var previous_terrain_effects: Array[Dictionary] = terrain_effects.duplicate(true)
@@ -2667,6 +2728,8 @@ func _validate_setup() -> void:
 		"grid_x": 7,
 		"grid_y": 5,
 		"attack_range": 4,
+		"move_range": 3,
+		"base_move_range": 3,
 		"action_points": 1,
 		"remaining_move": 3
 	}
@@ -2691,6 +2754,44 @@ func _validate_setup() -> void:
 	assert(_get_path_hazard_penalty(ai_archer, [Vector2i(6, 5)]) == 0, "Pusta sciezka AI nie powinna miec kary.")
 	terrain_effects = [{"id": "fire", "grid_x": 6, "grid_y": 5, "remaining_turns": 1, "caster_side": "player"}]
 	assert(_get_path_hazard_penalty(ai_archer, [Vector2i(6, 5)]) >= 200, "AI musi traktowac wrogie efekty terenu jako zagrozenie.")
+	terrain_effects = [{"id": "bear_trap", "grid_x": 3, "grid_y": 4, "remaining_turns": 99, "caster_side": "enemy"}]
+	assert(_has_bear_trap_near_cell_for_side(Vector2i(3, 5), "enemy"), "AI nie powinno dublowac pulapek przy tym samym celu.")
+	var melee_ai := {
+		"id": 1003,
+		"name": "AI Melee",
+		"side": "enemy",
+		"grid_x": 7,
+		"grid_y": 5,
+		"attack_range": 1,
+		"move_range": 3,
+		"base_move_range": 3,
+		"action_points": 1,
+		"remaining_move": 3
+	}
+	var crowded_target := {
+		"id": 1004,
+		"name": "Crowded Target",
+		"side": "player",
+		"grid_x": 6,
+		"grid_y": 5
+	}
+	var open_target := {
+		"id": 1005,
+		"name": "Open Target",
+		"side": "player",
+		"grid_x": 7,
+		"grid_y": 4
+	}
+	units = [
+		melee_ai,
+		crowded_target,
+		open_target,
+		{"id": 1006, "side": "enemy", "grid_x": 6, "grid_y": 4},
+		{"id": 1007, "side": "enemy", "grid_x": 5, "grid_y": 5}
+	]
+	obstacles = []
+	terrain_effects = []
+	assert(int(_find_nearest_player_unit(melee_ai).id) == int(open_target.id), "Melee AI powinno rozkladac cele zamiast pchac sie w ten sam tlok.")
 	var water_start := Vector2i(4, 4)
 	var first_water := Vector2i(5, 4)
 	var second_water := Vector2i(6, 4)
@@ -2708,6 +2809,13 @@ func _validate_setup() -> void:
 	assert(water_path.size() == 2 and water_path[0] == first_water and water_path[1] == second_water, "Pathfinding moze prowadzic przez kolejne pola wody.")
 	var executable_water_path: Array[Vector2i] = _get_executable_move_path(water_path)
 	assert(executable_water_path.size() == 1 and executable_water_path[0] == first_water, "Ruch musi zatrzymac sie na pierwszym polu wody.")
+	bush_unit.grid_x = first_water.x
+	bush_unit.grid_y = first_water.y
+	_apply_terrain_effects_to_unit(bush_unit)
+	assert(not _has_effect(bush_unit, "woda"), "Woda konczy biezacy ruch, ale nie moze zostawiac debuffa na nastepna ture.")
+	bush_unit.action_points = 1
+	_stop_unit_on_terrain(bush_unit)
+	assert(int(bush_unit.remaining_move) == 0 and int(bush_unit.action_points) == 1, "Woda konczy ruch, ale nie moze zabierac punktow akcji.")
 	bush_unit.remaining_move = 1
 	_apply_or_refresh_effect(bush_unit, {
 		"id": "test_ruchu",
@@ -2756,7 +2864,9 @@ func _unit_name_log_text(unit: Dictionary) -> String:
 	return _color_log_text(unit.name, color)
 
 
-func _log_event(text: String) -> void:
+func _log_event(text: String, counts_for_turn := true) -> void:
+	if active_unit_id != -1 and counts_for_turn and text.strip_edges() != "":
+		active_turn_has_log = true
 	event_log.append(text)
 	while event_log.size() > MAX_EVENT_LOG_ENTRIES:
 		event_log.pop_front()
@@ -3088,13 +3198,15 @@ func _start_next_activation() -> void:
 func _start_unit_activation(unit: Dictionary) -> void:
 	active_unit_id = unit.id
 	current_turn = unit.side
+	active_turn_has_log = false
+	_log_turn_separator()
 	unit.remaining_move = int(unit.move_range)
 	unit.action_points = int(unit.get("base_action_points", unit.get("action_points", 1)))
 	pending_skill_id = ""
 	_process_turn_start(unit)
 	if unit.side == "player":
 		_refresh_general_ability_buttons()
-	_apply_terrain_effects_to_unit(unit)
+	_apply_terrain_effects_to_unit(unit, false)
 	if _find_unit_by_id(unit.id).is_empty():
 		_sync_board()
 		_start_next_activation()
@@ -3116,6 +3228,10 @@ func _get_active_unit() -> Dictionary:
 
 func _is_player_turn() -> bool:
 	return current_turn == "player"
+
+
+func _log_turn_separator() -> void:
+	_log_event(_color_log_text("------------------------------------------", LOG_COLOR_YELLOW), false)
 
 
 func _get_remaining_move(unit: Dictionary) -> int:
