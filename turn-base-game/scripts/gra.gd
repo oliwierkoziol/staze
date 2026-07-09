@@ -511,14 +511,16 @@ func _prepare_unit(unit: Dictionary) -> Dictionary:
 			if not unit.has("skill_ids"):
 				unit["skill_ids"] = type_skill_ids.duplicate()
 
-	for stat_name in ["hp", "dmg", "def", "speed", "move_range", "attack_range", "action_points"]:
-		unit["base_%s" % stat_name] = int(unit[stat_name])
+	for stat_name in ["hp", "dmg", "def", "speed", "move_range", "attack_range", "action_points", "count"]:
+		if not unit.has(stat_name):
+			unit[stat_name] = 0
+		unit["base_%s" % stat_name] = int(unit.get(stat_name, 0))
 	unit["max_hp"] = int(unit["base_hp"])
-	unit["max_total_hp"] = int(unit["base_hp"]) * int(unit["count"])
+	unit["max_total_hp"] = int(unit["base_hp"]) * max(1, int(unit["count"]))
 	unit["current_total_hp"] = int(unit["max_total_hp"])
 	unit["current_hp"] = int(unit["base_hp"])
-	unit["remaining_move"] = int(unit.move_range)
-	unit["action_points"] = int(unit["base_action_points"])
+	unit["remaining_move"] = int(unit.get("move_range", 0))
+	unit["action_points"] = int(unit.get("base_action_points", unit.get("action_points", 1)))
 	unit["active_effects"] = []
 	unit["skill_cooldowns"] = {}
 	unit["buffs"] = "Brak"
@@ -553,15 +555,17 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 	var tex: Texture2D = _load_unit_portrait(unit_data)
 	if tex != null:
 		unit_portrait.texture = tex
-	unit_name_label.text = unit_data.name.to_upper()
+	unit_name_label.text = str(unit_data.get("name", "")).to_upper()
 	unit_meta_label.text = "Poziom 1"
+	var current_hp: int = int(unit_data.get("current_hp", unit_data.get("hp", 0)))
+	var max_hp: int = int(unit_data.get("max_hp", unit_data.get("hp", 0)))
 	unit_stats_display.set_values({
-		"hp": "%s / %s" % [unit_data.get("current_hp", unit_data.hp), unit_data.get("max_hp", unit_data.hp)],
-		"dmg": str(unit_data.dmg),
-		"def": str(unit_data.def),
-		"speed": str(unit_data.speed),
-		"count": str(unit_data.count),
-		"move": "%s / %s" % [_get_display_move(unit_data), unit_data.move_range],
+		"hp": "%s / %s" % [current_hp, max_hp],
+		"dmg": str(unit_data.get("dmg", 0)),
+		"def": str(unit_data.get("def", 0)),
+		"speed": str(unit_data.get("speed", 0)),
+		"count": str(unit_data.get("count", 0)),
+		"move": "%s / %s" % [_get_display_move(unit_data), unit_data.get("move_range", 0)],
 		"action_points": str(_get_display_action_points(unit_data)),
 	})
 	unit_status_panel.set_unit(unit_data)
@@ -614,8 +618,8 @@ func _apply_live_reload() -> void:
 
 
 func _reapply_runtime_state(target_unit: Dictionary, existing_unit: Dictionary) -> void:
-	target_unit["grid_x"] = int(existing_unit.grid_x)
-	target_unit["grid_y"] = int(existing_unit.grid_y)
+	target_unit["grid_x"] = int(existing_unit.get("grid_x", 0))
+	target_unit["grid_y"] = int(existing_unit.get("grid_y", 0))
 	_recalculate_unit_stats(target_unit)
 
 
@@ -1190,7 +1194,7 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 		board.set_hovered_move_path([])
 		return
 
-	var move_budget: int = unit.move_range if unit.id != active_unit_id else _get_remaining_move(unit)
+	var move_budget: int = int(unit.get("move_range", 0)) if unit.id != active_unit_id else _get_remaining_move(unit)
 	var move_cells: Array[Vector2i] = _get_reachable_cells(unit, move_budget)
 	var attack_cells: Array[Vector2i] = []
 	if unit.id == active_unit_id and pending_skill_id != "":
@@ -1363,7 +1367,7 @@ func _get_skill_target_cells(unit: Dictionary, skill_id: String) -> Array[Vector
 
 
 func _is_in_attack_range(unit: Dictionary, cell: Vector2i) -> bool:
-	if _hex_distance(Vector2i(unit.grid_x, unit.grid_y), cell) > int(unit.attack_range):
+	if _hex_distance(Vector2i(int(unit.get("grid_x", 0)), int(unit.get("grid_y", 0))), cell) > int(unit.get("attack_range", 1)):
 		return false
 	return not _is_attack_blocked(unit, cell)
 
@@ -1392,20 +1396,21 @@ func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_af
 
 
 func _calculate_damage(attacker: Dictionary, target: Dictionary, damage_multiplier := 1.0) -> int:
-	var scaled_damage: int = max(1, int(ceil(float(attacker.dmg) * damage_multiplier)))
-	var damage_per_unit: int = max(1, scaled_damage - int(target.def))
-	return max(1, damage_per_unit * int(attacker.count))
+	var scaled_damage: int = max(1, int(ceil(float(attacker.get("dmg", 1)) * damage_multiplier)))
+	var damage_per_unit: int = max(1, scaled_damage - int(target.get("def", 0)))
+	return max(1, damage_per_unit * int(attacker.get("count", 1)))
 
 
 func _apply_damage_to_unit(target: Dictionary, total_damage: int) -> int:
-	var previous_count: int = int(target.count)
-	var current_total_hp: int = int(target.get("current_total_hp", int(target.get("base_hp", target.hp)) * previous_count))
+	var previous_count: int = int(target.get("count", 0))
+	var base_hp: int = int(target.get("base_hp", target.get("hp", 1)))
+	var current_total_hp: int = int(target.get("current_total_hp", base_hp * previous_count))
 	if total_damage > 0:
-		board.play_damage_animation(int(target.id))
+		board.play_damage_animation(int(target.get("id", -1)))
 		_reveal_if_in_bush(target)
 	target["current_total_hp"] = max(0, current_total_hp - max(1, total_damage))
 	_refresh_unit_health_state(target)
-	return max(0, previous_count - int(target.count))
+	return max(0, previous_count - int(target.get("count", 0)))
 
 
 func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage: int, melee := false) -> Dictionary:
@@ -1457,7 +1462,9 @@ func _consume_energy_barrier(unit: Dictionary) -> bool:
 			continue
 		effects.erase(effect)
 		unit["active_effects"] = effects
-		unit.skill_cooldowns["bariera_energetyczna"] = 5
+		if not unit.has("skill_cooldowns"):
+			unit["skill_cooldowns"] = {}
+		unit["skill_cooldowns"]["bariera_energetyczna"] = 5
 		_recalculate_unit_stats(unit)
 		return true
 	return false
@@ -1468,14 +1475,14 @@ func _calculate_tick_damage(unit: Dictionary, effect_damage: int) -> int:
 
 
 func _cleanup_destroyed_unit(target: Dictionary) -> void:
-	if target.count > 0:
+	if int(target.get("count", 0)) > 0:
 		return
 	_log_event("%s zostaje rozbite." % _unit_name_log_text(target))
 	units.erase(target)
-	turn_queue.erase(target.id)
+	turn_queue.erase(target.get("id", -1))
 	if turn_queue_index >= turn_queue.size():
 		turn_queue_index = turn_queue.size() - 1
-	if target.id == selected_unit_id:
+	if target.get("id", -1) == selected_unit_id:
 		selected_unit_id = -1
 
 
@@ -1649,7 +1656,7 @@ func _execute_heavy_strike(caster: Dictionary, target: Dictionary) -> void:
 	var pushed := false
 	if int(result.get("damage", 0)) > 0 and int(hit_target.id) == int(target.id):
 		pushed = _try_push_unit_away(caster, target)
-	if int(result.get("damage", 0)) > 0 and not pushed and hit_target.count > 0:
+	if int(result.get("damage", 0)) > 0 and not pushed and int(hit_target.get("count", 0)) > 0:
 		_apply_or_refresh_effect(hit_target, {
 			"id": "ogluszenie",
 			"name": "Ogluszenie",
@@ -1990,7 +1997,7 @@ func _process_turn_start(unit: Dictionary) -> void:
 				_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
 			]
 		)
-		if unit.count <= 0:
+		if int(unit.get("count", 0)) <= 0:
 			_cleanup_destroyed_unit(unit)
 			return
 	if skipped_turn:
@@ -2025,12 +2032,12 @@ func _advance_unit_effects(unit: Dictionary) -> void:
 
 
 func _recalculate_unit_stats(unit: Dictionary) -> void:
-	unit["hp"] = int(unit.get("base_hp", unit.hp))
-	unit["dmg"] = int(unit.get("base_dmg", unit.dmg))
-	unit["def"] = int(unit.get("base_def", unit.def))
-	unit["speed"] = int(unit.get("base_speed", unit.speed))
-	unit["move_range"] = int(unit.get("base_move_range", unit.move_range))
-	unit["attack_range"] = int(unit.get("base_attack_range", unit.attack_range))
+	unit["hp"] = int(unit.get("base_hp", unit.get("hp", 0)))
+	unit["dmg"] = int(unit.get("base_dmg", unit.get("dmg", 0)))
+	unit["def"] = int(unit.get("base_def", unit.get("def", 0)))
+	unit["speed"] = int(unit.get("base_speed", unit.get("speed", 0)))
+	unit["move_range"] = int(unit.get("base_move_range", unit.get("move_range", 0)))
+	unit["attack_range"] = int(unit.get("base_attack_range", unit.get("attack_range", 1)))
 
 
 	var buff_names: Array[String] = []
@@ -2044,11 +2051,11 @@ func _recalculate_unit_stats(unit: Dictionary) -> void:
 			debuff_names.append(str(effect.get("name", "")))
 
 
-	unit["dmg"] = max(1, int(unit.dmg))
-	unit["def"] = max(0, int(unit.def))
-	unit["speed"] = max(0, int(unit.speed))
-	unit["move_range"] = max(0, int(unit.move_range))
-	unit["attack_range"] = max(1, int(unit.attack_range))
+	unit["dmg"] = max(1, int(unit.get("dmg", 1)))
+	unit["def"] = max(0, int(unit.get("def", 0)))
+	unit["speed"] = max(0, int(unit.get("speed", 0)))
+	unit["move_range"] = max(0, int(unit.get("move_range", 0)))
+	unit["attack_range"] = max(1, int(unit.get("attack_range", 1)))
 	unit["buffs"] = "Brak" if buff_names.is_empty() else ", ".join(buff_names)
 	unit["debuffs"] = "Brak" if debuff_names.is_empty() else ", ".join(debuff_names)
 	_refresh_unit_health_state(unit)
@@ -2056,9 +2063,9 @@ func _recalculate_unit_stats(unit: Dictionary) -> void:
 
 func _refresh_unit_health_state(unit: Dictionary) -> void:
 	var unit_hp: int = max(1, int(unit.get("base_hp", unit.get("max_hp", 1))))
-	var total_hp: int = max(0, int(unit.get("current_total_hp", unit_hp * int(unit.count))))
+	var total_hp: int = max(0, int(unit.get("current_total_hp", unit_hp * max(1, int(unit.get("count", 1))))))
 	unit["max_hp"] = unit_hp
-	unit["max_total_hp"] = max(unit_hp, int(unit.get("max_total_hp", unit_hp * max(1, int(unit.count)))))
+	unit["max_total_hp"] = max(unit_hp, int(unit.get("max_total_hp", unit_hp * max(1, int(unit.get("count", 1))))))
 	unit["current_total_hp"] = total_hp
 	if total_hp <= 0:
 		unit["count"] = 0
@@ -3103,13 +3110,15 @@ func _is_player_turn() -> bool:
 
 
 func _get_remaining_move(unit: Dictionary) -> int:
-	if int(unit.move_range) <= 0:
+	var move_range: int = int(unit.get("move_range", 0))
+	if move_range <= 0:
 		return 0
-	return min(int(unit.get("remaining_move", unit.get("move_range", 0))), int(unit.move_range))
+	return min(int(unit.get("remaining_move", move_range)), move_range)
 
 
 func _get_display_move(unit: Dictionary) -> int:
-	return _get_remaining_move(unit) if unit.id == active_unit_id else int(unit.move_range)
+	var move_range: int = int(unit.get("move_range", 0))
+	return _get_remaining_move(unit) if unit.id == active_unit_id else move_range
 
 
 func _get_display_action_points(unit: Dictionary) -> int:

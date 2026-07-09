@@ -323,7 +323,9 @@ func draw_obstacles() -> void:
 		"rock1": ROCK1_TEXTURE,
 		"rock2": ROCK2_TEXTURE,
 		"rock2k": ROCK2K_TEXTURE,
-		"rock3": ROCK3_TEXTURE
+		"rock3": ROCK3_TEXTURE,
+		"krzok": KRZOK_TEXTURE,
+		"bush": KRZOK_TEXTURE
 	}
 	var texture_draw_size := Vector2(HEX_RADIUS * 2.0, HEX_RADIUS * 2.0)
 	for obstacle in obstacles:
@@ -407,7 +409,7 @@ func draw_units() -> void:
 			var tint: Color = Color(1.0, 1.0 - damage_tint_alpha * 0.82, 1.0 - damage_tint_alpha * 0.82, alpha)
 			draw_texture_rect(portrait, sprite_rect, false, tint)
 
-		var count_text: String = str(unit.count)
+		var count_text: String = str(unit.get("count", 0))
 		var text_size: Vector2 = font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
 		var badge_size := Vector2(HEX_RADIUS * 0.95, text_size.y + 10.0)
 		var badge_rect := Rect2(center + Vector2(-badge_size.x / 2.0, HEX_RADIUS * 0.28), badge_size)
