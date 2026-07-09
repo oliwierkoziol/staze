@@ -20,6 +20,7 @@ const UNIT_COUNT_BADGE_TEXT := Color(0.95, 0.90, 0.78, 1.0)
 const PLAYER_OUTLINE_COLOR := Color(0.35, 0.65, 0.95, 0.95)
 const ENEMY_OUTLINE_COLOR := Color(0.92, 0.35, 0.30, 0.95)
 const HIDDEN_UNIT_ALPHA := 0.45
+const REVEALED_HIDDEN_UNIT_ALPHA := 0.68
 const ROCK1_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock1.png")
 const ROCK2_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2.png")
 const ROCK2K_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2k.png")
@@ -48,6 +49,8 @@ var active_projectiles: Array[Dictionary] = []
 var obstacles: Array = []
 var terrain_effects: Array[Dictionary] = []
 var hovered_cell := Vector2i(-1, -1)
+var viewer_side := "player"
+var grid_visible := true
 
 
 func _ready() -> void:
@@ -100,6 +103,16 @@ func set_terrain_effects(new_effects: Array) -> void:
 	queue_redraw()
 
 
+func set_viewer_side(side: String) -> void:
+	viewer_side = side
+	queue_redraw()
+
+
+func set_grid_visible(visible: bool) -> void:
+	grid_visible = visible
+	queue_redraw()
+
+
 func get_obstacles() -> Array:
 	return obstacles
 
@@ -139,7 +152,8 @@ func set_hovered_attack_cell(cell: Vector2i) -> void:
 
 
 func _draw() -> void:
-	draw_hex_grid()
+	if grid_visible:
+		draw_hex_grid()
 	draw_obstacles()
 	draw_terrain_effects()
 	draw_highlighted_cells()
@@ -327,6 +341,10 @@ func draw_terrain_effects() -> void:
 		var cell := Vector2i(int(effect.get("grid_x", -1)), int(effect.get("grid_y", -1)))
 		if cell.x < 0:
 			continue
+		if str(effect.get("id", "")) == "bear_trap":
+			if _should_draw_bear_trap(effect):
+				_draw_bear_trap(cell)
+			continue
 		var color := Color(0.35, 0.80, 1.0, 0.28)
 		match str(effect.get("id", "")):
 			"fire":
@@ -341,14 +359,33 @@ func draw_terrain_effects() -> void:
 		draw_polyline(points + PackedVector2Array([points[0]]), color.lightened(0.35), 2.0)
 
 
+func _should_draw_bear_trap(effect: Dictionary) -> bool:
+	if str(effect.get("caster_side", "")) == viewer_side:
+		return true
+	var visible := Time.get_ticks_msec() <= int(effect.get("visible_until_ms", 0))
+	if visible:
+		queue_redraw()
+	return visible
+
+
+func _draw_bear_trap(cell: Vector2i) -> void:
+	var center: Vector2 = axial_to_pixel(cell.x, cell.y)
+	var color := Color(0.75, 0.76, 0.72, 0.48)
+	draw_arc(center + Vector2(-10.0, 0.0), 14.0, -1.2, 1.2, 12, color, 3.0)
+	draw_arc(center + Vector2(10.0, 0.0), 14.0, PI - 1.2, PI + 1.2, 12, color, 3.0)
+	draw_line(center + Vector2(-20.0, 12.0), center + Vector2(20.0, 12.0), color, 3.0)
+	draw_circle(center, 4.0, color)
+
+
 func draw_units() -> void:
 	var font: Font = GEORGIA_FONT
 	var font_size: int = 22
 	for unit in units:
 		var hidden := bool(unit.get("is_hidden", false))
-		if hidden and not _should_draw_hidden_unit(unit):
+		var revealed := bool(unit.get("is_revealed", false))
+		if hidden and not revealed and not _should_draw_hidden_unit(unit):
 			continue
-		var alpha := HIDDEN_UNIT_ALPHA if hidden else 1.0
+		var alpha := REVEALED_HIDDEN_UNIT_ALPHA if hidden and revealed else HIDDEN_UNIT_ALPHA if hidden else 1.0
 		var center: Vector2 = visual_positions.get(unit.id, axial_to_pixel(unit.grid_x, unit.grid_y))
 		center += unit_attack_offsets.get(unit.id, Vector2.ZERO)
 		var portrait: Texture2D = unit_textures.get(unit.id, null)
@@ -390,6 +427,8 @@ func draw_units() -> void:
 
 
 func _should_draw_hidden_unit(unit: Dictionary) -> bool:
+	if bool(unit.get("is_revealed", false)):
+		return true
 	if unit.side == "player":
 		return true
 	for other in units:
