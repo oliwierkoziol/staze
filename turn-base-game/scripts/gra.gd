@@ -1856,7 +1856,7 @@ func _apply_terrain_entry_effect(unit: Dictionary) -> void:
 	var cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
 	var effect: Dictionary = _get_terrain_entry_effect(cell)
 	if effect.is_empty():
-		unit["is_hidden"] = false
+		_remove_hiding_effects(unit)
 		return
 	_apply_or_refresh_effect(unit, effect)
 	var terrain_name: String = str(effect.get("name", "teren"))
@@ -1866,6 +1866,21 @@ func _apply_terrain_entry_effect(unit: Dictionary) -> void:
 	else:
 		unit["is_hidden"] = false
 		_log_event("%s wchodzi w %s i traci reszte ruchu." % [_unit_name_log_text(unit), terrain_name])
+
+
+func _remove_hiding_effects(unit: Dictionary) -> void:
+	var effects: Array = unit.get("active_effects", [])
+	var kept_effects: Array = []
+	var removed := false
+	for existing in effects:
+		if bool(existing.get("hides_unit", false)):
+			removed = true
+			continue
+		kept_effects.append(existing)
+	if removed:
+		unit["active_effects"] = kept_effects
+		unit["is_hidden"] = false
+		_recalculate_unit_stats(unit)
 
 
 func _reveal_if_in_bush(unit: Dictionary) -> void:
@@ -1984,8 +1999,11 @@ func _process_turn_start(unit: Dictionary) -> void:
 			skipped_turn = true
 			unit["remaining_move"] = 0
 			unit["action_points"] = 0
-		if bool(effect.get("hides_unit", false)) and _terrain_hides_unit(Vector2i(unit.grid_x, unit.grid_y)):
-			unit["is_hidden"] = true
+		if bool(effect.get("hides_unit", false)):
+			if _terrain_hides_unit(Vector2i(int(unit.get("grid_x", 0)), int(unit.get("grid_y", 0)))):
+				unit["is_hidden"] = true
+			else:
+				unit["is_hidden"] = false
 		if tick_damage <= 0:
 			continue
 		var total_damage := _calculate_tick_damage(unit, tick_damage)
