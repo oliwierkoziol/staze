@@ -282,6 +282,17 @@
 		  {"stat": "def", "mode": "percent", "value": -20}
 		]
 	  }
+	},
+	"rzut_dynamitem": {
+	  "id": "rzut_dynamitem",
+	  "name": "Rzut Dynamitem",
+	  "description": "Rzuca dynamitem w wybrany hex. Zadaje 100% obrazen w centrum i 50% obrazen na 6 sasiednich hexach.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 4,
+	  "target_type": "cell",
+	  "effect_type": "dynamite_throw",
+	  "icon": "res://assets/dynamite.png"
 	}
   }
 }

@@ -1763,6 +1763,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_heavy_strike(caster, target)
 		"fireball":
 			_execute_fireball(caster, target_cell)
+		"dynamite_throw":
+			_execute_dynamite_throw(caster, target_cell)
 		"ice_ground":
 			_execute_ice_ground(caster, target_cell)
 		"poison_cloud":
@@ -1911,6 +1913,21 @@ func _execute_fireball(caster: Dictionary, center: Vector2i) -> void:
 		_cleanup_destroyed_unit(hit_target)
 	_add_terrain_effect(center, "fire", 1)
 	_log_event("%s rzuca Kule Ognia: %s." % [_unit_name_log_text(caster), "brak trafien" if hit_names.is_empty() else ", ".join(hit_names)])
+
+
+func _execute_dynamite_throw(caster: Dictionary, center: Vector2i) -> void:
+	var hit_names: Array[String] = []
+	for cell in _get_area_cells(center):
+		var target := _find_unit_at_cell(cell)
+		if target.is_empty() or target.side == caster.side:
+			continue
+		var multiplier := 1.0 if cell == center else 0.5
+		var total_damage := _calculate_damage(caster, target, multiplier)
+		var result := _apply_attack_damage(caster, target, total_damage)
+		var hit_target: Dictionary = result.get("target", target)
+		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
+		_cleanup_destroyed_unit(hit_target)
+	_log_event("%s rzuca dynamitem: %s." % [_unit_name_log_text(caster), "brak trafien" if hit_names.is_empty() else ", ".join(hit_names)])
 
 
 func _execute_ice_ground(caster: Dictionary, center: Vector2i) -> void:

@@ -38,7 +38,13 @@ func setup(skill: Dictionary, slot: int) -> void:
 	modulate = Color(0.55, 0.55, 0.55, 1.0) if not can_use else Color.WHITE
 	tooltip_text = str(skill.get("tooltip", ""))
 
-	_icon.texture = PLACEHOLDER_ICONS[slot % PLACEHOLDER_ICONS.size()]
+	var icon_path: String = str(skill.get("icon", ""))
+	if icon_path != "":
+		var icon_texture: Resource = load(icon_path)
+		if icon_texture is Texture2D:
+			_icon.texture = icon_texture
+	else:
+		_icon.texture = PLACEHOLDER_ICONS[slot % PLACEHOLDER_ICONS.size()]
 	_name_label.text = str(skill.get("name", "")).to_upper()
 
 	var description: String = str(skill.get("description", ""))
