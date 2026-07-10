@@ -1251,7 +1251,7 @@ func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[
 func _get_path_hazard_penalty(unit: Dictionary, path: Array[Vector2i]) -> int:
 	var penalty := 0
 	for cell in path:
-		if _is_known_bear_trap_for_unit(unit, cell):
+		if _is_known_trap_for_unit(unit, cell):
 			penalty += 1000
 		if _is_hostile_terrain_effect_for_unit(unit, cell):
 			penalty += 200
@@ -1266,57 +1266,65 @@ func _is_hostile_terrain_effect_for_unit(unit: Dictionary, cell: Vector2i) -> bo
 			continue
 		if str(effect.get("caster_side", "")) == str(unit.side):
 			continue
-		if ["fire", "ice", "poison_cloud", "bear_trap"].has(str(effect.get("id", ""))):
+		if ["fire", "ice", "poison_cloud", "bear_trap", "goblin_trap"].has(str(effect.get("id", ""))):
 			return true
 	return false
 
 
-func _is_known_bear_trap_for_unit(unit: Dictionary, cell: Vector2i) -> bool:
-	var trap: Dictionary = _get_terrain_effect_at(cell, "bear_trap")
-	if trap.is_empty():
+func _is_known_trap_for_unit(unit: Dictionary, cell: Vector2i) -> bool:
+	for trap_id in ["bear_trap", "goblin_trap"]:
+		var trap: Dictionary = _get_terrain_effect_at(cell, trap_id)
+		if trap.is_empty():
+			continue
+		var caster_side: String = str(trap.get("caster_side", ""))
+		if caster_side == str(unit.side):
+			return not _terrain_hides_unit(cell)
+		if Time.get_ticks_msec() <= int(trap.get("visible_until_ms", 0)):
+			return true
+		return unit.side == "enemy" and int(trap.get("enemy_memory_until_round", 0)) >= round_number
+	return false
+
+
+func _try_enemy_use_trap(enemy_unit: Dictionary, target: Dictionary, skill_id: String) -> bool:
+	if not _can_use_skill(enemy_unit, skill_id):
 		return false
-	var caster_side: String = str(trap.get("caster_side", ""))
-	if caster_side == str(unit.side):
-		return not _terrain_hides_unit(cell)
-	if Time.get_ticks_msec() <= int(trap.get("visible_until_ms", 0)):
-		return true
-	return unit.side == "enemy" and int(trap.get("enemy_memory_until_round", 0)) >= round_number
-
-
-func _try_enemy_use_bear_trap(enemy_unit: Dictionary, target: Dictionary) -> bool:
-	if not _can_use_skill(enemy_unit, "pulapka_na_niedzwiedzie"):
+	var skill: Dictionary = skill_library.get(skill_id, {})
+	if skill.is_empty():
 		return false
 	var target_cell := Vector2i(target.grid_x, target.grid_y)
 	if _can_see_target(enemy_unit, target) and _can_unit_attack(enemy_unit) and _is_in_attack_range(enemy_unit, target_cell):
 		return false
-	if _has_bear_trap_near_cell_for_side(target_cell, str(enemy_unit.side)):
+	if _has_trap_near_cell_for_side(target_cell, str(enemy_unit.side)):
 		return false
 	var origin := Vector2i(enemy_unit.grid_x, enemy_unit.grid_y)
+	var trap_effect_id: String = str(skill.get("effect_type", ""))
 	for cell in _get_neighbors(target_cell):
-		if _hex_distance(origin, cell) > 3:
+		if _hex_distance(origin, cell) > int(skill.get("range", 0)):
 			continue
 		if _is_attack_blocked(enemy_unit, cell) or _blocks_cell_skill_target(cell):
 			continue
-		if not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, "bear_trap").is_empty():
+		if not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, trap_effect_id).is_empty():
 			continue
-		_execute_skill(enemy_unit, {}, skill_library.get("pulapka_na_niedzwiedzie", {}), cell)
+		_execute_skill(enemy_unit, {}, skill, cell)
 		return true
 	return false
 
 
-func _has_bear_trap_near_cell_for_side(center: Vector2i, side: String) -> bool:
+func _has_trap_near_cell_for_side(center: Vector2i, side: String) -> bool:
 	for cell in _get_area_cells(center):
-		var trap: Dictionary = _get_terrain_effect_at(cell, "bear_trap")
-		if not trap.is_empty() and str(trap.get("caster_side", "")) == side:
-			return true
+		for trap_id in ["bear_trap", "goblin_trap"]:
+			var trap: Dictionary = _get_terrain_effect_at(cell, trap_id)
+			if not trap.is_empty() and str(trap.get("caster_side", "")) == side:
+				return true
 	return false
 
 
 func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
 	if not _can_see_target(enemy_unit, target):
 		return false
-	if _try_enemy_use_bear_trap(enemy_unit, target):
-		return true
+	for trap_skill_id in ["pulapka_na_niedzwiedzie", "pulapka_goblina"]:
+		if _try_enemy_use_trap(enemy_unit, target, trap_skill_id):
+			return true
 	for skill_id in enemy_unit.get("skill_ids", []):
 		var skill: Dictionary = skill_library.get(str(skill_id), {})
 		if skill.is_empty() or not _can_use_skill(enemy_unit, str(skill_id)):
@@ -1329,7 +1337,7 @@ func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
 		if target_type == "enemy_unit" and _hex_distance(Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), target_cell) <= int(skill.get("range", 0)) and not _is_attack_blocked(enemy_unit, target_cell):
 			_execute_skill(enemy_unit, target, skill, target_cell)
 			return true
-		if target_type == "cell" and str(skill.get("effect_type", "")) != "bear_trap":
+		if target_type == "cell" and str(skill.get("effect_type", "")) not in ["bear_trap", "goblin_trap"]:
 			var cell := _find_enemy_area_skill_cell(enemy_unit, skill)
 			if cell != Vector2i(-1, -1):
 				_execute_skill(enemy_unit, {}, skill, cell)
@@ -1723,6 +1731,8 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 			return
 		if str(skill.get("effect_type", "")) == "bear_trap" and (not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, "bear_trap").is_empty()):
 			return
+		if str(skill.get("effect_type", "")) == "goblin_trap" and (not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, "goblin_trap").is_empty()):
+			return
 		_execute_skill(unit, {}, skill, cell)
 		return
 
@@ -1771,6 +1781,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_poison_cloud(caster, target_cell)
 		"bear_trap":
 			_execute_bear_trap(caster, target_cell)
+		"goblin_trap":
+			_execute_goblin_trap(caster, target_cell)
 		"energy_barrier":
 			_execute_energy_barrier(caster)
 		"iron_curtain":
@@ -1959,6 +1971,40 @@ func _execute_bear_trap(caster: Dictionary, cell: Vector2i) -> void:
 	_log_event("%s zaklada Pulapke na Niedzwiedzie." % _unit_name_log_text(caster))
 
 
+func _execute_goblin_trap(caster: Dictionary, cell: Vector2i) -> void:
+	_add_terrain_effect(cell, "goblin_trap", 99, int(caster.id), max(1, int(ceil(float(caster.dmg) * 0.25))))
+	var trap: Dictionary = _get_terrain_effect_at(cell, "goblin_trap")
+	trap["caster_side"] = str(caster.side)
+	trap["visible_until_ms"] = Time.get_ticks_msec() + 5000
+	trap["enemy_memory_until_round"] = round_number + 1 if caster.side == "player" else round_number
+	_log_event("%s zaklada Pulapke Goblina." % _unit_name_log_text(caster))
+
+
+func _trigger_goblin_trap(unit: Dictionary, trap: Dictionary) -> void:
+	var damage: int = _calculate_tick_damage(unit, int(trap.get("tick_damage", 1)))
+	var casualties := _apply_damage_to_unit(unit, damage)
+	_apply_or_refresh_effect(unit, {
+		"id": "immobilize",
+		"name": "Unieruchomienie",
+		"category": "debuff",
+		"remaining_turns": 2,
+		"stat_changes": [
+			{"stat": "move_range", "mode": "set", "value": 0}
+		]
+	})
+	_apply_or_refresh_effect(unit, {
+		"id": "krwawienie",
+		"name": "Krwawienie",
+		"category": "debuff",
+		"remaining_turns": 2,
+		"stat_changes": [],
+		"tick_damage": max(1, int(trap.get("tick_damage", 1)))
+	})
+	terrain_effects.erase(trap)
+	_log_event("%s wpada w Pulapke Goblina za %s obrazen i %s strat." % [_unit_name_log_text(unit), _color_log_text(str(damage), LOG_COLOR_DAMAGE), _color_log_text(str(casualties), LOG_COLOR_DAMAGE)])
+	_cleanup_destroyed_unit(unit)
+
+
 func _execute_energy_barrier(caster: Dictionary) -> void:
 	_apply_energy_barrier(caster)
 	_log_event("%s otacza sie Bariera Energetyczna." % _unit_name_log_text(caster))
@@ -2057,6 +2103,8 @@ func _apply_terrain_effects_to_unit(unit: Dictionary, apply_entry_effect := true
 					_log_event("%s wdycha toksyczna chmure." % _unit_name_log_text(unit))
 			"bear_trap":
 				_trigger_bear_trap(unit, effect)
+			"goblin_trap":
+				_trigger_goblin_trap(unit, effect)
 	if apply_entry_effect:
 		_apply_terrain_entry_effect(unit)
 
@@ -2639,9 +2687,13 @@ func _get_executable_move_path(path: Array[Vector2i]) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for cell in path:
 		result.append(cell)
-		if _terrain_skips_turn(cell) or not _get_terrain_effect_at(cell, "bear_trap").is_empty():
+		if _terrain_skips_turn(cell) or _has_trap_at(cell):
 			break
 	return result
+
+
+func _has_trap_at(cell: Vector2i) -> bool:
+	return not _get_terrain_effect_at(cell, "bear_trap").is_empty() or not _get_terrain_effect_at(cell, "goblin_trap").is_empty()
 
 
 func _get_terrain_entry_effect(cell: Vector2i) -> Dictionary:
@@ -3254,7 +3306,7 @@ func _validate_setup() -> void:
 	terrain_effects = [{"id": "fire", "grid_x": 6, "grid_y": 5, "remaining_turns": 1, "caster_side": "player"}]
 	assert(_get_path_hazard_penalty(ai_archer, [Vector2i(6, 5)]) >= 200, "AI musi traktowac wrogie efekty terenu jako zagrozenie.")
 	terrain_effects = [{"id": "bear_trap", "grid_x": 3, "grid_y": 4, "remaining_turns": 99, "caster_side": "enemy"}]
-	assert(_has_bear_trap_near_cell_for_side(Vector2i(3, 5), "enemy"), "AI nie powinno dublowac pulapek przy tym samym celu.")
+	assert(_has_trap_near_cell_for_side(Vector2i(3, 5), "enemy"), "AI nie powinno dublowac pulapek przy tym samym celu.")
 	var melee_ai := {
 		"id": 1003,
 		"name": "AI Melee",

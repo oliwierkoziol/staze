@@ -349,9 +349,9 @@ func draw_terrain_effects() -> void:
 		var cell := Vector2i(int(effect.get("grid_x", -1)), int(effect.get("grid_y", -1)))
 		if cell.x < 0:
 			continue
-		if str(effect.get("id", "")) == "bear_trap":
-			if _should_draw_bear_trap(effect):
-				_draw_bear_trap(cell)
+		if str(effect.get("id", "")) in ["bear_trap", "goblin_trap"]:
+			if _should_draw_trap(effect):
+				_draw_trap(cell)
 			continue
 		var color := Color(0.35, 0.80, 1.0, 0.28)
 		match str(effect.get("id", "")):
@@ -367,7 +367,7 @@ func draw_terrain_effects() -> void:
 		draw_polyline(points + PackedVector2Array([points[0]]), color.lightened(0.35), 2.0)
 
 
-func _should_draw_bear_trap(effect: Dictionary) -> bool:
+func _should_draw_trap(effect: Dictionary) -> bool:
 	if str(effect.get("caster_side", "")) == viewer_side:
 		return true
 	var visible := Time.get_ticks_msec() <= int(effect.get("visible_until_ms", 0))
@@ -376,7 +376,7 @@ func _should_draw_bear_trap(effect: Dictionary) -> bool:
 	return visible
 
 
-func _draw_bear_trap(cell: Vector2i) -> void:
+func _draw_trap(cell: Vector2i) -> void:
 	var center: Vector2 = axial_to_pixel(cell.x, cell.y)
 	if TRAP_TEXTURE == null:
 		return
