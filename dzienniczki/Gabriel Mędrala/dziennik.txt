@@ -15,7 +15,7 @@ Dzień 4 (06.07.2026)
 Tutaj znajduje się dostęp do moich notatek https://github.com/Crunczyslaw/Notatki-z-godota
 
 Dzień 5 (07.07.2026)
-- rospisanie planu na zbliżające się dni
+- rospisanie planu na zbliżające się dni/tydzień
 - zapoznanie się ze podstawami godota
 - skończenie kursu dla kompletnych początkujących w godocie
 - poznanie się ze składnią, najważniejszymi funkcjami wbudowanymi, pojęciami
@@ -33,4 +33,18 @@ Dzień 7 (09.07.2026)
 - nauka posługiwania się sygnałami przez edytor lub kod, oraz tworzenia własnych sygnałów 
 - stworzenie małego projektu na podstawie sygnałów (patrz podpunkt 6 w notatkach)
 - zapoznanie się animowanymi spritami 
-- rozpoczęcie pracy nad kolejnym małym projektem, miejącym pokazać co dotychczas się nauczyłem
+- rozpoczęcie pracy nad kolejnym małym projektem, mającym pokazać co dotychczas się nauczyłem
+Dzień 8 (10.07.2026)
+- stworzenie systemu poruszania się dla gracza
+- ustawienie dla niego prawidłowych animacji oraz naprawienie błędu gdzie chodzenie po skosie nie włącza animacji
+- stworzenie 3 różnych wariantów wroga (każdy mający nieco innny wygląd i wielkość)
+- stworzenie systemu stawiania wrogów losowo w pionie po bokach ekranu
+- dodanie wrogom poruszanie się po ekranie, animacji oraz losowego uchylenia
+- uniemożliwienie graczowi wychodzenia poza ekran gry (z tym były niezłe problemy)
+- dodanie menu głównego
+- dodanie guzików umożliwiające zwiększanie poziomu trudności od łatwego po ciężki
+- dodanie wyniku zliczającego się przez okres gry
+- dodanie tekstów pokazujących poprzednie wyniki w danym poziomie trudności
+- dodanie możliwości przegrania gry przez dotykanie przeciwników (wiadomo)
+- dodanie gry na githuba i możliwienie grania przez przeglądarkę
+- przegląd lektury przekazanej przez pracodawcę
