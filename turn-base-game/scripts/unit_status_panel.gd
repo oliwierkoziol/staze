@@ -223,5 +223,3 @@ func _build_effect_tooltip(effect: Dictionary) -> String:
 
 	lines.append("Pozostale tury: %d" % int(effect.get("remaining_turns", 0)))
 	return "\n".join(lines)
-
-

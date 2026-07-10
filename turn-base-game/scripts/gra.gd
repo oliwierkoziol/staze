@@ -88,6 +88,14 @@ var save_setup_dialog: FileDialog
 var current_player_faction := ""
 var current_enemy_faction := ""
 var help_popup: PanelContainer
+var help_popup_content: VBoxContainer
+var help_popup_scroll: ScrollContainer
+var help_popup_page_label: Label
+var help_popup_prev_button: Button
+var help_popup_next_button: Button
+var help_popup_action_button: Button
+var help_mode_tutorial := true
+var tutorial_page := 0
 var victory_overlay: Control
 var victory_title_label: Label
 var tutorial_acknowledged := false
@@ -342,6 +350,8 @@ func _make_setup_button(text: String) -> Button:
 
 func _enter_setup_mode() -> void:
 	setup_mode = true
+	help_mode_tutorial = true
+	tutorial_page = 0
 	tutorial_acknowledged = false
 	_update_setup_hint_visibility()
 	units = unit_configs.map(func(unit: Dictionary) -> Dictionary: return _prepare_unit(unit.duplicate(true)))
@@ -499,6 +509,9 @@ func _typed_int_array(value: Variant) -> Array[int]:
 
 func _on_reset_battle_pressed() -> void:
 	setup_mode = true
+	help_mode_tutorial = true
+	tutorial_page = 0
+	tutorial_acknowledged = false
 	_update_setup_hint_visibility()
 	current_player_faction = ""
 	current_enemy_faction = ""
@@ -2673,47 +2686,256 @@ func _build_help_popup() -> void:
 	help_popup = PanelContainer.new()
 	help_popup.visible = false
 	help_popup.mouse_filter = Control.MOUSE_FILTER_STOP
-	help_popup.custom_minimum_size = Vector2(420, 0)
+	help_popup.custom_minimum_size = Vector2(640, 520)
 	help_popup.set_anchors_preset(Control.PRESET_CENTER)
-	help_popup.offset_left = -210
-	help_popup.offset_top = -150
-	help_popup.offset_right = 210
-	help_popup.offset_bottom = 150
+	help_popup.offset_left = -320
+	help_popup.offset_top = -260
+	help_popup.offset_right = 320
+	help_popup.offset_bottom = 260
 	hud.add_child(help_popup)
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 18)
-	margin.add_theme_constant_override("margin_top", 14)
-	margin.add_theme_constant_override("margin_right", 18)
-	margin.add_theme_constant_override("margin_bottom", 14)
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_bottom", 18)
 	help_popup.add_child(margin)
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
+	column.add_theme_constant_override("separation", 12)
 	margin.add_child(column)
 
 	var title := Label.new()
-	title.text = "STEROWANIE"
-	title.add_theme_font_size_override("font_size", 22)
+	title.text = "JAK GRAĆ"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_color_override("font_color", Color(0.86, 0.72, 0.34, 1.0))
 	column.add_child(title)
 
-	var body := Label.new()
-	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.text = "\n".join([
-		"LPM: wybierz jednostke, wskaz pole ruchu albo cel umiejetnosci.",
-		"PPM: podstawowy atak wybrana aktywna jednostka.",
-		"Tab: pokaz lub ukryj ta pomoc.",
-		"START: rozpocznij bitwe po rozstawieniu.",
-		"RESET: wroc do wyboru frakcji.",
-		"Jednostki rozstawiasz w trzech skrajnych kolumnach swojej strony.",
-		"Przeszkody blokuja ruch i linie strzalu."
-	])
-	column.add_child(body)
+	var subtitle := Label.new()
+	subtitle.text = "Przewodnik po sterowaniu, rozgrywce i interfejsie"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 13)
+	subtitle.add_theme_color_override("font_color", Color(0.75, 0.72, 0.62, 1.0))
+	column.add_child(subtitle)
 
-	var close_button := Button.new()
-	close_button.text = "OK"
-	close_button.pressed.connect(_on_tutorial_ok_pressed)
-	column.add_child(close_button)
+	var separator := TextureRect.new()
+	separator.texture = preload("res://assets/ui/divider.png")
+	separator.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	separator.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	separator.stretch_mode = TextureRect.STRETCH_SCALE
+	separator.custom_minimum_size = Vector2(0, 2)
+	separator.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(separator)
+
+	help_popup_scroll = ScrollContainer.new()
+	help_popup_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	help_popup_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	help_popup_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	column.add_child(help_popup_scroll)
+
+	help_popup_content = VBoxContainer.new()
+	help_popup_content.add_theme_constant_override("separation", 10)
+	help_popup_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	help_popup_content.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	help_popup_scroll.add_child(help_popup_content)
+
+	var nav_row := HBoxContainer.new()
+	nav_row.add_theme_constant_override("separation", 12)
+	nav_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_child(nav_row)
+
+	help_popup_prev_button = Button.new()
+	help_popup_prev_button.text = "< WSTECZ"
+	help_popup_prev_button.custom_minimum_size = Vector2(110, 40)
+	help_popup_prev_button.pressed.connect(_on_help_prev_pressed)
+	nav_row.add_child(help_popup_prev_button)
+
+	help_popup_page_label = Label.new()
+	help_popup_page_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	help_popup_page_label.custom_minimum_size = Vector2(80, 0)
+	help_popup_page_label.add_theme_color_override("font_color", Color(0.86, 0.72, 0.34, 1.0))
+	help_popup_page_label.add_theme_font_size_override("font_size", 14)
+	nav_row.add_child(help_popup_page_label)
+
+	help_popup_next_button = Button.new()
+	help_popup_next_button.text = "DALEJ >"
+	help_popup_next_button.custom_minimum_size = Vector2(110, 40)
+	help_popup_next_button.pressed.connect(_on_help_next_pressed)
+	nav_row.add_child(help_popup_next_button)
+
+	help_popup_action_button = Button.new()
+	help_popup_action_button.text = "ROZPOCZNIJ"
+	help_popup_action_button.custom_minimum_size = Vector2(220, 48)
+	help_popup_action_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	help_popup_action_button.add_theme_font_size_override("font_size", 18)
+	help_popup_action_button.pressed.connect(_on_help_action_pressed)
+	column.add_child(help_popup_action_button)
+
+	_help_rebuild_content()
+
+
+func _make_help_section(title: String, lines: Array[String], expanded := true) -> VBoxContainer:
+	var section := VBoxContainer.new()
+	section.add_theme_constant_override("separation", 6)
+	section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var header_button := Button.new()
+	header_button.text = title
+	header_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	header_button.custom_minimum_size = Vector2(0, 38)
+	header_button.add_theme_font_size_override("font_size", 16)
+	header_button.add_theme_color_override("font_color", Color(0.86, 0.72, 0.34, 1.0))
+	section.add_child(header_button)
+
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation", 4)
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.visible = expanded
+	section.add_child(body)
+
+	for line in lines:
+		var label := Label.new()
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.text = line
+		label.add_theme_font_size_override("font_size", 14)
+		body.add_child(label)
+
+	header_button.pressed.connect(func() -> void:
+		body.visible = not body.visible
+	)
+	return section
+
+
+func _help_rebuild_content() -> void:
+	if help_popup_content == null:
+		return
+	for child in help_popup_content.get_children():
+		child.queue_free()
+
+	if help_mode_tutorial:
+		_build_tutorial_pages()
+	else:
+		_build_controls_reference()
+
+
+func _build_tutorial_pages() -> void:
+	var page_0: Array[String] = [
+		"Witaj w prototypie turowego systemu walki!",
+		"",
+		"Twoim celem jest pokonanie wszystkich wrogich jednostek na heksagonalnej planszy.",
+		"Przed bitwą wybierasz frakcję i rozstawiasz swoje jednostki.",
+		"Po kliknięciu START rozpoczyna się walka oparta na inicjatywie.",
+	]
+	var page_1: Array[String] = [
+		"Rozstaw swoje jednostki w trzech skrajnych kolumnach po swojej stronie planszy.",
+		"",
+		"Wybierz jednostkę LPM, a następnie kliknij podświetlone pole, aby się przemieścić.",
+		"PPM wykonuje podstawowy atak w zasięgu aktywnej jednostki.",
+		"Każda jednostka ma ograniczone Punkty Akcji (PA) i Zasięg Ruchu na turę.",
+	]
+	var page_2: Array[String] = [
+		"Karta aktywnej jednostki wyświetla się w lewym panelu — znajdziesz tam statystyki, buffy i debuffy.",
+		"",
+		"Dolny panel pokazuje umiejętności specjalne jednostki.",
+		"Prawy panel to generał, jego umiejętności oraz log bitwy.",
+		"Górna belka to kolejka inicjatywy — kolejność aktywacji jednostek.",
+	]
+	var page_3: Array[String] = [
+		"Teren ma znaczenie:",
+		"• Woda — wejście zużywa cały pozostały ruch i pomija turę.",
+		"• Kamienie — blokują ruch i linię strzału.",
+		"• Krzaki — jednostka w krzaku jest niewidzialna dla wrogów poza sąsiednim krzakiem.",
+		"",
+		"Statusy i odporności jednostek wpływają na obrażenia oraz zachowanie w walce.",
+	]
+	var page_4: Array[String] = [
+		"Generał może raz na bitwę użyć jednej z dwóch globalnych umiejętności.",
+		"",
+		"Kliknij ZAKOŃCZ TURĘ, gdy skończysz działać aktywną jednostką.",
+		"Bitwę wygrywa strona, która jako pierwsza zniszczy wszystkie wrogie jednostki.",
+		"",
+		"Naciśnij Tab w dowolnym momencie, aby otworzyć pełną pomoc.",
+	]
+	var pages: Array = [page_0, page_1, page_2, page_3, page_4]
+
+	var page_index := clampi(tutorial_page, 0, pages.size() - 1)
+	var raw_page: Array = pages[page_index]
+	var page_lines: Array[String] = []
+	page_lines.assign(raw_page)
+
+	for line in page_lines:
+		var label := Label.new()
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.text = line
+		label.add_theme_font_size_override("font_size", 15)
+		help_popup_content.add_child(label)
+
+	help_popup_page_label.text = "STRONA %d / %d" % [page_index + 1, pages.size()]
+	help_popup_prev_button.disabled = page_index == 0
+	help_popup_next_button.disabled = page_index == pages.size() - 1
+	help_popup_action_button.text = "ROZPOCZNIJ" if page_index == pages.size() - 1 else "DALEJ"
+
+
+func _build_controls_reference() -> void:
+	var controls_section := _make_help_section("STEROWANIE", [
+		"LPM — wybierz jednostkę, wskaż pole ruchu lub cel umiejętności.",
+		"PPM — wykonaj podstawowy atak aktywną jednostką.",
+		"Tab — pokaż lub ukryj tę pomoc.",
+		"START — rozpocznij bitwę po rozstawieniu jednostek.",
+		"RESET — wróć do ekranu wyboru frakcji.",
+		"ZAKOŃCZ TURĘ — kończy turę aktywnej jednostki i przekazuje inicjatywę dalej.",
+		"Umiejętności generała — dwa przyciski w prawym panelu, używalne raz na bitwę.",
+	])
+	help_popup_content.add_child(controls_section)
+
+	var gameplay_section := _make_help_section("ROZGRYWKA", [
+		"Przygotowanie — wybierz frakcję gracza i przeciwnika, rozstaw jednostki w trzech skrajnych kolumnach.",
+		"Kolejka inicjatywy — górna belka pokazuje kolejność aktywacji w rundzie.",
+		"Tura jednostki — każda jednostka ma Punkty Akcji (PA) i Zasięg Ruchu.",
+		"Ruch — kliknij podświetlone pole; koszt zależy od terenu.",
+		"Atak — PPM lub umiejętność; obrażenia uwzględniają DEF celu i aktywne statusy.",
+		"Umiejętności — do 3 aktywnych umiejętności z cooldownem w turach.",
+		"Statusy — buffy/debuffy widoczne w lewym panelu; niektóre jednostki mają odporności.",
+		"Teren — woda pomija turę, kamienie blokują ruch i linię strzału, krzaki ukrywają jednostkę.",
+		"Generał — globalne umiejętności wpływające na przebieg bitwy.",
+		"Zwycięstwo — zniszcz wszystkie wrogie jednostki.",
+	])
+	help_popup_content.add_child(gameplay_section)
+
+	var panels_section := _make_help_section("PANELE INTERFEJSU", [
+		"Lewy panel — portret, nazwa, statystyki oraz aktywne buffy i debuffy wybranej jednostki.",
+		"Prawy panel — generał, jego umiejętności, log bitwy i przycisk zakończenia tury.",
+		"Dolny panel — karty umiejętności aktualnie aktywnej jednostki.",
+		"Górna belka — kolejka inicjatywy z portretami jednostek.",
+	])
+	help_popup_content.add_child(panels_section)
+
+	help_popup_page_label.text = "POMOC"
+	help_popup_prev_button.disabled = true
+	help_popup_next_button.disabled = true
+	help_popup_action_button.text = "ZAMKNIJ"
+
+
+func _on_help_prev_pressed() -> void:
+	if help_mode_tutorial and tutorial_page > 0:
+		tutorial_page -= 1
+		_help_rebuild_content()
+
+
+func _on_help_next_pressed() -> void:
+	if help_mode_tutorial:
+		tutorial_page += 1
+		_help_rebuild_content()
+
+
+func _on_help_action_pressed() -> void:
+	if help_mode_tutorial:
+		if tutorial_page < 4:
+			tutorial_page += 1
+			_help_rebuild_content()
+			return
+	_on_tutorial_ok_pressed()
 
 
 func _on_tutorial_ok_pressed() -> void:
@@ -2800,7 +3022,12 @@ func _on_victory_finish_pressed() -> void:
 func _toggle_help_popup() -> void:
 	if help_popup == null or hud == null or not hud.visible:
 		return
-	help_popup.visible = not help_popup.visible
+	var will_show := not help_popup.visible
+	help_popup.visible = will_show
+	if will_show:
+		help_mode_tutorial = false
+		tutorial_page = 0
+		_help_rebuild_content()
 
 
 func _disable_hud_mouse(node: Node) -> void:
