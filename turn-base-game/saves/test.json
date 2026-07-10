@@ -24,7 +24,7 @@
 		"[color=#59a6f2]Rycerze[/color] porusza sie.",
 		"[color=#59a6f2]Rycerze[/color] porusza sie.",
 		"[color=#59a6f2]Rycerze[/color] porusza sie.",
-		"[color=#59a6f2]Rycerze[/color] chroni [color=#59a6f2]Lucznicy[/color] Zelazna Kurtyna."
+		"[color=#59a6f2]Rycerze[/color] wchodzi w Woda i traci reszte ruchu."
 	],
 	"general_skill_used": false,
 	"obstacles": [
@@ -144,7 +144,7 @@
 	"turn_queue_index": 6,
 	"units": [
 		{
-			"action_points": 0,
+			"action_points": 1.0,
 			"active_effects": [],
 			"attack_range": 1,
 			"base_action_points": 1.0,
@@ -163,7 +163,7 @@
 			"def": 8,
 			"dmg": 7,
 			"grid_x": 4,
-			"grid_y": 4,
+			"grid_y": 2,
 			"hp": 22,
 			"id": 1,
 			"is_hidden": false,
@@ -173,14 +173,12 @@
 			"move_range": 3,
 			"name": "Rycerze",
 			"portrait": "res://assets/characters/humans/ChatGPT Image 6 lip 2026, 12_21_05.png",
-			"remaining_move": 0.0,
+			"remaining_move": 0,
 			"resistance": "Brak",
 			"role": "Ludzka kawaleria pancerna",
 			"short_name": "RYC",
 			"side": "player",
-			"skill_cooldowns": {
-				"zelazna_kurtyna": 2
-			},
+			"skill_cooldowns": {},
 			"skill_ids": [
 				"potezne_uderzenie",
 				"zelazna_kurtyna",
@@ -235,16 +233,7 @@
 		},
 		{
 			"action_points": 1.0,
-			"active_effects": [
-				{
-					"category": "buff",
-					"guarded_by_id": 1,
-					"id": "zelazna_kurtyna",
-					"name": "Zelazna Kurtyna",
-					"remaining_turns": 2,
-					"stat_changes": []
-				}
-			],
+			"active_effects": [],
 			"attack_range": 4,
 			"base_action_points": 1.0,
 			"base_attack_range": 4.0,
@@ -254,7 +243,7 @@
 			"base_hp": 14.0,
 			"base_move_range": 4.0,
 			"base_speed": 8.0,
-			"buffs": "Zelazna Kurtyna",
+			"buffs": "Brak",
 			"count": 12,
 			"current_hp": 14,
 			"current_total_hp": 168,

@@ -51,10 +51,9 @@ func set_faction(faction: String) -> void:
 
 
 func randomize_faction() -> void:
-	var faction_ids: Array[String] = UnitTypeLibraryScript.get_faction_ids()
-	if faction_ids.is_empty():
+	if _faction_options.is_empty():
 		return
-	var faction: String = faction_ids[randi() % faction_ids.size()]
+	var faction: String = _faction_options[randi() % _faction_options.size()]
 	_set_faction(faction)
 
 
