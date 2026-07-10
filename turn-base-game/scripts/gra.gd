@@ -7,9 +7,6 @@ const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
 const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "krzok"]
 const MAX_EVENT_LOG_ENTRIES := 60
-const CARD_SELECTED_FONT_COLOR := Color(0.99, 0.95, 0.84, 1.0)
-const TURN_QUEUE_CARD_SIZE := Vector2(128.0, 56.0)
-const TURN_QUEUE_PORTRAIT_SIZE := Vector2(42.0, 50.0)
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const LOG_COLOR_YELLOW := Color(0.95, 0.82, 0.25, 1.0)
 const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
@@ -17,6 +14,9 @@ const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
 const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 const TEAM_SETUP_SCENE: PackedScene = preload("res://scenes/team_setup.tscn")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
+const BattleSetupPositionsScript = preload("res://scripts/battle_setup_positions.gd")
+const TurnQueueCardScript = preload("res://scripts/turn_queue_card.gd")
+const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 
 var OBSTACLE_PORTRAITS: Dictionary = {
 	"woda": preload("res://assets/mapTiles/water.png"),
@@ -81,12 +81,15 @@ var setup_mode := true
 var setup_drag_unit_id := -1
 var last_battle_config_source := ""
 var setup_controls: HBoxContainer
-var start_battle_button: Button
+var save_setup_button: Button
 var reset_battle_button: Button
 var reload_json_button: Button
+var save_setup_dialog: FileDialog
 var current_player_faction := ""
 var current_enemy_faction := ""
 var help_popup: PanelContainer
+var victory_overlay: Control
+var victory_title_label: Label
 var tutorial_acknowledged := false
 var displayed_path_cost := -1
 var selected_obstacle_cell := Vector2i(-1, -1)
@@ -96,6 +99,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_disable_hud_mouse(hud)
 	_build_help_popup()
+	_build_victory_overlay()
 	_load_terrain_types()
 	_unit_type_library_warn()
 	_show_team_setup()
@@ -151,6 +155,7 @@ func _show_team_setup() -> void:
 	var setup: Control = TEAM_SETUP_SCENE.instantiate()
 	setup.name = "TeamSetup"
 	setup.setup_finished.connect(_on_team_setup_finished)
+	setup.setup_loaded.connect(_on_team_setup_loaded)
 	add_child(setup)
 	if hud != null:
 		hud.visible = false
@@ -159,6 +164,8 @@ func _show_team_setup() -> void:
 
 
 func _on_team_setup_finished(player_faction: String, enemy_faction: String) -> void:
+	if victory_overlay != null:
+		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
 	skill_library = UnitTypeLibraryScript.get_skill_library()
@@ -172,6 +179,24 @@ func _on_team_setup_finished(player_faction: String, enemy_faction: String) -> v
 		board.visible = true
 	_build_battle_config_from_factions(player_faction, enemy_faction)
 	_setup_battle_scene()
+
+
+func _on_team_setup_loaded(save_data: Dictionary) -> void:
+	if victory_overlay != null:
+		victory_overlay.visible = false
+	current_player_faction = str(save_data.get("player_faction", ""))
+	current_enemy_faction = str(save_data.get("enemy_faction", ""))
+	skill_library = UnitTypeLibraryScript.get_skill_library()
+	_load_general_skills()
+	var setup: Control = get_node_or_null("TeamSetup")
+	if setup != null:
+		setup.queue_free()
+	if hud != null:
+		hud.visible = true
+	if board != null:
+		board.visible = true
+	_setup_battle_scene()
+	_apply_save_data(save_data)
 
 
 func _load_general_skills() -> void:
@@ -243,47 +268,11 @@ func _build_battle_config_from_selection(player_types: Array[String], enemy_type
 
 
 func _compute_player_positions(count: int) -> Array[Vector2i]:
-	var center_y := GRID_ROWS / 2
-	var result: Array[Vector2i] = []
-	match count:
-		1:
-			result = [Vector2i(1, center_y)]
-		2:
-			result = [Vector2i(1, center_y - 1), Vector2i(1, center_y + 1)]
-		3:
-			result = [Vector2i(2, center_y), Vector2i(1, center_y - 1), Vector2i(1, center_y + 1)]
-		4:
-			result = [Vector2i(2, center_y - 1), Vector2i(2, center_y + 1), Vector2i(1, center_y - 2), Vector2i(1, center_y + 2)]
-		_:
-			for index in count:
-				result.append(Vector2i(1 + (index % 2), center_y + index - count / 2))
-	return _clamp_positions(result)
+	return BattleSetupPositionsScript.player(count, GRID_COLUMNS, GRID_ROWS)
 
 
 func _compute_enemy_positions(count: int) -> Array[Vector2i]:
-	var center_y := GRID_ROWS / 2
-	var right_x := GRID_COLUMNS - 2
-	var result: Array[Vector2i] = []
-	match count:
-		1:
-			result = [Vector2i(right_x, center_y)]
-		2:
-			result = [Vector2i(right_x, center_y - 1), Vector2i(right_x, center_y + 1)]
-		3:
-			result = [Vector2i(right_x - 1, center_y), Vector2i(right_x, center_y - 1), Vector2i(right_x, center_y + 1)]
-		4:
-			result = [Vector2i(right_x - 1, center_y - 1), Vector2i(right_x - 1, center_y + 1), Vector2i(right_x, center_y - 2), Vector2i(right_x, center_y + 2)]
-		_:
-			for index in count:
-				result.append(Vector2i(right_x - (index % 2), center_y + index - count / 2))
-	return _clamp_positions(result)
-
-
-func _clamp_positions(positions: Array[Vector2i]) -> Array[Vector2i]:
-	var result: Array[Vector2i] = []
-	for pos in positions:
-		result.append(Vector2i(clampi(pos.x, 0, GRID_COLUMNS - 1), clampi(pos.y, 0, GRID_ROWS - 1)))
-	return result
+	return BattleSetupPositionsScript.enemy(count, GRID_COLUMNS, GRID_ROWS)
 
 
 func _setup_battle_scene() -> void:
@@ -318,9 +307,9 @@ func _build_setup_controls() -> void:
 	left_content.add_child(setup_controls)
 	left_content.move_child(setup_controls, 3)
 
-	start_battle_button = _make_setup_button("START")
-	start_battle_button.pressed.connect(_on_start_battle_pressed)
-	setup_controls.add_child(start_battle_button)
+	save_setup_button = _make_setup_button("ZAPISZ")
+	save_setup_button.pressed.connect(_on_save_setup_pressed)
+	setup_controls.add_child(save_setup_button)
 
 	reset_battle_button = _make_setup_button("RESET")
 	reset_battle_button.pressed.connect(_on_reset_battle_pressed)
@@ -329,6 +318,13 @@ func _build_setup_controls() -> void:
 	reload_json_button = _make_setup_button("RELOAD JSON")
 	reload_json_button.pressed.connect(_on_reload_json_pressed)
 	setup_controls.add_child(reload_json_button)
+
+	save_setup_dialog = FileDialog.new()
+	save_setup_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	save_setup_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	save_setup_dialog.filters = PackedStringArray(["*.json ; Zapis armii"])
+	save_setup_dialog.file_selected.connect(_on_save_setup_file_selected)
+	add_child(save_setup_dialog)
 
 
 func _connect_signal_once(source_signal: Signal, callback: Callable) -> void:
@@ -367,7 +363,8 @@ func _enter_setup_mode() -> void:
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
 	selected_obstacle_cell = Vector2i(-1, -1)
-	_log_event(_color_log_text("Tryb przygotowania: ustaw jednostki i kliknij START.", LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("Tryb przygotowania: ustaw jednostki i kliknij START po prawej.", LOG_COLOR_YELLOW))
+	_update_action_buttons()
 	_sync_board()
 	if help_popup != null and hud.visible:
 		help_popup.visible = true
@@ -391,6 +388,113 @@ func _on_start_battle_pressed() -> void:
 	_log_event(_color_log_text("Bitwa rozpoczeta.", LOG_COLOR_YELLOW))
 	_rebuild_turn_queue()
 	_start_next_activation()
+
+
+func _on_save_setup_pressed() -> void:
+	save_setup_dialog.current_file = "zapis_armii.json"
+	save_setup_dialog.popup_centered(Vector2i(900, 600))
+
+
+func _on_save_setup_file_selected(path: String) -> void:
+	var save_path := path if path.get_extension().to_lower() == "json" else "%s.json" % path
+	var file := FileAccess.open(save_path, FileAccess.WRITE)
+	if file == null:
+		_log_event(_color_log_text("Nie udalo sie zapisac ustawienia armii.", LOG_COLOR_DAMAGE), false)
+		return
+	file.store_string(JSON.stringify(_make_save_data(), "\t"))
+	_log_event(_color_log_text("Zapisano stan gry.", LOG_COLOR_YELLOW), false)
+
+
+func _make_save_data() -> Dictionary:
+	return {
+		"player_faction": current_player_faction,
+		"enemy_faction": current_enemy_faction,
+		"setup_mode": setup_mode,
+		"units": units.duplicate(true),
+		"obstacles": obstacles.duplicate(true),
+		"terrain_effects": terrain_effects.duplicate(true),
+		"selected_unit_id": selected_unit_id,
+		"active_unit_id": active_unit_id,
+		"current_turn": current_turn,
+		"active_turn_has_log": active_turn_has_log,
+		"event_log": event_log.duplicate(),
+		"round_number": round_number,
+		"turn_queue": turn_queue.duplicate(),
+		"turn_queue_index": turn_queue_index,
+		"pending_skill_id": pending_skill_id,
+		"general_skill_used": general_skill_used,
+	}
+
+
+func _apply_save_data(save_data: Dictionary) -> void:
+	setup_mode = bool(save_data.get("setup_mode", true))
+	_update_setup_hint_visibility()
+	units = []
+	var saved_units: Variant = save_data.get("units", [])
+	if typeof(saved_units) != TYPE_ARRAY:
+		saved_units = []
+	for raw_unit in saved_units:
+		if typeof(raw_unit) == TYPE_DICTIONARY:
+			var unit: Dictionary = raw_unit.duplicate(true)
+			unit["id"] = int(unit.get("id", 0))
+			unit["grid_x"] = int(unit.get("grid_x", 0))
+			unit["grid_y"] = int(unit.get("grid_y", 0))
+			units.append(unit if unit.has("max_hp") else _prepare_unit(unit))
+	unit_configs = []
+	for unit in units:
+		unit_configs.append({
+			"id": int(unit.get("id", 0)),
+			"type_id": str(unit.get("type_id", "")),
+			"side": str(unit.get("side", "")),
+			"grid_x": int(unit.get("grid_x", 0)),
+			"grid_y": int(unit.get("grid_y", 0)),
+		})
+	obstacles = _typed_dictionary_array(save_data.get("obstacles", []))
+	terrain_effects = _typed_dictionary_array(save_data.get("terrain_effects", []))
+	selected_unit_id = int(save_data.get("selected_unit_id", -1))
+	active_unit_id = int(save_data.get("active_unit_id", -1))
+	current_turn = str(save_data.get("current_turn", ""))
+	active_turn_has_log = bool(save_data.get("active_turn_has_log", false))
+	event_log = _typed_string_array(save_data.get("event_log", []))
+	round_number = int(save_data.get("round_number", 1))
+	turn_queue = _typed_int_array(save_data.get("turn_queue", []))
+	turn_queue_index = int(save_data.get("turn_queue_index", -1))
+	pending_skill_id = str(save_data.get("pending_skill_id", ""))
+	general_skill_used = bool(save_data.get("general_skill_used", false))
+	is_animating = false
+	selected_obstacle_cell = Vector2i(-1, -1)
+	board.set_selected_unit(selected_unit_id)
+	board.reset_unit_positions(units)
+	_sync_board()
+	event_log_label.text = "\n".join(event_log)
+
+
+func _typed_dictionary_array(value: Variant) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if typeof(value) != TYPE_ARRAY:
+		return result
+	for item in value:
+		if typeof(item) == TYPE_DICTIONARY:
+			result.append(item.duplicate(true))
+	return result
+
+
+func _typed_string_array(value: Variant) -> Array[String]:
+	var result: Array[String] = []
+	if typeof(value) != TYPE_ARRAY:
+		return result
+	for item in value:
+		result.append(str(item))
+	return result
+
+
+func _typed_int_array(value: Variant) -> Array[int]:
+	var result: Array[int] = []
+	if typeof(value) != TYPE_ARRAY:
+		return result
+	for item in value:
+		result.append(int(item))
+	return result
 
 
 func _on_reset_battle_pressed() -> void:
@@ -689,10 +793,10 @@ func _build_skill_cards(unit_data: Dictionary) -> Array:
 
 
 func _can_interact_with_unit_skills(unit_data: Dictionary) -> bool:
-	if setup_mode or is_animating or not _is_player_turn():
+	if setup_mode or is_animating or not _is_manual_turn():
 		return false
 	var active_unit := _get_active_unit()
-	return not active_unit.is_empty() and active_unit.side == "player" and selected_unit_id == active_unit.id and unit_data.id == active_unit.id
+	return not active_unit.is_empty() and _is_manual_side(str(active_unit.side)) and selected_unit_id == active_unit.id and unit_data.id == active_unit.id
 
 
 func _clear_unit_details() -> void:
@@ -777,11 +881,11 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		_handle_setup_cell_pressed(cell)
 		return
 
-	if is_animating or not _is_player_turn():
+	if is_animating or not _is_manual_turn():
 		return
 
 	var active_unit := _get_active_unit()
-	if active_unit.is_empty() or active_unit.side != "player":
+	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)):
 		return
 
 	if pending_skill_id != "":
@@ -839,10 +943,10 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 
 
 func _on_cell_right_clicked(cell: Vector2i) -> void:
-	if setup_mode or is_animating or not _is_player_turn():
+	if setup_mode or is_animating or not _is_manual_turn():
 		return
 	var active_unit := _get_active_unit()
-	if active_unit.is_empty() or active_unit.side != "player" or selected_unit_id != active_unit.id:
+	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)) or selected_unit_id != active_unit.id:
 		return
 	var target := _find_unit_at_cell(cell)
 	if target.is_empty() or target.side == active_unit.side:
@@ -958,7 +1062,7 @@ func _enemy_take_turn() -> void:
 
 func _find_unit_by_id(unit_id: int) -> Dictionary:
 	for unit in units:
-		if unit.id == unit_id:
+		if int(unit.id) == unit_id:
 			return unit
 	return {}
 
@@ -1209,7 +1313,7 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 		_on_board_cell_hovered(board.get_hovered_cell())
 		return
 
-	if unit.side != "player":
+	if not _is_manual_side(str(unit.side)):
 		board.set_highlighted_cells([], [])
 		board.set_hovered_move_path([])
 		return
@@ -1247,7 +1351,7 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		return
 
 	var active_unit := _get_active_unit()
-	if active_unit.is_empty() or active_unit.side != "player":
+	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)):
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		_clear_move_cost_label()
@@ -1507,6 +1611,7 @@ func _cleanup_destroyed_unit(target: Dictionary) -> void:
 		turn_queue_index = turn_queue.size() - 1
 	if target.get("id", -1) == selected_unit_id:
 		selected_unit_id = -1
+	_check_victory()
 
 
 func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
@@ -2618,6 +2723,80 @@ func _on_tutorial_ok_pressed() -> void:
 	_update_setup_hint_visibility()
 
 
+func _build_victory_overlay() -> void:
+	victory_overlay = ColorRect.new()
+	victory_overlay.visible = false
+	victory_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	victory_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	victory_overlay.color = Color(0.02, 0.02, 0.04, 0.78)
+	hud.add_child(victory_overlay)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(460, 0)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -230
+	panel.offset_top = -120
+	panel.offset_right = 230
+	panel.offset_bottom = 120
+	victory_overlay.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 28)
+	margin.add_theme_constant_override("margin_top", 24)
+	margin.add_theme_constant_override("margin_right", 28)
+	margin.add_theme_constant_override("margin_bottom", 24)
+	panel.add_child(margin)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 18)
+	margin.add_child(column)
+
+	victory_title_label = Label.new()
+	victory_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	victory_title_label.add_theme_font_size_override("font_size", 30)
+	column.add_child(victory_title_label)
+
+	var finish_button := Button.new()
+	finish_button.text = "ZAKOŃCZ"
+	finish_button.custom_minimum_size = Vector2(220, 52)
+	finish_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	finish_button.add_theme_font_size_override("font_size", 22)
+	finish_button.pressed.connect(_on_victory_finish_pressed)
+	column.add_child(finish_button)
+
+
+func _show_victory_overlay(winner_side: String) -> void:
+	if victory_overlay == null:
+		return
+	var winner_name := "GRACZ" if winner_side == "player" else "PRZECIWNIK"
+	victory_title_label.text = "ZWYCIĘSTWO: %s" % winner_name
+	victory_overlay.visible = true
+
+
+func _on_victory_finish_pressed() -> void:
+	if victory_overlay != null:
+		victory_overlay.visible = false
+	setup_mode = true
+	current_player_faction = ""
+	current_enemy_faction = ""
+	selected_unit_id = -1
+	setup_drag_unit_id = -1
+	active_unit_id = -1
+	current_turn = ""
+	pending_skill_id = ""
+	selected_obstacle_cell = Vector2i(-1, -1)
+	is_animating = false
+	turn_queue_index = -1
+	turn_queue.clear()
+	event_log.clear()
+	unit_configs.clear()
+	units.clear()
+	obstacles.clear()
+	terrain_effects.clear()
+	_clear_selected_unit()
+	_show_team_setup()
+
+
 func _toggle_help_popup() -> void:
 	if help_popup == null or hud == null or not hud.visible:
 		return
@@ -2835,15 +3014,19 @@ func _update_action_buttons() -> void:
 	if not selected_unit.is_empty():
 		unit_abilities_panel.set_skills(_build_skill_cards(selected_unit))
 	var active_unit: Dictionary = _get_active_unit()
-	end_turn_button.disabled = setup_mode or is_animating or not _is_player_turn() or active_unit.is_empty() or active_unit.side != "player"
+	end_turn_button.text = "START" if setup_mode else "ZAKOŃCZ TURĘ"
+	end_turn_button.disabled = is_animating or (not setup_mode and (not _is_manual_turn() or active_unit.is_empty() or not _is_manual_side(str(active_unit.side))))
 	_refresh_general_ability_buttons()
 
 
 func _on_end_turn_button_pressed() -> void:
-	if setup_mode or is_animating or not _is_player_turn():
+	if setup_mode:
+		_on_start_battle_pressed()
+		return
+	if setup_mode or is_animating or not _is_manual_turn():
 		return
 	var active_unit: Dictionary = _get_active_unit()
-	if active_unit.is_empty() or active_unit.side != "player":
+	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)):
 		return
 	_end_current_activation()
 
@@ -2892,79 +3075,16 @@ func _refresh_turn_queue() -> void:
 
 
 func _create_turn_queue_card(unit: Dictionary) -> Button:
-	var is_selected: bool = int(unit.id) == selected_unit_id
-	var is_active: bool = int(unit.id) == active_unit_id
-
-	var button := Button.new()
-	button.text = ""
-	button.custom_minimum_size = TURN_QUEUE_CARD_SIZE
-	button.clip_contents = true
-	button.disabled = is_animating
-	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_stylebox_override("normal", _make_turn_queue_card_style(unit, is_selected, false, is_active))
-	button.add_theme_stylebox_override("hover", _make_turn_queue_card_style(unit, is_selected, true, is_active))
-	button.add_theme_stylebox_override("pressed", _make_turn_queue_card_style(unit, true, true, is_active))
-	button.add_theme_stylebox_override("disabled", _make_turn_queue_card_style(unit, is_selected, false, is_active))
-	button.pressed.connect(_on_turn_queue_pressed.bind(unit.id))
-	button.gui_input.connect(_on_turn_queue_gui_input.bind(unit.id))
-
-	var border_color: Color = _get_turn_queue_border_color(unit, is_selected, is_active)
-	var border_width: int = _get_turn_queue_border_width(is_selected, is_active)
-
-	var row := HBoxContainer.new()
-	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	row.add_theme_constant_override("separation", 0)
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	button.add_child(row)
-
-	var portrait_frame := PanelContainer.new()
-	portrait_frame.custom_minimum_size = TURN_QUEUE_PORTRAIT_SIZE
-	portrait_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	portrait_frame.add_theme_stylebox_override("panel", _make_turn_queue_portrait_frame_style(unit))
-	row.add_child(portrait_frame)
-
-	var portrait := TextureRect.new()
-	portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var portrait_tex: Texture2D = _load_unit_portrait(unit)
-	portrait.texture = portrait_tex if portrait_tex != null else TURN_QUEUE_PLACEHOLDER_PORTRAIT
-	portrait_frame.add_child(portrait)
-
-	var divider := ColorRect.new()
-	divider.custom_minimum_size = Vector2(border_width, 0)
-	divider.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	divider.color = border_color
-	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(divider)
-
-	var text_wrap := MarginContainer.new()
-	text_wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	text_wrap.add_theme_constant_override("margin_left", 6)
-	text_wrap.add_theme_constant_override("margin_right", 2)
-	text_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(text_wrap)
-
-	var name_label := Label.new()
-	name_label.text = str(unit.name)
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	name_label.max_lines_visible = 2
-	name_label.clip_text = true
-	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	name_label.add_theme_font_size_override("font_size", 13)
-	name_label.add_theme_color_override("font_color", CARD_SELECTED_FONT_COLOR if is_selected else Color(0.95, 0.93, 0.88, 1.0))
-	text_wrap.add_child(name_label)
-
-	return button
+	return TurnQueueCardScript.create(
+		unit,
+		selected_unit_id,
+		active_unit_id,
+		is_animating,
+		_load_unit_portrait(unit),
+		TURN_QUEUE_PLACEHOLDER_PORTRAIT,
+		_on_turn_queue_pressed,
+		_on_turn_queue_gui_input
+	)
 
 
 func _update_top_bar_width(card_count: int) -> void:
@@ -2972,8 +3092,8 @@ func _update_top_bar_width(card_count: int) -> void:
 		return
 	if card_count <= 0:
 		return
-	var card_width := int(TURN_QUEUE_CARD_SIZE.x)
-	var card_height := int(TURN_QUEUE_CARD_SIZE.y)
+	var card_width := int(TurnQueueCardScript.CARD_SIZE.x)
+	var card_height := int(TurnQueueCardScript.CARD_SIZE.y)
 	var card_spacing := turn_queue_list.get_theme_constant("separation")
 	var margin_left := 28
 	var margin_right := 28
@@ -3005,71 +3125,6 @@ func _on_turn_queue_pressed(unit_id: int) -> void:
 
 func _on_turn_queue_gui_input(_event: InputEvent, _unit_id: int) -> void:
 	return
-
-
-func _get_turn_queue_border_color(unit: Dictionary, selected: bool, active: bool) -> Color:
-	var player_border := Color(0.35, 0.65, 0.95, 0.95)
-	var enemy_border := Color(0.92, 0.35, 0.30, 0.95)
-	var selected_border := Color(0.90, 0.77, 0.34, 1.0)
-	if selected:
-		return selected_border
-	return player_border if unit.side == "player" else enemy_border
-
-
-func _get_turn_queue_border_width(selected: bool, active: bool) -> int:
-	return 1
-
-
-func _make_turn_queue_card_style(unit: Dictionary, selected: bool, hovered := false, active := false) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	var player_bg := Color(0.09, 0.16, 0.26, 0.96)
-	var enemy_bg := Color(0.24, 0.10, 0.10, 0.96)
-	var selected_bg := Color(0.23, 0.19, 0.08, 0.98)
-	var active_player_bg := Color(0.12, 0.20, 0.32, 0.98)
-	var active_enemy_bg := Color(0.30, 0.12, 0.12, 0.98)
-
-	if selected:
-		style.bg_color = selected_bg
-	elif active:
-		style.bg_color = active_player_bg if unit.side == "player" else active_enemy_bg
-	else:
-		style.bg_color = player_bg if unit.side == "player" else enemy_bg
-
-	style.border_color = _get_turn_queue_border_color(unit, selected, active)
-	if hovered and not selected:
-		style.bg_color = style.bg_color.lightened(0.08)
-		style.border_color = style.border_color.lightened(0.08)
-
-	var border_width: int = _get_turn_queue_border_width(selected, active)
-	style.border_width_left = border_width
-	style.border_width_top = border_width
-	style.border_width_right = border_width
-	style.border_width_bottom = border_width
-	style.shadow_size = 0
-	style.shadow_offset = Vector2.ZERO
-	style.shadow_color = Color(0.0, 0.0, 0.0, 0.0)
-	style.content_margin_left = 8.0
-	style.content_margin_top = 6.0
-	style.content_margin_right = 10.0
-	style.content_margin_bottom = 6.0
-	return style
-
-
-func _make_turn_queue_portrait_frame_style(unit: Dictionary) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	var player_tint := Color(0.06, 0.10, 0.16, 0.92)
-	var enemy_tint := Color(0.16, 0.06, 0.06, 0.92)
-	style.bg_color = player_tint if unit.side == "player" else enemy_tint
-	style.border_color = Color(0.0, 0.0, 0.0, 0.35)
-	style.border_width_left = 1
-	style.border_width_top = 1
-	style.border_width_right = 1
-	style.border_width_bottom = 1
-	style.content_margin_left = 2.0
-	style.content_margin_top = 2.0
-	style.content_margin_right = 2.0
-	style.content_margin_bottom = 2.0
-	return style
 
 
 func _build_skill_tooltip(unit: Dictionary, index: int) -> String:
@@ -3122,16 +3177,11 @@ func _get_skill_name(skill_id: String) -> String:
 
 
 func _hex_distance(a: Vector2i, b: Vector2i) -> int:
-	var ac: Vector3i = _oddr_to_cube(a)
-	var bc: Vector3i = _oddr_to_cube(b)
-	return int((abs(ac.x - bc.x) + abs(ac.y - bc.y) + abs(ac.z - bc.z)) / 2)
+	return HexUtilsScript.distance(a, b)
 
 
 func _oddr_to_cube(cell: Vector2i) -> Vector3i:
-	var x: int = cell.x - int((cell.y - (cell.y & 1)) / 2)
-	var z: int = cell.y
-	var y: int = -x - z
-	return Vector3i(x, y, z)
+	return HexUtilsScript.oddr_to_cube(cell)
 
 
 func _rebuild_turn_queue() -> void:
@@ -3151,17 +3201,7 @@ func _rebuild_turn_queue() -> void:
 
 
 func _start_next_activation() -> void:
-	if not _has_units_on_side("player") or not _has_units_on_side("enemy"):
-		active_unit_id = -1
-		current_turn = ""
-		selected_unit_id = -1
-		board.set_selected_unit(-1)
-		_update_selection_visibility()
-		board.set_highlighted_cells([], [])
-		board.set_hovered_move_path([])
-		_clear_unit_details()
-		_update_action_buttons()
-		_refresh_turn_queue()
+	if _check_victory():
 		return
 
 
@@ -3197,21 +3237,21 @@ func _start_unit_activation(unit: Dictionary) -> void:
 	unit.action_points = int(unit.get("base_action_points", unit.get("action_points", 1)))
 	pending_skill_id = ""
 	_process_turn_start(unit)
-	if unit.side == "player":
+	if _is_manual_side(str(unit.side)):
 		_refresh_general_ability_buttons()
 	_apply_terrain_effects_to_unit(unit, false)
 	if _find_unit_by_id(unit.id).is_empty():
 		_sync_board()
 		_start_next_activation()
 		return
-	if unit.side != "player" and not _can_unit_continue_turn(unit):
+	if not _is_manual_side(str(unit.side)) and not _can_unit_continue_turn(unit):
 		_sync_board()
 		_end_current_activation()
 		return
-	selected_unit_id = unit.id if unit.side == "player" else -1
+	selected_unit_id = unit.id if _is_manual_side(str(unit.side)) else -1
 	board.set_selected_unit(selected_unit_id)
 	_sync_board()
-	if unit.side == "enemy":
+	if unit.side == "enemy" and not _is_manual_side(str(unit.side)):
 		_enemy_take_turn()
 
 
@@ -3221,6 +3261,14 @@ func _get_active_unit() -> Dictionary:
 
 func _is_player_turn() -> bool:
 	return current_turn == "player"
+
+
+func _is_manual_turn() -> bool:
+	return _is_manual_side(current_turn)
+
+
+func _is_manual_side(side: String) -> bool:
+	return side == "player" or (side == "enemy" and current_player_faction == "testowa" and current_enemy_faction == "testowa")
 
 
 func _log_turn_separator() -> void:
@@ -3258,6 +3306,28 @@ func _has_units_on_side(side: String) -> bool:
 	return false
 
 
+func _check_victory() -> bool:
+	var has_player := _has_units_on_side("player")
+	var has_enemy := _has_units_on_side("enemy")
+	if has_player and has_enemy:
+		return false
+	var winner_side := "player" if has_player else "enemy"
+	active_unit_id = -1
+	current_turn = ""
+	selected_unit_id = -1
+	pending_skill_id = ""
+	is_animating = false
+	board.set_selected_unit(-1)
+	_update_selection_visibility()
+	board.set_highlighted_cells([], [])
+	board.set_hovered_move_path([])
+	_clear_unit_details()
+	_update_action_buttons()
+	_refresh_turn_queue()
+	_show_victory_overlay(winner_side)
+	return true
+
+
 func _get_visible_turn_queue() -> Array[int]:
 	var visible_queue: Array[int] = []
 	if turn_queue.is_empty():
@@ -3271,7 +3341,7 @@ func _get_visible_turn_queue() -> Array[int]:
 
 
 func _on_skill_button_pressed(index: int) -> void:
-	if not _is_player_turn() or is_animating:
+	if not _is_manual_turn() or is_animating:
 		return
 
 	var unit := _get_active_unit()

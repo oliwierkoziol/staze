@@ -1,6 +1,7 @@
 extends Control
 
 signal setup_finished(player_faction: String, enemy_faction: String)
+signal setup_loaded(save_data: Dictionary)
 
 const UnitSelectPanelScene: PackedScene = preload("res://scenes/unit_select_panel.tscn")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
@@ -10,6 +11,8 @@ const BATTLE_BACKGROUND: Texture2D = preload("res://assets/backgrounds/back.png"
 var _player_panel: UnitSelectPanelClass
 var _enemy_panel: UnitSelectPanelClass
 var _start_button: Button
+var _load_button: Button
+var _load_dialog: FileDialog
 
 
 func _ready() -> void:
@@ -47,7 +50,7 @@ func _build_ui() -> void:
 	add_child(main)
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 24)
+	column.add_theme_constant_override("separation", 16)
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -105,13 +108,33 @@ func _build_ui() -> void:
 	_player_panel.setup("player", faction_ids, default_faction)
 	_enemy_panel.setup("enemy", faction_ids, _random_faction())
 
+	var actions_row := HBoxContainer.new()
+	actions_row.add_theme_constant_override("separation", 16)
+	actions_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	column.add_child(actions_row)
+
+	_load_button = Button.new()
+	_load_button.text = "WCZYTAJ ZAPIS"
+	_load_button.custom_minimum_size = Vector2(220, 60)
+	_load_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_load_button.add_theme_font_size_override("font_size", 22)
+	_load_button.pressed.connect(_on_load_pressed)
+	actions_row.add_child(_load_button)
+
 	_start_button = Button.new()
 	_start_button.text = "START"
 	_start_button.custom_minimum_size = Vector2(220, 60)
 	_start_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_start_button.add_theme_font_size_override("font_size", 28)
 	_start_button.pressed.connect(_on_start_pressed)
-	column.add_child(_start_button)
+	actions_row.add_child(_start_button)
+
+	_load_dialog = FileDialog.new()
+	_load_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	_load_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_load_dialog.filters = PackedStringArray(["*.json ; Zapis armii"])
+	_load_dialog.file_selected.connect(_on_load_file_selected)
+	add_child(_load_dialog)
 
 
 func _random_faction() -> String:
@@ -134,3 +157,18 @@ func _on_randomize_requested(side: String) -> void:
 
 func _on_start_pressed() -> void:
 	setup_finished.emit(_player_panel.get_selected_faction(), _enemy_panel.get_selected_faction())
+
+
+func _on_load_pressed() -> void:
+	_load_dialog.popup_centered(Vector2i(900, 600))
+
+
+func _on_load_file_selected(path: String) -> void:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return
+	var data: Dictionary = parsed
+	setup_loaded.emit(data)

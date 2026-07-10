@@ -32,6 +32,7 @@ const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
 const PROJECTILE_PATH_ARROWS := "res://assets/arrows_projectile.png"
 const PROJECTILE_PATH_SPELL := "res://assets/spell_projectile.png"
 const PROJECTILE_PATH_DYNAMITE := "res://assets/dynamite.png"
+const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 var TRAP_TEXTURE: Texture2D = load("res://assets/trap-removebg-preview.png")
 
 var units: Array = []
@@ -65,11 +66,12 @@ func set_units(new_units: Array) -> void:
 	var valid_unit_ids: Dictionary = {}
 	for unit in new_units:
 		var copied_unit: Dictionary = unit.duplicate(true)
+		var unit_id := int(copied_unit.id)
 		units.append(copied_unit)
-		unit_textures[copied_unit.id] = _load_unit_portrait(copied_unit)
-		valid_unit_ids[copied_unit.id] = true
-		if not visual_positions.has(copied_unit.id):
-			visual_positions[copied_unit.id] = axial_to_pixel(copied_unit.grid_x, copied_unit.grid_y)
+		unit_textures[unit_id] = _load_unit_portrait(copied_unit)
+		valid_unit_ids[unit_id] = true
+		if not visual_positions.has(unit_id):
+			visual_positions[unit_id] = axial_to_pixel(copied_unit.grid_x, copied_unit.grid_y)
 	for unit_id in unit_attack_offsets.keys():
 		if not valid_unit_ids.has(unit_id):
 			unit_attack_offsets.erase(unit_id)
@@ -82,7 +84,7 @@ func set_units(new_units: Array) -> void:
 func reset_unit_positions(new_units: Array) -> void:
 	visual_positions.clear()
 	for unit in new_units:
-		visual_positions[unit.id] = axial_to_pixel(unit.grid_x, unit.grid_y)
+		visual_positions[int(unit.id)] = axial_to_pixel(unit.grid_x, unit.grid_y)
 	queue_redraw()
 
 
@@ -386,20 +388,21 @@ func draw_units() -> void:
 	var font: Font = GEORGIA_FONT
 	var font_size: int = 22
 	for unit in units:
+		var unit_id := int(unit.id)
 		var hidden := bool(unit.get("is_hidden", false))
 		var revealed := bool(unit.get("is_revealed", false))
 		if hidden and not revealed and not _should_draw_hidden_unit(unit):
 			continue
 		var alpha := REVEALED_HIDDEN_UNIT_ALPHA if hidden and revealed else HIDDEN_UNIT_ALPHA if hidden else 1.0
-		var center: Vector2 = visual_positions.get(unit.id, axial_to_pixel(unit.grid_x, unit.grid_y))
-		center += unit_attack_offsets.get(unit.id, Vector2.ZERO)
-		var portrait: Texture2D = unit_textures.get(unit.id, null)
+		var center: Vector2 = visual_positions.get(unit_id, axial_to_pixel(unit.grid_x, unit.grid_y))
+		center += unit_attack_offsets.get(unit_id, Vector2.ZERO)
+		var portrait: Texture2D = unit_textures.get(unit_id, null)
 		var sprite_size := Vector2(HEX_RADIUS * 1.9, HEX_RADIUS * 2.2)
 		var sprite_rect := Rect2(center - Vector2(sprite_size.x / 2.0, sprite_size.y * 0.68), sprite_size)
-		var damage_tint_alpha: float = float(unit_damage_tint_alpha.get(unit.id, 0.0))
+		var damage_tint_alpha: float = float(unit_damage_tint_alpha.get(unit_id, 0.0))
 
 		var marker_center := center + Vector2(0.0, HEX_RADIUS * 0.18)
-		if unit.id == selected_unit_id:
+		if unit_id == selected_unit_id:
 			var outline_radius := HEX_RADIUS * 0.55
 			draw_arc(marker_center, outline_radius, 0.0, TAU, 24, Color(1.0, 0.92, 0.45, 0.9 * alpha), 3.0)
 		else:
@@ -616,13 +619,8 @@ func axial_to_pixel(column: int, row: int) -> Vector2:
 
 
 func _hex_distance(a: Vector2i, b: Vector2i) -> int:
-	var ac: Vector3i = _oddr_to_cube(a)
-	var bc: Vector3i = _oddr_to_cube(b)
-	return int((abs(ac.x - bc.x) + abs(ac.y - bc.y) + abs(ac.z - bc.z)) / 2)
+	return HexUtilsScript.distance(a, b)
 
 
 func _oddr_to_cube(cell: Vector2i) -> Vector3i:
-	var x: int = cell.x - int((cell.y - (cell.y & 1)) / 2)
-	var z: int = cell.y
-	var y: int = -x - z
-	return Vector3i(x, y, z)
+	return HexUtilsScript.oddr_to_cube(cell)
