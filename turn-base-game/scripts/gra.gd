@@ -2,6 +2,7 @@ extends Control
 
 const BATTLE_CONFIG_PATH := "res://data/battle_config.json"
 const TERRAIN_TYPES_PATH := "res://data/terrain_types.json"
+const DEFAULT_BATTLE_BACKGROUND_PATH := "res://assets/backgrounds/back.png"
 const GRID_COLUMNS := 15
 const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
@@ -35,6 +36,7 @@ const OBSTACLE_DESCRIPTIONS: Dictionary = {
 }
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
+@onready var battle_background: TextureRect = $Background
 @onready var hud: CanvasLayer = $HUD
 @onready var left_panel: NinePatchRect = $HUD/Overlay/LeftPanel
 @onready var left_content: VBoxContainer = $HUD/Overlay/LeftPanel/LeftMargin/LeftContent
@@ -87,6 +89,8 @@ var reload_json_button: Button
 var save_setup_dialog: FileDialog
 var current_player_faction := ""
 var current_enemy_faction := ""
+var current_battle_background_path: String = DEFAULT_BATTLE_BACKGROUND_PATH
+var free_setup_mode := false
 var help_popup: PanelContainer
 var help_popup_content: VBoxContainer
 var help_popup_scroll: ScrollContainer
@@ -164,6 +168,7 @@ func _show_team_setup() -> void:
 	setup.name = "TeamSetup"
 	setup.setup_finished.connect(_on_team_setup_finished)
 	setup.setup_loaded.connect(_on_team_setup_loaded)
+	setup.custom_setup_finished.connect(_on_custom_setup_finished)
 	add_child(setup)
 	if hud != null:
 		hud.visible = false
@@ -176,6 +181,8 @@ func _on_team_setup_finished(player_faction: String, enemy_faction: String) -> v
 		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
+	free_setup_mode = false
+	_set_battle_background(DEFAULT_BATTLE_BACKGROUND_PATH)
 	skill_library = UnitTypeLibraryScript.get_skill_library()
 	_load_general_skills()
 	var setup: Control = get_node_or_null("TeamSetup")
@@ -194,6 +201,8 @@ func _on_team_setup_loaded(save_data: Dictionary) -> void:
 		victory_overlay.visible = false
 	current_player_faction = str(save_data.get("player_faction", ""))
 	current_enemy_faction = str(save_data.get("enemy_faction", ""))
+	free_setup_mode = bool(save_data.get("free_setup_mode", false))
+	_set_battle_background(str(save_data.get("background_path", DEFAULT_BATTLE_BACKGROUND_PATH)))
 	skill_library = UnitTypeLibraryScript.get_skill_library()
 	_load_general_skills()
 	var setup: Control = get_node_or_null("TeamSetup")
@@ -207,12 +216,39 @@ func _on_team_setup_loaded(save_data: Dictionary) -> void:
 	_apply_save_data(save_data)
 
 
+func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: String, enemy_faction: String, background_path: String) -> void:
+	if victory_overlay != null:
+		victory_overlay.visible = false
+	current_player_faction = player_faction
+	current_enemy_faction = enemy_faction
+	free_setup_mode = true
+	_set_battle_background(background_path if background_path != "" else DEFAULT_BATTLE_BACKGROUND_PATH)
+	skill_library = UnitTypeLibraryScript.get_skill_library()
+	_load_general_skills()
+	var setup: Control = get_node_or_null("TeamSetup")
+	if setup != null:
+		setup.queue_free()
+	if hud != null:
+		hud.visible = true
+	if board != null:
+		board.visible = true
+	_build_test_battle_config(custom_units)
+	_setup_battle_scene()
+
+
 func _load_general_skills() -> void:
 	general_skills = UnitTypeLibraryScript.get_general_skills()
 	general_skill_ids = []
 	for skill_id in general_skills.keys():
 		general_skill_ids.append(str(skill_id))
 	general_skill_used = false
+
+
+func _set_battle_background(path: String) -> void:
+	current_battle_background_path = path if path != "" else DEFAULT_BATTLE_BACKGROUND_PATH
+	var texture: Resource = load(current_battle_background_path)
+	if texture is Texture2D:
+		battle_background.texture = texture
 
 
 func _build_battle_config_from_factions(player_faction: String, enemy_faction: String) -> void:
@@ -244,6 +280,40 @@ func _build_battle_config_from_factions(player_faction: String, enemy_faction: S
 			"grid_y": pos.y,
 		})
 		next_id += 1
+
+
+func _build_test_battle_config(custom_units: Array[Dictionary]) -> void:
+	var player_count := 0
+	var enemy_count := 0
+	for unit in custom_units:
+		if str(unit.get("side", "")) == "player":
+			player_count += 1
+		elif str(unit.get("side", "")) == "enemy":
+			enemy_count += 1
+	var player_positions := _compute_player_positions(player_count)
+	var enemy_positions := _compute_enemy_positions(enemy_count)
+	var player_index := 0
+	var enemy_index := 0
+	unit_configs.clear()
+	for unit in custom_units:
+		var side := str(unit.get("side", ""))
+		var pos := Vector2i.ZERO
+		if side == "player":
+			pos = player_positions[player_index]
+			player_index += 1
+		elif side == "enemy":
+			pos = enemy_positions[enemy_index]
+			enemy_index += 1
+		else:
+			continue
+		unit_configs.append({
+			"id": int(unit.get("id", unit_configs.size() + 1)),
+			"type_id": str(unit.get("type_id", "")),
+			"side": side,
+			"count": int(unit.get("count", 1)),
+			"grid_x": pos.x,
+			"grid_y": pos.y,
+		})
 
 
 func _build_battle_config_from_selection(player_types: Array[String], enemy_types: Array[String]) -> void:
@@ -419,6 +489,8 @@ func _make_save_data() -> Dictionary:
 	return {
 		"player_faction": current_player_faction,
 		"enemy_faction": current_enemy_faction,
+		"background_path": current_battle_background_path,
+		"free_setup_mode": free_setup_mode,
 		"setup_mode": setup_mode,
 		"units": units.duplicate(true),
 		"obstacles": obstacles.duplicate(true),
@@ -515,6 +587,8 @@ func _on_reset_battle_pressed() -> void:
 	_update_setup_hint_visibility()
 	current_player_faction = ""
 	current_enemy_faction = ""
+	free_setup_mode = false
+	_set_battle_background(DEFAULT_BATTLE_BACKGROUND_PATH)
 	selected_unit_id = -1
 	setup_drag_unit_id = -1
 	active_unit_id = -1
@@ -1455,6 +1529,8 @@ func _can_place_setup_unit(unit: Dictionary, cell: Vector2i) -> bool:
 
 
 func _is_setup_cell_allowed_for_side(side: String, cell: Vector2i) -> bool:
+	if free_setup_mode:
+		return true
 	if side == "player":
 		return current_player_faction == "testowa" or cell.x < SETUP_COLUMNS
 	if side == "enemy":
@@ -3001,6 +3077,8 @@ func _on_victory_finish_pressed() -> void:
 	setup_mode = true
 	current_player_faction = ""
 	current_enemy_faction = ""
+	free_setup_mode = false
+	_set_battle_background(DEFAULT_BATTLE_BACKGROUND_PATH)
 	selected_unit_id = -1
 	setup_drag_unit_id = -1
 	active_unit_id = -1
@@ -3054,10 +3132,10 @@ func _validate_setup() -> void:
 				assert(skill_library.has(skill_id), "Brak skilla w bibliotece: %s" % skill_id)
 
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
-	if current_player_faction != "testowa":
+	if not free_setup_mode and current_player_faction != "testowa":
 		assert(_is_setup_cell_allowed_for_side("player", Vector2i(SETUP_COLUMNS - 1, 0)))
 		assert(not _is_setup_cell_allowed_for_side("player", Vector2i(SETUP_COLUMNS, 0)))
-	if current_enemy_faction != "testowa":
+	if not free_setup_mode and current_enemy_faction != "testowa":
 		assert(_is_setup_cell_allowed_for_side("enemy", Vector2i(GRID_COLUMNS - SETUP_COLUMNS, 0)))
 		assert(not _is_setup_cell_allowed_for_side("enemy", Vector2i(GRID_COLUMNS - SETUP_COLUMNS - 1, 0)))
 
@@ -3073,6 +3151,11 @@ func _validate_setup() -> void:
 
 	assert(_calculate_tick_damage({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
 	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 8}) == 4, "DEF ma redukowac obrazenia miekko, bez zbijania typowego ataku do minimum.")
+	for faction_id in UnitTypeLibraryScript.get_faction_ids():
+		for type_data in UnitTypeLibraryScript.get_faction_units(faction_id):
+			assert(int(type_data.action_points) == 1, "Jednostki prototypu powinny miec 1 AP: %s" % str(type_data.id))
+			assert(int(type_data.speed) <= 10 and int(type_data.move_range) <= 6 and int(type_data.attack_range) <= 5, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
+			assert(int(type_data.hp) <= 32 and int(type_data.dmg) <= 12 and int(type_data.def) <= 12 and int(type_data.count) <= 14, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna"), "Umiejetnosci bierne nie moga byc uzywane recznie.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}, "skill_ids": []}, "pulapka_na_niedzwiedzie"), "Jednostka nie moze uzywac umiejetnosci spoza skill_ids.")
 	var previous_units: Array = units.duplicate(true)
