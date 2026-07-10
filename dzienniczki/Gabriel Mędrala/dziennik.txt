@@ -47,4 +47,5 @@ Dzień 8 (10.07.2026)
 - dodanie tekstów pokazujących poprzednie wyniki w danym poziomie trudności
 - dodanie możliwości przegrania gry przez dotykanie przeciwników (wiadomo)
 - dodanie gry na githuba i możliwienie grania przez przeglądarkę
-- przegląd lektury przekazanej przez pracodawcę
+- przegląd lektury przekazanej przez pana Marcina
+- myślenie nad dalszymi planami
