@@ -221,7 +221,7 @@ func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: 
 		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
-	free_setup_mode = true
+	free_setup_mode = player_faction == "testowa" and enemy_faction == "testowa"
 	_set_battle_background(background_path if background_path != "" else DEFAULT_BATTLE_BACKGROUND_PATH)
 	skill_library = UnitTypeLibraryScript.get_skill_library()
 	_load_general_skills()
