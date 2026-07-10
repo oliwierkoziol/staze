@@ -9,6 +9,21 @@ const SETUP_COLUMNS := 3
 const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "krzok"]
 const MAX_EVENT_LOG_ENTRIES := 60
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
+const DEFAULT_GENERAL_PORTRAIT: Texture2D = preload("res://assets/ui/general1.png")
+const GENERAL_PORTRAITS: Dictionary = {
+	"elves": preload("res://assets/ui/general_elf_1.png"),
+	"orcs": preload("res://assets/ui/general_orc_1.png"),
+	"dwarves": preload("res://assets/ui/general_dwarf_1.png"),
+	"goblins": preload("res://assets/ui/general_goblin_1.png"),
+	"humans": preload("res://assets/ui/general_human_1.png"),
+}
+const GENERAL_NAMES: Dictionary = {
+	"elves": "Władca Sylvar",
+	"orcs": "Wódz Grak'thar",
+	"dwarves": "Wojewoda Bronwyn",
+	"goblins": "Król Skrawek",
+	"humans": "Kapitan Alaric",
+}
 const LOG_COLOR_YELLOW := Color(0.95, 0.82, 0.25, 1.0)
 const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
 const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
@@ -51,6 +66,7 @@ const OBSTACLE_DESCRIPTIONS: Dictionary = {
 @onready var unit_abilities_panel_frame: NinePatchRect = $HUD/Overlay/UnitAbilitiesPanel
 @onready var unit_abilities_panel: VBoxContainer = $HUD/Overlay/UnitAbilitiesPanel/UnitAbilitiesMargin/UnitAbilities
 @onready var actions_label: Label = get_node_or_null("HUD/Overlay/LeftPanel/LeftMargin/LeftContent/ActionsPanel/ActionsMargin/ActionsLabel")
+@onready var general_portrait: TextureRect = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralPortrait
 @onready var general_name_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText/GeneralName
 @onready var general_level_label: Label = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText/GeneralLevel
 @onready var general_ability_button_1: Button = $HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1
@@ -364,8 +380,7 @@ func _setup_battle_scene() -> void:
 	_connect_signal_once(end_turn_button.pressed, _on_end_turn_button_pressed)
 	_connect_signal_once(general_ability_button_1.pressed, _on_general_ability_1_pressed)
 	_connect_signal_once(general_ability_button_2.pressed, _on_general_ability_2_pressed)
-	general_name_label.text = "KAPITAN ALARIC"
-	general_level_label.text = "Poziom 5"
+	_refresh_general_display()
 	_refresh_general_ability_buttons()
 	_clear_unit_details()
 	event_log_label.bbcode_enabled = true
@@ -625,6 +640,7 @@ func _reload_selected_factions() -> void:
 		return
 	_build_battle_config_from_factions(current_player_faction, current_enemy_faction)
 	_debug_reload_snapshot("JSON", unit_configs)
+	_refresh_general_display()
 	_refresh_general_ability_buttons()
 
 
@@ -976,6 +992,10 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		return
 
 	if pending_skill_id != "":
+		var pending_skill: Dictionary = skill_library.get(pending_skill_id, {})
+		if str(pending_skill.get("effect_type", "")) == "charge":
+			_try_execute_charge_move(active_unit, cell)
+			return
 		_try_use_skill(active_unit, pending_skill_id, cell)
 		return
 
@@ -1039,6 +1059,11 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 	if target.is_empty() or target.side == active_unit.side:
 		return
 	if not _can_see_target(active_unit, target):
+		return
+	var charge_skill: Dictionary = _get_active_charge_skill(active_unit)
+	if not charge_skill.is_empty():
+		if _can_unit_attack(active_unit) and _can_charge_attack_target(active_unit, target, charge_skill):
+			await _perform_charge_attack(active_unit, target, charge_skill, false)
 		return
 	if _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
 		_perform_basic_attack(active_unit, target, false)
@@ -1323,8 +1348,10 @@ func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
 			continue
 		var target_type := str(skill.get("target_type", ""))
 		var target_cell := Vector2i(target.grid_x, target.grid_y)
-		if target_type == "self" and not _has_effect(enemy_unit, str(skill.get("id", ""))):
+		if target_type == "self" and str(skill.get("effect_type", "")) == "self_buff" and not _has_effect(enemy_unit, str(skill.get("id", ""))):
 			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
+			return true
+		if str(skill.get("effect_type", "")) == "charge" and _try_enemy_charge(enemy_unit, target, skill):
 			return true
 		if target_type == "enemy_unit" and _hex_distance(Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), target_cell) <= int(skill.get("range", 0)) and not _is_attack_blocked(enemy_unit, target_cell):
 			_execute_skill(enemy_unit, target, skill, target_cell)
@@ -1406,13 +1433,20 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 		return
 
 	var move_budget: int = int(unit.get("move_range", 0)) if unit.id != active_unit_id else _get_remaining_move(unit)
-	var move_cells: Array[Vector2i] = _get_reachable_cells(unit, move_budget)
+	var charge_skill: Dictionary = _get_active_charge_skill(unit)
+	var move_cells: Array[Vector2i] = []
 	var attack_cells: Array[Vector2i] = []
-	if unit.id == active_unit_id and pending_skill_id != "":
+	if not charge_skill.is_empty():
+		move_budget += _get_charge_stat_bonus(charge_skill, "move_range")
+		move_cells = _get_reachable_cells(unit, move_budget, charge_skill)
+		if _can_unit_attack(unit):
+			attack_cells = _get_attackable_cells(unit, charge_skill)
+	elif unit.id == active_unit_id and pending_skill_id != "":
 		attack_cells = _get_skill_target_cells(unit, pending_skill_id)
-		move_cells = []
-	elif unit.id == active_unit_id and pending_skill_id == "" and _can_unit_attack(unit):
-		attack_cells = _get_attackable_cells(unit)
+	else:
+		move_cells = _get_reachable_cells(unit, move_budget)
+		if unit.id == active_unit_id and pending_skill_id == "" and _can_unit_attack(unit):
+			attack_cells = _get_attackable_cells(unit)
 	var move_opacity_mult: float = 0.5 if unit.id != active_unit_id else 1.0
 	board.set_highlighted_cells(move_cells, attack_cells, move_opacity_mult)
 	_on_board_cell_hovered(board.get_hovered_cell())
@@ -1431,13 +1465,20 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		return
 
-	if is_animating or pending_skill_id != "":
+	if is_animating:
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		_clear_move_cost_label()
 		return
 
 	var active_unit := _get_active_unit()
+	var charge_skill: Dictionary = _get_active_charge_skill(active_unit)
+	if pending_skill_id != "" and charge_skill.is_empty():
+		board.set_hovered_move_path([])
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		_clear_move_cost_label()
+		return
+
 	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)):
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
@@ -1457,15 +1498,23 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		return
 
 	var hovered_unit: Dictionary = _find_unit_at_cell(cell)
-	if not hovered_unit.is_empty() and hovered_unit.side != active_unit.side and _can_see_target(active_unit, hovered_unit) and _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
-		board.set_hovered_move_path([])
-		board.set_hovered_attack_cell(cell)
-		_clear_move_cost_label()
-		return
+	if not hovered_unit.is_empty() and hovered_unit.side != active_unit.side and _can_see_target(active_unit, hovered_unit) and _can_unit_attack(active_unit):
+		if not charge_skill.is_empty() and _can_charge_attack_target(active_unit, hovered_unit, charge_skill):
+			board.set_hovered_move_path([])
+			board.set_hovered_attack_cell(cell)
+			_clear_move_cost_label()
+			return
+		if charge_skill.is_empty() and _is_in_attack_range(active_unit, cell):
+			board.set_hovered_move_path([])
+			board.set_hovered_attack_cell(cell)
+			_clear_move_cost_label()
+			return
 
-	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell)
+	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell, charge_skill)
 	var path_cost: int = _get_path_cost(path)
 	var remaining: int = _get_remaining_move(active_unit)
+	if not charge_skill.is_empty():
+		remaining += _get_charge_stat_bonus(charge_skill, "move_range")
 	if path.is_empty() or path_cost > remaining:
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
@@ -1477,7 +1526,76 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 	_show_move_cost_label(path_cost, remaining - path_cost)
 
 
-func _get_reachable_cells(unit: Dictionary, max_distance: int) -> Array[Vector2i]:
+func _get_active_charge_skill(unit: Dictionary) -> Dictionary:
+	if unit.is_empty() or unit.id != active_unit_id or pending_skill_id == "":
+		return {}
+	var skill: Dictionary = skill_library.get(pending_skill_id, {})
+	if str(skill.get("effect_type", "")) != "charge":
+		return {}
+	return skill
+
+
+func _get_charge_stat_bonus(skill: Dictionary, stat_name: String) -> int:
+	for change in skill.get("effect", {}).get("stat_changes", []):
+		if str(change.get("stat", "")) == stat_name and str(change.get("mode", "")) == "flat":
+			return int(change.get("value", 0))
+	return 0
+
+
+func _get_charge_damage_multiplier(skill: Dictionary) -> float:
+	for change in skill.get("effect", {}).get("stat_changes", []):
+		if str(change.get("stat", "")) == "dmg" and str(change.get("mode", "")) == "percent":
+			return 1.0 + float(change.get("value", 0)) / 100.0
+	return 1.0
+
+
+func _requires_forward_only(unit: Dictionary, charge_skill: Dictionary = {}) -> bool:
+	if not charge_skill.is_empty():
+		return true
+	for effect in unit.get("active_effects", []):
+		if bool(effect.get("forward_only", false)):
+			return true
+	return false
+
+
+func _get_forward_axis_delta(unit: Dictionary) -> int:
+	return 1 if str(unit.get("side", "")) == "player" else -1
+
+
+func _get_direct_forward_cell(from_cell: Vector2i, unit: Dictionary) -> Vector2i:
+	return from_cell + Vector2i(_get_forward_axis_delta(unit), 0)
+
+
+func _is_direct_forward_step(from_cell: Vector2i, to_cell: Vector2i, unit: Dictionary) -> bool:
+	return to_cell == _get_direct_forward_cell(from_cell, unit)
+
+
+func _is_forward_step(unit: Dictionary, from_cell: Vector2i, to_cell: Vector2i, charge_skill: Dictionary = {}) -> bool:
+	if not _requires_forward_only(unit, charge_skill):
+		return true
+	if not charge_skill.is_empty():
+		return _is_direct_forward_step(from_cell, to_cell, unit)
+	return (to_cell.x - from_cell.x) * _get_forward_axis_delta(unit) > 0
+
+
+func _is_forward_cell_from(attacker_cell: Vector2i, target_cell: Vector2i, unit: Dictionary) -> bool:
+	if attacker_cell == target_cell:
+		return false
+	if target_cell.y != attacker_cell.y:
+		return false
+	return (target_cell.x - attacker_cell.x) * _get_forward_axis_delta(unit) > 0
+
+
+func _is_forward_cell_for_unit(unit: Dictionary, cell: Vector2i, charge_skill: Dictionary = {}) -> bool:
+	if not _requires_forward_only(unit, charge_skill):
+		return true
+	var origin := Vector2i(int(unit.get("grid_x", 0)), int(unit.get("grid_y", 0)))
+	if cell == origin:
+		return true
+	return _is_forward_cell_from(origin, cell, unit)
+
+
+func _get_reachable_cells(unit: Dictionary, max_distance: int, charge_skill: Dictionary = {}) -> Array[Vector2i]:
 	var origin: Vector2i = Vector2i(unit.grid_x, unit.grid_y)
 	var blocked: Dictionary = _get_blocked_cells(unit.id)
 	var costs: Dictionary = {origin: 0}
@@ -1488,6 +1606,8 @@ func _get_reachable_cells(unit: Dictionary, max_distance: int) -> Array[Vector2i
 		var current: Vector2i = frontier.pop_front()
 		var current_cost: int = costs[current]
 		for neighbor in _get_neighbors(current):
+			if not _is_forward_step(unit, current, neighbor, charge_skill):
+				continue
 			if blocked.has(neighbor):
 				continue
 			var step_cost: int = _get_movement_cost(neighbor)
@@ -1538,7 +1658,7 @@ func _is_setup_cell_allowed_for_side(side: String, cell: Vector2i) -> bool:
 	return false
 
 
-func _get_attackable_cells(unit: Dictionary) -> Array[Vector2i]:
+func _get_attackable_cells(unit: Dictionary, charge_skill: Dictionary = {}) -> Array[Vector2i]:
 	var origin: Vector2i = Vector2i(unit.grid_x, unit.grid_y)
 	var attackable: Array[Vector2i] = []
 	for row in GRID_ROWS:
@@ -1547,9 +1667,12 @@ func _get_attackable_cells(unit: Dictionary) -> Array[Vector2i]:
 			if cell == origin:
 				continue
 			var target: Dictionary = _find_unit_at_cell(cell)
-			if not target.is_empty() and target.side != unit.side and not _can_see_target(unit, target):
+			if target.is_empty() or target.side == unit.side or not _can_see_target(unit, target):
 				continue
-			if _is_in_attack_range(unit, cell):
+			if not charge_skill.is_empty():
+				if _can_charge_attack_target(unit, target, charge_skill):
+					attackable.append(cell)
+			elif _is_in_attack_range(unit, cell):
 				attackable.append(cell)
 	return attackable
 
@@ -1579,10 +1702,72 @@ func _get_skill_target_cells(unit: Dictionary, skill_id: String) -> Array[Vector
 	return cells
 
 
-func _is_in_attack_range(unit: Dictionary, cell: Vector2i) -> bool:
-	if _hex_distance(Vector2i(int(unit.get("grid_x", 0)), int(unit.get("grid_y", 0))), cell) > int(unit.get("attack_range", 1)):
+func _is_in_attack_range(unit: Dictionary, cell: Vector2i, charge_skill: Dictionary = {}) -> bool:
+	if not _is_forward_cell_for_unit(unit, cell, charge_skill):
+		return false
+	var attack_range: int = int(unit.get("attack_range", 1)) + _get_charge_stat_bonus(charge_skill, "attack_range")
+	if _hex_distance(Vector2i(int(unit.get("grid_x", 0)), int(unit.get("grid_y", 0))), cell) > attack_range:
 		return false
 	return not _is_attack_blocked(unit, cell)
+
+
+func _is_attack_blocked_from(from_cell: Vector2i, target_cell: Vector2i) -> bool:
+	if from_cell == target_cell:
+		return false
+	for cell in _get_hex_line(from_cell, target_cell):
+		if cell == from_cell or cell == target_cell:
+			continue
+		if _is_cell_obstacle(cell):
+			return true
+	return false
+
+
+func _can_attack_from_cell_for_charge(unit: Dictionary, from_cell: Vector2i, target_cell: Vector2i, skill: Dictionary) -> bool:
+	if not _is_forward_cell_from(from_cell, target_cell, unit):
+		return false
+	var attack_range: int = int(unit.get("attack_range", 1)) + _get_charge_stat_bonus(skill, "attack_range")
+	if _hex_distance(from_cell, target_cell) > attack_range:
+		return false
+	return not _is_attack_blocked_from(from_cell, target_cell)
+
+
+func _find_charge_approach_destination(unit: Dictionary, target: Dictionary, skill: Dictionary) -> Vector2i:
+	var origin := Vector2i(unit.grid_x, unit.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	var move_budget: int = _get_remaining_move(unit) + _get_charge_stat_bonus(skill, "move_range")
+	var best_cell := Vector2i(-1, -1)
+	var best_score: int = 1000000
+	var candidates: Array[Vector2i] = [origin]
+	candidates.append_array(_get_reachable_cells(unit, move_budget, skill))
+	for cell in candidates:
+		if not _can_attack_from_cell_for_charge(unit, cell, target_cell, skill):
+			continue
+		var distance: int = _hex_distance(cell, target_cell)
+		var score: int = distance * 10
+		if distance == 1:
+			score = 0
+		if score < best_score:
+			best_score = score
+			best_cell = cell
+	return best_cell
+
+
+func _find_charge_approach_path(unit: Dictionary, target: Dictionary, skill: Dictionary) -> Array[Vector2i]:
+	var destination: Vector2i = _find_charge_approach_destination(unit, target, skill)
+	if destination == Vector2i(-1, -1):
+		return []
+	var origin := Vector2i(unit.grid_x, unit.grid_y)
+	if destination == origin:
+		return []
+	return _get_executable_move_path(_find_path(unit, origin, destination, skill))
+
+
+func _can_charge_attack_target(unit: Dictionary, target: Dictionary, skill: Dictionary) -> bool:
+	if target.is_empty() or target.side == unit.side:
+		return false
+	if not _can_see_target(unit, target):
+		return false
+	return _find_charge_approach_destination(unit, target, skill) != Vector2i(-1, -1)
 
 
 func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_after := true) -> void:
@@ -1606,6 +1791,148 @@ func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_af
 	_sync_board()
 	if end_turn_after:
 		_end_current_activation()
+
+
+func _commit_charge_skill(caster: Dictionary, skill: Dictionary) -> void:
+	caster.action_points = max(0, int(caster.get("action_points", 0)) - int(skill.get("ap_cost", 0)))
+	if not caster.has("skill_cooldowns"):
+		caster["skill_cooldowns"] = {}
+	caster.skill_cooldowns[str(skill.get("id", ""))] = int(skill.get("cooldown", 0))
+	if int(caster.get("id", -1)) == active_unit_id:
+		pending_skill_id = ""
+	_log_event("%s uzywa %s." % [_unit_name_log_text(caster), str(skill.get("name", skill.get("id", "")))])
+
+
+func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dictionary, end_turn_after := true, animate_move := true) -> void:
+	if not _can_charge_attack_target(attacker, target, skill):
+		return
+
+	var move_path: Array[Vector2i] = _find_charge_approach_path(attacker, target, skill)
+	if not move_path.is_empty():
+		var destination: Vector2i = move_path[move_path.size() - 1]
+		attacker.grid_x = destination.x
+		attacker.grid_y = destination.y
+		attacker.remaining_move = 0
+		if animate_move:
+			is_animating = true
+			_sync_board()
+			board.animate_unit_path(attacker.id, move_path)
+			await board.animation_finished
+			is_animating = false
+			_apply_terrain_effects_to_unit(attacker)
+			_stop_unit_on_terrain(attacker)
+			_try_trigger_agility(attacker)
+		else:
+			_sync_board()
+	else:
+		attacker.remaining_move = 0
+
+	var attacker_cell := Vector2i(attacker.grid_x, attacker.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	if not _is_forward_cell_from(attacker_cell, target_cell, attacker):
+		return
+
+	_commit_charge_skill(attacker, skill)
+	_reveal_if_in_bush(attacker)
+	var total_damage: int = _calculate_damage(attacker, target, _get_charge_damage_multiplier(skill))
+	var result: Dictionary = _apply_attack_damage(attacker, target, total_damage, _hex_distance(Vector2i(attacker.grid_x, attacker.grid_y), Vector2i(target.grid_x, target.grid_y)) == 1)
+	var hit_target: Dictionary = result.get("target", target)
+	var casualties: int = int(result.get("casualties", 0))
+	_log_event(
+		"%s szarzuje na %s za %s obrazen i zadaje %s strat." % [
+			_unit_name_log_text(attacker),
+			_unit_name_log_text(hit_target),
+			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
+			_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+		]
+	)
+	_try_apply_poison_master(attacker, hit_target)
+	_cleanup_destroyed_unit(hit_target)
+	_sync_board()
+	if end_turn_after:
+		_end_current_activation()
+
+
+func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
+	var skill: Dictionary = _get_active_charge_skill(unit)
+	if skill.is_empty():
+		return
+	if selected_unit_id != unit.id:
+		return
+
+	var clicked_unit: Dictionary = _find_unit_at_cell(cell)
+	if not clicked_unit.is_empty() and clicked_unit.side != unit.side and _can_unit_attack(unit) and _can_charge_attack_target(unit, clicked_unit, skill):
+		await _perform_charge_attack(unit, clicked_unit, skill, false)
+		return
+
+	var max_distance: int = _get_remaining_move(unit) + _get_charge_stat_bonus(skill, "move_range")
+	if max_distance <= 0:
+		return
+
+	var path := _find_path(unit, Vector2i(unit.grid_x, unit.grid_y), cell, skill)
+	var path_cost: int = _get_path_cost(path)
+	if path.is_empty():
+		if _is_cell_obstacle(cell):
+			_show_obstacle_details(cell)
+		return
+	if path_cost > max_distance:
+		return
+
+	var move_path: Array[Vector2i] = _get_executable_move_path(path)
+	is_animating = true
+	var destination: Vector2i = move_path[move_path.size() - 1]
+	unit.grid_x = destination.x
+	unit.grid_y = destination.y
+	unit.remaining_move = 0
+	_sync_board()
+	_show_move_cost_label(path_cost, 0)
+	board.animate_unit_path(unit.id, move_path)
+	await board.animation_finished
+	_clear_move_cost_label()
+	_commit_charge_skill(unit, skill)
+	_log_event("%s szarzuje do przodu." % _unit_name_log_text(unit))
+	_apply_terrain_effects_to_unit(unit)
+	_stop_unit_on_terrain(unit)
+	_try_trigger_agility(unit)
+	_sync_board()
+
+
+func _try_enemy_charge(enemy_unit: Dictionary, target: Dictionary, skill: Dictionary) -> bool:
+	if not _can_use_skill(enemy_unit, str(skill.get("id", ""))):
+		return false
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	if _can_unit_attack(enemy_unit) and _can_charge_attack_target(enemy_unit, target, skill):
+		_perform_charge_attack(enemy_unit, target, skill, false, false)
+		return true
+
+	var move_budget: int = _get_remaining_move(enemy_unit) + _get_charge_stat_bonus(skill, "move_range")
+	if move_budget <= 0:
+		return false
+
+	var origin := Vector2i(enemy_unit.grid_x, enemy_unit.grid_y)
+	var best_path: Array[Vector2i] = []
+	var best_score: int = 1000000
+	for cell in _get_reachable_cells(enemy_unit, move_budget, skill):
+		var candidate_path: Array[Vector2i] = _get_executable_move_path(_find_path(enemy_unit, origin, cell, skill))
+		if candidate_path.is_empty():
+			continue
+		var score: int = _hex_distance(cell, target_cell)
+		if score < best_score:
+			best_score = score
+			best_path = candidate_path
+	if best_path.is_empty():
+		return false
+
+	var destination: Vector2i = best_path[best_path.size() - 1]
+	enemy_unit.grid_x = destination.x
+	enemy_unit.grid_y = destination.y
+	enemy_unit.remaining_move = 0
+	_commit_charge_skill(enemy_unit, skill)
+	_log_event("%s szarzuje do przodu." % _unit_name_log_text(enemy_unit))
+	_apply_terrain_effects_to_unit(enemy_unit)
+	_stop_unit_on_terrain(enemy_unit)
+	_sync_board()
+	return true
 
 
 func _calculate_damage(attacker: Dictionary, target: Dictionary, damage_multiplier := 1.0) -> int:
@@ -2197,6 +2524,8 @@ func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void
 			existing["guarded_by_id"] = int(effect_data.get("guarded_by_id", -1))
 		if effect_data.has("block_next_attack"):
 			existing["block_next_attack"] = bool(effect_data.get("block_next_attack", false))
+		if effect_data.has("forward_only"):
+			existing["forward_only"] = bool(effect_data.get("forward_only", false))
 		_recalculate_unit_stats(unit)
 		_add_current_move_gain(unit, previous_move_range)
 		return
@@ -2348,7 +2677,7 @@ func _apply_stat_change(unit: Dictionary, change: Dictionary) -> void:
 	unit[stat_name] = next_value
 
 
-func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
+func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i, charge_skill: Dictionary = {}) -> Array[Vector2i]:
 	if start == goal:
 		return []
 
@@ -2367,6 +2696,8 @@ func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vect
 			break
 
 		for neighbor in _get_neighbors(current):
+			if not _is_forward_step(unit, current, neighbor, charge_skill):
+				continue
 			if blocked.has(neighbor):
 				continue
 			var step_cost: int = _get_movement_cost(neighbor)
@@ -3309,6 +3640,51 @@ func _validate_setup() -> void:
 		]
 	})
 	assert(int(bush_unit.move_range) == 3 and _get_remaining_move(bush_unit) == 3, "Buff ruchu musi od razu dodac ruch do tej tury.")
+	var charge_unit := bush_unit.duplicate(true)
+	charge_unit.id = 1001
+	charge_unit.grid_x = 2
+	charge_unit.grid_y = 5
+	charge_unit.remaining_move = 2
+	var previous_active_unit_id: int = active_unit_id
+	var previous_pending_skill_id: String = pending_skill_id
+	active_unit_id = int(charge_unit.id)
+	pending_skill_id = "szarza"
+	var charge_skill: Dictionary = skill_library.get("szarza", {})
+	var charge_move_budget: int = _get_remaining_move(charge_unit) + _get_charge_stat_bonus(charge_skill, "move_range")
+	for cell in _get_reachable_cells(charge_unit, charge_move_budget, charge_skill):
+		assert(cell.y == charge_unit.grid_y, "Szarza gracza moze ruszac tylko bezposrednio przed siebie.")
+		assert(cell.x > charge_unit.grid_x, "Szarza gracza moze ruszac tylko w prawo.")
+	assert(not _is_in_attack_range(charge_unit, Vector2i(1, 5), charge_skill), "Szarza gracza nie moze atakowac w lewo.")
+	var forward_enemy := {
+		"id": 1002,
+		"side": "enemy",
+		"grid_x": 5,
+		"grid_y": 5,
+		"is_hidden": false
+	}
+	var approach_path: Array[Vector2i] = _find_charge_approach_path(charge_unit, forward_enemy, charge_skill)
+	assert(not approach_path.is_empty(), "Szarza musi ruszac na wprost wroga przed atakiem.")
+	for cell in approach_path:
+		assert(cell.y == charge_unit.grid_y, "Szarza musi prowadzic prosto przed siebie.")
+		assert(cell.x > charge_unit.grid_x, "Szarza musi prowadzic tylko do przodu.")
+	assert(_can_charge_attack_target(charge_unit, forward_enemy, charge_skill), "Szarza musi pozwalac atakowac wroga przed soba.")
+	var diagonal_enemy := {
+		"id": 1003,
+		"side": "enemy",
+		"grid_x": 4,
+		"grid_y": 4,
+		"is_hidden": false
+	}
+	assert(not _can_charge_attack_target(charge_unit, diagonal_enemy, charge_skill), "Szarza nie moze atakowac wroga z boku.")
+	charge_unit.side = "enemy"
+	charge_unit.grid_x = 10
+	charge_unit.grid_y = 5
+	for cell in _get_reachable_cells(charge_unit, charge_move_budget, charge_skill):
+		assert(cell.y == charge_unit.grid_y, "Szarza wroga moze ruszac tylko bezposrednio przed siebie.")
+		assert(cell.x < charge_unit.grid_x, "Szarza wroga moze ruszac tylko w lewo.")
+	assert(not _is_in_attack_range(charge_unit, Vector2i(11, 5), charge_skill), "Szarza wroga nie moze atakowac w prawo.")
+	active_unit_id = previous_active_unit_id
+	pending_skill_id = previous_pending_skill_id
 	units = previous_units
 	obstacles = previous_obstacles
 	terrain_effects = previous_terrain_effects
@@ -3704,6 +4080,14 @@ func _use_general_skill_by_index(index: int) -> void:
 	_log_event("%s uzywa %s." % [general_name_label.text, str(skill.get("name", skill_id))])
 	_refresh_general_ability_buttons()
 	_sync_board()
+
+
+func _refresh_general_display() -> void:
+	var faction: String = current_player_faction
+	general_name_label.text = str(GENERAL_NAMES.get(faction, "Generał"))
+	general_level_label.text = "Poziom 5"
+	var portrait: Texture2D = GENERAL_PORTRAITS.get(faction, DEFAULT_GENERAL_PORTRAIT)
+	general_portrait.texture = portrait if portrait != null else DEFAULT_GENERAL_PORTRAIT
 
 
 func _refresh_general_ability_buttons() -> void:

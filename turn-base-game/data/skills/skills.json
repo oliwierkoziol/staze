@@ -250,18 +250,17 @@
 	"szarza": {
 	  "id": "szarza",
 	  "name": "Szarza",
-	  "description": "Jednostka rzuca się do przodu: +2 do zasięgu ruchu i +15% DMG na 1 turę.",
+	  "description": "Szarza do przodu: +1 zasieg ruchu i ataku, +50% DMG. Ruch i atak tylko bezposrednio przed soba; atak najpierw rusza na wprost wroga. Po ruchu tracisz caly pozostaly ruch.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 0,
 	  "target_type": "self",
-	  "effect_type": "self_buff",
+	  "effect_type": "charge",
 	  "effect": {
-		"category": "buff",
-		"remaining_turns": 1,
 		"stat_changes": [
-		  {"stat": "move_range", "mode": "flat", "value": 2},
-		  {"stat": "dmg", "mode": "percent", "value": 15}
+		  {"stat": "move_range", "mode": "flat", "value": 1},
+		  {"stat": "attack_range", "mode": "flat", "value": 1},
+		  {"stat": "dmg", "mode": "percent", "value": 50}
 		]
 	  }
 	},

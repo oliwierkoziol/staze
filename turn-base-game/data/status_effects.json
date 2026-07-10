@@ -115,7 +115,7 @@
 	"szarza": {
 	  "id": "szarza",
 	  "name": "Szarza",
-	  "description": "+2 do zasiegu ruchu i +15% obrazen przez 1 ture.",
+	  "description": "+1 zasieg ruchu i ataku, +50% obrazen. Ruch i atak tylko bezposrednio przed soba; atak najpierw rusza na wprost wroga. Po ruchu tracisz caly pozostaly ruch.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/speed.png",
 	  "color": "#F79E33"
