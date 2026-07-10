@@ -281,6 +281,28 @@
 		  {"stat": "def", "mode": "percent", "value": -20}
 		]
 	  }
+	},
+	"rzut_dynamitem": {
+	  "id": "rzut_dynamitem",
+	  "name": "Rzut Dynamitem",
+	  "description": "Rzuca dynamitem w wybrany hex. Zadaje 100% obrazen w centrum i 50% obrazen na 6 sasiednich hexach.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 4,
+	  "target_type": "cell",
+	  "effect_type": "dynamite_throw",
+	  "icon": "res://assets/dynamite.png"
+	},
+	"pulapka_goblina": {
+	  "id": "pulapka_goblina",
+	  "name": "Pulapka Goblina",
+	  "description": "Zaklada pulapke w zasiegu 3. Wejscie zadaje male obrazenia, unieruchamia na 2 tury i naklada Krwawienie.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 3,
+	  "target_type": "cell",
+	  "effect_type": "goblin_trap",
+	  "icon": "res://assets/trap-removebg-preview.png"
 	}
   }
 }
