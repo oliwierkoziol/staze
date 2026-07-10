@@ -14,12 +14,6 @@
 [ext_resource type="Texture2D" uid="uid://cymiq2f6b8k8c" path="res://assets/ui/general_ability1.png" id="12_general_ability1"]
 [ext_resource type="Theme" uid="uid://cna4ihybudjlx" path="res://theme/georgia_theme.tres" id="13_georgia_theme"]
 
-[sub_resource type="LabelSettings" id="LabelSettings_6otim"]
-font_size = 22
-font_color = Color(0.76862746, 0.61960787, 0.2901961, 1)
-outline_size = 3
-outline_color = Color(0.11256667, 0.09398364, 0.056831576, 1)
-
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_general_ability"]
 texture = ExtResource("4_panel")
 texture_margin_left = 8.0
@@ -55,6 +49,12 @@ texture_margin_right = 8.0
 texture_margin_bottom = 8.0
 axis_stretch_horizontal = 2
 axis_stretch_vertical = 2
+
+[sub_resource type="LabelSettings" id="LabelSettings_6otim"]
+font_size = 22
+font_color = Color(0.76862746, 0.61960787, 0.2901961, 1)
+outline_size = 3
+outline_color = Color(0.11256667, 0.09398364, 0.056831576, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
 content_margin_left = 10.0
@@ -111,7 +111,7 @@ expand_mode = 1
 stretch_mode = 6
 
 [node name="BattleLayer" type="Node2D" parent="." unique_id=1838734481]
-position = Vector2(460, 200)
+position = Vector2(433, 220)
 
 [node name="PlanszaWalki" type="Node2D" parent="BattleLayer" unique_id=1820381021]
 script = ExtResource("2_h3x7m")
@@ -236,7 +236,7 @@ anchor_bottom = 1.0
 offset_left = -364.0
 offset_top = 16.0
 offset_right = -16.0
-offset_bottom = -64.0
+offset_bottom = -54.0
 grow_horizontal = 0
 grow_vertical = 2
 texture = ExtResource("4_panel")
@@ -517,7 +517,7 @@ anchor_bottom = 1.0
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 364.0
-offset_bottom = -64.0
+offset_bottom = -54.0
 grow_vertical = 2
 texture = ExtResource("4_panel")
 patch_margin_left = 8
@@ -700,10 +700,10 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 364.0
-offset_top = -234.0
-offset_right = -364.0
-offset_bottom = -64.0
+offset_left = 368.0
+offset_top = -226.0
+offset_right = -368.0
+offset_bottom = -56.0
 grow_horizontal = 2
 grow_vertical = 0
 texture = ExtResource("4_panel")
