@@ -40,6 +40,7 @@ var unit_textures: Dictionary = {}
 var selected_unit_id := -1
 var highlighted_move_cells: Array[Vector2i] = []
 var highlighted_attack_cells: Array[Vector2i] = []
+var map_event_warning_cells: Array[Vector2i] = []
 var move_highlight_opacity_mult: float = 1.0
 var hovered_move_path: Array[Vector2i] = []
 var hovered_attack_cell := Vector2i(-1, -1)
@@ -154,6 +155,13 @@ func set_highlighted_cells(move_cells: Array, attack_cells: Array = [], move_opa
 	queue_redraw()
 
 
+func set_map_event_warning_cells(cells: Array) -> void:
+	map_event_warning_cells.clear()
+	for cell in cells:
+		map_event_warning_cells.append(cell)
+	queue_redraw()
+
+
 func set_hovered_move_path(path: Array) -> void:
 	hovered_move_path.clear()
 	for cell in path:
@@ -178,6 +186,7 @@ func _draw() -> void:
 		draw_hex_grid()
 	draw_obstacles()
 	draw_terrain_effects()
+	_draw_cell_highlights(map_event_warning_cells, Color(1.0, 0.25, 0.08, 0.32), Color(1.0, 0.55, 0.12, 0.95))
 	draw_highlighted_cells()
 	draw_units()
 	draw_projectiles()
