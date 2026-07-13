@@ -1546,6 +1546,9 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		if _is_area_damage_skill(pending_skill):
 			_handle_area_skill_hover(active_unit, pending_skill, cell)
 			return
+		if str(pending_skill.get("target_type", "")) == "enemy_unit":
+			_handle_enemy_unit_skill_hover(active_unit, pending_skill, cell)
+			return
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
@@ -1599,6 +1602,20 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 	_show_move_cost_label(path_cost, remaining - path_cost)
 
 
+func _handle_enemy_unit_skill_hover(active_unit: Dictionary, skill: Dictionary, cell: Vector2i) -> void:
+	board.set_hovered_move_path([])
+	board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
+	_clear_move_cost_label()
+	if cell.x == -1 or active_unit.is_empty():
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		return
+	var hovered_unit: Dictionary = _find_unit_at_cell(cell)
+	if hovered_unit.is_empty() or not _can_target_enemy_with_skill(active_unit, hovered_unit, skill):
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		return
+	board.set_hovered_attack_cell(cell)
+
+
 func _handle_hook_throw_hover(active_unit: Dictionary, skill: Dictionary, cell: Vector2i) -> void:
 	board.set_hovered_move_path([])
 	_clear_move_cost_label()
@@ -1633,7 +1650,7 @@ func _handle_area_skill_hover(active_unit: Dictionary, skill: Dictionary, cell: 
 	board.set_hovered_area_skill(cell, _get_area_cells(cell))
 
 
-func _can_hook_throw_target(caster: Dictionary, target: Dictionary, skill: Dictionary) -> bool:
+func _can_target_enemy_with_skill(caster: Dictionary, target: Dictionary, skill: Dictionary) -> bool:
 	if target.is_empty() or target.side == caster.side:
 		return false
 	if not _can_see_target(caster, target):
@@ -1644,7 +1661,13 @@ func _can_hook_throw_target(caster: Dictionary, target: Dictionary, skill: Dicti
 		return false
 	if _is_attack_blocked(caster, target_cell):
 		return false
-	return _get_pull_destination(caster, target) != Vector2i(-1, -1)
+	if str(skill.get("effect_type", "")) == "hook_throw":
+		return _get_pull_destination(caster, target) != Vector2i(-1, -1)
+	return true
+
+
+func _can_hook_throw_target(caster: Dictionary, target: Dictionary, skill: Dictionary) -> bool:
+	return _can_target_enemy_with_skill(caster, target, skill)
 
 
 func _get_active_charge_skill(unit: Dictionary) -> Dictionary:
@@ -2076,7 +2099,7 @@ func _apply_damage_to_unit(target: Dictionary, total_damage: int) -> int:
 	return max(0, previous_count - int(target.get("count", 0)))
 
 
-func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage: int, melee := false, play_animation := true) -> Dictionary:
+func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage: int, melee := false, play_animation := true, projectile_kind_override := "") -> Dictionary:
 	var hit_target: Dictionary = target
 	var damage := total_damage
 	if melee:
@@ -2086,7 +2109,8 @@ func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage
 			damage = max(1, int(ceil(float(damage) * 0.8)))
 			_log_event("%s zaslania %s Zelazna Kurtyna." % [_unit_name_log_text(guardian), _unit_name_log_text(target)])
 	if play_animation:
-		board.play_attack_animation(int(attacker.id), int(hit_target.id), _get_attack_projectile_kind(attacker))
+		var projectile_kind: String = projectile_kind_override if projectile_kind_override != "" else _get_attack_projectile_kind(attacker)
+		board.play_attack_animation(int(attacker.id), int(hit_target.id), projectile_kind)
 	if _consume_energy_barrier(hit_target):
 		_log_event("Bariera Energetyczna blokuje atak na %s." % _unit_name_log_text(hit_target))
 		return {"target": hit_target, "damage": 0, "casualties": 0}
@@ -2239,7 +2263,7 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 		"self_buff":
 			_execute_self_buff(caster, skill)
 		"focused_strike":
-			_execute_focused_strike(caster, target)
+			_execute_focused_strike(caster, target, skill)
 
 	_sync_board()
 
@@ -2545,9 +2569,10 @@ func _execute_self_buff(caster: Dictionary, skill: Dictionary) -> void:
 	_log_event("%s uzywa %s." % [_unit_name_log_text(caster), str(skill.get("name", skill.get("id", "")))])
 
 
-func _execute_focused_strike(caster: Dictionary, target: Dictionary) -> void:
+func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dictionary = {}) -> void:
 	var total_damage := _calculate_damage(caster, target)
-	var result := _apply_attack_damage(caster, target, total_damage)
+	var projectile_kind: String = str(skill.get("projectile_kind", ""))
+	var result := _apply_attack_damage(caster, target, total_damage, false, true, projectile_kind)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	_log_event(

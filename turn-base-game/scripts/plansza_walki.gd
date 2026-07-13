@@ -34,6 +34,7 @@ const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
 const PROJECTILE_PATH_ARROWS := "res://assets/arrows_projectile.png"
 const PROJECTILE_PATH_SPELL := "res://assets/spell_projectile.png"
 const PROJECTILE_PATH_DYNAMITE := "res://assets/dynamite.png"
+const PROJECTILE_PATH_THROWING_AXE := "res://assets/throwing_axe.png"
 const SHIELD_TEXTURE: Texture2D = preload("res://assets/ui/energy_shield.png")
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 var TRAP_TEXTURE: Texture2D = load("res://assets/trap-removebg-preview.png")
@@ -492,6 +493,8 @@ func _get_projectile_texture(projectile_kind: String) -> Texture2D:
 			path = PROJECTILE_PATH_ARROWS
 		"dynamite":
 			path = PROJECTILE_PATH_DYNAMITE
+		"throwing_axe":
+			path = PROJECTILE_PATH_THROWING_AXE
 		_:
 			return null
 	var resource: Resource = load(path)

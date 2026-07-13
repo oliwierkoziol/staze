@@ -41,7 +41,7 @@
 		"portrait": "res://assets/characters/humans/goblinWarrior.png",
 		"skill_ids": [
 		  "odepchniecie_tarcza",
-		  "skupiony_cios",
+		  "rzut_toporem",
           "tarcza"
 		]
 	  },

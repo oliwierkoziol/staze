@@ -150,6 +150,18 @@
 	  "target_type": "enemy_unit",
 	  "effect_type": "focused_strike"
 	},
+	"rzut_toporem": {
+	  "id": "rzut_toporem",
+	  "name": "Rzut Toporem",
+	  "description": "Rzuca toporem we wroga w zasiegu 4 hexow, zadajac standardowe obrazenia.",
+	  "ap_cost": 1,
+	  "cooldown": 2,
+	  "range": 4,
+	  "target_type": "enemy_unit",
+	  "effect_type": "focused_strike",
+	  "projectile_kind": "throwing_axe",
+	  "icon": "res://assets/throwing_axe.png"
+	},
 	"zatruta_strzala": {
 	  "id": "zatruta_strzala",
 	  "name": "Zatruta Strzala",
