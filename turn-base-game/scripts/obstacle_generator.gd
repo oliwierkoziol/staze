@@ -3,10 +3,11 @@ class_name ObstacleGenerator
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 
 
-static func generate(units: Array, obstacle_types: Array[String], columns: int, rows: int, setup_columns: int, winter_mode: bool = false) -> Array[Dictionary]:
+static func generate(units: Array, obstacle_types: Array[String], columns: int, rows: int, setup_columns: int, winter_mode: bool = false, max_detonators: int = 2) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var occupied: Dictionary = {}
 	var obstacle_types_by_cell: Dictionary = {}
+	var detonator_count: int = 0
 	for unit in units:
 		occupied[Vector2i(unit.grid_x, unit.grid_y)] = true
 
@@ -15,11 +16,15 @@ static func generate(units: Array, obstacle_types: Array[String], columns: int, 
 	var cluster_count: int = rng.randi_range(4, 7)
 	for cluster_index in range(cluster_count):
 		var obstacle_type: String = obstacle_types[rng.randi_range(0, obstacle_types.size() - 1)]
+		if obstacle_type == "detonator" and detonator_count >= max_detonators:
+			obstacle_type = "holy_tree" if rng.randi_range(0, 1) == 0 else "cart"
 		var cluster_size: int = rng.randi_range(1, 3) + (1 if cluster_index < 2 else 0)
 		var cluster: Array[Vector2i] = _generate_cluster(cluster_size, occupied, obstacle_types_by_cell, obstacle_type, rng, columns, rows, setup_columns)
 		for cell in cluster:
 			occupied[cell] = true
 			obstacle_types_by_cell[cell] = obstacle_type
+			if obstacle_type == "detonator":
+				detonator_count += 1
 			result.append({
 				"grid_x": cell.x,
 				"grid_y": cell.y,
@@ -45,6 +50,16 @@ static func _pick_variant(obstacle_type: String, rng: RandomNumberGenerator, win
 		return "water"
 	if obstacle_type == "ruchome_piaski":
 		return "quicksand"
+	if obstacle_type == "holy_tree":
+		return "holy_tree"
+	if obstacle_type == "cart":
+		return "cart"
+	if obstacle_type == "elf_statue":
+		return "elf_statue"
+	if obstacle_type == "hole":
+		return "hole"
+	if obstacle_type == "detonator":
+		return "detonator"
 	return ""
 
 

@@ -72,6 +72,72 @@
 	    "hides_unit": true,
 	    "stat_changes": []
 	  }
+	},
+	"holy_tree": {
+	  "id": "holy_tree",
+	  "name": "Swiete Drzewo",
+	  "description": "Jednostka w swietym drzewie jest niewidzialna dla wrogow poza sasiednim swietym drzewem lub wozem.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": {
+	    "id": "holy_tree",
+	    "name": "Swiete Drzewo",
+	  	"category": "buff",
+	  	"remaining_turns": 2,
+	  	"hides_unit": true,
+	  	"stat_changes": []
+	  }
+	},
+	"cart": {
+	  "id": "cart",
+	  "name": "Woz",
+	  "description": "Jednostka przy wozie moze sie schowac i jest niewidzialna dla wrogow poza sasiednim wozem.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": {
+	    "id": "cart",
+	    "name": "Woz",
+	  	"category": "buff",
+	  	"remaining_turns": 2,
+	  	"hides_unit": true,
+	  	"stat_changes": []
+	  }
+	},
+	"elf_statue": {
+	  "id": "elf_statue",
+	  "name": "Posag Elfow",
+	  "description": "Przez posag elfow nie da sie przejsc. Sasiadujaca jednostka otrzymuje +2 do obrazen.",
+	  "movement_cost": 999,
+	  "blocks_movement": true,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": null
+	},
+	"hole": {
+	  "id": "hole",
+	  "name": "Dziura",
+	  "description": "Jednostka ktora wpadnie do dziury ginie natychmiast.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": false,
+	  "entry_effect": {
+	    "id": "hole",
+	    "name": "Dziura",
+	  	"category": "debuff",
+	  	"remaining_turns": 1,
+	  	"instant_death": true,
+	  	"stat_changes": []
+	  }
+	},
+	"detonator": {
+	  "id": "detonator",
+	  "name": "Detonator",
+	  "description": "Jednorazowy detonator. Aktywowany z sasiedniego hexa naciskiem. Przywoluje spadajace kamienie na cztery losowe hexy.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": false,
+	  "entry_effect": null
 	}
   }
 }

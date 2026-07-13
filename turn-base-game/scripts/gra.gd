@@ -7,11 +7,12 @@ const GRID_COLUMNS := 15
 const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
 const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "krzok"]
+const FOREST_OBSTACLE_TYPES: Array[String] = ["holy_tree", "cart", "elf_statue", "hole", "detonator"]
 const WINTER_OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "zimowy_krzak"]
 const DESERT_OBSTACLE_TYPES: Array[String] = ["ruchome_piaski", "kamienie"]
 const MAX_EVENT_LOG_ENTRIES := 60
 const MAX_VISIBLE_QUEUE_CARDS := 8
-const MAX_EVENT_OBSTACLES: Dictionary = {"woda": 6, "kamienie": 4, "krzok": 6, "ruchome_piaski": 6}
+const MAX_EVENT_OBSTACLES: Dictionary = {"woda": 6, "kamienie": 4, "krzok": 6, "ruchome_piaski": 6, "holy_tree": 4, "cart": 3, "elf_statue": 3, "hole": 4, "detonator": 2}
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const MAP_EVENT_POOLS: Dictionary = {
 	"orcs_vs_elves_forest": ["gniew_korzeni", "przebudzenie_gaju", "lesne_opary", "magiczny_rozkwit"],
@@ -75,6 +76,11 @@ var OBSTACLE_PORTRAITS: Dictionary = {
 	"zimowy_krzak": load("res://assets/mapTiles/zimowykszok.png"),
 	"ruchome_piaski": load("res://assets/mapTiles/quicksand.png"),
 	"wydmy": load("res://assets/mapTiles/dune.png"),
+	"holy_tree": load("res://assets/holy_tree.png"),
+	"cart": load("res://assets/cart.png"),
+	"elf_statue": load("res://assets/elfStatue.png"),
+	"hole": load("res://assets/hole.png"),
+	"detonator": load("res://assets/detonator.png"),
 }
 const OBSTACLE_NAMES: Dictionary = {
 	"woda": "Woda",
@@ -83,6 +89,11 @@ const OBSTACLE_NAMES: Dictionary = {
 	"zimowy_krzak": "Zimowy Krzak",
 	"ruchome_piaski": "Ruchome Piaski",
 	"wydmy": "Wydmy",
+	"holy_tree": "Swiete Drzewo",
+	"cart": "Woz",
+	"elf_statue": "Posag Elfow",
+	"hole": "Dziura",
+	"detonator": "Detonator",
 }
 const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"woda": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
@@ -91,6 +102,11 @@ const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"zimowy_krzak": "Jednostka w zimowym krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
 	"ruchome_piaski": "Wejscie w ruchome piaski zuzywa caly pozostaly ruch w tej turze.",
 	"wydmy": "Strome wydmy blokuja ruch i linie strzalu.",
+	"holy_tree": "Jednostka w swietym drzewie jest niewidzialna dla wrogow poza sasiednim swietym drzewem lub wozem.",
+	"cart": "Jednostka przy wozie moze sie schowac i jest niewidzialna dla wrogow poza sasiednim wozem.",
+	"elf_statue": "Posag blokuje ruch i linie strzalu. Sasiadujaca jednostka otrzymuje +2 do obrazen.",
+	"hole": "Jednostka ktora wpadnie do dziury ginie natychmiast.",
+	"detonator": "Jednorazowy detonator. Aktywowany z sasiedniego hexa. Przywoluje spadajace kamienie na cztery losowe hexy.",
 }
 const OBSTACLE_WINTER_DESCRIPTIONS: Dictionary = {
 	"woda": "Lod jest kruchy. Wejscie zuzywa caly ruch i ma 10%% szans na zapadniecie sie zabijajace jednostke.",
@@ -172,6 +188,9 @@ var victory_title_label: Label
 var tutorial_acknowledged := false
 var displayed_path_cost := -1
 var selected_obstacle_cell := Vector2i(-1, -1)
+var screen_message_label: Label
+var screen_message_tween: Tween
+var detonator_activated := false
 
 
 func _ready() -> void:
@@ -179,6 +198,7 @@ func _ready() -> void:
 	_disable_hud_mouse(hud)
 	_build_help_popup()
 	_build_victory_overlay()
+	_build_screen_message_label()
 	_load_terrain_types()
 	_unit_type_library_warn()
 	_show_team_setup()
@@ -502,6 +522,9 @@ func _enter_setup_mode() -> void:
 	round_number = 1
 	next_map_event_id = ""
 	map_event_cells.clear()
+	detonator_activated = false
+	board.set_detonator_warning_cells([])
+	board.clear_falling_rock_cells()
 	_schedule_next_map_event(0)
 	turn_queue_index = -1
 	event_log.clear()
@@ -532,6 +555,9 @@ func _on_start_battle_pressed() -> void:
 	round_number = 1
 	turn_queue_index = -1
 	event_log.clear()
+	detonator_activated = false
+	board.set_detonator_warning_cells([])
+	board.clear_falling_rock_cells()
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
 	_log_event(_color_log_text("Bitwa rozpoczeta.", LOG_COLOR_YELLOW))
@@ -577,6 +603,7 @@ func _make_save_data() -> Dictionary:
 		"turn_queue_index": turn_queue_index,
 		"pending_skill_id": pending_skill_id,
 		"general_skill_used": general_skill_used,
+		"detonator_activated": detonator_activated,
 	}
 
 
@@ -624,6 +651,9 @@ func _apply_save_data(save_data: Dictionary) -> void:
 	general_skill_used = bool(save_data.get("general_skill_used", false))
 	is_animating = false
 	selected_obstacle_cell = Vector2i(-1, -1)
+	detonator_activated = bool(save_data.get("detonator_activated", false))
+	board.set_detonator_warning_cells([])
+	board.clear_falling_rock_cells()
 	board.set_selected_unit(selected_unit_id)
 	board.reset_unit_positions(units)
 	_sync_board()
@@ -1055,6 +1085,9 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 
 	var active_unit := _get_active_unit()
 	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)):
+		return
+
+	if _try_activate_detonator(active_unit, cell):
 		return
 
 	if pending_skill_id != "":
@@ -2672,10 +2705,14 @@ func _trigger_bear_trap(unit: Dictionary, trap: Dictionary) -> void:
 func _apply_terrain_entry_effect(unit: Dictionary) -> void:
 	var cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
 	var effect: Dictionary = _get_terrain_entry_effect(cell)
+	_apply_elf_statue_buff(unit)
 	if effect.is_empty():
 		_remove_hiding_effects(unit)
 		return
 	var terrain_name: String = str(effect.get("name", "teren"))
+	if bool(effect.get("instant_death", false)):
+		_trigger_hole_death(unit, terrain_name)
+		return
 	if _terrain_hides_unit(cell):
 		_apply_or_refresh_effect(unit, effect)
 		unit["is_hidden"] = true
@@ -2685,6 +2722,127 @@ func _apply_terrain_entry_effect(unit: Dictionary) -> void:
 		_log_event("%s wchodzi w %s i traci reszte ruchu." % [_unit_name_log_text(unit), terrain_name])
 		if _is_winter_scenario() and _is_water_cell(cell):
 			_try_ice_break_death(unit, cell)
+
+
+func _trigger_hole_death(unit: Dictionary, terrain_name: String) -> void:
+	_log_event(_color_log_text("%s wpada do %s i ginie!" % [_unit_name_log_text(unit), terrain_name], LOG_COLOR_DAMAGE))
+	_show_screen_message("%s wpada do %s i ginie!" % [str(unit.get("name", "Jednostka")), terrain_name], 3.0)
+	unit["count"] = 0
+	unit["current_total_hp"] = 0
+	unit["current_hp"] = 0
+	unit["is_hidden"] = false
+	_cleanup_destroyed_unit(unit)
+
+
+func _apply_elf_statue_buff(unit: Dictionary) -> void:
+	var cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
+	var has_statue_neighbor := false
+	for neighbor in _get_neighbors(cell):
+		if _get_terrain_type_at(neighbor) == "elf_statue":
+			has_statue_neighbor = true
+			break
+	if has_statue_neighbor:
+		_apply_or_refresh_effect(unit, {
+			"id": "blogoslawienstwo_elfow",
+			"name": "Blogoslawienstwo Elfow",
+			"category": "buff",
+			"remaining_turns": 1,
+			"stat_changes": [
+				{"stat": "dmg", "mode": "flat", "value": 2}
+			]
+		})
+	else:
+		_remove_effect(unit, "blogoslawienstwo_elfow")
+
+
+func _get_terrain_type_at(cell: Vector2i) -> String:
+	for obstacle in obstacles:
+		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y:
+			return str(obstacle.get("type", ""))
+	return ""
+
+
+func _try_activate_detonator(active_unit: Dictionary, cell: Vector2i) -> bool:
+	if _get_terrain_type_at(cell) != "detonator":
+		return false
+	var unit_cell := Vector2i(int(active_unit.grid_x), int(active_unit.grid_y))
+	if _hex_distance(unit_cell, cell) != 1:
+		return false
+	var detonator_index := _find_detonator_index(cell)
+	if detonator_index < 0:
+		return false
+	if detonator_activated:
+		return false
+	_trigger_detonator(active_unit, cell, detonator_index)
+	return true
+
+
+func _find_detonator_index(cell: Vector2i) -> int:
+	for index in obstacles.size():
+		var obstacle: Dictionary = obstacles[index]
+		if int(obstacle.get("grid_x", -1)) == cell.x and int(obstacle.get("grid_y", -1)) == cell.y and str(obstacle.get("type", "")) == "detonator":
+			return index
+	return -1
+
+
+func _trigger_detonator(active_unit: Dictionary, cell: Vector2i, detonator_index: int) -> void:
+	is_animating = true
+	active_unit.action_points = max(0, int(active_unit.action_points) - 1)
+	pending_skill_id = ""
+	selected_obstacle_cell = Vector2i(-1, -1)
+	_log_event("%s aktywuje detonator." % _unit_name_log_text(active_unit))
+	_show_screen_message("Detonator aktywowany!", 2.0)
+
+	var target_cells: Array[Vector2i] = _random_detonator_target_cells(cell)
+	board.set_detonator_warning_cells(target_cells)
+	_sync_board()
+	await get_tree().create_timer(0.8).timeout
+
+	board.play_falling_rocks_animation(target_cells)
+	await get_tree().create_timer(0.55).timeout
+
+	var hit_names: Array[String] = []
+	for target_cell in target_cells:
+		var target := _find_unit_at_cell(target_cell)
+		if target.is_empty():
+			continue
+		var total_damage: int = _calculate_damage(active_unit, target, 1.5)
+		var result := _apply_attack_damage(active_unit, target, total_damage, false, false)
+		var hit_target: Dictionary = result.get("target", target)
+		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
+		if int(hit_target.get("count", 0)) <= 0:
+			_show_screen_message("%s zostaje zmiazdzony przez kamienie!" % str(hit_target.get("name", "Jednostka")), 2.5)
+		_cleanup_destroyed_unit(hit_target)
+
+	obstacles.remove_at(detonator_index)
+	detonator_activated = true
+	board.set_detonator_warning_cells([])
+	board.clear_falling_rock_cells()
+	_log_event(
+		"%s wybucha: %s." % [
+			_unit_name_log_text(active_unit),
+			"brak trafien" if hit_names.is_empty() else ", ".join(hit_names)
+		]
+	)
+	_show_screen_message("Detonator wybucha!", 2.0)
+	_sync_board()
+	is_animating = false
+
+
+func _random_detonator_target_cells(excluded_cell: Vector2i) -> Array[Vector2i]:
+	var candidates: Array[Vector2i] = []
+	for column in GRID_COLUMNS:
+		for row in GRID_ROWS:
+			var cell := Vector2i(column, row)
+			if cell == excluded_cell:
+				continue
+			candidates.append(cell)
+	candidates.shuffle()
+	var count: int = mini(4, candidates.size())
+	var result: Array[Vector2i] = []
+	for index in count:
+		result.append(candidates[index])
+	return result
 
 
 func _try_ice_break_death(unit: Dictionary, cell: Vector2i) -> void:
@@ -3098,6 +3256,7 @@ func _process_turn_start(unit: Dictionary) -> void:
 	_advance_skill_cooldowns(unit)
 	_ensure_energy_barrier(unit)
 	_remove_effect(unit, "woda")
+	_apply_elf_statue_buff(unit)
 	var effects: Array = unit.get("active_effects", [])
 	var skipped_turn := false
 	for effect in effects:
@@ -3400,13 +3559,26 @@ func _are_active_skills_on_cooldown(unit: Dictionary) -> bool:
 func _generate_obstacles() -> Array[Dictionary]:
 	var winter_mode: bool = _is_winter_scenario()
 	var desert_mode: bool = _is_desert_scenario()
-	var obstacle_types: Array[String] = DESERT_OBSTACLE_TYPES if desert_mode else (WINTER_OBSTACLE_TYPES if winter_mode else OBSTACLE_TYPES)
+	var forest_mode: bool = _is_forest_scenario()
+	var obstacle_types: Array[String]
+	if desert_mode:
+		obstacle_types = DESERT_OBSTACLE_TYPES
+	elif winter_mode:
+		obstacle_types = WINTER_OBSTACLE_TYPES
+	elif forest_mode:
+		obstacle_types = FOREST_OBSTACLE_TYPES
+	else:
+		obstacle_types = OBSTACLE_TYPES
 	var generated: Array[Dictionary] = ObstacleGeneratorScript.generate(units, obstacle_types, GRID_COLUMNS, GRID_ROWS, SETUP_COLUMNS, winter_mode)
 	if desert_mode:
 		for obstacle in generated:
 			if str(obstacle.get("type", "")) == "kamienie":
 				obstacle["variant"] = "dune"
 	return generated
+
+
+func _is_forest_scenario() -> bool:
+	return current_battle_background_path.get_file().get_basename() == "orcs_vs_elves_forest"
 
 
 func _is_winter_scenario() -> bool:
@@ -3511,7 +3683,8 @@ func _blocks_cell_skill_target(cell: Vector2i) -> bool:
 	if not _is_cell_obstacle(cell):
 		return false
 	var terrain_id: String = str(_get_terrain_at(cell).get("id", ""))
-	return terrain_id != "krzok" and terrain_id != "zimowy_krzak"
+	var passable_types: Array[String] = ["krzok", "zimowy_krzak", "holy_tree", "cart", "detonator", "hole"]
+	return not passable_types.has(terrain_id)
 
 
 func _is_attack_blocked(attacker: Dictionary, target_cell: Vector2i) -> bool:
@@ -3850,6 +4023,36 @@ func _show_victory_overlay(winner_side: String) -> void:
 	var winner_name := "GRACZ" if winner_side == "player" else "PRZECIWNIK"
 	victory_title_label.text = "ZWYCIĘSTWO: %s" % winner_name
 	victory_overlay.visible = true
+
+
+func _build_screen_message_label() -> void:
+	screen_message_label = Label.new()
+	screen_message_label.visible = false
+	screen_message_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	screen_message_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	screen_message_label.offset_top = 90
+	screen_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	screen_message_label.add_theme_font_size_override("font_size", 34)
+	screen_message_label.add_theme_color_override("font_color", Color(0.95, 0.18, 0.18, 1.0))
+	screen_message_label.add_theme_color_override("font_outline_color", Color(0.08, 0.02, 0.02, 1.0))
+	screen_message_label.add_theme_constant_override("outline_size", 6)
+	hud.add_child(screen_message_label)
+
+
+func _show_screen_message(text: String, duration := 2.5) -> void:
+	if screen_message_label == null:
+		return
+	screen_message_label.text = text
+	screen_message_label.visible = true
+	screen_message_label.modulate = Color.WHITE
+	if screen_message_tween != null and screen_message_tween.is_valid():
+		screen_message_tween.kill()
+	screen_message_tween = create_tween()
+	screen_message_tween.tween_interval(duration)
+	screen_message_tween.tween_property(screen_message_label, "modulate", Color(1.0, 1.0, 1.0, 0.0), 0.35)
+	screen_message_tween.finished.connect(func() -> void:
+		screen_message_label.visible = false
+	)
 
 
 func _on_victory_finish_pressed() -> void:

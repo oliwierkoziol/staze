@@ -31,6 +31,11 @@ const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
 var QUICKSAND_TEXTURE: Texture2D = load("res://assets/mapTiles/quicksand.png")
 var DUNE_TEXTURE: Texture2D = load("res://assets/mapTiles/dune.png")
 var ICE_TEXTURE: Texture2D = load("res://assets/mapTiles/ice.png")
+var HOLY_TREE_TEXTURE: Texture2D = load("res://assets/holy_tree.png")
+var ELF_STATUE_TEXTURE: Texture2D = load("res://assets/elfStatue.png")
+var HOLE_TEXTURE: Texture2D = load("res://assets/hole.png")
+var CART_TEXTURE: Texture2D = load("res://assets/cart.png")
+var DETONATOR_TEXTURE: Texture2D = load("res://assets/detonator.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
 const PROJECTILE_PATH_ARROWS := "res://assets/arrows_projectile.png"
@@ -46,6 +51,8 @@ var selected_unit_id := -1
 var highlighted_move_cells: Array[Vector2i] = []
 var highlighted_attack_cells: Array[Vector2i] = []
 var map_event_warning_cells: Array[Vector2i] = []
+var detonator_warning_cells: Array[Vector2i] = []
+var falling_rock_cells: Array[Vector2i] = []
 var move_highlight_opacity_mult: float = 1.0
 var hovered_move_path: Array[Vector2i] = []
 var hovered_attack_cell := Vector2i(-1, -1)
@@ -175,6 +182,16 @@ func set_map_event_warning_cells(cells: Array) -> void:
 		map_event_warning_cells.append(cell)
 	queue_redraw()
 
+func set_detonator_warning_cells(cells: Array) -> void:
+	detonator_warning_cells.clear()
+	for cell in cells:
+		detonator_warning_cells.append(cell)
+	queue_redraw()
+
+func clear_falling_rock_cells() -> void:
+	falling_rock_cells.clear()
+	queue_redraw()
+
 
 func set_hovered_move_path(path: Array) -> void:
 	hovered_move_path.clear()
@@ -210,6 +227,7 @@ func _draw() -> void:
 	draw_obstacles()
 	draw_terrain_effects()
 	_draw_cell_highlights(map_event_warning_cells, Color(1.0, 0.25, 0.08, 0.32), Color(1.0, 0.55, 0.12, 0.95))
+	_draw_cell_highlights(detonator_warning_cells, Color(0.92, 0.12, 0.12, 0.42), Color(1.0, 0.18, 0.18, 0.95))
 	draw_highlighted_cells()
 	_draw_arrow_rain_overlay()
 	draw_units()
@@ -349,6 +367,65 @@ func play_arrow_rain_animation(caster_id: int, cells: Array) -> void:
 		for _arrow_index in arrows_per_cell:
 			_spawn_falling_arrow(texture, cell_center, rng, float(spawn_index) * 0.026)
 			spawn_index += 1
+
+
+func play_falling_rocks_animation(cells: Array) -> void:
+	var texture: Texture2D = ROCK1_TEXTURE
+	if texture == null or cells.is_empty():
+		return
+
+	falling_rock_cells.clear()
+	for cell in cells:
+		falling_rock_cells.append(cell)
+
+	var overlay_tween: Tween = create_tween()
+	overlay_tween.tween_method(_set_rock_overlay_alpha, 0.0, 0.55, 0.12)
+	overlay_tween.tween_method(_set_rock_overlay_alpha, 0.55, 0.22, 0.32)
+	overlay_tween.tween_method(_set_rock_overlay_alpha, 0.22, 0.0, 0.22)
+
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var spawn_index := 0
+	for cell_index in cells.size():
+		var cell: Vector2i = cells[cell_index]
+		var rocks_per_cell: int = 3
+		var cell_center: Vector2 = axial_to_pixel(cell.x, cell.y)
+		for _rock_index in rocks_per_cell:
+			_spawn_falling_rock(texture, cell_center, rng, float(spawn_index) * 0.045)
+			spawn_index += 1
+
+
+func _set_rock_overlay_alpha(alpha: float) -> void:
+	arrow_rain_overlay_alpha = alpha
+	queue_redraw()
+
+
+func _spawn_falling_rock(texture: Texture2D, cell_center: Vector2, rng: RandomNumberGenerator, start_delay: float) -> void:
+	var lateral_offset: float = rng.randf_range(-22.0, 22.0)
+	var start_height: float = HEX_RADIUS * rng.randf_range(2.4, 3.8)
+	var start_position: Vector2 = cell_center + Vector2(lateral_offset, -start_height)
+	var impact_position: Vector2 = cell_center + Vector2(lateral_offset * 0.12, rng.randf_range(-6.0, 10.0))
+	var rock: Dictionary = {
+		"position": start_position,
+		"texture": texture,
+		"rotation": rng.randf_range(-0.55, 0.55),
+		"alpha": 0.0,
+		"scale": rng.randf_range(0.55, 0.95)
+	}
+	active_falling_arrows.append(rock)
+	var fall_duration: float = rng.randf_range(0.24, 0.38)
+	var tween: Tween = create_tween()
+	if start_delay > 0.0:
+		tween.tween_interval(start_delay)
+	tween.tween_method(_set_falling_arrow_alpha.bind(rock), 0.0, 1.0, 0.06)
+	tween.parallel().tween_method(
+		_set_falling_arrow_position.bind(rock),
+		start_position,
+		impact_position,
+		fall_duration
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_method(_set_falling_arrow_alpha.bind(rock), 1.0, 0.0, 0.08)
+	tween.finished.connect(_on_falling_arrow_finished.bind(rock))
 
 
 func _spawn_falling_arrow(texture: Texture2D, cell_center: Vector2, rng: RandomNumberGenerator, start_delay: float) -> void:
@@ -555,7 +632,16 @@ func draw_obstacles() -> void:
 		"bush": KRZOK_TEXTURE,
 		"zimowy_krzak": ZIMOWY_KRZOK_TEXTURE,
 		"zimowykszok": ZIMOWY_KRZOK_TEXTURE,
-		"ice": ICE_TEXTURE
+		"ice": ICE_TEXTURE,
+		"holy_tree": HOLY_TREE_TEXTURE,
+		"swiete_drzewo": HOLY_TREE_TEXTURE,
+		"elf_statue": ELF_STATUE_TEXTURE,
+		"posag_elfow": ELF_STATUE_TEXTURE,
+		"hole": HOLE_TEXTURE,
+		"dziura": HOLE_TEXTURE,
+		"cart": CART_TEXTURE,
+		"woz": CART_TEXTURE,
+		"detonator": DETONATOR_TEXTURE
 	}
 	var texture_draw_size := Vector2(HEX_RADIUS * 2.0, HEX_RADIUS * 2.0)
 	for obstacle in obstacles:
@@ -741,7 +827,7 @@ func _units_share_adjacent_bushes(observer: Dictionary, target: Dictionary) -> b
 
 
 func _is_bush_cell(cell: Vector2i) -> bool:
-	var bush_types: Array[String] = ["krzok", "zimowy_krzak"]
+	var bush_types: Array[String] = ["krzok", "zimowy_krzak", "holy_tree", "cart"]
 	for obstacle in obstacles:
 		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y and bush_types.has(str(obstacle.get("type", ""))):
 			return true
