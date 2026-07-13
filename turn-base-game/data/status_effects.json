@@ -24,6 +24,14 @@
 	  "icon": "res://assets/ui/speed.png",
 	  "color": "#99E65C"
 	},
+	"blogoslawienstwo_elfow": {
+	  "id": "blogoslawienstwo_elfow",
+	  "name": "Blogoslawienstwo Elfow",
+	  "description": "Sasiadujaca z posagiem elfow jednostka otrzymuje +2 do obrazen.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/aura.png",
+	  "color": "#7AD67A"
+	},
 	"immobilize": {
 	  "id": "immobilize",
 	  "name": "Unieruchomienie",

@@ -238,8 +238,37 @@ func _read_json_text(path: String) -> String:
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+
+	if event.keycode == KEY_TAB:
 		_toggle_help_popup()
+		get_viewport().set_input_as_handled()
+		return
+
+	if hud == null or not hud.visible:
+		return
+
+	if save_setup_dialog != null and save_setup_dialog.visible:
+		return
+
+	if event.keycode == KEY_ESCAPE:
+		_on_reset_battle_pressed()
+		get_viewport().set_input_as_handled()
+		return
+
+	if event.keycode == KEY_SPACE:
+		if help_popup != null and help_popup.visible:
+			if help_mode_tutorial:
+				_on_tutorial_ok_pressed()
+			get_viewport().set_input_as_handled()
+			return
+		if setup_mode:
+			if not tutorial_acknowledged or is_animating:
+				return
+			_on_start_battle_pressed()
+		else:
+			_on_end_turn_button_pressed()
 		get_viewport().set_input_as_handled()
 
 
@@ -505,11 +534,15 @@ func _make_setup_button(text: String) -> Button:
 	return button
 
 
+func _should_skip_tutorial() -> bool:
+	return free_setup_mode
+
+
 func _enter_setup_mode() -> void:
 	setup_mode = true
 	help_mode_tutorial = true
 	tutorial_page = 0
-	tutorial_acknowledged = false
+	tutorial_acknowledged = _should_skip_tutorial()
 	_update_setup_hint_visibility()
 	units = unit_configs.map(func(unit: Dictionary) -> Dictionary: return _prepare_unit(unit.duplicate(true)))
 	obstacles = _generate_obstacles()
@@ -539,7 +572,7 @@ func _enter_setup_mode() -> void:
 	_log_event(_color_log_text("Tryb przygotowania: ustaw jednostki i kliknij START po prawej.", LOG_COLOR_YELLOW))
 	_update_action_buttons()
 	_sync_board()
-	if help_popup != null and hud.visible:
+	if help_popup != null and hud.visible and not _should_skip_tutorial():
 		help_popup.visible = true
 
 
@@ -3958,7 +3991,7 @@ func _build_tutorial_pages() -> void:
 	help_popup_page_label.text = "STRONA %d / %d" % [page_index + 1, pages.size()]
 	help_popup_prev_button.disabled = page_index == 0
 	help_popup_next_button.disabled = page_index == pages.size() - 1
-	help_popup_action_button.text = "ROZPOCZNIJ" if page_index == pages.size() - 1 else "DALEJ"
+	help_popup_action_button.text = "ROZPOCZNIJ" if page_index == pages.size() - 1 else "POMIŃ"
 
 
 func _build_controls_reference() -> void:
@@ -4015,11 +4048,10 @@ func _on_help_next_pressed() -> void:
 
 func _on_help_action_pressed() -> void:
 	if help_mode_tutorial:
-		if tutorial_page < 4:
-			tutorial_page += 1
-			_help_rebuild_content()
-			return
-	_on_tutorial_ok_pressed()
+		_on_tutorial_ok_pressed()
+		return
+	if help_popup != null:
+		help_popup.visible = false
 
 
 func _on_tutorial_ok_pressed() -> void:

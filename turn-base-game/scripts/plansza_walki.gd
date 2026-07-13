@@ -1131,6 +1131,8 @@ func _draw_hovered_move_path() -> void:
 		return
 
 	var path_points: Array[Vector2] = []
+	if selected_unit_id != -1 and visual_positions.has(selected_unit_id):
+		path_points.append(visual_positions[selected_unit_id])
 	for cell in hovered_move_path:
 		path_points.append(axial_to_pixel(cell.x, cell.y))
 
