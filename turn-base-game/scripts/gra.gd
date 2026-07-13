@@ -8,7 +8,32 @@ const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
 const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "krzok"]
 const MAX_EVENT_LOG_ENTRIES := 60
+const MAX_VISIBLE_QUEUE_CARDS := 8
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
+const MAP_EVENT_POOLS: Dictionary = {
+	"orcs_vs_elves_forest": ["gniew_korzeni", "przebudzenie_gaju", "lesne_opary", "magiczny_rozkwit"],
+	"dwarves_vs_goblins_mine": ["spadajacy_rumosz", "wybuch_gazu", "pekniecie_chodnika", "zawal_kopalni"],
+	"humans_vs_orcs_village": ["rozprzestrzeniajacy_sie_pozar", "gesty_dym", "przerwanie_grobli", "plonace_zabudowania"],
+	"elves_vs_dwarves_pass": ["wichura_lodowa", "sniezna_zamiec", "oblodzenie", "lawina"],
+}
+const MAP_EVENT_DATA: Dictionary = {
+	"gniew_korzeni": {"name": "Gniew Korzeni", "icon": preload("res://assets/ui/root.png")},
+	"przebudzenie_gaju": {"name": "Przebudzenie Gaju", "icon": preload("res://assets/mapTiles/bush.png")},
+	"lesne_opary": {"name": "Lesne Opary", "icon": preload("res://assets/ui/reveal.png")},
+	"magiczny_rozkwit": {"name": "Magiczny Rozkwit", "icon": preload("res://assets/ui/aura.png")},
+	"spadajacy_rumosz": {"name": "Spadajacy Rumosz", "icon": preload("res://assets/mapTiles/rock1.png")},
+	"wybuch_gazu": {"name": "Wybuch Gazu", "icon": preload("res://assets/ui/poison_cloud.png")},
+	"pekniecie_chodnika": {"name": "Pekniecie Chodnika", "icon": preload("res://assets/ui/water.png")},
+	"zawal_kopalni": {"name": "Zawal Kopalni", "icon": preload("res://assets/mapTiles/rock2.png")},
+	"rozprzestrzeniajacy_sie_pozar": {"name": "Rozprzestrzeniajacy sie Pozar", "icon": preload("res://assets/ui/fire.png")},
+	"gesty_dym": {"name": "Gesty Dym", "icon": preload("res://assets/ui/reveal.png")},
+	"przerwanie_grobli": {"name": "Przerwanie Grobli", "icon": preload("res://assets/ui/water.png")},
+	"plonace_zabudowania": {"name": "Plonace Zabudowania", "icon": preload("res://assets/ui/fire.png")},
+	"wichura_lodowa": {"name": "Wichura Lodowa", "icon": preload("res://assets/ui/frost.png")},
+	"sniezna_zamiec": {"name": "Sniezna Zamiec", "icon": preload("res://assets/ui/frost.png")},
+	"oblodzenie": {"name": "Oblodzenie", "icon": preload("res://assets/ui/frost.png")},
+	"lawina": {"name": "Lawina", "icon": preload("res://assets/mapTiles/rock3.png")},
+}
 const DEFAULT_GENERAL_PORTRAIT: Texture2D = preload("res://assets/ui/general1.png")
 const GENERAL_PORTRAITS: Dictionary = {
 	"elves": preload("res://assets/ui/general_elf_1.png"),
@@ -33,6 +58,7 @@ const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const BattleSetupPositionsScript = preload("res://scripts/battle_setup_positions.gd")
 const TurnQueueCardScript = preload("res://scripts/turn_queue_card.gd")
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
+const ObstacleGeneratorScript = preload("res://scripts/obstacle_generator.gd")
 
 var OBSTACLE_PORTRAITS: Dictionary = {
 	"woda": preload("res://assets/mapTiles/water.png"),
@@ -86,6 +112,8 @@ var is_animating := false
 var active_turn_has_log := false
 var event_log: Array[String] = []
 var round_number := 1
+var next_map_event_round := 0
+var next_map_event_id := ""
 var turn_queue: Array[int] = []
 var turn_queue_index := -1
 var pending_skill_id := ""
@@ -449,6 +477,8 @@ func _enter_setup_mode() -> void:
 	pending_skill_id = ""
 	is_animating = false
 	round_number = 1
+	next_map_event_id = ""
+	_schedule_next_map_event(0)
 	turn_queue_index = -1
 	event_log.clear()
 	board.set_selected_unit(-1)
@@ -516,6 +546,8 @@ func _make_save_data() -> Dictionary:
 		"active_turn_has_log": active_turn_has_log,
 		"event_log": event_log.duplicate(),
 		"round_number": round_number,
+		"next_map_event_round": next_map_event_round,
+		"next_map_event_id": next_map_event_id,
 		"turn_queue": turn_queue.duplicate(),
 		"turn_queue_index": turn_queue_index,
 		"pending_skill_id": pending_skill_id,
@@ -554,6 +586,10 @@ func _apply_save_data(save_data: Dictionary) -> void:
 	active_turn_has_log = bool(save_data.get("active_turn_has_log", false))
 	event_log = _typed_string_array(save_data.get("event_log", []))
 	round_number = int(save_data.get("round_number", 1))
+	next_map_event_round = int(save_data.get("next_map_event_round", 0))
+	next_map_event_id = str(save_data.get("next_map_event_id", ""))
+	if next_map_event_round == 0 or next_map_event_id == "":
+		_schedule_next_map_event(round_number)
 	turn_queue = _typed_int_array(save_data.get("turn_queue", []))
 	turn_queue_index = int(save_data.get("turn_queue_index", -1))
 	pending_skill_id = str(save_data.get("pending_skill_id", ""))
@@ -1935,6 +1971,7 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 	_show_move_cost_label(path_cost, 0)
 	board.animate_unit_path(unit.id, move_path)
 	await board.animation_finished
+	is_animating = false
 	_clear_move_cost_label()
 	_commit_charge_skill(unit, skill)
 	_log_event("%s szarzuje do przodu." % _unit_name_log_text(unit))
@@ -2069,9 +2106,10 @@ func _cleanup_destroyed_unit(target: Dictionary) -> void:
 		return
 	_log_event("%s zostaje rozbite." % _unit_name_log_text(target))
 	units.erase(target)
-	turn_queue.erase(target.get("id", -1))
-	if turn_queue_index >= turn_queue.size():
-		turn_queue_index = turn_queue.size() - 1
+	var removed_queue_index: int = turn_queue.find(int(target.get("id", -1)))
+	turn_queue.erase(int(target.get("id", -1)))
+	if removed_queue_index >= 0 and removed_queue_index <= turn_queue_index:
+		turn_queue_index -= 1
 	if target.get("id", -1) == selected_unit_id:
 		selected_unit_id = -1
 	_check_victory()
@@ -2486,6 +2524,16 @@ func _apply_terrain_effects_to_unit(unit: Dictionary, apply_entry_effect := true
 		if int(effect.get("grid_x", -1)) != int(unit.grid_x) or int(effect.get("grid_y", -1)) != int(unit.grid_y):
 			continue
 		match str(effect.get("id", "")):
+			"fire":
+				_apply_or_refresh_effect(unit, {
+					"id": "ploniecie",
+					"name": "Ploniecie",
+					"category": "debuff",
+					"remaining_turns": 2,
+					"stat_changes": [],
+					"tick_damage": 1
+				})
+				_log_event("%s staje w ogniu." % _unit_name_log_text(unit))
 			"ice":
 				_apply_or_refresh_effect(unit, {
 					"id": "lodowe_podloze",
@@ -2625,6 +2673,185 @@ func _advance_terrain_effects() -> void:
 		if int(effect["remaining_turns"]) > 0:
 			kept_effects.append(effect)
 	terrain_effects = kept_effects
+
+
+func _try_trigger_map_event() -> void:
+	if next_map_event_round == 0 or round_number < next_map_event_round:
+		return
+	match next_map_event_id:
+		"gniew_korzeni":
+			_event_forest_roots()
+		"przebudzenie_gaju":
+			_event_forest_awakening()
+		"lesne_opary":
+			_event_global_range("Lesne Opary")
+		"magiczny_rozkwit":
+			_event_magic_bloom()
+		"spadajacy_rumosz":
+			_event_falling_rubble()
+		"wybuch_gazu":
+			_event_random_terrain("poison_cloud", 3, 2)
+		"pekniecie_chodnika":
+			_event_random_obstacles("woda", "water", 3, "Pekniecie Chodnika zalewa trzy pola.")
+		"zawal_kopalni":
+			_event_random_obstacles("kamienie", "rock1", 2, "Zawal Kopalni blokuje dwa pola.")
+		"rozprzestrzeniajacy_sie_pozar":
+			_event_spreading_fire()
+		"gesty_dym":
+			_event_global_range("Gesty Dym")
+		"przerwanie_grobli":
+			_event_random_obstacles("woda", "water", 3, "Przerwanie Grobli zalewa trzy pola.")
+		"plonace_zabudowania":
+			_event_random_damage("Plonace Zabudowania", 2)
+		"wichura_lodowa":
+			_event_ice_storm()
+		"sniezna_zamiec":
+			_event_global_range("Sniezna Zamiec")
+		"oblodzenie":
+			_event_random_terrain("ice", 3, 2)
+		"lawina":
+			_event_random_damage("Lawina", 3)
+		_:
+			return
+	_schedule_next_map_event(round_number)
+	_sync_board()
+
+
+func _schedule_next_map_event(after_round: int) -> void:
+	var scenario_id: String = current_battle_background_path.get_file().get_basename()
+	var pool: Array = MAP_EVENT_POOLS.get(scenario_id, [])
+	if pool.is_empty():
+		next_map_event_round = 0
+		next_map_event_id = ""
+	else:
+		var previous_event_id: String = next_map_event_id
+		var choices: Array = pool.filter(func(event_id: String) -> bool: return event_id != previous_event_id)
+		next_map_event_id = str(choices.pick_random() if not choices.is_empty() else pool.pick_random())
+		next_map_event_round = after_round + randi_range(2, 4)
+
+
+func _map_event_name() -> String:
+	return str(MAP_EVENT_DATA.get(next_map_event_id, {}).get("name", ""))
+
+
+func _event_forest_roots() -> void:
+	var targets: Array = units.duplicate()
+	targets.shuffle()
+	for index in range(min(2, targets.size())):
+		_apply_or_refresh_effect(targets[index], {
+			"id": "gniew_korzeni",
+			"name": "Gniew Korzeni",
+			"category": "debuff",
+			"remaining_turns": 1,
+			"stat_changes": [{"stat": "move_range", "mode": "set", "value": 0}]
+		})
+	_log_event(_color_log_text("EVENT MAPY: Gniew Korzeni unieruchamia dwie losowe jednostki.", LOG_COLOR_YELLOW))
+
+
+func _event_falling_rubble() -> void:
+	var targets: Array = units.duplicate()
+	targets.shuffle()
+	for index in range(min(2, targets.size())):
+		var target: Dictionary = targets[index]
+		var damage: int = _calculate_tick_damage(target, 1)
+		_apply_damage_to_unit(target, damage)
+		_log_event("%s otrzymuje %s obrazen od spadajacego rumoszu." % [_unit_name_log_text(target), _color_log_text(str(damage), LOG_COLOR_DAMAGE)])
+		_cleanup_destroyed_unit(target)
+	_log_event(_color_log_text("EVENT MAPY: Wstrzas narusza strop kopalni.", LOG_COLOR_YELLOW))
+
+
+func _event_spreading_fire() -> void:
+	var cells: Array[Vector2i] = []
+	for column in range(GRID_COLUMNS):
+		for row in range(GRID_ROWS):
+			var cell := Vector2i(column, row)
+			if _find_unit_at_cell(cell).is_empty() and _get_terrain_at(cell).is_empty():
+				cells.append(cell)
+	cells.shuffle()
+	for index in range(min(3, cells.size())):
+		_add_terrain_effect(cells[index], "fire", 2)
+	_log_event(_color_log_text("EVENT MAPY: Pozar rozprzestrzenia sie na trzy pola.", LOG_COLOR_YELLOW))
+
+
+func _event_ice_storm() -> void:
+	for unit in units:
+		_apply_or_refresh_effect(unit, {
+			"id": "wichura_lodowa",
+			"name": "Wichura Lodowa",
+			"category": "debuff",
+			"remaining_turns": 1,
+			"stat_changes": [
+				{"stat": "speed", "mode": "flat", "value": -2},
+				{"stat": "move_range", "mode": "flat", "value": -2}
+			]
+		})
+	_log_event(_color_log_text("EVENT MAPY: Wichura Lodowa spowalnia wszystkie jednostki.", LOG_COLOR_YELLOW))
+
+
+func _event_forest_awakening() -> void:
+	_event_random_obstacles("krzok", "krzok", 3, "Przebudzenie Gaju tworzy trzy nowe krzaki.")
+
+
+func _event_global_range(event_name: String) -> void:
+	for unit in units:
+		_apply_or_refresh_effect(unit, {
+			"id": event_name.to_snake_case(),
+			"name": event_name,
+			"category": "debuff",
+			"remaining_turns": 1,
+			"stat_changes": [{"stat": "attack_range", "mode": "flat", "value": -1}]
+		})
+	_log_event(_color_log_text("EVENT MAPY: %s zmniejsza zasieg ataku wszystkich jednostek o 1." % event_name, LOG_COLOR_YELLOW))
+
+
+func _event_magic_bloom() -> void:
+	for side in ["player", "enemy"]:
+		var candidates: Array = units.filter(func(unit: Dictionary) -> bool: return str(unit.side) == side)
+		if candidates.is_empty():
+			continue
+		var target: Dictionary = candidates.pick_random()
+		var healing: int = int(target.get("base_hp", 1))
+		target["current_total_hp"] = mini(int(target.get("max_total_hp", healing)), int(target.get("current_total_hp", 0)) + healing)
+		_refresh_unit_health_state(target)
+		_log_event("%s odzyskuje %s HP dzieki Magicznemu Rozkwitowi." % [_unit_name_log_text(target), healing])
+	_log_event(_color_log_text("EVENT MAPY: Magiczny Rozkwit leczy po jednej jednostce kazdej strony.", LOG_COLOR_YELLOW))
+
+
+func _event_random_terrain(effect_id: String, count: int, turns: int) -> void:
+	var cells: Array[Vector2i] = _random_empty_map_cells(count)
+	for cell in cells:
+		_add_terrain_effect(cell, effect_id, turns, -1, 1 if effect_id == "poison_cloud" else 0)
+	_log_event(_color_log_text("EVENT MAPY: %s pojawia sie na %d polach." % [_map_event_name(), cells.size()], LOG_COLOR_YELLOW))
+
+
+func _event_random_obstacles(type_id: String, variant: String, count: int, message: String) -> void:
+	for cell in _random_empty_map_cells(count):
+		obstacles.append({"grid_x": cell.x, "grid_y": cell.y, "type": type_id, "variant": variant})
+	_log_event(_color_log_text("EVENT MAPY: %s" % message, LOG_COLOR_YELLOW))
+
+
+func _event_random_damage(event_name: String, target_count: int) -> void:
+	var targets: Array = units.duplicate()
+	targets.shuffle()
+	for index in range(mini(target_count, targets.size())):
+		var target: Dictionary = targets[index]
+		var damage: int = _calculate_tick_damage(target, 1)
+		_apply_damage_to_unit(target, damage)
+		_log_event("%s otrzymuje %s obrazen przez %s." % [_unit_name_log_text(target), _color_log_text(str(damage), LOG_COLOR_DAMAGE), event_name])
+		_cleanup_destroyed_unit(target)
+	_log_event(_color_log_text("EVENT MAPY: %s uderza w losowe jednostki." % event_name, LOG_COLOR_YELLOW))
+
+
+func _random_empty_map_cells(count: int) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for column in range(GRID_COLUMNS):
+		for row in range(GRID_ROWS):
+			var cell := Vector2i(column, row)
+			if _find_unit_at_cell(cell).is_empty() and _get_terrain_at(cell).is_empty():
+				cells.append(cell)
+	cells.shuffle()
+	cells.resize(mini(count, cells.size()))
+	return cells
 
 
 func _can_use_skill(unit: Dictionary, skill_id: String) -> bool:
@@ -2984,99 +3211,7 @@ func _are_active_skills_on_cooldown(unit: Dictionary) -> bool:
 
 
 func _generate_obstacles() -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
-	var occupied: Dictionary = {}
-	var obstacle_types_by_cell: Dictionary = {}
-	for unit in units:
-		occupied[Vector2i(unit.grid_x, unit.grid_y)] = true
-
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
-	var cluster_count: int = rng.randi_range(4, 7)
-	for cluster_index in range(cluster_count):
-		var type: String = OBSTACLE_TYPES[rng.randi_range(0, OBSTACLE_TYPES.size() - 1)]
-		var cluster_size: int = rng.randi_range(1, 3)
-		if cluster_index < 2:
-			cluster_size += 1
-		var cluster: Array[Vector2i] = _generate_cluster(cluster_size, occupied, obstacle_types_by_cell, type, rng)
-		for cell in cluster:
-			occupied[cell] = true
-			obstacle_types_by_cell[cell] = type
-			result.append({
-				"grid_x": cell.x,
-				"grid_y": cell.y,
-				"type": type,
-				"variant": _pick_obstacle_variant(type, rng)
-			})
-	return result
-
-
-func _pick_obstacle_variant(obstacle_type: String, rng: RandomNumberGenerator) -> String:
-	if obstacle_type == "kamienie":
-		if rng.randi_range(1, 100) == 1:
-			return "rock2k"
-		var rock_variants: Array[String] = ["rock1", "rock2", "rock3"]
-		return rock_variants[rng.randi_range(0, rock_variants.size() - 1)]
-	if obstacle_type == "krzok":
-		return "krzok"
-	if obstacle_type == "woda":
-		return "water"
-	return ""
-
-
-func _generate_cluster(target_size: int, occupied: Dictionary, obstacle_types_by_cell: Dictionary, obstacle_type: String, rng: RandomNumberGenerator) -> Array[Vector2i]:
-	var attempts: int = 0
-	while attempts < 200:
-		attempts += 1
-		var start: Vector2i = _random_empty_cell(occupied, obstacle_types_by_cell, obstacle_type, rng)
-		if start == Vector2i(-1, -1):
-			continue
-		var cluster: Array[Vector2i] = [start]
-		var cluster_cells: Dictionary = {start: true}
-		var frontier: Array[Vector2i] = [start]
-		while cluster.size() < target_size and not frontier.is_empty():
-			frontier.shuffle()
-			var current: Vector2i = frontier.pop_front()
-			var neighbors: Array[Vector2i] = _get_neighbors(current)
-			neighbors.shuffle()
-			for neighbor in neighbors:
-				if not _can_place_obstacle_cell(neighbor, occupied, obstacle_types_by_cell, obstacle_type, cluster_cells):
-					continue
-				cluster.append(neighbor)
-				cluster_cells[neighbor] = true
-				frontier.append(neighbor)
-				if cluster.size() >= target_size:
-					break
-		return cluster
-	return []
-
-
-func _random_empty_cell(occupied: Dictionary, obstacle_types_by_cell: Dictionary, obstacle_type: String, rng: RandomNumberGenerator) -> Vector2i:
-	var x_min: int = SETUP_COLUMNS
-	var x_max: int = GRID_COLUMNS - SETUP_COLUMNS - 1
-	var attempts: int = 0
-	while attempts < 100:
-		attempts += 1
-		var cell := Vector2i(rng.randi_range(x_min, x_max), rng.randi_range(0, GRID_ROWS - 1))
-		if _can_place_obstacle_cell(cell, occupied, obstacle_types_by_cell, obstacle_type):
-			return cell
-	return Vector2i(-1, -1)
-
-
-func _is_obstacle_column_allowed(column: int) -> bool:
-	return column >= SETUP_COLUMNS and column < GRID_COLUMNS - SETUP_COLUMNS
-
-
-func _can_place_obstacle_cell(cell: Vector2i, occupied: Dictionary, obstacle_types_by_cell: Dictionary, obstacle_type: String, cluster_cells: Dictionary = {}) -> bool:
-	if occupied.has(cell) or cluster_cells.has(cell) or not _is_obstacle_column_allowed(cell.x):
-		return false
-	for neighbor in _get_neighbors(cell):
-		if cluster_cells.has(neighbor):
-			continue
-		var neighbor_type: String = str(obstacle_types_by_cell.get(neighbor, ""))
-		if neighbor_type != "" and neighbor_type != obstacle_type:
-			return false
-	return true
+	return ObstacleGeneratorScript.generate(units, OBSTACLE_TYPES, GRID_COLUMNS, GRID_ROWS, SETUP_COLUMNS)
 
 
 func _get_terrain_at(cell: Vector2i) -> Dictionary:
@@ -3187,70 +3322,15 @@ func _is_attack_blocked(attacker: Dictionary, target_cell: Vector2i) -> bool:
 
 
 func _get_hex_line(start: Vector2i, end: Vector2i) -> Array[Vector2i]:
-	var start_cube: Vector3i = _oddr_to_cube(start)
-	var end_cube: Vector3i = _oddr_to_cube(end)
-	var distance: int = _hex_distance(start, end)
-	if distance == 0:
-		return [start]
-	var line: Array[Vector2i] = []
-	for step in range(distance + 1):
-		var t: float = float(step) / float(distance)
-		var cube: Vector3i = _cube_round(_cube_lerp(start_cube, end_cube, t))
-		line.append(_cube_to_oddr(cube))
-	return line
-
-
-func _cube_lerp(a: Vector3i, b: Vector3i, t: float) -> Vector3:
-	return Vector3(lerpf(a.x, b.x, t), lerpf(a.y, b.y, t), lerpf(a.z, b.z, t))
-
-
-func _cube_round(cube: Vector3) -> Vector3i:
-	var rx: int = int(round(cube.x))
-	var ry: int = int(round(cube.y))
-	var rz: int = int(round(cube.z))
-	var dx: float = absf(rx - cube.x)
-	var dy: float = absf(ry - cube.y)
-	var dz: float = absf(rz - cube.z)
-	if dx > dy and dx > dz:
-		rx = -ry - rz
-	elif dy > dz:
-		ry = -rx - rz
-	else:
-		rz = -rx - ry
-	return Vector3i(rx, ry, rz)
+	return HexUtilsScript.line(start, end)
 
 
 func _cube_to_oddr(cube: Vector3i) -> Vector2i:
-	var x: int = cube.x + int((cube.z - (cube.z & 1)) / 2)
-	return Vector2i(x, cube.z)
+	return HexUtilsScript.cube_to_oddr(cube)
 
 
 func _get_neighbors(cell: Vector2i) -> Array[Vector2i]:
-	var offsets: Array[Vector2i] = [
-		Vector2i(1, 0),
-		Vector2i(-1, 0)
-	]
-	if cell.y % 2 == 0:
-		offsets.append_array([
-			Vector2i(0, -1),
-			Vector2i(-1, -1),
-			Vector2i(0, 1),
-			Vector2i(-1, 1)
-		])
-	else:
-		offsets.append_array([
-			Vector2i(1, -1),
-			Vector2i(0, -1),
-			Vector2i(1, 1),
-			Vector2i(0, 1)
-		])
-
-	var neighbors: Array[Vector2i] = []
-	for offset in offsets:
-		var next: Vector2i = cell + offset
-		if next.x >= 0 and next.x < GRID_COLUMNS and next.y >= 0 and next.y < GRID_ROWS:
-			neighbors.append(next)
-	return neighbors
+	return HexUtilsScript.neighbors(cell, GRID_COLUMNS, GRID_ROWS)
 
 
 func _build_help_popup() -> void:
@@ -3627,6 +3707,11 @@ func _validate_setup() -> void:
 				assert(skill_library.has(skill_id), "Brak skilla w bibliotece: %s" % skill_id)
 
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
+	var test_line: Array[Vector2i] = _get_hex_line(Vector2i(0, 0), Vector2i(3, 0))
+	assert(test_line.size() == 4 and test_line.front() == Vector2i(0, 0) and test_line.back() == Vector2i(3, 0), "Linia heksow musi zawierac oba konce.")
+	for obstacle in obstacles:
+		assert(int(obstacle.grid_x) >= SETUP_COLUMNS and int(obstacle.grid_x) < GRID_COLUMNS - SETUP_COLUMNS, "Przeszkoda poza dozwolonymi kolumnami.")
+		assert(int(obstacle.grid_y) >= 0 and int(obstacle.grid_y) < GRID_ROWS, "Przeszkoda poza plansza.")
 	if not free_setup_mode and current_player_faction != "testowa":
 		assert(_is_setup_cell_allowed_for_side("player", Vector2i(SETUP_COLUMNS - 1, 0)))
 		assert(not _is_setup_cell_allowed_for_side("player", Vector2i(SETUP_COLUMNS, 0)))
@@ -3645,6 +3730,12 @@ func _validate_setup() -> void:
 		assert(int(prepared.get("base_action_points", 0)) == int(prepared.get("action_points", 0)), "AP z JSON musi byc startowym AP jednostki.")
 
 	assert(_calculate_tick_damage({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
+	assert(next_map_event_round == 0 or next_map_event_round >= 2, "Event mapy nie moze wystapic przed druga runda.")
+	for scenario_id in MAP_EVENT_POOLS:
+		var event_pool: Array = MAP_EVENT_POOLS[scenario_id]
+		assert(event_pool.size() == 4, "Kazdy scenariusz musi miec cztery eventy: %s" % scenario_id)
+		for event_id in event_pool:
+			assert(MAP_EVENT_DATA.has(event_id), "Brak danych eventu: %s" % event_id)
 	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 8}) == 4, "DEF ma redukowac obrazenia miekko, bez zbijania typowego ataku do minimum.")
 	for faction_id in UnitTypeLibraryScript.get_faction_ids():
 		for type_data in UnitTypeLibraryScript.get_faction_units(faction_id):
@@ -3934,13 +4025,21 @@ func _refresh_turn_queue() -> void:
 		child.queue_free()
 
 	var visible_queue: Array[int] = _get_visible_turn_queue()
-	for unit_id in visible_queue:
+	var event_insert_index: int = visible_queue.size()
+	if next_map_event_round == round_number + 1:
+		event_insert_index = mini(turn_queue.size() - maxi(turn_queue_index, 0), visible_queue.size())
+	for index in range(visible_queue.size() + 1):
+		if index == event_insert_index and next_map_event_round > 0:
+			turn_queue_list.add_child(_create_map_event_queue_card())
+		if index >= visible_queue.size():
+			continue
+		var unit_id: int = visible_queue[index]
 		var unit := _find_unit_by_id(unit_id)
 		if unit.is_empty():
 			continue
 		turn_queue_list.add_child(_create_turn_queue_card(unit))
 
-	_update_top_bar_width(visible_queue.size())
+	_update_top_bar_width(visible_queue.size() + (1 if next_map_event_round > 0 else 0))
 
 
 func _create_turn_queue_card(unit: Dictionary) -> Button:
@@ -3954,6 +4053,27 @@ func _create_turn_queue_card(unit: Dictionary) -> Button:
 		_on_turn_queue_pressed,
 		_on_turn_queue_gui_input
 	)
+
+
+func _create_map_event_queue_card() -> Button:
+	var event_data: Dictionary = MAP_EVENT_DATA.get(next_map_event_id, {})
+	var event_unit: Dictionary = {
+		"id": -100000,
+		"name": "R%d: %s" % [next_map_event_round, _map_event_name()],
+		"side": "event"
+	}
+	var card: Button = TurnQueueCardScript.create(
+		event_unit,
+		-100000,
+		-1,
+		true,
+		event_data.get("icon", TURN_QUEUE_PLACEHOLDER_PORTRAIT),
+		TURN_QUEUE_PLACEHOLDER_PORTRAIT,
+		_on_turn_queue_pressed,
+		_on_turn_queue_gui_input
+	)
+	card.tooltip_text = "Event mapy nastapi w rundzie %d." % next_map_event_round
+	return card
 
 
 func _update_top_bar_width(card_count: int) -> void:
@@ -4084,6 +4204,9 @@ func _start_next_activation() -> void:
 		if turn_queue_index >= turn_queue.size():
 			round_number += 1
 			_advance_terrain_effects()
+			_try_trigger_map_event()
+			if _check_victory():
+				return
 			_rebuild_turn_queue()
 			continue
 
@@ -4203,7 +4326,8 @@ func _get_visible_turn_queue() -> Array[int]:
 		return visible_queue
 
 	var start_index: int = maxi(turn_queue_index, 0)
-	for offset in range(turn_queue.size()):
+	var unit_limit: int = MAX_VISIBLE_QUEUE_CARDS - (1 if next_map_event_round > 0 else 0)
+	for offset in range(mini(turn_queue.size(), unit_limit)):
 		var index: int = (start_index + offset) % turn_queue.size()
 		visible_queue.append(turn_queue[index])
 	return visible_queue

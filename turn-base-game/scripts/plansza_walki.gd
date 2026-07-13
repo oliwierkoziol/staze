@@ -58,6 +58,8 @@ var grid_visible := true
 
 
 func _ready() -> void:
+	if OS.is_debug_build():
+		_validate_obstacle_connections()
 	queue_redraw()
 
 
@@ -96,8 +98,15 @@ func snap_unit_to_cell(unit_id: int, cell: Vector2i) -> void:
 
 func set_obstacles(new_obstacles: Array) -> void:
 	obstacles = []
+	var types_by_cell: Dictionary = {}
 	for obstacle in new_obstacles:
-		obstacles.append(obstacle.duplicate(true))
+		var copied_obstacle: Dictionary = obstacle.duplicate(true)
+		var indexed_cell := Vector2i(int(copied_obstacle.get("grid_x", -1)), int(copied_obstacle.get("grid_y", -1)))
+		obstacles.append(copied_obstacle)
+		types_by_cell[indexed_cell] = str(copied_obstacle.get("type", ""))
+	for obstacle in obstacles:
+		var obstacle_cell := Vector2i(int(obstacle.get("grid_x", -1)), int(obstacle.get("grid_y", -1)))
+		obstacle["connection_mask"] = _get_obstacle_connection_mask(obstacle_cell, str(obstacle.get("type", "")), types_by_cell)
 	queue_redraw()
 
 
@@ -390,6 +399,63 @@ func draw_obstacles() -> void:
 		if texture == null:
 			continue
 		draw_texture_rect(texture, Rect2(center - texture_draw_size / 2.0, texture_draw_size), false)
+	_draw_obstacle_connection_placeholders()
+
+
+func _draw_obstacle_connection_placeholders() -> void:
+	for obstacle in obstacles:
+		var mask: int = int(obstacle.get("connection_mask", 0))
+		if mask == 0:
+			continue
+		var cell := Vector2i(int(obstacle.get("grid_x", -1)), int(obstacle.get("grid_y", -1)))
+		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
+		var color: Color = _get_obstacle_connection_color(str(obstacle.get("type", "")))
+		var neighbors: Array[Vector2i] = _get_connection_neighbors(cell)
+		for direction in range(6):
+			if (mask & (1 << direction)) != 0:
+				draw_line(center, axial_to_pixel(neighbors[direction].x, neighbors[direction].y), color, 8.0, true)
+		draw_circle(center, 7.0, color)
+
+
+func _get_obstacle_connection_mask(cell: Vector2i, obstacle_type: String, types_by_cell: Dictionary) -> int:
+	if obstacle_type == "":
+		return 0
+	var mask: int = 0
+	var neighbors: Array[Vector2i] = _get_connection_neighbors(cell)
+	for direction in range(6):
+		if str(types_by_cell.get(neighbors[direction], "")) == obstacle_type:
+			mask |= 1 << direction
+	return mask
+
+
+func _get_connection_neighbors(cell: Vector2i) -> Array[Vector2i]:
+	var row_offset: int = cell.y & 1
+	return [
+		cell + Vector2i(1, 0),
+		cell + Vector2i(row_offset, 1),
+		cell + Vector2i(row_offset - 1, 1),
+		cell + Vector2i(-1, 0),
+		cell + Vector2i(row_offset - 1, -1),
+		cell + Vector2i(row_offset, -1)
+	]
+
+
+func _get_obstacle_connection_color(obstacle_type: String) -> Color:
+	var hue: float = float(posmod(obstacle_type.hash(), 360)) / 360.0
+	return Color.from_hsv(hue, 0.55, 0.95, 0.42)
+
+
+func _validate_obstacle_connections() -> void:
+	var types_by_cell: Dictionary = {
+		Vector2i(4, 4): "test",
+		Vector2i(5, 4): "test",
+		Vector2i(4, 5): "inny"
+	}
+	var first_mask: int = _get_obstacle_connection_mask(Vector2i(4, 4), "test", types_by_cell)
+	var second_mask: int = _get_obstacle_connection_mask(Vector2i(5, 4), "test", types_by_cell)
+	assert((first_mask & 1) != 0, "Przeszkoda musi laczyc sie z tym samym typem po prawej.")
+	assert((second_mask & (1 << 3)) != 0, "Polaczenie przeszkod musi dzialac w obie strony.")
+	assert((first_mask & (1 << 2)) == 0, "Rozne typy przeszkod nie moga sie laczyc.")
 
 
 func draw_terrain_effects() -> void:
