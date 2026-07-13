@@ -1230,7 +1230,7 @@ func _enemy_take_turn() -> void:
 	var enemy_unit := _get_active_unit()
 	if enemy_unit.is_empty() or enemy_unit.side != "enemy":
 		return
-	await get_tree().create_timer(3.0).timeout
+	await get_tree().create_timer(1.5).timeout
 
 	var target := _find_nearest_player_unit(enemy_unit)
 	if target.is_empty():
@@ -1243,7 +1243,9 @@ func _enemy_take_turn() -> void:
 			return
 
 	var best_path := _find_best_enemy_path(enemy_unit, target)
-	if not best_path.is_empty():
+	if _is_immobilized(enemy_unit):
+		_log_event("%s nie rusza sie, bo jest unieruchomiony." % _unit_name_log_text(enemy_unit))
+	elif not best_path.is_empty():
 		best_path = _get_executable_move_path(best_path)
 		var destination: Vector2i = best_path[best_path.size() - 1]
 		var path_cost: int = _get_path_cost(best_path)
@@ -2285,6 +2287,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_poison_dagger(caster, target)
 		"eagle_eye":
 			_execute_eagle_eye(caster)
+		"pnacza":
+			_execute_pnacza(caster, target)
 		"shield_push":
 			await _execute_shield_push(caster, target)
 		"hook_throw":
@@ -2397,6 +2401,19 @@ func _execute_eagle_eye(caster: Dictionary) -> void:
 		]
 	})
 	_log_event("%s przygotowuje Sokole Oko na nastepna ture." % _unit_name_log_text(caster))
+
+
+func _execute_pnacza(caster: Dictionary, target: Dictionary) -> void:
+	_apply_or_refresh_effect(target, {
+		"id": "immobilize",
+		"name": "Unieruchomienie",
+		"category": "debuff",
+		"remaining_turns": 2,
+		"stat_changes": [
+			{"stat": "move_range", "mode": "set", "value": 0}
+		]
+	})
+	_log_event("%s oplata %s Pnaczami na 2 tury." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
 
 
 func _execute_hook_throw(caster: Dictionary, target: Dictionary) -> void:
@@ -3550,6 +3567,10 @@ func _has_effect(unit: Dictionary, effect_id: String) -> bool:
 	return false
 
 
+func _is_immobilized(unit: Dictionary) -> bool:
+	return _has_effect(unit, "immobilize")
+
+
 func _remove_effect(unit: Dictionary, effect_id: String) -> void:
 	var kept_effects: Array = []
 	var removed := false
@@ -4680,7 +4701,11 @@ func _start_unit_activation(unit: Dictionary) -> void:
 		_sync_board()
 		_start_next_activation()
 		return
+	if _is_immobilized(unit) and _is_manual_side(str(unit.side)):
+		_log_event("%s nie rusza sie, bo jest unieruchomiony." % _unit_name_log_text(unit))
 	if not _is_manual_side(str(unit.side)) and not _can_unit_continue_turn(unit):
+		if _is_immobilized(unit):
+			_log_event("%s nie rusza sie, bo jest unieruchomiony." % _unit_name_log_text(unit))
 		_sync_board()
 		_end_current_activation()
 		return

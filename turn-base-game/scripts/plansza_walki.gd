@@ -27,6 +27,7 @@ const ROCK2K_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2k.png")
 const ROCK3_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock3.png")
 var KRZOK_TEXTURE: Texture2D = load("res://assets/mapTiles/bush.png")
 var ZIMOWY_KRZOK_TEXTURE: Texture2D = load("res://assets/mapTiles/zimowykszok.png")
+var VINES_TEXTURE: Texture2D = load("res://assets/vines_bottom.png")
 const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
 var QUICKSAND_TEXTURE: Texture2D = load("res://assets/mapTiles/quicksand.png")
 var DUNE_TEXTURE: Texture2D = load("res://assets/mapTiles/dune.png")
@@ -737,6 +738,55 @@ func draw_terrain_effects() -> void:
 		draw_polyline(points + PackedVector2Array([points[0]]), color.lightened(0.35), 2.0)
 
 
+func _draw_unit_immobilize_vines(unit: Dictionary, center: Vector2, alpha: float, font: Font, font_size: int) -> void:
+	if VINES_TEXTURE == null or not _unit_is_immobilized(unit):
+		return
+	var count_text: String = str(unit.get("count", 0))
+	var text_size: Vector2 = font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
+	var badge_size := Vector2(HEX_RADIUS * 0.95, text_size.y + 10.0)
+	var badge_rect := Rect2(center + Vector2(-badge_size.x / 2.0, HEX_RADIUS * 0.28), badge_size)
+	var texture_size: Vector2 = VINES_TEXTURE.get_size()
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return
+	var source_region := Rect2(0.0, texture_size.y * 0.50, texture_size.x, texture_size.y * 0.50)
+	var vine_size: Vector2 = _fit_rect_size(source_region.size, Vector2(HEX_RADIUS * 2.15, HEX_RADIUS * 1.45))
+	var vine_top: float = badge_rect.position.y + badge_rect.size.y + 3.0 - 48.0
+	var vine_rect := Rect2(center.x - vine_size.x / 2.0, vine_top, vine_size.x, vine_size.y)
+	var max_bottom: float = center.y + HEX_RADIUS - 5.0
+	var vine_bottom: float = vine_rect.position.y + vine_rect.size.y
+	if vine_bottom > max_bottom:
+		vine_rect.position.y -= vine_bottom - max_bottom
+	var shadow_center := Vector2(center.x, vine_rect.position.y + vine_rect.size.y - 5.0)
+	draw_circle(shadow_center, HEX_RADIUS * 0.34, Color(0.04, 0.16, 0.03, 0.42 * alpha))
+	var glow_rect := vine_rect.grow(5.0)
+	draw_texture_rect_region(
+		VINES_TEXTURE,
+		glow_rect,
+		source_region,
+		Color(0.42, 0.92, 0.30, 0.24 * alpha)
+	)
+	draw_texture_rect_region(
+		VINES_TEXTURE,
+		vine_rect,
+		source_region,
+		Color(0.94, 1.05, 0.90, alpha)
+	)
+
+
+func _fit_rect_size(source_size: Vector2, max_size: Vector2) -> Vector2:
+	if source_size.x <= 0.0 or source_size.y <= 0.0:
+		return max_size
+	var scale: float = min(max_size.x / source_size.x, max_size.y / source_size.y)
+	return source_size * scale
+
+
+func _unit_is_immobilized(unit: Dictionary) -> bool:
+	for effect in unit.get("active_effects", []):
+		if str(effect.get("id", "")) == "immobilize":
+			return true
+	return false
+
+
 func _should_draw_trap(effect: Dictionary) -> bool:
 	if str(effect.get("caster_side", "")) == viewer_side:
 		return true
@@ -790,6 +840,8 @@ func draw_units() -> void:
 			var shield_size := Vector2(HEX_RADIUS * 2.1, HEX_RADIUS * 2.1)
 			var shield_rect := Rect2(center - shield_size / 2.0, shield_size)
 			draw_texture_rect(SHIELD_TEXTURE, shield_rect, false, Color(0.75, 0.9, 1.0, shield_alpha * alpha))
+
+		_draw_unit_immobilize_vines(unit, center, alpha, font, font_size)
 
 		var count_text: String = str(unit.get("count", 0))
 		var text_size: Vector2 = font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)

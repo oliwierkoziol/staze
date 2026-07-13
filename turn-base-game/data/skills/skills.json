@@ -40,6 +40,17 @@
 	  "target_type": "self",
 	  "effect_type": "eagle_eye"
 	},
+	"pnacza": {
+	  "id": "pnacza",
+	  "name": "Pnacza",
+	  "description": "Oplata wroga w zasiegu 3 hexow pnaczami, unieruchamiajac go na 2 tury.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 3,
+	  "target_type": "enemy_unit",
+	  "effect_type": "pnacza",
+	  "icon": "res://assets/ui/root.png"
+	},
 	"rzut_hakiem": {
 	  "id": "rzut_hakiem",
 	  "name": "Rzut Hakiem",

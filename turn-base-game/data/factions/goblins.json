@@ -61,7 +61,7 @@
 		"resistance": "Brak",
 		"portrait": "res://assets/characters/humans/goblinShaman.png",
 		"skill_ids": [
-		  "sokole_oko",
+		  "pnacza",
 		  "medytacja",
           "przyspieszenie"
 		]
