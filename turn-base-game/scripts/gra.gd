@@ -2721,26 +2721,10 @@ func _apply_terrain_effects_to_unit(unit: Dictionary, apply_entry_effect := true
 			continue
 		match str(effect.get("id", "")):
 			"fire":
-				_apply_or_refresh_effect(unit, {
-					"id": "ploniecie",
-					"name": "Ploniecie",
-					"category": "debuff",
-					"remaining_turns": 2,
-					"stat_changes": [],
-					"tick_damage": 1
-				})
+				_apply_or_refresh_effect(unit, {"id": "ploniecie"})
 				_log_event("%s staje w ogniu." % _unit_name_log_text(unit))
 			"ice":
-				_apply_or_refresh_effect(unit, {
-					"id": "lodowe_podloze",
-					"name": "Lodowe Podloze",
-					"category": "debuff",
-					"remaining_turns": 1,
-					"stat_changes": [
-						{"stat": "speed", "mode": "flat", "value": -2},
-						{"stat": "move_range", "mode": "flat", "value": -2}
-					]
-				})
+				_apply_or_refresh_effect(unit, {"id": "lodowe_podloze"})
 				_log_event("%s slizga sie na lodzie." % _unit_name_log_text(unit))
 			"poison_cloud":
 				if _apply_poison_effect(unit, "zatrucie", "Zatrucie", 2, int(effect.get("tick_damage", 1))):
@@ -2818,15 +2802,7 @@ func _apply_elf_statue_buff(unit: Dictionary) -> void:
 			has_statue_neighbor = true
 			break
 	if has_statue_neighbor:
-		_apply_or_refresh_effect(unit, {
-			"id": "blogoslawienstwo_elfow",
-			"name": "Blogoslawienstwo Elfow",
-			"category": "buff",
-			"remaining_turns": 1,
-			"stat_changes": [
-				{"stat": "dmg", "mode": "flat", "value": 2}
-			]
-		})
+		_apply_or_refresh_effect(unit, {"id": "blogoslawienstwo_elfow"})
 	else:
 		_remove_effect(unit, "blogoslawienstwo_elfow")
 
@@ -3289,12 +3265,9 @@ func _can_use_skill(unit: Dictionary, skill_id: String) -> bool:
 
 
 func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void:
-	var metadata: Dictionary = UnitTypeLibrary.get_status_effect(str(effect_data.get("id", "")))
-	if not metadata.is_empty():
-		effect_data["name"] = str(metadata.get("name", effect_data.get("name", "")))
-		var category: String = str(metadata.get("category", ""))
-		if category != "":
-			effect_data["category"] = category
+	var effect_id: String = str(effect_data.get("id", ""))
+	if effect_id != "":
+		effect_data = UnitTypeLibrary.build_active_effect(effect_id, effect_data)
 	var effects: Array = unit.get("active_effects", [])
 	var previous_move_range: int = int(unit.get("move_range", 0))
 	for existing in effects:
@@ -3723,10 +3696,27 @@ func _get_terrain_entry_effect(cell: Vector2i) -> Dictionary:
 	var terrain: Dictionary = _get_terrain_at(cell)
 	if terrain.is_empty():
 		return {}
-	var effect: Variant = terrain.get("entry_effect", null)
-	if effect == null or typeof(effect) != TYPE_DICTIONARY:
+	var raw_entry: Variant = terrain.get("entry_effect", null)
+	if raw_entry == null:
 		return {}
-	return effect.duplicate(true)
+	var effect_id: String = ""
+	var overrides: Dictionary = {}
+	if typeof(raw_entry) == TYPE_STRING:
+		effect_id = str(raw_entry)
+	elif typeof(raw_entry) == TYPE_DICTIONARY:
+		var raw_dict: Dictionary = raw_entry
+		effect_id = str(raw_dict.get("id", raw_dict.get("effect_id", "")))
+		overrides = raw_dict.duplicate(true)
+		overrides.erase("id")
+		overrides.erase("effect_id")
+	else:
+		return {}
+	if effect_id.is_empty():
+		return {}
+	var effect: Dictionary = UnitTypeLibrary.build_active_effect(effect_id, overrides)
+	if effect.is_empty():
+		push_warning("Brak efektu terenu '%s' w status_effects.json" % effect_id)
+	return effect
 
 
 func _terrain_hides_unit(cell: Vector2i) -> bool:
@@ -4225,6 +4215,13 @@ func _validate_setup() -> void:
 		assert(int(prepared.get("base_action_points", 0)) == int(prepared.get("action_points", 0)), "AP z JSON musi byc startowym AP jednostki.")
 
 	assert(_calculate_tick_damage({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
+	for terrain_id in terrain_types.keys():
+		var raw_entry: Variant = terrain_types[terrain_id].get("entry_effect", null)
+		if raw_entry == null:
+			continue
+		var effect_id: String = str(raw_entry) if typeof(raw_entry) == TYPE_STRING else str((raw_entry as Dictionary).get("id", ""))
+		var resolved: Dictionary = UnitTypeLibraryScript.build_active_effect(effect_id, {})
+		assert(not resolved.is_empty() and str(resolved.get("category", "")) != "", "Efekt terenu musi byc w status_effects: %s" % effect_id)
 	assert(next_map_event_round == 0 or next_map_event_round >= 2, "Event mapy nie moze wystapic przed druga runda.")
 	assert(_is_map_event_warning_round(2, 3) and not _is_map_event_warning_round(1, 3), "Pola eventu maja byc widoczne tylko runde przed jego aktywacja.")
 	for scenario_id in MAP_EVENT_POOLS:

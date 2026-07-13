@@ -30,7 +30,22 @@
 	  "description": "Sasiadujaca z posagiem elfow jednostka otrzymuje +2 do obrazen.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/aura.png",
-	  "color": "#7AD67A"
+	  "color": "#7AD67A",
+	  "remaining_turns": 1,
+	  "stat_changes": [
+		{"stat": "dmg", "mode": "flat", "value": 2}
+	  ]
+	},
+	"cart": {
+	  "id": "cart",
+	  "name": "Woz",
+	  "description": "Jednostka przy wozie jest niewidzialna dla wrogow poza sasiednim wozem.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/invisibility.png",
+	  "color": "#A88B5C",
+	  "remaining_turns": 2,
+	  "hides_unit": true,
+	  "stat_changes": []
 	},
 	"immobilize": {
 	  "id": "immobilize",
@@ -39,6 +54,17 @@
 	  "category": "debuff",
 	  "icon": "res://assets/ui/root.png",
 	  "color": "#66B8F5"
+	},
+	"hole": {
+	  "id": "hole",
+	  "name": "Dziura",
+	  "description": "Jednostka wpada do dziury i ginie natychmiast.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/reveal.png",
+	  "color": "#5A5A5A",
+	  "remaining_turns": 1,
+	  "instant_death": true,
+	  "stat_changes": []
 	},
 	"krwawa_ofiara": {
 	  "id": "krwawa_ofiara",
@@ -56,13 +82,27 @@
 	  "icon": "res://assets/ui/bleed.png",
 	  "color": "#E62429"
 	},
+	"holy_tree": {
+	  "id": "holy_tree",
+	  "name": "Swiete Drzewo",
+	  "description": "Jednostka w swietym drzewie jest niewidzialna dla wrogow poza sasiednim swietym drzewem lub wozem.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/invisibility.png",
+	  "color": "#7AD67A",
+	  "remaining_turns": 2,
+	  "hides_unit": true,
+	  "stat_changes": []
+	},
 	"krzok": {
 	  "id": "krzok",
 	  "name": "Krzak",
 	  "description": "Jednostka pozostaje ukryta, dopoki stoi w krzaku.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/invisibility.png",
-	  "color": "#57C757"
+	  "color": "#57C757",
+	  "remaining_turns": 2,
+	  "hides_unit": true,
+	  "stat_changes": []
 	},
 	"lodowe_podloze": {
 	  "id": "lodowe_podloze",
@@ -70,7 +110,12 @@
 	  "description": "-2 do szybkosci i -2 do zasiegu ruchu przez 1 ture.",
 	  "category": "debuff",
 	  "icon": "res://assets/ui/frost.png",
-	  "color": "#80D6FF"
+	  "color": "#80D6FF",
+	  "remaining_turns": 1,
+	  "stat_changes": [
+		{"stat": "speed", "mode": "flat", "value": -2},
+		{"stat": "move_range", "mode": "flat", "value": -2}
+	  ]
 	},
 	"medytacja": {
 	  "id": "medytacja",
@@ -86,7 +131,21 @@
 	  "description": "Jednostka traci najblizsza ture.",
 	  "category": "debuff",
 	  "icon": "res://assets/ui/stun.png",
-	  "color": "#F5D64D"
+	  "color": "#F5D64D",
+	  "remaining_turns": 1,
+	  "skip_turn": true,
+	  "stat_changes": []
+	},
+	"ploniecie": {
+	  "id": "ploniecie",
+	  "name": "Ploniecie",
+	  "description": "Zadaje obrazenia na poczatku tury przez 2 tury.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/focus.png",
+	  "color": "#F77F3D",
+	  "remaining_turns": 2,
+	  "tick_damage": 1,
+	  "stat_changes": []
 	},
 	"przyspieszenie": {
 	  "id": "przyspieszenie",
@@ -95,6 +154,16 @@
 	  "category": "buff",
 	  "icon": "res://assets/ui/speed.png",
 	  "color": "#A3F05A"
+	},
+	"ruchome_piaski": {
+	  "id": "ruchome_piaski",
+	  "name": "Ruchome Piaski",
+	  "description": "Wejscie w ruchome piaski zuzywa caly pozostaly ruch w tej turze.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/water.png",
+	  "color": "#C4A35A",
+	  "skip_turn": true,
+	  "stat_changes": []
 	},
 	"runiczna_ochrona": {
 	  "id": "runiczna_ochrona",
@@ -182,7 +251,9 @@
 	  "description": "Po wejsciu do wody zuzywa caly pozostaly ruch.",
 	  "category": "debuff",
 	  "icon": "res://assets/ui/water.png",
-	  "color": "#5CAEFB"
+	  "color": "#5CAEFB",
+	  "skip_turn": true,
+	  "stat_changes": []
 	},
 	"wola_przetrwania": {
 	  "id": "wola_przetrwania",
@@ -223,6 +294,17 @@
 	  "category": "buff",
 	  "icon": "res://assets/ui/immunity.png",
 	  "color": "#9EDBFF"
+	},
+	"zimowy_krzak": {
+	  "id": "zimowy_krzak",
+	  "name": "Zimowy Krzak",
+	  "description": "Jednostka pozostaje ukryta, dopoki stoi w zimowym krzaku.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/invisibility.png",
+	  "color": "#80D6FF",
+	  "remaining_turns": 2,
+	  "hides_unit": true,
+	  "stat_changes": []
 	},
 	"zmasowany_atak": {
 	  "id": "zmasowany_atak",
