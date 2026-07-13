@@ -7,6 +7,7 @@ const GRID_COLUMNS := 15
 const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
 const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "krzok"]
+const WINTER_OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "zimowy_krzak"]
 const MAX_EVENT_LOG_ENTRIES := 60
 const MAX_VISIBLE_QUEUE_CARDS := 8
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
@@ -64,16 +65,24 @@ var OBSTACLE_PORTRAITS: Dictionary = {
 	"woda": preload("res://assets/mapTiles/water.png"),
 	"kamienie": preload("res://assets/mapTiles/rock1.png"),
 	"krzok": load("res://assets/mapTiles/bush.png"),
+	"zimowy_krzak": load("res://assets/mapTiles/zimowykszok.png"),
 }
 const OBSTACLE_NAMES: Dictionary = {
 	"woda": "Woda",
 	"kamienie": "Kamienie",
 	"krzok": "Krzak",
+	"zimowy_krzak": "Zimowy Krzak",
 }
 const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"woda": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
 	"kamienie": "Przez kamienie nie da sie przejsc. Blokuja linie strzalu.",
 	"krzok": "Jednostka w krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
+	"zimowy_krzak": "Jednostka w zimowym krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
+}
+const OBSTACLE_WINTER_DESCRIPTIONS: Dictionary = {
+	"woda": "Lod jest kruchy. Wejscie zuzywa caly ruch i ma 10%% szans na zapadniecie sie zabijajace jednostke.",
+	"kamienie": "Oblodzone skaly blokuja ruch i linie strzalu.",
+	"zimowy_krzak": "Jednostka w zimowym krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
 }
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
@@ -114,6 +123,7 @@ var event_log: Array[String] = []
 var round_number := 1
 var next_map_event_round := 0
 var next_map_event_id := ""
+var map_event_cells: Array[Vector2i] = []
 var turn_queue: Array[int] = []
 var turn_queue_index := -1
 var pending_skill_id := ""
@@ -478,6 +488,7 @@ func _enter_setup_mode() -> void:
 	is_animating = false
 	round_number = 1
 	next_map_event_id = ""
+	map_event_cells.clear()
 	_schedule_next_map_event(0)
 	turn_queue_index = -1
 	event_log.clear()
@@ -548,6 +559,7 @@ func _make_save_data() -> Dictionary:
 		"round_number": round_number,
 		"next_map_event_round": next_map_event_round,
 		"next_map_event_id": next_map_event_id,
+		"map_event_cells": map_event_cells.map(func(cell: Vector2i) -> Dictionary: return {"grid_x": cell.x, "grid_y": cell.y}),
 		"turn_queue": turn_queue.duplicate(),
 		"turn_queue_index": turn_queue_index,
 		"pending_skill_id": pending_skill_id,
@@ -588,6 +600,9 @@ func _apply_save_data(save_data: Dictionary) -> void:
 	round_number = int(save_data.get("round_number", 1))
 	next_map_event_round = int(save_data.get("next_map_event_round", 0))
 	next_map_event_id = str(save_data.get("next_map_event_id", ""))
+	map_event_cells.clear()
+	for cell_data in _typed_dictionary_array(save_data.get("map_event_cells", [])):
+		map_event_cells.append(Vector2i(int(cell_data.get("grid_x", -1)), int(cell_data.get("grid_y", -1))))
 	if next_map_event_round == 0 or next_map_event_id == "":
 		_schedule_next_map_event(round_number)
 	turn_queue = _typed_int_array(save_data.get("turn_queue", []))
@@ -965,7 +980,8 @@ func _render_obstacle_details(cell: Vector2i) -> void:
 	unit_status_panel.clear()
 	unit_abilities_panel.clear()
 	if actions_label != null:
-		actions_label.text = str(OBSTACLE_DESCRIPTIONS.get(type_id, ""))
+		var descriptions: Dictionary = OBSTACLE_WINTER_DESCRIPTIONS if _is_winter_scenario() else OBSTACLE_DESCRIPTIONS
+		actions_label.text = str(descriptions.get(type_id, OBSTACLE_DESCRIPTIONS.get(type_id, "")))
 
 func _show_obstacle_details(cell: Vector2i) -> void:
 	selected_unit_id = -1
@@ -1434,6 +1450,7 @@ func _sync_board() -> void:
 	board.set_units(units)
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
+	board.set_map_event_warning_cells(map_event_cells if _is_map_event_warning_round(round_number, next_map_event_round) else [])
 	if board.has_method("set_viewer_side"):
 		board.set_viewer_side("player")
 	_update_selection_visibility()
@@ -2652,6 +2669,25 @@ func _apply_terrain_entry_effect(unit: Dictionary) -> void:
 	else:
 		unit["is_hidden"] = false
 		_log_event("%s wchodzi w %s i traci reszte ruchu." % [_unit_name_log_text(unit), terrain_name])
+		if _is_winter_scenario() and _is_water_cell(cell):
+			_try_ice_break_death(unit, cell)
+
+
+func _try_ice_break_death(unit: Dictionary, cell: Vector2i) -> void:
+	if randi() % 100 >= 10:
+		return
+	_log_event(_color_log_text("%s zapada sie pod lod i ginie!" % _unit_name_log_text(unit), LOG_COLOR_DAMAGE))
+	unit["count"] = 0
+	unit["current_total_hp"] = 0
+	unit["current_hp"] = 0
+	_cleanup_destroyed_unit(unit)
+
+
+func _is_water_cell(cell: Vector2i) -> bool:
+	for obstacle in obstacles:
+		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y:
+			return str(obstacle.get("type", "")) == "woda"
+	return false
 
 
 func _remove_hiding_effects(unit: Dictionary) -> void:
@@ -2758,7 +2794,7 @@ func _try_trigger_map_event() -> void:
 		"przerwanie_grobli":
 			_event_random_obstacles("woda", "water", 3, "Przerwanie Grobli zalewa trzy pola.")
 		"plonace_zabudowania":
-			_event_random_damage("Plonace Zabudowania", 2)
+			_event_damage_on_marked_cells("Plonace Zabudowania")
 		"wichura_lodowa":
 			_event_ice_storm()
 		"sniezna_zamiec":
@@ -2766,9 +2802,10 @@ func _try_trigger_map_event() -> void:
 		"oblodzenie":
 			_event_random_terrain("ice", 3, 2)
 		"lawina":
-			_event_random_damage("Lawina", 3)
+			_event_damage_on_marked_cells("Lawina")
 		_:
 			return
+	map_event_cells.clear()
 	_schedule_next_map_event(round_number)
 	_sync_board()
 
@@ -2784,6 +2821,8 @@ func _schedule_next_map_event(after_round: int) -> void:
 		var choices: Array = pool.filter(func(event_id: String) -> bool: return event_id != previous_event_id)
 		next_map_event_id = str(choices.pick_random() if not choices.is_empty() else pool.pick_random())
 		next_map_event_round = after_round + randi_range(2, 4)
+	map_event_cells.clear()
+	_prepare_map_event_warning()
 
 
 func _map_event_name() -> String:
@@ -2791,41 +2830,28 @@ func _map_event_name() -> String:
 
 
 func _event_forest_roots() -> void:
-	var targets: Array = units.duplicate()
-	targets.shuffle()
-	for index in range(min(2, targets.size())):
-		_apply_or_refresh_effect(targets[index], {
+	for unit in units:
+		if not map_event_cells.has(Vector2i(int(unit.grid_x), int(unit.grid_y))):
+			continue
+		_apply_or_refresh_effect(unit, {
 			"id": "gniew_korzeni",
 			"name": "Gniew Korzeni",
 			"category": "debuff",
 			"remaining_turns": 1,
 			"stat_changes": [{"stat": "move_range", "mode": "set", "value": 0}]
 		})
-	_log_event(_color_log_text("EVENT MAPY: Gniew Korzeni unieruchamia dwie losowe jednostki.", LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("EVENT MAPY: Gniew Korzeni unieruchamia jednostki na oznaczonych polach.", LOG_COLOR_YELLOW))
 
 
 func _event_falling_rubble() -> void:
-	var targets: Array = units.duplicate()
-	targets.shuffle()
-	for index in range(min(2, targets.size())):
-		var target: Dictionary = targets[index]
-		var damage: int = _calculate_tick_damage(target, 1)
-		_apply_damage_to_unit(target, damage)
-		_log_event("%s otrzymuje %s obrazen od spadajacego rumoszu." % [_unit_name_log_text(target), _color_log_text(str(damage), LOG_COLOR_DAMAGE)])
-		_cleanup_destroyed_unit(target)
+	_damage_units_on_event_cells("Spadajacy Rumosz")
 	_log_event(_color_log_text("EVENT MAPY: Wstrzas narusza strop kopalni.", LOG_COLOR_YELLOW))
 
 
 func _event_spreading_fire() -> void:
-	var cells: Array[Vector2i] = []
-	for column in range(GRID_COLUMNS):
-		for row in range(GRID_ROWS):
-			var cell := Vector2i(column, row)
-			if _find_unit_at_cell(cell).is_empty() and _get_terrain_at(cell).is_empty():
-				cells.append(cell)
-	cells.shuffle()
-	for index in range(min(3, cells.size())):
-		_add_terrain_effect(cells[index], "fire", 2)
+	for cell in map_event_cells:
+		_add_terrain_effect(cell, "fire", 2)
+	_apply_terrain_effects_in_cells(map_event_cells)
 	_log_event(_color_log_text("EVENT MAPY: Pozar rozprzestrzenia sie na trzy pola.", LOG_COLOR_YELLOW))
 
 
@@ -2861,53 +2887,92 @@ func _event_global_range(event_name: String) -> void:
 
 
 func _event_magic_bloom() -> void:
-	for side in ["player", "enemy"]:
-		var candidates: Array = units.filter(func(unit: Dictionary) -> bool: return str(unit.side) == side)
-		if candidates.is_empty():
+	for target in units:
+		if not map_event_cells.has(Vector2i(int(target.grid_x), int(target.grid_y))):
 			continue
-		var target: Dictionary = candidates.pick_random()
 		var healing: int = int(target.get("base_hp", 1))
 		target["current_total_hp"] = mini(int(target.get("max_total_hp", healing)), int(target.get("current_total_hp", 0)) + healing)
 		_refresh_unit_health_state(target)
 		_log_event("%s odzyskuje %s HP dzieki Magicznemu Rozkwitowi." % [_unit_name_log_text(target), healing])
-	_log_event(_color_log_text("EVENT MAPY: Magiczny Rozkwit leczy po jednej jednostce kazdej strony.", LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("EVENT MAPY: Magiczny Rozkwit leczy jednostki na oznaczonych polach.", LOG_COLOR_YELLOW))
 
 
 func _event_random_terrain(effect_id: String, count: int, turns: int) -> void:
-	var cells: Array[Vector2i] = _random_empty_map_cells(count)
-	for cell in cells:
+	for cell in map_event_cells:
 		_add_terrain_effect(cell, effect_id, turns, -1, 1 if effect_id == "poison_cloud" else 0)
-	_log_event(_color_log_text("EVENT MAPY: %s pojawia sie na %d polach." % [_map_event_name(), cells.size()], LOG_COLOR_YELLOW))
+	_apply_terrain_effects_in_cells(map_event_cells)
+	_log_event(_color_log_text("EVENT MAPY: %s pojawia sie na %d polach." % [_map_event_name(), map_event_cells.size()], LOG_COLOR_YELLOW))
 
 
 func _event_random_obstacles(type_id: String, variant: String, count: int, message: String) -> void:
-	for cell in _random_empty_map_cells(count):
+	for cell in map_event_cells:
+		if type_id == "kamienie":
+			var target: Dictionary = _find_unit_at_cell(cell)
+			if not target.is_empty():
+				var damage: int = _calculate_tick_damage(target, 1)
+				_apply_damage_to_unit(target, damage)
+				_cleanup_destroyed_unit(target)
+				if not _find_unit_at_cell(cell).is_empty():
+					continue
 		obstacles.append({"grid_x": cell.x, "grid_y": cell.y, "type": type_id, "variant": variant})
+	for unit in units:
+		if map_event_cells.has(Vector2i(int(unit.grid_x), int(unit.grid_y))):
+			_apply_terrain_entry_effect(unit)
 	_log_event(_color_log_text("EVENT MAPY: %s" % message, LOG_COLOR_YELLOW))
 
 
-func _event_random_damage(event_name: String, target_count: int) -> void:
-	var targets: Array = units.duplicate()
-	targets.shuffle()
-	for index in range(mini(target_count, targets.size())):
-		var target: Dictionary = targets[index]
+func _event_damage_on_marked_cells(event_name: String) -> void:
+	_damage_units_on_event_cells(event_name)
+	_log_event(_color_log_text("EVENT MAPY: %s uderza w oznaczone pola." % event_name, LOG_COLOR_YELLOW))
+
+
+func _damage_units_on_event_cells(event_name: String) -> void:
+	for target in units.duplicate():
+		if not map_event_cells.has(Vector2i(int(target.grid_x), int(target.grid_y))):
+			continue
 		var damage: int = _calculate_tick_damage(target, 1)
 		_apply_damage_to_unit(target, damage)
 		_log_event("%s otrzymuje %s obrazen przez %s." % [_unit_name_log_text(target), _color_log_text(str(damage), LOG_COLOR_DAMAGE), event_name])
 		_cleanup_destroyed_unit(target)
-	_log_event(_color_log_text("EVENT MAPY: %s uderza w losowe jednostki." % event_name, LOG_COLOR_YELLOW))
 
 
-func _random_empty_map_cells(count: int) -> Array[Vector2i]:
+func _random_map_event_cells(count: int) -> Array[Vector2i]:
 	var cells: Array[Vector2i] = []
 	for column in range(GRID_COLUMNS):
 		for row in range(GRID_ROWS):
 			var cell := Vector2i(column, row)
-			if _find_unit_at_cell(cell).is_empty() and _get_terrain_at(cell).is_empty():
+			if _get_terrain_at(cell).is_empty():
 				cells.append(cell)
 	cells.shuffle()
 	cells.resize(mini(count, cells.size()))
 	return cells
+
+
+func _prepare_map_event_warning() -> void:
+	if not _is_map_event_warning_round(round_number, next_map_event_round) or not map_event_cells.is_empty():
+		return
+	var cell_count: int = int({
+		"gniew_korzeni": 3,
+		"przebudzenie_gaju": 3,
+		"magiczny_rozkwit": 3,
+		"spadajacy_rumosz": 3,
+		"wybuch_gazu": 3,
+		"pekniecie_chodnika": 3,
+		"zawal_kopalni": 2,
+		"rozprzestrzeniajacy_sie_pozar": 3,
+		"przerwanie_grobli": 3,
+		"plonace_zabudowania": 3,
+		"oblodzenie": 3,
+		"lawina": 4,
+	}.get(next_map_event_id, 0))
+	if cell_count == 0:
+		return
+	map_event_cells = _random_map_event_cells(cell_count)
+	_log_event(_color_log_text("OSTRZEZENIE: %s uderzy w oznaczone pola w rundzie %d." % [_map_event_name(), next_map_event_round], LOG_COLOR_YELLOW), false)
+
+
+func _is_map_event_warning_round(current_round_number: int, event_round: int) -> bool:
+	return event_round >= 2 and current_round_number == event_round - 1
 
 
 func _can_use_skill(unit: Dictionary, skill_id: String) -> bool:
@@ -3267,7 +3332,13 @@ func _are_active_skills_on_cooldown(unit: Dictionary) -> bool:
 
 
 func _generate_obstacles() -> Array[Dictionary]:
-	return ObstacleGeneratorScript.generate(units, OBSTACLE_TYPES, GRID_COLUMNS, GRID_ROWS, SETUP_COLUMNS)
+	var winter_mode: bool = _is_winter_scenario()
+	var obstacle_types: Array[String] = WINTER_OBSTACLE_TYPES if winter_mode else OBSTACLE_TYPES
+	return ObstacleGeneratorScript.generate(units, obstacle_types, GRID_COLUMNS, GRID_ROWS, SETUP_COLUMNS, winter_mode)
+
+
+func _is_winter_scenario() -> bool:
+	return current_battle_background_path.get_file().get_basename() == "elves_vs_dwarves_pass"
 
 
 func _get_terrain_at(cell: Vector2i) -> Dictionary:
@@ -3361,7 +3432,10 @@ func _is_cell_obstacle(cell: Vector2i) -> bool:
 
 
 func _blocks_cell_skill_target(cell: Vector2i) -> bool:
-	return _is_cell_obstacle(cell) and str(_get_terrain_at(cell).get("id", "")) != "krzok"
+	if not _is_cell_obstacle(cell):
+		return false
+	var terrain_id: String = str(_get_terrain_at(cell).get("id", ""))
+	return terrain_id != "krzok" and terrain_id != "zimowy_krzak"
 
 
 func _is_attack_blocked(attacker: Dictionary, target_cell: Vector2i) -> bool:
@@ -3787,6 +3861,7 @@ func _validate_setup() -> void:
 
 	assert(_calculate_tick_damage({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
 	assert(next_map_event_round == 0 or next_map_event_round >= 2, "Event mapy nie moze wystapic przed druga runda.")
+	assert(_is_map_event_warning_round(2, 3) and not _is_map_event_warning_round(1, 3), "Pola eventu maja byc widoczne tylko runde przed jego aktywacja.")
 	for scenario_id in MAP_EVENT_POOLS:
 		var event_pool: Array = MAP_EVENT_POOLS[scenario_id]
 		assert(event_pool.size() == 4, "Kazdy scenariusz musi miec cztery eventy: %s" % scenario_id)
@@ -4263,6 +4338,7 @@ func _start_next_activation() -> void:
 			round_number += 1
 			_advance_terrain_effects()
 			_try_trigger_map_event()
+			_prepare_map_event_warning()
 			if _check_victory():
 				return
 			_rebuild_turn_queue()

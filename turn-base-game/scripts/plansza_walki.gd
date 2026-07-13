@@ -26,7 +26,9 @@ const ROCK2_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2.png")
 const ROCK2K_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2k.png")
 const ROCK3_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock3.png")
 var KRZOK_TEXTURE: Texture2D = load("res://assets/mapTiles/bush.png")
+var ZIMOWY_KRZOK_TEXTURE: Texture2D = load("res://assets/mapTiles/zimowykszok.png")
 const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
+var ICE_TEXTURE: Texture2D = load("res://assets/mapTiles/ice.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
 const PROJECTILE_PATH_ARROWS := "res://assets/arrows_projectile.png"
@@ -41,6 +43,7 @@ var unit_textures: Dictionary = {}
 var selected_unit_id := -1
 var highlighted_move_cells: Array[Vector2i] = []
 var highlighted_attack_cells: Array[Vector2i] = []
+var map_event_warning_cells: Array[Vector2i] = []
 var move_highlight_opacity_mult: float = 1.0
 var hovered_move_path: Array[Vector2i] = []
 var hovered_attack_cell := Vector2i(-1, -1)
@@ -164,6 +167,13 @@ func set_highlighted_cells(move_cells: Array, attack_cells: Array = [], move_opa
 	queue_redraw()
 
 
+func set_map_event_warning_cells(cells: Array) -> void:
+	map_event_warning_cells.clear()
+	for cell in cells:
+		map_event_warning_cells.append(cell)
+	queue_redraw()
+
+
 func set_hovered_move_path(path: Array) -> void:
 	hovered_move_path.clear()
 	for cell in path:
@@ -197,6 +207,7 @@ func _draw() -> void:
 		draw_hex_grid()
 	draw_obstacles()
 	draw_terrain_effects()
+	_draw_cell_highlights(map_event_warning_cells, Color(1.0, 0.25, 0.08, 0.32), Color(1.0, 0.55, 0.12, 0.95))
 	draw_highlighted_cells()
 	_draw_arrow_rain_overlay()
 	draw_units()
@@ -536,7 +547,10 @@ func draw_obstacles() -> void:
 		"rock2k": ROCK2K_TEXTURE,
 		"rock3": ROCK3_TEXTURE,
 		"krzok": KRZOK_TEXTURE,
-		"bush": KRZOK_TEXTURE
+		"bush": KRZOK_TEXTURE,
+		"zimowy_krzak": ZIMOWY_KRZOK_TEXTURE,
+		"zimowykszok": ZIMOWY_KRZOK_TEXTURE,
+		"ice": ICE_TEXTURE
 	}
 	var texture_draw_size := Vector2(HEX_RADIUS * 2.0, HEX_RADIUS * 2.0)
 	for obstacle in obstacles:
@@ -722,8 +736,9 @@ func _units_share_adjacent_bushes(observer: Dictionary, target: Dictionary) -> b
 
 
 func _is_bush_cell(cell: Vector2i) -> bool:
+	var bush_types: Array[String] = ["krzok", "zimowy_krzak"]
 	for obstacle in obstacles:
-		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y and str(obstacle.get("type", "")) == "krzok":
+		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y and bush_types.has(str(obstacle.get("type", ""))):
 			return true
 	return false
 
