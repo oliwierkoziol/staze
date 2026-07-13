@@ -7,7 +7,8 @@ const GRID_COLUMNS := 15
 const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
 const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "krzok"]
-const FOREST_OBSTACLE_TYPES: Array[String] = ["holy_tree", "cart", "elf_statue", "hole", "detonator"]
+const FOREST_OBSTACLE_TYPES: Array[String] = ["holy_tree", "elf_statue"]
+const MINE_OBSTACLE_TYPES: Array[String] = ["cart", "detonator", "hole"]
 const WINTER_OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "zimowy_krzak"]
 const DESERT_OBSTACLE_TYPES: Array[String] = ["ruchome_piaski", "kamienie"]
 const MAX_EVENT_LOG_ENTRIES := 60
@@ -3560,6 +3561,7 @@ func _generate_obstacles() -> Array[Dictionary]:
 	var winter_mode: bool = _is_winter_scenario()
 	var desert_mode: bool = _is_desert_scenario()
 	var forest_mode: bool = _is_forest_scenario()
+	var mine_mode: bool = _is_mine_scenario()
 	var obstacle_types: Array[String]
 	if desert_mode:
 		obstacle_types = DESERT_OBSTACLE_TYPES
@@ -3567,6 +3569,8 @@ func _generate_obstacles() -> Array[Dictionary]:
 		obstacle_types = WINTER_OBSTACLE_TYPES
 	elif forest_mode:
 		obstacle_types = FOREST_OBSTACLE_TYPES
+	elif mine_mode:
+		obstacle_types = MINE_OBSTACLE_TYPES
 	else:
 		obstacle_types = OBSTACLE_TYPES
 	var generated: Array[Dictionary] = ObstacleGeneratorScript.generate(units, obstacle_types, GRID_COLUMNS, GRID_ROWS, SETUP_COLUMNS, winter_mode)
@@ -3575,6 +3579,10 @@ func _generate_obstacles() -> Array[Dictionary]:
 			if str(obstacle.get("type", "")) == "kamienie":
 				obstacle["variant"] = "dune"
 	return generated
+
+
+func _is_mine_scenario() -> bool:
+	return current_battle_background_path.get_file().get_basename() == "dwarves_vs_goblins_mine"
 
 
 func _is_forest_scenario() -> bool:
