@@ -40,6 +40,16 @@
 	  "target_type": "self",
 	  "effect_type": "eagle_eye"
 	},
+	"rzut_hakiem": {
+	  "id": "rzut_hakiem",
+	  "name": "Rzut Hakiem",
+	  "description": "Rzuca hakiem we wroga w zasiegu 4 hexow i przyciaga go na sasiedni hex.",
+	  "ap_cost": 1,
+	  "cooldown": 2,
+	  "range": 4,
+	  "target_type": "enemy_unit",
+	  "effect_type": "hook_throw"
+	},
 	"potezne_uderzenie": {
 	  "id": "potezne_uderzenie",
 	  "name": "Potezne Uderzenie",

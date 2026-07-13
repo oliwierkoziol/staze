@@ -20,7 +20,7 @@
         "portrait": "res://assets/characters/humans/orcWarrior.png",
         "skill_ids": [
           "potezne_uderzenie",
-          "skupiony_cios",
+          "rzut_hakiem",
           "berserk"
         ]
       },

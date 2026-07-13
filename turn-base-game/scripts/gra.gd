@@ -996,7 +996,9 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		if str(pending_skill.get("effect_type", "")) == "charge":
 			_try_execute_charge_move(active_unit, cell)
 			return
-		_try_use_skill(active_unit, pending_skill_id, cell)
+		await _try_use_skill(active_unit, pending_skill_id, cell)
+		_update_highlighted_cells(active_unit)
+		_update_action_buttons()
 		return
 
 	var clicked_unit := _find_unit_at_cell(cell)
@@ -1135,7 +1137,7 @@ func _enemy_take_turn() -> void:
 	if target.is_empty():
 		_end_current_activation()
 		return
-	if _try_enemy_use_skill(enemy_unit, target):
+	if await _try_enemy_use_skill(enemy_unit, target):
 		target = _find_nearest_player_unit(enemy_unit)
 		if enemy_unit.is_empty() or target.is_empty():
 			_end_current_activation()
@@ -1161,7 +1163,7 @@ func _enemy_take_turn() -> void:
 		_try_trigger_agility(enemy_unit)
 
 	target = _find_nearest_player_unit(enemy_unit)
-	if not enemy_unit.is_empty() and not target.is_empty() and _try_enemy_use_skill(enemy_unit, target):
+	if not enemy_unit.is_empty() and not target.is_empty() and await _try_enemy_use_skill(enemy_unit, target):
 		_end_current_activation()
 		return
 	if not enemy_unit.is_empty() and not target.is_empty() and _can_see_target(enemy_unit, target) and _can_unit_attack(enemy_unit) and _is_in_attack_range(enemy_unit, Vector2i(target.grid_x, target.grid_y)):
@@ -1362,7 +1364,9 @@ func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
 		if str(skill.get("effect_type", "")) == "charge" and _try_enemy_charge(enemy_unit, target, skill):
 			return true
 		if target_type == "enemy_unit" and _hex_distance(Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), target_cell) <= int(skill.get("range", 0)) and not _is_attack_blocked(enemy_unit, target_cell):
-			_execute_skill(enemy_unit, target, skill, target_cell)
+			if str(skill.get("effect_type", "")) == "hook_throw" and not _can_hook_throw_target(enemy_unit, target, skill):
+				continue
+			await _execute_skill(enemy_unit, target, skill, target_cell)
 			return true
 		if target_type == "cell" and str(skill.get("effect_type", "")) not in ["bear_trap", "goblin_trap"]:
 			var cell := _find_enemy_area_skill_cell(enemy_unit, skill)
@@ -1482,8 +1486,13 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 	var active_unit := _get_active_unit()
 	var charge_skill: Dictionary = _get_active_charge_skill(active_unit)
 	if pending_skill_id != "" and charge_skill.is_empty():
+		var pending_skill: Dictionary = skill_library.get(pending_skill_id, {})
+		if str(pending_skill.get("effect_type", "")) == "hook_throw":
+			_handle_hook_throw_hover(active_unit, pending_skill, cell)
+			return
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
 		_clear_move_cost_label()
 		return
 
@@ -1532,6 +1541,36 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 	board.set_hovered_move_path(path)
 	board.set_hovered_attack_cell(Vector2i(-1, -1))
 	_show_move_cost_label(path_cost, remaining - path_cost)
+
+
+func _handle_hook_throw_hover(active_unit: Dictionary, skill: Dictionary, cell: Vector2i) -> void:
+	board.set_hovered_move_path([])
+	_clear_move_cost_label()
+	if cell.x == -1 or active_unit.is_empty():
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
+		return
+	var hovered_unit: Dictionary = _find_unit_at_cell(cell)
+	if hovered_unit.is_empty() or not _can_hook_throw_target(active_unit, hovered_unit, skill):
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
+		return
+	board.set_hovered_attack_cell(cell)
+	board.set_hovered_pull_destination_cell(_get_pull_destination(active_unit, hovered_unit))
+
+
+func _can_hook_throw_target(caster: Dictionary, target: Dictionary, skill: Dictionary) -> bool:
+	if target.is_empty() or target.side == caster.side:
+		return false
+	if not _can_see_target(caster, target):
+		return false
+	var origin := Vector2i(caster.grid_x, caster.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	if _hex_distance(origin, target_cell) > int(skill.get("range", 0)):
+		return false
+	if _is_attack_blocked(caster, target_cell):
+		return false
+	return _get_pull_destination(caster, target) != Vector2i(-1, -1)
 
 
 func _get_active_charge_skill(unit: Dictionary) -> Dictionary:
@@ -2048,7 +2087,7 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 	if str(skill.get("target_type", "")) == "self":
 		if cell != Vector2i(unit.grid_x, unit.grid_y):
 			return
-		_execute_skill(unit, unit, skill, cell)
+		await _execute_skill(unit, unit, skill, cell)
 		return
 
 	if str(skill.get("target_type", "")) == "cell":
@@ -2060,7 +2099,7 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 			return
 		if str(skill.get("effect_type", "")) == "goblin_trap" and (not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, "goblin_trap").is_empty()):
 			return
-		_execute_skill(unit, {}, skill, cell)
+		await _execute_skill(unit, {}, skill, cell)
 		return
 
 	var target := _find_unit_at_cell(cell)
@@ -2077,7 +2116,9 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 		return
 	if _is_attack_blocked(unit, cell):
 		return
-	_execute_skill(unit, target, skill, cell)
+	if str(skill.get("effect_type", "")) == "hook_throw" and not _can_hook_throw_target(unit, target, skill):
+		return
+	await _execute_skill(unit, target, skill, cell)
 
 
 func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, target_cell: Vector2i) -> void:
@@ -2098,6 +2139,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_eagle_eye(caster)
 		"heavy_strike":
 			_execute_heavy_strike(caster, target)
+		"hook_throw":
+			await _execute_hook_throw(caster, target)
 		"fireball":
 			_execute_fireball(caster, target_cell)
 		"dynamite_throw":
@@ -2204,6 +2247,36 @@ func _execute_eagle_eye(caster: Dictionary) -> void:
 		]
 	})
 	_log_event("%s przygotowuje Sokole Oko na nastepna ture." % _unit_name_log_text(caster))
+
+
+func _execute_hook_throw(caster: Dictionary, target: Dictionary) -> void:
+	var destination: Vector2i = _get_pull_destination(caster, target)
+	if destination == Vector2i(-1, -1):
+		_log_event("%s rzuca hakiem w %s, ale nie moze przyciagnac celu." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
+		return
+	var start_cell := Vector2i(target.grid_x, target.grid_y)
+	var pull_path: Array[Vector2i] = _get_pull_path(start_cell, destination)
+	is_animating = true
+	board.play_hook_throw_animation(int(caster.id), int(target.id))
+	await get_tree().create_timer(0.15).timeout
+	target["grid_x"] = destination.x
+	target["grid_y"] = destination.y
+	_sync_board()
+	if pull_path.is_empty():
+		board.snap_unit_to_cell(int(target.id), destination)
+	else:
+		board.animate_unit_pull_path(int(target.id), pull_path)
+		await board.animation_finished
+	is_animating = false
+	_sync_board()
+	_log_event("%s przyciaga %s Rzutem Hakiem." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
+
+
+func _get_pull_path(start_cell: Vector2i, destination_cell: Vector2i) -> Array[Vector2i]:
+	var line_cells: Array[Vector2i] = _get_hex_line(start_cell, destination_cell)
+	if line_cells.size() <= 1:
+		return []
+	return line_cells.slice(1)
 
 
 func _execute_heavy_strike(caster: Dictionary, target: Dictionary) -> void:
@@ -2829,6 +2902,28 @@ func _get_push_destination(source: Dictionary, target: Dictionary) -> Vector2i:
 	if not occupant.is_empty():
 		return Vector2i(-1, -1)
 	return pushed_cell
+
+
+func _get_pull_destination(source: Dictionary, target: Dictionary) -> Vector2i:
+	var source_cell := Vector2i(source.grid_x, source.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	if _hex_distance(source_cell, target_cell) <= 1:
+		return Vector2i(-1, -1)
+	var best_cell := Vector2i(-1, -1)
+	var best_distance: int = _hex_distance(source_cell, target_cell)
+	for neighbor in _get_neighbors(source_cell):
+		if neighbor.x < 0 or neighbor.x >= GRID_COLUMNS or neighbor.y < 0 or neighbor.y >= GRID_ROWS:
+			continue
+		if _is_cell_obstacle(neighbor):
+			continue
+		if not _find_unit_at_cell(neighbor).is_empty():
+			continue
+		var neighbor_distance: int = _hex_distance(neighbor, target_cell)
+		if neighbor_distance >= best_distance:
+			continue
+		best_distance = neighbor_distance
+		best_cell = neighbor
+	return best_cell
 
 
 func _ensure_energy_barrier(unit: Dictionary) -> void:
@@ -3757,6 +3852,25 @@ func _validate_setup() -> void:
 	units = previous_units
 	obstacles = previous_obstacles
 	terrain_effects = previous_terrain_effects
+	var hook_caster := {
+		"id": 1101,
+		"side": "player",
+		"grid_x": 2,
+		"grid_y": 5,
+		"name": "Ork Wojownik"
+	}
+	var hook_target := {
+		"id": 1102,
+		"side": "enemy",
+		"grid_x": 5,
+		"grid_y": 5,
+		"name": "Cel"
+	}
+	var pull_cell: Vector2i = _get_pull_destination(hook_caster, hook_target)
+	assert(pull_cell == Vector2i(3, 5), "Rzut Hakiem musi przyciagac cel na sasiedni hex rzucajacego.")
+	hook_target.grid_x = pull_cell.x
+	hook_target.grid_y = pull_cell.y
+	assert(_get_pull_destination(hook_caster, hook_target) == Vector2i(-1, -1), "Rzut Hakiem nie moze przyciagac celu juz stojacego obok.")
 
 
 func _on_board_animation_finished(_unit_id: int) -> void:

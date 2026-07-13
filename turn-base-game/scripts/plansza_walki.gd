@@ -43,6 +43,7 @@ var highlighted_attack_cells: Array[Vector2i] = []
 var move_highlight_opacity_mult: float = 1.0
 var hovered_move_path: Array[Vector2i] = []
 var hovered_attack_cell := Vector2i(-1, -1)
+var hovered_pull_destination_cell := Vector2i(-1, -1)
 var visual_positions: Dictionary = {}
 var active_tweens: Dictionary = {}
 var unit_attack_offsets: Dictionary = {}
@@ -135,6 +136,7 @@ func set_highlighted_cells(move_cells: Array, attack_cells: Array = [], move_opa
 	highlighted_attack_cells.clear()
 	hovered_move_path.clear()
 	hovered_attack_cell = Vector2i(-1, -1)
+	hovered_pull_destination_cell = Vector2i(-1, -1)
 	move_highlight_opacity_mult = move_opacity_mult
 	for cell in move_cells:
 		highlighted_move_cells.append(cell)
@@ -152,6 +154,13 @@ func set_hovered_move_path(path: Array) -> void:
 
 func set_hovered_attack_cell(cell: Vector2i) -> void:
 	hovered_attack_cell = cell
+	if cell.x == -1:
+		hovered_pull_destination_cell = Vector2i(-1, -1)
+	queue_redraw()
+
+
+func set_hovered_pull_destination_cell(cell: Vector2i) -> void:
+	hovered_pull_destination_cell = cell
 	queue_redraw()
 
 
@@ -197,6 +206,45 @@ func _set_unit_visual_position(position: Vector2, unit_id: int) -> void:
 func _on_unit_tween_finished(unit_id: int) -> void:
 	active_tweens.erase(unit_id)
 	animation_finished.emit(unit_id)
+
+
+func animate_unit_pull_path(unit_id: int, path: Array) -> void:
+	var current_position: Vector2 = visual_positions.get(unit_id, Vector2.ZERO)
+	var points: Array[Vector2] = [current_position]
+	for cell in path:
+		points.append(axial_to_pixel(cell.x, cell.y))
+
+	if points.size() < 2:
+		animation_finished.emit(unit_id)
+		return
+
+	if active_tweens.has(unit_id):
+		var old_tween: Tween = active_tweens[unit_id]
+		old_tween.kill()
+
+	var tween: Tween = create_tween()
+	active_tweens[unit_id] = tween
+	var from_position: Vector2 = current_position
+	for index in range(1, points.size()):
+		var target_position: Vector2 = points[index]
+		tween.tween_method(_set_unit_visual_position.bind(unit_id), from_position, target_position, 0.10)\
+			.set_trans(Tween.TRANS_QUAD)\
+			.set_ease(Tween.EASE_IN)
+		from_position = target_position
+	tween.finished.connect(_on_unit_tween_finished.bind(unit_id))
+
+
+func play_hook_throw_animation(caster_id: int, target_id: int) -> void:
+	var caster_position: Vector2 = visual_positions.get(caster_id, Vector2.ZERO)
+	var target_position: Vector2 = visual_positions.get(target_id, Vector2.ZERO)
+	_spawn_projectile(caster_position, target_position, "arrows")
+	var direction: Vector2 = target_position - caster_position
+	if direction.length_squared() <= 0.001:
+		return
+	var dash_offset: Vector2 = direction.normalized() * 10.0
+	var tween: Tween = create_tween()
+	tween.tween_method(_set_unit_attack_offset.bind(caster_id), Vector2.ZERO, dash_offset, 0.08)
+	tween.tween_method(_set_unit_attack_offset.bind(caster_id), dash_offset, Vector2.ZERO, 0.10)
 
 
 func play_attack_animation(attacker_id: int, target_id: int, projectile_kind: String = "") -> void:
@@ -514,6 +562,16 @@ func draw_highlighted_cells() -> void:
 		HEX_RADIUS - 12.0
 	)
 	_draw_hovered_attack_cell()
+	_draw_hovered_pull_destination_cell()
+
+
+func _draw_hovered_pull_destination_cell() -> void:
+	if hovered_pull_destination_cell.x == -1:
+		return
+	var center: Vector2 = axial_to_pixel(hovered_pull_destination_cell.x, hovered_pull_destination_cell.y)
+	var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 10.0)
+	draw_colored_polygon(points, Color(1.0, 0.72, 0.18, 0.22))
+	draw_polyline(points + PackedVector2Array([points[0]]), Color(1.0, 0.78, 0.20, 0.95), 3.0)
 
 
 func _draw_cell_highlights(cells: Array[Vector2i], fill_color: Color, border_color: Color, radius: float = HEX_RADIUS - 6.0) -> void:
