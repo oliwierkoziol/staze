@@ -7,6 +7,7 @@ const GRID_COLUMNS := 15
 const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
 const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "krzok"]
+const WINTER_OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "zimowy_krzak"]
 const MAX_EVENT_LOG_ENTRIES := 60
 const MAX_VISIBLE_QUEUE_CARDS := 8
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
@@ -64,16 +65,24 @@ var OBSTACLE_PORTRAITS: Dictionary = {
 	"woda": preload("res://assets/mapTiles/water.png"),
 	"kamienie": preload("res://assets/mapTiles/rock1.png"),
 	"krzok": load("res://assets/mapTiles/bush.png"),
+	"zimowy_krzak": load("res://assets/mapTiles/zimowykszok.png"),
 }
 const OBSTACLE_NAMES: Dictionary = {
 	"woda": "Woda",
 	"kamienie": "Kamienie",
 	"krzok": "Krzak",
+	"zimowy_krzak": "Zimowy Krzak",
 }
 const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"woda": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
 	"kamienie": "Przez kamienie nie da sie przejsc. Blokuja linie strzalu.",
 	"krzok": "Jednostka w krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
+	"zimowy_krzak": "Jednostka w zimowym krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
+}
+const OBSTACLE_WINTER_DESCRIPTIONS: Dictionary = {
+	"woda": "Lod jest kruchy. Wejscie zuzywa caly ruch i ma 10%% szans na zapadniecie sie zabijajace jednostke.",
+	"kamienie": "Oblodzone skaly blokuja ruch i linie strzalu.",
+	"zimowy_krzak": "Jednostka w zimowym krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
 }
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
@@ -971,7 +980,8 @@ func _render_obstacle_details(cell: Vector2i) -> void:
 	unit_status_panel.clear()
 	unit_abilities_panel.clear()
 	if actions_label != null:
-		actions_label.text = str(OBSTACLE_DESCRIPTIONS.get(type_id, ""))
+		var descriptions: Dictionary = OBSTACLE_WINTER_DESCRIPTIONS if _is_winter_scenario() else OBSTACLE_DESCRIPTIONS
+		actions_label.text = str(descriptions.get(type_id, OBSTACLE_DESCRIPTIONS.get(type_id, "")))
 
 func _show_obstacle_details(cell: Vector2i) -> void:
 	selected_unit_id = -1
@@ -2603,6 +2613,25 @@ func _apply_terrain_entry_effect(unit: Dictionary) -> void:
 	else:
 		unit["is_hidden"] = false
 		_log_event("%s wchodzi w %s i traci reszte ruchu." % [_unit_name_log_text(unit), terrain_name])
+		if _is_winter_scenario() and _is_water_cell(cell):
+			_try_ice_break_death(unit, cell)
+
+
+func _try_ice_break_death(unit: Dictionary, cell: Vector2i) -> void:
+	if randi() % 100 >= 10:
+		return
+	_log_event(_color_log_text("%s zapada sie pod lod i ginie!" % _unit_name_log_text(unit), LOG_COLOR_DAMAGE))
+	unit["count"] = 0
+	unit["current_total_hp"] = 0
+	unit["current_hp"] = 0
+	_cleanup_destroyed_unit(unit)
+
+
+func _is_water_cell(cell: Vector2i) -> bool:
+	for obstacle in obstacles:
+		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y:
+			return str(obstacle.get("type", "")) == "woda"
+	return false
 
 
 func _remove_hiding_effects(unit: Dictionary) -> void:
@@ -3247,7 +3276,13 @@ func _are_active_skills_on_cooldown(unit: Dictionary) -> bool:
 
 
 func _generate_obstacles() -> Array[Dictionary]:
-	return ObstacleGeneratorScript.generate(units, OBSTACLE_TYPES, GRID_COLUMNS, GRID_ROWS, SETUP_COLUMNS)
+	var winter_mode: bool = _is_winter_scenario()
+	var obstacle_types: Array[String] = WINTER_OBSTACLE_TYPES if winter_mode else OBSTACLE_TYPES
+	return ObstacleGeneratorScript.generate(units, obstacle_types, GRID_COLUMNS, GRID_ROWS, SETUP_COLUMNS, winter_mode)
+
+
+func _is_winter_scenario() -> bool:
+	return current_battle_background_path.get_file().get_basename() == "elves_vs_dwarves_pass"
 
 
 func _get_terrain_at(cell: Vector2i) -> Dictionary:
@@ -3341,7 +3376,10 @@ func _is_cell_obstacle(cell: Vector2i) -> bool:
 
 
 func _blocks_cell_skill_target(cell: Vector2i) -> bool:
-	return _is_cell_obstacle(cell) and str(_get_terrain_at(cell).get("id", "")) != "krzok"
+	if not _is_cell_obstacle(cell):
+		return false
+	var terrain_id: String = str(_get_terrain_at(cell).get("id", ""))
+	return terrain_id != "krzok" and terrain_id != "zimowy_krzak"
 
 
 func _is_attack_blocked(attacker: Dictionary, target_cell: Vector2i) -> bool:

@@ -3,7 +3,7 @@ class_name ObstacleGenerator
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 
 
-static func generate(units: Array, obstacle_types: Array[String], columns: int, rows: int, setup_columns: int) -> Array[Dictionary]:
+static func generate(units: Array, obstacle_types: Array[String], columns: int, rows: int, setup_columns: int, winter_mode: bool = false) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var occupied: Dictionary = {}
 	var obstacle_types_by_cell: Dictionary = {}
@@ -24,19 +24,23 @@ static func generate(units: Array, obstacle_types: Array[String], columns: int, 
 				"grid_x": cell.x,
 				"grid_y": cell.y,
 				"type": obstacle_type,
-				"variant": _pick_variant(obstacle_type, rng)
+				"variant": _pick_variant(obstacle_type, rng, winter_mode)
 			})
 	return result
 
 
-static func _pick_variant(obstacle_type: String, rng: RandomNumberGenerator) -> String:
+static func _pick_variant(obstacle_type: String, rng: RandomNumberGenerator, winter_mode: bool = false) -> String:
 	if obstacle_type == "kamienie":
+		if winter_mode:
+			return "ice"
 		if rng.randi_range(1, 100) == 1:
 			return "rock2k"
 		var rock_variants: Array[String] = ["rock1", "rock2", "rock3"]
 		return rock_variants[rng.randi_range(0, rock_variants.size() - 1)]
 	if obstacle_type == "krzok":
 		return "krzok"
+	if obstacle_type == "zimowy_krzak":
+		return "zimowykszok"
 	if obstacle_type == "woda":
 		return "water"
 	return ""

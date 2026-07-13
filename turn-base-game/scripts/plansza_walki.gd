@@ -26,7 +26,9 @@ const ROCK2_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2.png")
 const ROCK2K_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock2k.png")
 const ROCK3_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock3.png")
 var KRZOK_TEXTURE: Texture2D = load("res://assets/mapTiles/bush.png")
+var ZIMOWY_KRZOK_TEXTURE: Texture2D = load("res://assets/mapTiles/zimowykszok.png")
 const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
+var ICE_TEXTURE: Texture2D = load("res://assets/mapTiles/ice.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
 const PROJECTILE_PATH_ARROWS := "res://assets/arrows_projectile.png"
@@ -397,7 +399,10 @@ func draw_obstacles() -> void:
 		"rock2k": ROCK2K_TEXTURE,
 		"rock3": ROCK3_TEXTURE,
 		"krzok": KRZOK_TEXTURE,
-		"bush": KRZOK_TEXTURE
+		"bush": KRZOK_TEXTURE,
+		"zimowy_krzak": ZIMOWY_KRZOK_TEXTURE,
+		"zimowykszok": ZIMOWY_KRZOK_TEXTURE,
+		"ice": ICE_TEXTURE
 	}
 	var texture_draw_size := Vector2(HEX_RADIUS * 2.0, HEX_RADIUS * 2.0)
 	for obstacle in obstacles:
@@ -577,8 +582,9 @@ func _units_share_adjacent_bushes(observer: Dictionary, target: Dictionary) -> b
 
 
 func _is_bush_cell(cell: Vector2i) -> bool:
+	var bush_types: Array[String] = ["krzok", "zimowy_krzak"]
 	for obstacle in obstacles:
-		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y and str(obstacle.get("type", "")) == "krzok":
+		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y and bush_types.has(str(obstacle.get("type", ""))):
 			return true
 	return false
 

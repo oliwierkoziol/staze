@@ -33,12 +33,28 @@
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": true,
 	  "entry_effect": {
-		"id": "krzok",
-		"name": "Krzak",
-		"category": "buff",
-		"remaining_turns": 2,
-		"hides_unit": true,
-		"stat_changes": []
+	    "id": "krzok",
+	    "name": "Krzak",
+	    "category": "buff",
+	    "remaining_turns": 2,
+	    "hides_unit": true,
+	    "stat_changes": []
+	  }
+	},
+	"zimowy_krzak": {
+	  "id": "zimowy_krzak",
+	  "name": "Zimowy Krzak",
+	  "description": "Jednostka w zimowym krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": {
+	    "id": "zimowy_krzak",
+	    "name": "Zimowy Krzak",
+	    "category": "buff",
+	    "remaining_turns": 2,
+	    "hides_unit": true,
+	    "stat_changes": []
 	  }
 	}
   }
