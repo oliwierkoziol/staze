@@ -176,7 +176,7 @@
 			"side": "player",
 			"skill_cooldowns": {},
 			"skill_ids": [
-				"potezne_uderzenie",
+				"odepchniecie_tarcza",
 				"zelazna_kurtyna",
 				"tarcza"
 			],
@@ -266,7 +266,7 @@
 			"skill_ids": [
 				"strzal_w_kolano",
 				"sokole_oko",
-				"precyzyjny_strzal"
+				"deszcz_strzal"
 			],
 			"speed": 8,
 			"type_id": "human_archers"
@@ -352,7 +352,7 @@
 			"side": "enemy",
 			"skill_cooldowns": {},
 			"skill_ids": [
-				"potezne_uderzenie",
+				"odepchniecie_tarcza",
 				"zelazna_kurtyna",
 				"tarcza"
 			],
@@ -474,7 +474,7 @@
 			"skill_ids": [
 				"strzal_w_kolano",
 				"sokole_oko",
-				"precyzyjny_strzal"
+				"deszcz_strzal"
 			],
 			"speed": 8,
 			"type_id": "human_archers"

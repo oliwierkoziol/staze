@@ -32,6 +32,7 @@ const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
 const PROJECTILE_PATH_ARROWS := "res://assets/arrows_projectile.png"
 const PROJECTILE_PATH_SPELL := "res://assets/spell_projectile.png"
 const PROJECTILE_PATH_DYNAMITE := "res://assets/dynamite.png"
+const SHIELD_TEXTURE: Texture2D = preload("res://assets/ui/energy_shield.png")
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 var TRAP_TEXTURE: Texture2D = load("res://assets/trap-removebg-preview.png")
 
@@ -43,13 +44,18 @@ var highlighted_attack_cells: Array[Vector2i] = []
 var move_highlight_opacity_mult: float = 1.0
 var hovered_move_path: Array[Vector2i] = []
 var hovered_attack_cell := Vector2i(-1, -1)
+var hovered_area_cells: Array[Vector2i] = []
 var hovered_pull_destination_cell := Vector2i(-1, -1)
 var visual_positions: Dictionary = {}
 var active_tweens: Dictionary = {}
 var unit_attack_offsets: Dictionary = {}
+var unit_shield_flash_alpha: Dictionary = {}
 var unit_damage_tint_alpha: Dictionary = {}
 var projectile_textures: Dictionary = {}
 var active_projectiles: Array[Dictionary] = []
+var active_falling_arrows: Array[Dictionary] = []
+var arrow_rain_overlay_cells: Array[Vector2i] = []
+var arrow_rain_overlay_alpha: float = 0.0
 var obstacles: Array = []
 var terrain_effects: Array[Dictionary] = []
 var hovered_cell := Vector2i(-1, -1)
@@ -78,6 +84,9 @@ func set_units(new_units: Array) -> void:
 	for unit_id in unit_attack_offsets.keys():
 		if not valid_unit_ids.has(unit_id):
 			unit_attack_offsets.erase(unit_id)
+	for unit_id in unit_shield_flash_alpha.keys():
+		if not valid_unit_ids.has(unit_id):
+			unit_shield_flash_alpha.erase(unit_id)
 	for unit_id in unit_damage_tint_alpha.keys():
 		if not valid_unit_ids.has(unit_id):
 			unit_damage_tint_alpha.erase(unit_id)
@@ -145,6 +154,7 @@ func set_highlighted_cells(move_cells: Array, attack_cells: Array = [], move_opa
 	highlighted_attack_cells.clear()
 	hovered_move_path.clear()
 	hovered_attack_cell = Vector2i(-1, -1)
+	hovered_area_cells.clear()
 	hovered_pull_destination_cell = Vector2i(-1, -1)
 	move_highlight_opacity_mult = move_opacity_mult
 	for cell in move_cells:
@@ -163,8 +173,17 @@ func set_hovered_move_path(path: Array) -> void:
 
 func set_hovered_attack_cell(cell: Vector2i) -> void:
 	hovered_attack_cell = cell
+	hovered_area_cells.clear()
 	if cell.x == -1:
 		hovered_pull_destination_cell = Vector2i(-1, -1)
+	queue_redraw()
+
+
+func set_hovered_area_skill(center_cell: Vector2i, area_cells: Array) -> void:
+	hovered_attack_cell = center_cell
+	hovered_area_cells.clear()
+	for cell in area_cells:
+		hovered_area_cells.append(cell)
 	queue_redraw()
 
 
@@ -179,6 +198,7 @@ func _draw() -> void:
 	draw_obstacles()
 	draw_terrain_effects()
 	draw_highlighted_cells()
+	_draw_arrow_rain_overlay()
 	draw_units()
 	draw_projectiles()
 
@@ -243,6 +263,109 @@ func animate_unit_pull_path(unit_id: int, path: Array) -> void:
 	tween.finished.connect(_on_unit_tween_finished.bind(unit_id))
 
 
+func play_shield_push_animation(caster_id: int, target_id: int) -> void:
+	var caster_position: Vector2 = visual_positions.get(caster_id, Vector2.ZERO)
+	var target_position: Vector2 = visual_positions.get(target_id, Vector2.ZERO)
+	var direction: Vector2 = target_position - caster_position
+	if direction.length_squared() <= 0.001:
+		return
+	var dash_offset: Vector2 = direction.normalized() * 22.0
+	var tween: Tween = create_tween()
+	tween.parallel().tween_method(_set_unit_shield_flash_alpha.bind(caster_id), 0.0, 0.9, 0.05)
+	tween.parallel().tween_method(_set_unit_attack_offset.bind(caster_id), Vector2.ZERO, dash_offset, 0.09)\
+		.set_trans(Tween.TRANS_QUAD)\
+		.set_ease(Tween.EASE_OUT)
+	tween.tween_method(_set_unit_attack_offset.bind(caster_id), dash_offset, Vector2.ZERO, 0.11)\
+		.set_trans(Tween.TRANS_QUAD)\
+		.set_ease(Tween.EASE_IN)
+	tween.parallel().tween_method(_set_unit_shield_flash_alpha.bind(caster_id), 0.9, 0.0, 0.12)
+
+
+func animate_unit_knockback_path(unit_id: int, path: Array) -> void:
+	var current_position: Vector2 = visual_positions.get(unit_id, Vector2.ZERO)
+	var points: Array[Vector2] = [current_position]
+	for cell in path:
+		points.append(axial_to_pixel(cell.x, cell.y))
+
+	if points.size() < 2:
+		animation_finished.emit(unit_id)
+		return
+
+	if active_tweens.has(unit_id):
+		var old_tween: Tween = active_tweens[unit_id]
+		old_tween.kill()
+
+	var tween: Tween = create_tween()
+	active_tweens[unit_id] = tween
+	var from_position: Vector2 = current_position
+	for index in range(1, points.size()):
+		var target_position: Vector2 = points[index]
+		tween.tween_method(_set_unit_visual_position.bind(unit_id), from_position, target_position, 0.11)\
+			.set_trans(Tween.TRANS_BACK)\
+			.set_ease(Tween.EASE_OUT)
+		from_position = target_position
+	tween.finished.connect(_on_unit_tween_finished.bind(unit_id))
+
+
+func play_arrow_rain_animation(caster_id: int, cells: Array) -> void:
+	var texture: Texture2D = _get_projectile_texture("arrows")
+	if texture == null or cells.is_empty():
+		return
+
+	arrow_rain_overlay_cells.clear()
+	for cell in cells:
+		arrow_rain_overlay_cells.append(cell)
+
+	var overlay_tween: Tween = create_tween()
+	overlay_tween.tween_method(_set_arrow_rain_overlay_alpha, 0.0, 0.55, 0.10)
+	overlay_tween.tween_method(_set_arrow_rain_overlay_alpha, 0.55, 0.22, 0.28)
+	overlay_tween.tween_method(_set_arrow_rain_overlay_alpha, 0.22, 0.0, 0.18)
+
+	if caster_id >= 0:
+		var caster_tween: Tween = create_tween()
+		caster_tween.tween_method(_set_unit_attack_offset.bind(caster_id), Vector2.ZERO, Vector2(0.0, -7.0), 0.08)
+		caster_tween.tween_method(_set_unit_attack_offset.bind(caster_id), Vector2(0.0, -7.0), Vector2.ZERO, 0.18)
+
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var spawn_index := 0
+	for cell_index in cells.size():
+		var cell: Vector2i = cells[cell_index]
+		var arrows_per_cell: int = 4 if cell_index == 0 else 2
+		var cell_center: Vector2 = axial_to_pixel(cell.x, cell.y)
+		for _arrow_index in arrows_per_cell:
+			_spawn_falling_arrow(texture, cell_center, rng, float(spawn_index) * 0.026)
+			spawn_index += 1
+
+
+func _spawn_falling_arrow(texture: Texture2D, cell_center: Vector2, rng: RandomNumberGenerator, start_delay: float) -> void:
+	var lateral_offset: float = rng.randf_range(-24.0, 24.0)
+	var start_height: float = HEX_RADIUS * rng.randf_range(2.2, 3.6)
+	var start_position: Vector2 = cell_center + Vector2(lateral_offset, -start_height)
+	var impact_position: Vector2 = cell_center + Vector2(lateral_offset * 0.16, rng.randf_range(-8.0, 12.0))
+	var arrow: Dictionary = {
+		"position": start_position,
+		"texture": texture,
+		"rotation": PI * 0.5 + rng.randf_range(-0.38, 0.38),
+		"alpha": 0.0,
+		"scale": rng.randf_range(0.72, 1.08)
+	}
+	active_falling_arrows.append(arrow)
+	var fall_duration: float = rng.randf_range(0.20, 0.34)
+	var tween: Tween = create_tween()
+	if start_delay > 0.0:
+		tween.tween_interval(start_delay)
+	tween.tween_method(_set_falling_arrow_alpha.bind(arrow), 0.0, 1.0, 0.05)
+	tween.parallel().tween_method(
+		_set_falling_arrow_position.bind(arrow),
+		start_position,
+		impact_position,
+		fall_duration
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_method(_set_falling_arrow_alpha.bind(arrow), 1.0, 0.0, 0.07)
+	tween.finished.connect(_on_falling_arrow_finished.bind(arrow))
+
+
 func play_hook_throw_animation(caster_id: int, target_id: int) -> void:
 	var caster_position: Vector2 = visual_positions.get(caster_id, Vector2.ZERO)
 	var target_position: Vector2 = visual_positions.get(target_id, Vector2.ZERO)
@@ -291,6 +414,11 @@ func _set_unit_attack_offset(offset: Vector2, unit_id: int) -> void:
 	queue_redraw()
 
 
+func _set_unit_shield_flash_alpha(alpha: float, unit_id: int) -> void:
+	unit_shield_flash_alpha[unit_id] = alpha
+	queue_redraw()
+
+
 func _set_unit_damage_tint_alpha(alpha: float, unit_id: int) -> void:
 	unit_damage_tint_alpha[unit_id] = alpha
 	queue_redraw()
@@ -319,6 +447,26 @@ func _set_projectile_position(position: Vector2, projectile: Dictionary) -> void
 
 func _on_projectile_tween_finished(projectile: Dictionary) -> void:
 	active_projectiles.erase(projectile)
+	queue_redraw()
+
+
+func _set_falling_arrow_position(position: Vector2, arrow: Dictionary) -> void:
+	arrow["position"] = position
+	queue_redraw()
+
+
+func _set_falling_arrow_alpha(alpha: float, arrow: Dictionary) -> void:
+	arrow["alpha"] = alpha
+	queue_redraw()
+
+
+func _on_falling_arrow_finished(arrow: Dictionary) -> void:
+	active_falling_arrows.erase(arrow)
+	queue_redraw()
+
+
+func _set_arrow_rain_overlay_alpha(alpha: float) -> void:
+	arrow_rain_overlay_alpha = alpha
 	queue_redraw()
 
 
@@ -529,6 +677,12 @@ func draw_units() -> void:
 			var tint: Color = Color(1.0, 1.0 - damage_tint_alpha * 0.82, 1.0 - damage_tint_alpha * 0.82, alpha)
 			draw_texture_rect(portrait, sprite_rect, false, tint)
 
+		var shield_alpha: float = float(unit_shield_flash_alpha.get(unit_id, 0.0))
+		if shield_alpha > 0.0 and SHIELD_TEXTURE != null:
+			var shield_size := Vector2(HEX_RADIUS * 2.1, HEX_RADIUS * 2.1)
+			var shield_rect := Rect2(center - shield_size / 2.0, shield_size)
+			draw_texture_rect(SHIELD_TEXTURE, shield_rect, false, Color(0.75, 0.9, 1.0, shield_alpha * alpha))
+
 		var count_text: String = str(unit.get("count", 0))
 		var text_size: Vector2 = font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
 		var badge_size := Vector2(HEX_RADIUS * 0.95, text_size.y + 10.0)
@@ -585,6 +739,37 @@ func draw_projectiles() -> void:
 		draw_set_transform(position, rotation, Vector2.ONE)
 		draw_texture_rect(texture, Rect2(-projectile_size / 2.0, projectile_size), false)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	for arrow in active_falling_arrows:
+		var arrow_texture: Texture2D = arrow.get("texture", null)
+		if arrow_texture == null:
+			continue
+		var arrow_position: Vector2 = arrow.get("position", Vector2.ZERO)
+		var arrow_rotation: float = float(arrow.get("rotation", 0.0))
+		var arrow_alpha: float = float(arrow.get("alpha", 1.0))
+		var arrow_scale: float = float(arrow.get("scale", 1.0))
+		var arrow_size: Vector2 = projectile_size * arrow_scale
+		draw_set_transform(arrow_position, arrow_rotation, Vector2.ONE * arrow_scale)
+		draw_texture_rect(
+			arrow_texture,
+			Rect2(-arrow_size / 2.0, arrow_size),
+			false,
+			Color(1.0, 1.0, 1.0, arrow_alpha)
+		)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_arrow_rain_overlay() -> void:
+	if arrow_rain_overlay_alpha <= 0.0 or arrow_rain_overlay_cells.is_empty():
+		return
+	for cell in arrow_rain_overlay_cells:
+		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
+		var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 4.0)
+		draw_colored_polygon(points, Color(0.95, 0.82, 0.38, arrow_rain_overlay_alpha * 0.30))
+		draw_polyline(
+			points + PackedVector2Array([points[0]]),
+			Color(1.0, 0.9, 0.45, arrow_rain_overlay_alpha * 0.88),
+			2.5
+		)
 
 
 func _load_unit_portrait(unit: Dictionary) -> Texture2D:
@@ -628,6 +813,7 @@ func draw_highlighted_cells() -> void:
 		HEX_RADIUS - 12.0
 	)
 	_draw_hovered_attack_cell()
+	_draw_hovered_area_cells()
 	_draw_hovered_pull_destination_cell()
 
 
@@ -675,11 +861,26 @@ func _draw_hovered_move_path() -> void:
 func _draw_hovered_attack_cell() -> void:
 	if hovered_attack_cell.x == -1:
 		return
-	if not highlighted_attack_cells.has(hovered_attack_cell):
+	if not highlighted_attack_cells.has(hovered_attack_cell) and hovered_area_cells.is_empty():
 		return
 	var center: Vector2 = axial_to_pixel(hovered_attack_cell.x, hovered_attack_cell.y)
 	var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 8.0)
 	draw_polyline(points + PackedVector2Array([points[0]]), Color(1.0, 0.30, 0.30, 1.0), 3.0)
+
+
+func _draw_hovered_area_cells() -> void:
+	if hovered_area_cells.is_empty():
+		return
+	for cell in hovered_area_cells:
+		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
+		var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 8.0)
+		var is_center: bool = cell == hovered_attack_cell
+		if is_center:
+			draw_colored_polygon(points, Color(0.95, 0.72, 0.22, 0.38))
+			draw_polyline(points + PackedVector2Array([points[0]]), Color(1.0, 0.82, 0.28, 0.98), 3.0)
+		else:
+			draw_colored_polygon(points, Color(0.92, 0.38, 0.22, 0.30))
+			draw_polyline(points + PackedVector2Array([points[0]]), Color(1.0, 0.42, 0.26, 0.90), 2.5)
 
 
 func _draw_dotted_segment(start: Vector2, finish: Vector2, color: Color) -> void:

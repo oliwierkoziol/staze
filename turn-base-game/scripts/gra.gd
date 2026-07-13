@@ -1526,6 +1526,9 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		if str(pending_skill.get("effect_type", "")) == "hook_throw":
 			_handle_hook_throw_hover(active_unit, pending_skill, cell)
 			return
+		if _is_area_damage_skill(pending_skill):
+			_handle_area_skill_hover(active_unit, pending_skill, cell)
+			return
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
@@ -1593,6 +1596,24 @@ func _handle_hook_throw_hover(active_unit: Dictionary, skill: Dictionary, cell: 
 		return
 	board.set_hovered_attack_cell(cell)
 	board.set_hovered_pull_destination_cell(_get_pull_destination(active_unit, hovered_unit))
+
+
+func _is_area_damage_skill(skill: Dictionary) -> bool:
+	return str(skill.get("effect_type", "")) in ["arrow_rain", "fireball", "dynamite_throw"]
+
+
+func _handle_area_skill_hover(active_unit: Dictionary, skill: Dictionary, cell: Vector2i) -> void:
+	board.set_hovered_move_path([])
+	board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
+	_clear_move_cost_label()
+	if cell.x == -1 or active_unit.is_empty():
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		return
+	var valid_cells: Array[Vector2i] = _get_skill_target_cells(active_unit, str(skill.get("id", "")))
+	if not valid_cells.has(cell):
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		return
+	board.set_hovered_area_skill(cell, _get_area_cells(cell))
 
 
 func _can_hook_throw_target(caster: Dictionary, target: Dictionary, skill: Dictionary) -> bool:
@@ -2038,7 +2059,7 @@ func _apply_damage_to_unit(target: Dictionary, total_damage: int) -> int:
 	return max(0, previous_count - int(target.get("count", 0)))
 
 
-func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage: int, melee := false) -> Dictionary:
+func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage: int, melee := false, play_animation := true) -> Dictionary:
 	var hit_target: Dictionary = target
 	var damage := total_damage
 	if melee:
@@ -2047,7 +2068,8 @@ func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage
 			hit_target = guardian
 			damage = max(1, int(ceil(float(damage) * 0.8)))
 			_log_event("%s zaslania %s Zelazna Kurtyna." % [_unit_name_log_text(guardian), _unit_name_log_text(target)])
-	board.play_attack_animation(int(attacker.id), int(hit_target.id), _get_attack_projectile_kind(attacker))
+	if play_animation:
+		board.play_attack_animation(int(attacker.id), int(hit_target.id), _get_attack_projectile_kind(attacker))
 	if _consume_energy_barrier(hit_target):
 		_log_event("Bariera Energetyczna blokuje atak na %s." % _unit_name_log_text(hit_target))
 		return {"target": hit_target, "damage": 0, "casualties": 0}
@@ -2175,14 +2197,16 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_poison_dagger(caster, target)
 		"eagle_eye":
 			_execute_eagle_eye(caster)
-		"heavy_strike":
-			_execute_heavy_strike(caster, target)
+		"shield_push":
+			await _execute_shield_push(caster, target)
 		"hook_throw":
 			await _execute_hook_throw(caster, target)
 		"fireball":
 			_execute_fireball(caster, target_cell)
 		"dynamite_throw":
 			_execute_dynamite_throw(caster, target_cell)
+		"arrow_rain":
+			await _execute_arrow_rain(caster, target_cell)
 		"ice_ground":
 			_execute_ice_ground(caster, target_cell)
 		"poison_cloud":
@@ -2317,14 +2341,25 @@ func _get_pull_path(start_cell: Vector2i, destination_cell: Vector2i) -> Array[V
 	return line_cells.slice(1)
 
 
-func _execute_heavy_strike(caster: Dictionary, target: Dictionary) -> void:
+func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
+	is_animating = true
+	board.play_shield_push_animation(int(caster.id), int(target.id))
+	await get_tree().create_timer(0.12).timeout
 	var total_damage := _calculate_damage(caster, target)
-	var result := _apply_attack_damage(caster, target, total_damage, true)
+	var result := _apply_attack_damage(caster, target, total_damage, true, false)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	var pushed := false
 	if int(result.get("damage", 0)) > 0 and int(hit_target.id) == int(target.id):
-		pushed = _try_push_unit_away(caster, target)
+		var destination: Vector2i = _get_push_destination(caster, target)
+		if destination != Vector2i(-1, -1):
+			pushed = true
+			var push_path: Array[Vector2i] = [destination]
+			target["grid_x"] = destination.x
+			target["grid_y"] = destination.y
+			_sync_board()
+			board.animate_unit_knockback_path(int(target.id), push_path)
+			await board.animation_finished
 	if int(result.get("damage", 0)) > 0 and not pushed and int(hit_target.get("count", 0)) > 0:
 		_apply_or_refresh_effect(hit_target, {
 			"id": "ogluszenie",
@@ -2334,11 +2369,12 @@ func _execute_heavy_strike(caster: Dictionary, target: Dictionary) -> void:
 			"stat_changes": [],
 			"skip_turn": true
 		})
+	is_animating = false
 	var suffix := " Atak zostaje zablokowany."
 	if int(result.get("damage", 0)) > 0:
 		suffix = " Cel zostaje odepchniety." if pushed else " Cel wpada w blokade i zostaje ogluszony."
 	_log_event(
-		"%s uderza %s poteznie za %s obrazen i %s strat.%s" % [
+		"%s odepycha %s Odepchnieciem Tarcza za %s obrazen i %s strat.%s" % [
 			_unit_name_log_text(caster),
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -2378,6 +2414,26 @@ func _execute_dynamite_throw(caster: Dictionary, center: Vector2i) -> void:
 		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
 		_cleanup_destroyed_unit(hit_target)
 	_log_event("%s rzuca dynamitem: %s." % [_unit_name_log_text(caster), "brak trafien" if hit_names.is_empty() else ", ".join(hit_names)])
+
+
+func _execute_arrow_rain(caster: Dictionary, center: Vector2i) -> void:
+	var area_cells: Array[Vector2i] = _get_area_cells(center)
+	is_animating = true
+	board.play_arrow_rain_animation(int(caster.id), area_cells)
+	await get_tree().create_timer(0.42).timeout
+	var hit_names: Array[String] = []
+	for cell in area_cells:
+		var target := _find_unit_at_cell(cell)
+		if target.is_empty() or target.side == caster.side:
+			continue
+		var multiplier := 0.5 if cell == center else 0.35
+		var total_damage := _calculate_damage(caster, target, multiplier)
+		var result := _apply_attack_damage(caster, target, total_damage, false, false)
+		var hit_target: Dictionary = result.get("target", target)
+		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
+		_cleanup_destroyed_unit(hit_target)
+	is_animating = false
+	_log_event("%s uzywa Deszczu Strzal: %s." % [_unit_name_log_text(caster), "brak trafien" if hit_names.is_empty() else ", ".join(hit_names)])
 
 
 func _execute_ice_ground(caster: Dictionary, center: Vector2i) -> void:
@@ -3743,6 +3799,8 @@ func _validate_setup() -> void:
 			assert(int(type_data.speed) <= 10 and int(type_data.move_range) <= 6 and int(type_data.attack_range) <= 5, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
 			assert(int(type_data.hp) <= 32 and int(type_data.dmg) <= 12 and int(type_data.def) <= 12 and int(type_data.count) <= 14, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna"), "Umiejetnosci bierne nie moga byc uzywane recznie.")
+	assert(skill_library.has("deszcz_strzal"), "Brak skilla deszcz_strzal w bibliotece.")
+	assert(str(skill_library["deszcz_strzal"].get("effect_type", "")) == "arrow_rain", "Deszcz Strzal musi miec efekt arrow_rain.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}, "skill_ids": []}, "pulapka_na_niedzwiedzie"), "Jednostka nie moze uzywac umiejetnosci spoza skill_ids.")
 	var previous_units: Array = units.duplicate(true)
 	var previous_obstacles: Array[Dictionary] = obstacles.duplicate(true)

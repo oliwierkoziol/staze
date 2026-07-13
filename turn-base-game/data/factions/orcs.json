@@ -19,7 +19,7 @@
         "resistance": "Brak",
         "portrait": "res://assets/characters/humans/orcWarrior.png",
         "skill_ids": [
-          "potezne_uderzenie",
+          "odepchniecie_tarcza",
           "rzut_hakiem",
           "berserk"
         ]

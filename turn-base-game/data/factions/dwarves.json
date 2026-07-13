@@ -19,7 +19,7 @@
 		"resistance": "Brak",
 		"portrait": "res://assets/characters/humans/dwarfWarrior.png",
 		"skill_ids": [
-		  "potezne_uderzenie",
+		  "odepchniecie_tarcza",
 		  "zelazna_kurtyna",
           "tarcza"
 		]
@@ -61,7 +61,7 @@
 		"resistance": "Brak",
 		"portrait": "res://assets/characters/humans/dwarfHammer.png",
 		"skill_ids": [
-		  "potezne_uderzenie",
+		  "odepchniecie_tarcza",
 		  "skupiony_cios",
           "berserk"
 		]
