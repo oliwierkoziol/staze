@@ -8,14 +8,17 @@ const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
 const OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "krzok"]
 const WINTER_OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "zimowy_krzak"]
+const DESERT_OBSTACLE_TYPES: Array[String] = ["ruchome_piaski", "kamienie"]
 const MAX_EVENT_LOG_ENTRIES := 60
 const MAX_VISIBLE_QUEUE_CARDS := 8
+const MAX_EVENT_OBSTACLES: Dictionary = {"woda": 6, "kamienie": 4, "krzok": 6, "ruchome_piaski": 6}
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const MAP_EVENT_POOLS: Dictionary = {
 	"orcs_vs_elves_forest": ["gniew_korzeni", "przebudzenie_gaju", "lesne_opary", "magiczny_rozkwit"],
 	"dwarves_vs_goblins_mine": ["spadajacy_rumosz", "wybuch_gazu", "pekniecie_chodnika", "zawal_kopalni"],
 	"humans_vs_orcs_village": ["rozprzestrzeniajacy_sie_pozar", "gesty_dym", "przerwanie_grobli", "plonace_zabudowania"],
 	"elves_vs_dwarves_pass": ["wichura_lodowa", "sniezna_zamiec", "oblodzenie", "lawina"],
+	"humans_vs_goblins_desert": ["burza_piaskowa", "zapadlisko", "palacy_skwar", "pustynny_podmuch"],
 }
 const MAP_EVENT_DATA: Dictionary = {
 	"gniew_korzeni": {"name": "Gniew Korzeni", "icon": preload("res://assets/ui/root.png")},
@@ -34,6 +37,10 @@ const MAP_EVENT_DATA: Dictionary = {
 	"sniezna_zamiec": {"name": "Sniezna Zamiec", "icon": preload("res://assets/ui/frost.png")},
 	"oblodzenie": {"name": "Oblodzenie", "icon": preload("res://assets/ui/frost.png")},
 	"lawina": {"name": "Lawina", "icon": preload("res://assets/mapTiles/rock3.png")},
+	"burza_piaskowa": {"name": "Burza Piaskowa", "icon": preload("res://assets/ui/reveal.png")},
+	"zapadlisko": {"name": "Zapadlisko", "icon": preload("res://assets/ui/exhaust.png")},
+	"palacy_skwar": {"name": "Palacy Skwar", "icon": preload("res://assets/ui/fire.png")},
+	"pustynny_podmuch": {"name": "Pustynny Podmuch", "icon": preload("res://assets/ui/speed.png")},
 }
 const DEFAULT_GENERAL_PORTRAIT: Texture2D = preload("res://assets/ui/general1.png")
 const GENERAL_PORTRAITS: Dictionary = {
@@ -66,18 +73,24 @@ var OBSTACLE_PORTRAITS: Dictionary = {
 	"kamienie": preload("res://assets/mapTiles/rock1.png"),
 	"krzok": load("res://assets/mapTiles/bush.png"),
 	"zimowy_krzak": load("res://assets/mapTiles/zimowykszok.png"),
+	"ruchome_piaski": load("res://assets/mapTiles/quicksand.png"),
+	"wydmy": load("res://assets/mapTiles/dune.png"),
 }
 const OBSTACLE_NAMES: Dictionary = {
 	"woda": "Woda",
 	"kamienie": "Kamienie",
 	"krzok": "Krzak",
 	"zimowy_krzak": "Zimowy Krzak",
+	"ruchome_piaski": "Ruchome Piaski",
+	"wydmy": "Wydmy",
 }
 const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"woda": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
 	"kamienie": "Przez kamienie nie da sie przejsc. Blokuja linie strzalu.",
 	"krzok": "Jednostka w krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
 	"zimowy_krzak": "Jednostka w zimowym krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
+	"ruchome_piaski": "Wejscie w ruchome piaski zuzywa caly pozostaly ruch w tej turze.",
+	"wydmy": "Strome wydmy blokuja ruch i linie strzalu.",
 }
 const OBSTACLE_WINTER_DESCRIPTIONS: Dictionary = {
 	"woda": "Lod jest kruchy. Wejscie zuzywa caly ruch i ma 10%% szans na zapadniecie sie zabijajace jednostke.",
@@ -970,18 +983,19 @@ func _render_obstacle_details(cell: Vector2i) -> void:
 	if terrain.is_empty():
 		return
 	var type_id: String = str(terrain.get("id", ""))
+	var display_type: String = "wydmy" if _is_desert_scenario() and type_id == "kamienie" else type_id
 	unit_portrait.visible = true
-	var tex: Texture2D = OBSTACLE_PORTRAITS.get(type_id, null)
+	var tex: Texture2D = OBSTACLE_PORTRAITS.get(display_type, null)
 	if tex != null:
 		unit_portrait.texture = tex
-	unit_name_label.text = str(OBSTACLE_NAMES.get(type_id, type_id)).to_upper()
+	unit_name_label.text = str(OBSTACLE_NAMES.get(display_type, display_type)).to_upper()
 	unit_meta_label.text = "Przeszkoda terenowa"
 	unit_stats_display.set_values({})
 	unit_status_panel.clear()
 	unit_abilities_panel.clear()
 	if actions_label != null:
 		var descriptions: Dictionary = OBSTACLE_WINTER_DESCRIPTIONS if _is_winter_scenario() else OBSTACLE_DESCRIPTIONS
-		actions_label.text = str(descriptions.get(type_id, OBSTACLE_DESCRIPTIONS.get(type_id, "")))
+		actions_label.text = str(descriptions.get(display_type, OBSTACLE_DESCRIPTIONS.get(display_type, "")))
 
 func _show_obstacle_details(cell: Vector2i) -> void:
 	selected_unit_id = -1
@@ -1740,7 +1754,7 @@ func _can_place_setup_unit(unit: Dictionary, cell: Vector2i) -> bool:
 		return false
 	if not _is_setup_cell_allowed_for_side(str(unit.side), cell):
 		return false
-	if _is_cell_obstacle(cell):
+	if not _is_cell_passable(cell):
 		return false
 	if cell == Vector2i(unit.grid_x, unit.grid_y):
 		return true
@@ -2714,6 +2728,11 @@ func _advance_terrain_effects() -> void:
 func _try_trigger_map_event() -> void:
 	if next_map_event_round == 0 or round_number < next_map_event_round:
 		return
+	if next_map_event_id == "brak_eventu":
+		_log_event(_color_log_text("Runda mija bez eventu mapy.", LOG_COLOR_YELLOW), false)
+		_schedule_next_map_event(round_number)
+		_sync_board()
+		return
 	match next_map_event_id:
 		"gniew_korzeni":
 			_event_forest_roots()
@@ -2740,13 +2759,21 @@ func _try_trigger_map_event() -> void:
 		"plonace_zabudowania":
 			_event_damage_on_marked_cells("Plonace Zabudowania")
 		"wichura_lodowa":
-			_event_ice_storm()
+			_event_global_slow("wichura_lodowa", "Wichura Lodowa")
 		"sniezna_zamiec":
 			_event_global_range("Sniezna Zamiec")
 		"oblodzenie":
 			_event_random_terrain("ice", 3, 2)
 		"lawina":
 			_event_damage_on_marked_cells("Lawina")
+		"burza_piaskowa":
+			_event_global_range("Burza Piaskowa")
+		"zapadlisko":
+			_event_random_obstacles("ruchome_piaski", "quicksand", 3, "Zapadlisko tworzy trzy pola ruchomych piaskow.")
+		"palacy_skwar":
+			_event_damage_on_marked_cells("Palacy Skwar")
+		"pustynny_podmuch":
+			_event_global_slow("pustynny_podmuch", "Pustynny Podmuch")
 		_:
 			return
 	map_event_cells.clear()
@@ -2756,14 +2783,18 @@ func _try_trigger_map_event() -> void:
 
 func _schedule_next_map_event(after_round: int) -> void:
 	var scenario_id: String = current_battle_background_path.get_file().get_basename()
-	var pool: Array = MAP_EVENT_POOLS.get(scenario_id, [])
+	var raw_pool: Array = MAP_EVENT_POOLS.get(scenario_id, [])
+	var pool: Array = raw_pool.filter(func(event_id: String) -> bool: return _event_can_be_scheduled(event_id))
 	if pool.is_empty():
 		next_map_event_round = 0
 		next_map_event_id = ""
 	else:
-		var previous_event_id: String = next_map_event_id
-		var choices: Array = pool.filter(func(event_id: String) -> bool: return event_id != previous_event_id)
-		next_map_event_id = str(choices.pick_random() if not choices.is_empty() else pool.pick_random())
+		if randi_range(1, 100) <= 25:
+			next_map_event_id = "brak_eventu"
+		else:
+			var previous_event_id: String = next_map_event_id
+			var choices: Array = pool.filter(func(event_id: String) -> bool: return event_id != previous_event_id)
+			next_map_event_id = str(choices.pick_random() if not choices.is_empty() else pool.pick_random())
 		next_map_event_round = after_round + randi_range(2, 4)
 	map_event_cells.clear()
 	_prepare_map_event_warning()
@@ -2771,6 +2802,29 @@ func _schedule_next_map_event(after_round: int) -> void:
 
 func _map_event_name() -> String:
 	return str(MAP_EVENT_DATA.get(next_map_event_id, {}).get("name", ""))
+
+
+func _event_can_be_scheduled(event_id: String) -> bool:
+	var obstacle_type: String = _event_obstacle_type(event_id)
+	return obstacle_type == "" or _available_event_obstacle_slots(obstacle_type) > 0
+
+
+func _event_obstacle_type(event_id: String) -> String:
+	return str({
+		"przebudzenie_gaju": "krzok",
+		"pekniecie_chodnika": "woda",
+		"zawal_kopalni": "kamienie",
+		"przerwanie_grobli": "woda",
+		"zapadlisko": "ruchome_piaski",
+	}.get(event_id, ""))
+
+
+func _available_event_obstacle_slots(type_id: String) -> int:
+	var used: int = 0
+	for obstacle in obstacles:
+		if str(obstacle.get("type", "")) == type_id and str(obstacle.get("source", "")) == "map_event":
+			used += 1
+	return maxi(0, int(MAX_EVENT_OBSTACLES.get(type_id, 0)) - used)
 
 
 func _event_forest_roots() -> void:
@@ -2799,11 +2853,11 @@ func _event_spreading_fire() -> void:
 	_log_event(_color_log_text("EVENT MAPY: Pozar rozprzestrzenia sie na trzy pola.", LOG_COLOR_YELLOW))
 
 
-func _event_ice_storm() -> void:
+func _event_global_slow(event_id: String, event_name: String) -> void:
 	for unit in units:
 		_apply_or_refresh_effect(unit, {
-			"id": "wichura_lodowa",
-			"name": "Wichura Lodowa",
+			"id": event_id,
+			"name": event_name,
 			"category": "debuff",
 			"remaining_turns": 1,
 			"stat_changes": [
@@ -2811,7 +2865,7 @@ func _event_ice_storm() -> void:
 				{"stat": "move_range", "mode": "flat", "value": -2}
 			]
 		})
-	_log_event(_color_log_text("EVENT MAPY: Wichura Lodowa spowalnia wszystkie jednostki.", LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("EVENT MAPY: %s spowalnia wszystkie jednostki." % event_name, LOG_COLOR_YELLOW))
 
 
 func _event_forest_awakening() -> void:
@@ -2849,7 +2903,11 @@ func _event_random_terrain(effect_id: String, count: int, turns: int) -> void:
 
 
 func _event_random_obstacles(type_id: String, variant: String, count: int, message: String) -> void:
+	var placed := 0
+	var available: int = mini(count, _available_event_obstacle_slots(type_id))
 	for cell in map_event_cells:
+		if placed >= available:
+			break
 		if type_id == "kamienie":
 			var target: Dictionary = _find_unit_at_cell(cell)
 			if not target.is_empty():
@@ -2858,7 +2916,8 @@ func _event_random_obstacles(type_id: String, variant: String, count: int, messa
 				_cleanup_destroyed_unit(target)
 				if not _find_unit_at_cell(cell).is_empty():
 					continue
-		obstacles.append({"grid_x": cell.x, "grid_y": cell.y, "type": type_id, "variant": variant})
+		obstacles.append({"grid_x": cell.x, "grid_y": cell.y, "type": type_id, "variant": variant, "source": "map_event"})
+		placed += 1
 	for unit in units:
 		if map_event_cells.has(Vector2i(int(unit.grid_x), int(unit.grid_y))):
 			_apply_terrain_entry_effect(unit)
@@ -2908,7 +2967,14 @@ func _prepare_map_event_warning() -> void:
 		"plonace_zabudowania": 3,
 		"oblodzenie": 3,
 		"lawina": 4,
+		"zapadlisko": 3,
+		"palacy_skwar": 3,
 	}.get(next_map_event_id, 0))
+	if ["wybuch_gazu", "rozprzestrzeniajacy_sie_pozar", "oblodzenie"].has(next_map_event_id):
+		cell_count = randi_range(5, 8)
+	var obstacle_type: String = _event_obstacle_type(next_map_event_id)
+	if obstacle_type != "":
+		cell_count = mini(cell_count, _available_event_obstacle_slots(obstacle_type))
 	if cell_count == 0:
 		return
 	map_event_cells = _random_map_event_cells(cell_count)
@@ -3277,12 +3343,22 @@ func _are_active_skills_on_cooldown(unit: Dictionary) -> bool:
 
 func _generate_obstacles() -> Array[Dictionary]:
 	var winter_mode: bool = _is_winter_scenario()
-	var obstacle_types: Array[String] = WINTER_OBSTACLE_TYPES if winter_mode else OBSTACLE_TYPES
-	return ObstacleGeneratorScript.generate(units, obstacle_types, GRID_COLUMNS, GRID_ROWS, SETUP_COLUMNS, winter_mode)
+	var desert_mode: bool = _is_desert_scenario()
+	var obstacle_types: Array[String] = DESERT_OBSTACLE_TYPES if desert_mode else (WINTER_OBSTACLE_TYPES if winter_mode else OBSTACLE_TYPES)
+	var generated: Array[Dictionary] = ObstacleGeneratorScript.generate(units, obstacle_types, GRID_COLUMNS, GRID_ROWS, SETUP_COLUMNS, winter_mode)
+	if desert_mode:
+		for obstacle in generated:
+			if str(obstacle.get("type", "")) == "kamienie":
+				obstacle["variant"] = "dune"
+	return generated
 
 
 func _is_winter_scenario() -> bool:
 	return current_battle_background_path.get_file().get_basename() == "elves_vs_dwarves_pass"
+
+
+func _is_desert_scenario() -> bool:
+	return current_battle_background_path.get_file().get_basename() == "humans_vs_goblins_desert"
 
 
 func _get_terrain_at(cell: Vector2i) -> Dictionary:
@@ -3828,6 +3904,8 @@ func _validate_setup() -> void:
 		{"grid_x": 5, "grid_y": 4, "type": "krzok"},
 		{"grid_x": 5, "grid_y": 5, "type": "krzok"}
 	]
+	assert(_is_cell_passable(Vector2i(5, 4)), "Jednostka musi moc wejsc w krzak.")
+	assert(not _is_cell_passable(Vector2i(4, 4)), "Jednostka nie moze wejsc w kamienie.")
 	assert(not _blocks_cell_skill_target(Vector2i(5, 4)), "Skill obszarowy musi moc celowac w krzak.")
 	assert(_blocks_cell_skill_target(Vector2i(4, 4)), "Skill obszarowy nie powinien celowac w blokujace przeszkody.")
 	var bush_unit := {
@@ -4101,10 +4179,10 @@ func _refresh_turn_queue() -> void:
 
 	var visible_queue: Array[int] = _get_visible_turn_queue()
 	var event_insert_index: int = visible_queue.size()
-	if next_map_event_round == round_number + 1:
+	if _has_visible_map_event() and next_map_event_round == round_number + 1:
 		event_insert_index = mini(turn_queue.size() - maxi(turn_queue_index, 0), visible_queue.size())
 	for index in range(visible_queue.size() + 1):
-		if index == event_insert_index and next_map_event_round > 0:
+		if index == event_insert_index and _has_visible_map_event():
 			turn_queue_list.add_child(_create_map_event_queue_card())
 		if index >= visible_queue.size():
 			continue
@@ -4114,7 +4192,11 @@ func _refresh_turn_queue() -> void:
 			continue
 		turn_queue_list.add_child(_create_turn_queue_card(unit))
 
-	_update_top_bar_width(visible_queue.size() + (1 if next_map_event_round > 0 else 0))
+	_update_top_bar_width(visible_queue.size() + (1 if _has_visible_map_event() else 0))
+
+
+func _has_visible_map_event() -> bool:
+	return next_map_event_round > 0 and next_map_event_id != "" and next_map_event_id != "brak_eventu"
 
 
 func _create_turn_queue_card(unit: Dictionary) -> Button:
@@ -4402,7 +4484,7 @@ func _get_visible_turn_queue() -> Array[int]:
 		return visible_queue
 
 	var start_index: int = maxi(turn_queue_index, 0)
-	var unit_limit: int = MAX_VISIBLE_QUEUE_CARDS - (1 if next_map_event_round > 0 else 0)
+	var unit_limit: int = MAX_VISIBLE_QUEUE_CARDS - (1 if _has_visible_map_event() else 0)
 	for offset in range(mini(turn_queue.size(), unit_limit)):
 		var index: int = (start_index + offset) % turn_queue.size()
 		visible_queue.append(turn_queue[index])

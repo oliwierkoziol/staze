@@ -28,6 +28,8 @@ const ROCK3_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock3.png")
 var KRZOK_TEXTURE: Texture2D = load("res://assets/mapTiles/bush.png")
 var ZIMOWY_KRZOK_TEXTURE: Texture2D = load("res://assets/mapTiles/zimowykszok.png")
 const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
+var QUICKSAND_TEXTURE: Texture2D = load("res://assets/mapTiles/quicksand.png")
+var DUNE_TEXTURE: Texture2D = load("res://assets/mapTiles/dune.png")
 var ICE_TEXTURE: Texture2D = load("res://assets/mapTiles/ice.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
@@ -394,6 +396,9 @@ func draw_obstacles() -> void:
 		"woda": WATER_TEXTURE,
 		"kamienie": ROCK1_TEXTURE,
 		"water": WATER_TEXTURE,
+		"ruchome_piaski": QUICKSAND_TEXTURE,
+		"quicksand": QUICKSAND_TEXTURE,
+		"dune": DUNE_TEXTURE,
 		"rock1": ROCK1_TEXTURE,
 		"rock2": ROCK2_TEXTURE,
 		"rock2k": ROCK2K_TEXTURE,

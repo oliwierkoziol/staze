@@ -16,6 +16,22 @@
 		"stat_changes": []
 	  }
 	},
+	"ruchome_piaski": {
+	  "id": "ruchome_piaski",
+	  "name": "Ruchome Piaski",
+	  "description": "Wejscie w ruchome piaski zuzywa caly pozostaly ruch w tej turze.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": false,
+	  "entry_effect": {
+		"id": "ruchome_piaski",
+		"name": "Ruchome Piaski",
+		"category": "debuff",
+		"remaining_turns": 2,
+		"skip_turn": true,
+		"stat_changes": []
+	  }
+	},
 	"kamienie": {
 	  "id": "kamienie",
 	  "name": "Kamienie",

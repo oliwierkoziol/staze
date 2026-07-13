@@ -43,6 +43,8 @@ static func _pick_variant(obstacle_type: String, rng: RandomNumberGenerator, win
 		return "zimowykszok"
 	if obstacle_type == "woda":
 		return "water"
+	if obstacle_type == "ruchome_piaski":
+		return "quicksand"
 	return ""
 
 

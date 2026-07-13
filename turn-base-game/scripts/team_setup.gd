@@ -89,6 +89,26 @@ const SCENARIOS: Array[Dictionary] = [
 			{"type_id": "dwarf_digger", "count": 5},
 		],
 	},
+	{
+		"id": "humans_vs_goblins_desert",
+		"name": "Zasadzka na Szlaku",
+		"description": "Ludzka karawana przebija sie przez goblinska zasadzke na pustyni.",
+		"player_faction": "humans",
+		"enemy_faction": "goblins",
+		"background": "res://assets/backgrounds/scenarios/humans_vs_goblins_desert.png",
+		"player_units": [
+			{"type_id": "human_knights", "count": 5},
+			{"type_id": "human_cavalry", "count": 4},
+			{"type_id": "human_archers", "count": 7},
+			{"type_id": "human_mages", "count": 4},
+		],
+		"enemy_units": [
+			{"type_id": "goblin_thief", "count": 12},
+			{"type_id": "goblin_warrior", "count": 10},
+			{"type_id": "goblin_shaman", "count": 8},
+			{"type_id": "goblin_trapper", "count": 10},
+		],
+	},
 ]
 
 var _player_panel: UnitSelectPanelClass
@@ -99,6 +119,7 @@ var _load_dialog: FileDialog
 var _rows: Array[Dictionary] = []
 var _sandbox_player_faction: String = ""
 var _sandbox_enemy_faction: String = ""
+var _debug_background_path: String = str(SCENARIOS[0].get("background", ""))
 
 
 func _ready() -> void:
@@ -348,10 +369,10 @@ func _show_sandbox_count_config() -> void:
 
 
 func _show_debug_count_config() -> void:
-	_show_count_config("DEBUG", _get_all_unit_types_for_debug(), _show_mode_menu, _on_start_debug_pressed)
+	_show_count_config("DEBUG", _get_all_unit_types_for_debug(), _show_mode_menu, _on_start_debug_pressed, true)
 
 
-func _show_count_config(title_text: String, unit_types: Array[Dictionary], back_callback: Callable, start_callback: Callable) -> void:
+func _show_count_config(title_text: String, unit_types: Array[Dictionary], back_callback: Callable, start_callback: Callable, show_map_select: bool = false) -> void:
 	_clear()
 	_rows.clear()
 	_build_background()
@@ -367,6 +388,16 @@ func _show_count_config(title_text: String, unit_types: Array[Dictionary], back_
 	title.add_theme_font_size_override("font_size", 34)
 	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
 	column.add_child(title)
+	if show_map_select:
+		var map_select := OptionButton.new()
+		map_select.custom_minimum_size = Vector2(320, 42)
+		for scenario in SCENARIOS:
+			map_select.add_item(str(scenario.get("name", "")))
+			map_select.set_item_metadata(map_select.item_count - 1, str(scenario.get("background", "")))
+			if str(scenario.get("background", "")) == _debug_background_path:
+				map_select.select(map_select.item_count - 1)
+		map_select.item_selected.connect(func(index: int) -> void: _debug_background_path = str(map_select.get_item_metadata(index)))
+		column.add_child(map_select)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -408,10 +439,10 @@ func _on_start_sandbox_pressed() -> void:
 
 
 func _on_start_debug_pressed() -> void:
-	_emit_custom_setup("testowa", "testowa")
+	_emit_custom_setup("testowa", "testowa", _debug_background_path)
 
 
-func _emit_custom_setup(player_faction: String, enemy_faction: String) -> void:
+func _emit_custom_setup(player_faction: String, enemy_faction: String, background_path: String = "") -> void:
 	var unit_configs: Array[Dictionary] = []
 	var next_id := 1
 	var player_count := 0
@@ -436,7 +467,7 @@ func _emit_custom_setup(player_faction: String, enemy_faction: String) -> void:
 		next_id += 1
 	if player_count == 0 or enemy_count == 0:
 		return
-	custom_setup_finished.emit(unit_configs, player_faction, enemy_faction, "")
+	custom_setup_finished.emit(unit_configs, player_faction, enemy_faction, background_path)
 
 
 func _build_background() -> void:
