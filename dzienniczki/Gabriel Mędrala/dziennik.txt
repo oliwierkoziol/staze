@@ -49,3 +49,12 @@ Dzień 8 (10.07.2026)
 - dodanie gry na githuba i możliwienie grania przez przeglądarkę
 - przegląd lektury przekazanej przez pana Marcina
 - myślenie nad dalszymi planami
+Dzień 9 (13.07.2026)
+- nauka o magistralach do dźwięków
+- nauka używania audio w godocie
+- nauka o znaczeniu audio w grach komputerowych
+- nauka technik audio w grach
+- nauka pojęć dotyczących audio designu
+- rozpoczęcia pracy nad projektem odnośnie audio
+- dodanie możliwości przywoływania dźwięku pod kursorem
+- dodanie zmniejszającego się poziomu głośności w zależności od dystansu dźwięku
