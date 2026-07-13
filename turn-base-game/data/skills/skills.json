@@ -50,15 +50,15 @@
 	  "target_type": "enemy_unit",
 	  "effect_type": "hook_throw"
 	},
-	"potezne_uderzenie": {
-	  "id": "potezne_uderzenie",
-	  "name": "Potezne Uderzenie",
-	  "description": "Zadaje standardowe obrazenia i odpycha cel o 1 hex. Jesli trafi w przeszkode lub blokade, zostaje ogluszony na 1 ture.",
+	"odepchniecie_tarcza": {
+	  "id": "odepchniecie_tarcza",
+	  "name": "Odepchniecie Tarcza",
+	  "description": "Uderza tarcza, zadaje standardowe obrazenia i odepycha cel o 1 hex. Jesli trafi w przeszkode lub blokade, cel zostaje ogluszony na 1 ture.",
 	  "ap_cost": 1,
 	  "cooldown": 2,
 	  "range": 1,
 	  "target_type": "enemy_unit",
-	  "effect_type": "heavy_strike"
+	  "effect_type": "shield_push"
 	},
 	"kula_ognia": {
 	  "id": "kula_ognia",
@@ -169,6 +169,16 @@
 	  "range": 5,
 	  "target_type": "enemy_unit",
 	  "effect_type": "focused_strike"
+	},
+	"deszcz_strzal": {
+	  "id": "deszcz_strzal",
+	  "name": "Deszcz Strzal",
+	  "description": "Salwa strzal we wskazany obszar: 50% obrazen w centrum i 35% na 6 sasiednich hexach.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 4,
+	  "target_type": "cell",
+	  "effect_type": "arrow_rain"
 	},
 	"berserk": {
 	  "id": "berserk",

@@ -379,12 +379,14 @@ theme_override_font_sizes/font_size = 15
 text = "-"
 
 [node name="AbilityDesc" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent/AbilityText" unique_id=170510007]
+custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
 theme_override_font_sizes/font_size = 11
-clip_text = true
+autowrap_mode = 3
 text_overrun_behavior = 3
+max_lines_visible = 2
 
 [node name="AbilityCooldown" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent/AbilityText" unique_id=170510014]
 layout_mode = 2
@@ -438,12 +440,14 @@ theme_override_font_sizes/font_size = 15
 text = "-"
 
 [node name="AbilityDesc" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent/AbilityText" unique_id=170510013]
+custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
 theme_override_font_sizes/font_size = 11
-clip_text = true
+autowrap_mode = 3
 text_overrun_behavior = 3
+max_lines_visible = 2
 
 [node name="AbilityCooldown" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent/AbilityText" unique_id=170510015]
 layout_mode = 2
