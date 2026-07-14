@@ -30,7 +30,7 @@
 	"krzok": {
 	  "id": "krzok",
 	  "name": "Krzak",
-	  "description": "Jednostka w krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
+	  "description": "Jednostka w krzaku jest ukryta. Wrog moze ja zobaczyc z sasiedniego pola zapewniajacego ukrycie. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "movement_cost": 1,
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": true,
@@ -39,7 +39,7 @@
 	"zimowy_krzak": {
 	  "id": "zimowy_krzak",
 	  "name": "Zimowy Krzak",
-	  "description": "Jednostka w zimowym krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
+	  "description": "Jednostka w zimowym krzaku jest ukryta. Wrog moze ja zobaczyc z sasiedniego pola zapewniajacego ukrycie. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "movement_cost": 1,
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": true,
@@ -48,7 +48,7 @@
 	"holy_tree": {
 	  "id": "holy_tree",
 	  "name": "Swiete Drzewo",
-	  "description": "Jednostka w swietym drzewie jest niewidzialna dla wrogow poza sasiednim swietym drzewem lub wozem.",
+	  "description": "Jednostka w Swietym Drzewie jest ukryta. Wrog moze ja zobaczyc z sasiedniego pola zapewniajacego ukrycie. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "movement_cost": 1,
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": true,
@@ -57,7 +57,7 @@
 	"cart": {
 	  "id": "cart",
 	  "name": "Woz",
-	  "description": "Jednostka przy wozie moze sie schowac i jest niewidzialna dla wrogow poza sasiednim wozem.",
+	  "description": "Jednostka na polu wozu jest ukryta. Wrog moze ja zobaczyc z sasiedniego pola zapewniajacego ukrycie. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "movement_cost": 1,
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": true,

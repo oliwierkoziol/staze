@@ -1,6 +1,30 @@
-[gd_resource type="Theme" load_steps=2 format=3 uid="uid://cna4ihybudjlx"]
+[gd_resource type="Theme" load_steps=3 format=3 uid="uid://cna4ihybudjlx"]
 
 [ext_resource type="FontFile" uid="uid://b7at424svjkvy" path="res://theme/georgia.ttf" id="1_georgia"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tooltip"]
+content_margin_left = 12.0
+content_margin_top = 9.0
+content_margin_right = 12.0
+content_margin_bottom = 9.0
+bg_color = Color(0.105, 0.065, 0.025, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.72, 0.56, 0.25, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0, 0, 0, 0.75)
+shadow_size = 6
+
 [resource]
 default_font = ExtResource("1_georgia")
+TooltipLabel/colors/font_color = Color(0.92, 0.88, 0.76, 1)
+TooltipLabel/colors/font_shadow_color = Color(0, 0, 0, 0.9)
+TooltipLabel/constants/shadow_offset_x = 1
+TooltipLabel/constants/shadow_offset_y = 1
+TooltipLabel/font_sizes/font_size = 14
+TooltipPanel/styles/panel = SubResource("StyleBoxFlat_tooltip")
