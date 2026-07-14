@@ -5,3 +5,6 @@
 07.07.2026 - Generowanie assetów do gry, dodanie kategorii wojskowej i budynków z nią związanej
 08.07.2026 - Dalsze generowanie assetów do gry, dodanie tooltipa, poprawienie mechaniki werbowania
 09.07.2026 - Dodanie ustawień, ulepszenie ui, inicjacja walki, daodanie przypisywanie armii do generałów
+10.07.2026 - Poprawy błędów, stworzenie skryptu ułatwiającego wycinanie tła
+13.07.2026 - Naprawa spirali głodu, usunięcie martwych callbacków i nieużywanego kodu, zmiana działania esc, naprawa drobnych błędów i exploitów. Generowanie assetów.
+14.07.2026 - Generowanie assetów i ich modyfikacja.
