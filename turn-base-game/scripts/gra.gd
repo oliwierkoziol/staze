@@ -13,6 +13,8 @@ const WINTER_OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "zimowy_krzak"
 const DESERT_OBSTACLE_TYPES: Array[String] = ["ruchome_piaski", "kamienie"]
 const MAX_EVENT_LOG_ENTRIES := 60
 const KRWAWIENIE_TICK_DAMAGE := 2
+const PLONIECIE_TICK_DAMAGE := 2
+const PLONIECIE_TURNS := 3
 const MAX_VISIBLE_QUEUE_CARDS := 8
 const SINGLE_CLICK_DELAY := 0.3
 const MAX_EVENT_OBSTACLES: Dictionary = {"woda": 6, "kamienie": 4, "krzok": 6, "ruchome_piaski": 6, "holy_tree": 5, "cart": 3, "elf_statue": 6, "hole": 4, "detonator": 2}
@@ -33,7 +35,7 @@ const MAP_EVENT_DATA: Dictionary = {
 	"wybuch_gazu": {"name": "Wybuch Gazu", "icon": preload("res://assets/ui/poison_cloud.png"), "description": "Tworzy toksyczna chmure na 5-8 polach na 2 rundy. Zatrucie zadaje 1 obrazenie za kazda zywa jednostke w oddziale przez 2 tury."},
 	"pekniecie_chodnika": {"name": "Pekniecie Chodnika", "icon": preload("res://assets/ui/water.png"), "description": "Tworzy 3 pola wody. Wejscie zuzywa caly pozostaly ruch jednostki."},
 	"zawal_kopalni": {"name": "Zawal Kopalni", "icon": preload("res://assets/mapTiles/rock2.png"), "description": "Tworzy kamienie na 2 polach. Jednostka na oznaczonym polu otrzymuje 1 obrazenie za kazdego zywego czlonka oddzialu; kamienie powstaja, jesli pole zostanie zwolnione."},
-	"rozprzestrzeniajacy_sie_pozar": {"name": "Rozprzestrzeniajacy sie Pozar", "icon": preload("res://assets/ui/fire.png"), "description": "Tworzy ogien na 5-8 polach na 2 rundy. Ploniecie zadaje 1 obrazenie za kazda zywa jednostke w oddziale przez 2 tury."},
+	"rozprzestrzeniajacy_sie_pozar": {"name": "Rozprzestrzeniajacy sie Pozar", "icon": preload("res://assets/ui/fire.png"), "description": "Tworzy ogien na 5-8 polach na 2 rundy. Ploniecie zadaje 2 obrazenia za kazda zywa jednostke w oddziale przez 3 tury."},
 	"gesty_dym": {"name": "Gesty Dym", "icon": preload("res://assets/ui/reveal.png"), "description": "Zmniejsza zasieg ataku wszystkich jednostek o 1 przez 1 ture."},
 	"przerwanie_grobli": {"name": "Przerwanie Grobli", "icon": preload("res://assets/ui/water.png"), "description": "Tworzy 3 pola wody. Wejscie zuzywa caly pozostaly ruch jednostki."},
 	"plonace_zabudowania": {"name": "Plonace Zabudowania", "icon": preload("res://assets/ui/fire.png"), "description": "Oznacza 3 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
@@ -2983,7 +2985,11 @@ func _apply_terrain_effects_to_unit(unit: Dictionary, apply_entry_effect := true
 			continue
 		match str(effect.get("id", "")):
 			"fire":
-				_apply_or_refresh_effect(unit, {"id": "ploniecie"})
+				_apply_or_refresh_effect(unit, {
+					"id": "ploniecie",
+					"remaining_turns": PLONIECIE_TURNS,
+					"tick_damage": PLONIECIE_TICK_DAMAGE
+				})
 				_log_event("%s staje w ogniu." % _unit_name_log_text(unit))
 			"ice":
 				_apply_or_refresh_effect(unit, {"id": "lodowe_podloze"})

@@ -160,12 +160,12 @@
 	"ploniecie": {
 	  "id": "ploniecie",
 	  "name": "Ploniecie",
-	  "description": "Zadaje obrazenia na poczatku tury przez 2 tury.",
+	  "description": "Przez 3 tury zadaje na poczatku tury 2 obrazenia za kazda zywa jednostke w oddziale.",
 	  "category": "debuff",
 	  "icon": "res://assets/ui/focus.png",
 	  "color": "#F77F3D",
-	  "remaining_turns": 2,
-	  "tick_damage": 1,
+	  "remaining_turns": 3,
+	  "tick_damage": 2,
 	  "stat_changes": []
 	},
 	"przyspieszenie": {

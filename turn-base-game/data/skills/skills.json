@@ -74,7 +74,7 @@
 	"kula_ognia": {
 	  "id": "kula_ognia",
 	  "name": "Kula Ognia",
-	  "description": "Zadaje 100% obrazen w centrum i 50% na 6 sasiednich hexach. W centrum pozostawia ogien na 1 runde; wejscie w niego naklada Ploniecie na 2 tury.",
+	  "description": "Zadaje 100% obrazen w centrum i 50% na 6 sasiednich hexach. W centrum pozostawia ogien na 1 runde; wejscie w niego naklada Ploniecie na 3 tury (2 obrazenia za jednostke na ture).",
 	  "ap_cost": 1,
 	  "cooldown": 2,
 	  "range": 7,
