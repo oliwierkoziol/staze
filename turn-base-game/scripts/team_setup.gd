@@ -196,14 +196,33 @@ func _show_scenarios_placeholder() -> void:
 	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
 	column.add_child(title)
 
-	var scenarios_row := GridContainer.new()
-	scenarios_row.columns = 3
+	var top_spacer := Control.new()
+	top_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(top_spacer)
+
+	var scenarios_row := HBoxContainer.new()
+	scenarios_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	scenarios_row.add_theme_constant_override("separation", 18)
 	scenarios_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(scenarios_row)
 
+	var castle_scenario: Dictionary = {}
 	for scenario in SCENARIOS:
-		scenarios_row.add_child(_make_scenario_card(scenario))
+		if str(scenario.get("id", "")) == "zamek":
+			castle_scenario = scenario
+		else:
+			scenarios_row.add_child(_make_scenario_card(scenario))
+
+	if not castle_scenario.is_empty():
+		var castle_row := HBoxContainer.new()
+		castle_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		castle_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.add_child(castle_row)
+		castle_row.add_child(_make_scenario_card(castle_scenario))
+
+	var bottom_spacer := Control.new()
+	bottom_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(bottom_spacer)
 
 	var back_button := _make_action_button("WROC", Vector2(180, 52))
 	back_button.pressed.connect(_show_mode_menu)
