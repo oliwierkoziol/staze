@@ -17,7 +17,12 @@ static func generate(units: Array, obstacle_types: Array[String], columns: int, 
 	for cluster_index in range(cluster_count):
 		var obstacle_type: String = obstacle_types[rng.randi_range(0, obstacle_types.size() - 1)]
 		if obstacle_type == "detonator" and detonator_count >= max_detonators:
-			obstacle_type = "holy_tree" if rng.randi_range(0, 1) == 0 else "cart"
+			var fallback_types: Array[String] = obstacle_types.duplicate()
+			while fallback_types.has("detonator"):
+				fallback_types.erase("detonator")
+			if fallback_types.is_empty():
+				continue
+			obstacle_type = fallback_types[rng.randi_range(0, fallback_types.size() - 1)]
 		var cluster_size: int = rng.randi_range(1, 3) + (1 if cluster_index < 2 else 0)
 		var cluster: Array[Vector2i] = _generate_cluster(cluster_size, occupied, obstacle_types_by_cell, obstacle_type, rng, columns, rows, setup_columns)
 		for cell in cluster:
