@@ -17,7 +17,6 @@ const PIERCING_SHOT_HEX_COUNT := 3
 const PLONIECIE_TICK_DAMAGE := 2
 const PLONIECIE_TURNS := 3
 const MAX_VISIBLE_QUEUE_CARDS := 8
-const SINGLE_CLICK_DELAY := 0.3
 const MAX_EVENT_OBSTACLES: Dictionary = {"woda": 6, "kamienie": 4, "krzok": 6, "ruchome_piaski": 6, "holy_tree": 5, "cart": 3, "elf_statue": 6, "hole": 4, "detonator": 2}
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const MAP_EVENT_POOLS: Dictionary = {
@@ -205,7 +204,6 @@ var screen_message_label: Label
 var screen_message_tween: Tween
 var detonator_activated := false
 var unit_details_popup: PopupPanel
-var cell_click_revision := 0
 
 
 func _ready() -> void:
@@ -1148,12 +1146,6 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		_handle_setup_cell_pressed(cell)
 		return
 
-	cell_click_revision += 1
-	var click_revision: int = cell_click_revision
-	await get_tree().create_timer(SINGLE_CLICK_DELAY).timeout
-	if click_revision != cell_click_revision:
-		return
-
 	if is_animating or not _is_manual_turn():
 		return
 
@@ -1228,7 +1220,6 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 
 
 func _on_cell_double_clicked(cell: Vector2i) -> void:
-	cell_click_revision += 1
 	var unit: Dictionary = _find_unit_at_cell(cell)
 	if not unit.is_empty():
 		unit_details_popup.show_unit(unit, skill_library, _load_unit_portrait(unit))
@@ -1324,7 +1315,7 @@ func _enemy_take_turn() -> void:
 	var enemy_unit := _get_active_unit()
 	if enemy_unit.is_empty() or enemy_unit.side != "enemy":
 		return
-	await get_tree().create_timer(1.5).timeout
+	await get_tree().create_timer(1.0).timeout
 
 	var target := _find_nearest_player_unit(enemy_unit)
 	if target.is_empty():
@@ -1562,6 +1553,9 @@ func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
 		if target_type == "self" and str(skill.get("effect_type", "")) == "utwardzenie":
 			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
 			return true
+		if target_type == "self" and str(skill.get("effect_type", "")) == "dancing_blade" and _has_adjacent_enemy_unit(enemy_unit):
+			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
+			return true
 		if str(skill.get("effect_type", "")) == "charge" and _try_enemy_charge(enemy_unit, target, skill):
 			return true
 		if target_type == "enemy_unit" and _hex_distance(Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), target_cell) <= int(skill.get("range", 0)) and not _is_attack_blocked(enemy_unit, target_cell):
@@ -1580,6 +1574,8 @@ func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
 func _find_enemy_area_skill_cell(enemy_unit: Dictionary, skill: Dictionary) -> Vector2i:
 	if str(skill.get("effect_type", "")) == "magic_projection":
 		return _find_enemy_magic_projection_cell(enemy_unit, skill)
+	if str(skill.get("effect_type", "")) == "summon_statue":
+		return _find_enemy_summon_statue_cell(enemy_unit, skill)
 	var best_cell := Vector2i(-1, -1)
 	var best_score := 0
 	for cell in _get_skill_target_cells(enemy_unit, str(skill.get("id", ""))):
@@ -1658,7 +1654,11 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 		if _can_unit_attack(unit):
 			attack_cells = _get_attackable_cells(unit, charge_skill)
 	elif unit.id == active_unit_id and pending_skill_id != "":
-		attack_cells = _get_skill_target_cells(unit, pending_skill_id)
+		var pending_skill: Dictionary = skill_library.get(pending_skill_id, {})
+		if str(pending_skill.get("effect_type", "")) == "dancing_blade":
+			attack_cells = _get_neighbors(Vector2i(unit.grid_x, unit.grid_y))
+		else:
+			attack_cells = _get_skill_target_cells(unit, pending_skill_id)
 	else:
 		move_cells = _get_reachable_cells(unit, move_budget)
 		if unit.id == active_unit_id and pending_skill_id == "" and _can_unit_attack(unit):
@@ -1708,6 +1708,9 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		var pending_skill: Dictionary = skill_library.get(pending_skill_id, {})
 		if str(pending_skill.get("effect_type", "")) == "hook_throw":
 			_handle_hook_throw_hover(active_unit, pending_skill, cell)
+			return
+		if str(pending_skill.get("effect_type", "")) == "dancing_blade":
+			_handle_dancing_blade_hover(active_unit, cell)
 			return
 		if _is_area_damage_skill(pending_skill):
 			_handle_area_skill_hover(active_unit, pending_skill, cell)
@@ -1808,6 +1811,24 @@ func _handle_ally_unit_skill_hover(active_unit: Dictionary, skill: Dictionary, c
 	board.set_hovered_attack_cell(cell)
 
 
+func _get_dancing_blade_preview_cells(caster: Dictionary) -> Array[Vector2i]:
+	return _get_neighbors(Vector2i(caster.grid_x, caster.grid_y))
+
+
+func _handle_dancing_blade_hover(active_unit: Dictionary, cell: Vector2i) -> void:
+	board.set_hovered_move_path([])
+	board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
+	_clear_move_cost_label()
+	if cell.x == -1 or active_unit.is_empty():
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		return
+	var caster_cell := Vector2i(active_unit.grid_x, active_unit.grid_y)
+	if cell != caster_cell:
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		return
+	board.set_hovered_area_skill(caster_cell, _get_dancing_blade_preview_cells(active_unit))
+
+
 func _handle_self_skill_hover(active_unit: Dictionary, cell: Vector2i) -> void:
 	board.set_hovered_move_path([])
 	board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
@@ -1893,6 +1914,8 @@ func _can_target_cell_with_skill(caster: Dictionary, cell: Vector2i, skill: Dict
 		return _find_unit_at_cell(cell).is_empty() and _get_terrain_effect_at(cell, "goblin_trap").is_empty()
 	if effect_type == "magic_projection":
 		return _can_place_magic_projection_at(caster, cell)
+	if effect_type == "summon_statue":
+		return _can_place_summoned_statue_at(cell)
 	return true
 
 
@@ -2099,6 +2122,8 @@ func _get_skill_target_cells(unit: Dictionary, skill_id: String) -> Array[Vector
 			if str(skill.get("target_type", "")) == "cell" and _blocks_cell_skill_target(cell):
 				continue
 			if str(skill.get("effect_type", "")) == "magic_projection" and not _can_place_magic_projection_at(unit, cell):
+				continue
+			if str(skill.get("effect_type", "")) == "summon_statue" and not _can_place_summoned_statue_at(cell):
 				continue
 			cells.append(cell)
 	return cells
@@ -2482,6 +2507,8 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 			return
 		if str(skill.get("effect_type", "")) == "magic_projection" and not _can_place_magic_projection_at(unit, cell):
 			return
+		if str(skill.get("effect_type", "")) == "summon_statue" and not _can_place_summoned_statue_at(cell):
+			return
 		await _execute_skill(unit, {}, skill, cell)
 		return
 
@@ -2514,6 +2541,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 	match String(skill.get("effect_type", "")):
 		"taunt_burst":
 			_execute_taunt_burst(caster)
+		"dancing_blade":
+			_execute_dancing_blade(caster)
 		"knee_shot":
 			_execute_knee_shot(caster, target)
 		"poison_dagger":
@@ -2542,6 +2571,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_poison_cloud(caster, target_cell)
 		"bear_trap":
 			_execute_bear_trap(caster, target_cell)
+		"summon_statue":
+			_execute_summon_statue(caster, target_cell)
 		"goblin_trap":
 			_execute_goblin_trap(caster, target_cell)
 		"energy_barrier":
@@ -2591,6 +2622,50 @@ func _execute_taunt_burst(caster: Dictionary) -> void:
 		_log_event("%s uzywa Prowokacji, ale nikt nie jest w zasiegu." % _unit_name_log_text(caster))
 		return
 	_log_event("%s prowokuje: %s." % [_unit_name_log_text(caster), ", ".join(affected)])
+
+
+func _has_adjacent_enemy_unit(unit: Dictionary) -> bool:
+	var unit_cell := Vector2i(unit.grid_x, unit.grid_y)
+	for other in units:
+		if other.side == unit.side:
+			continue
+		if _hex_distance(unit_cell, Vector2i(other.grid_x, other.grid_y)) != 1:
+			continue
+		if _can_see_target(unit, other):
+			return true
+	return false
+
+
+func _execute_dancing_blade(caster: Dictionary) -> void:
+	var caster_cell := Vector2i(caster.grid_x, caster.grid_y)
+	var targets: Array[Dictionary] = []
+	for other in units:
+		if other.side == caster.side:
+			continue
+		if _hex_distance(caster_cell, Vector2i(other.grid_x, other.grid_y)) != 1:
+			continue
+		if not _can_see_target(caster, other):
+			continue
+		targets.append(other)
+	if targets.is_empty():
+		_log_event("%s uzywa Tanczacego Ostrza, ale nikt nie jest w zasiegu." % _unit_name_log_text(caster))
+		return
+	var play_animation := true
+	for target in targets:
+		var total_damage := _calculate_damage(caster, target, 0.5)
+		var result := _apply_attack_damage(caster, target, total_damage, true, play_animation)
+		play_animation = false
+		var hit_target: Dictionary = result.get("target", target)
+		var casualties := int(result.get("casualties", 0))
+		_log_event(
+			"%s tnie %s Tanczacym Ostrzem za %s obrazen i %s strat." % [
+				_unit_name_log_text(caster),
+				_unit_name_log_text(hit_target),
+				_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
+				_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+			]
+		)
+		_cleanup_destroyed_unit(hit_target)
 
 
 func _execute_knee_shot(caster: Dictionary, target: Dictionary) -> void:
@@ -2904,6 +2979,22 @@ func _find_enemy_magic_projection_cell(enemy_unit: Dictionary, skill: Dictionary
 	return best_cell
 
 
+func _find_enemy_summon_statue_cell(enemy_unit: Dictionary, skill: Dictionary) -> Vector2i:
+	var best_cell := Vector2i(-1, -1)
+	var best_score := 0
+	for cell in _get_skill_target_cells(enemy_unit, str(skill.get("id", ""))):
+		var score := 0
+		for neighbor in _get_neighbors(cell):
+			var unit := _find_unit_at_cell(neighbor)
+			if unit.is_empty() or unit.side != enemy_unit.side:
+				continue
+			score += 2
+		if score > best_score:
+			best_score = score
+			best_cell = cell
+	return best_cell
+
+
 func _execute_magic_projection(caster: Dictionary, anchor: Vector2i) -> void:
 	var cells: Array[Vector2i] = _get_magic_projection_cells(anchor, str(caster.side))
 	if cells.size() != 3:
@@ -2945,6 +3036,58 @@ func _execute_goblin_trap(caster: Dictionary, cell: Vector2i) -> void:
 	trap["visible_until_ms"] = Time.get_ticks_msec() + 5000
 	trap["enemy_memory_until_round"] = round_number + 1 if caster.side == "player" else round_number
 	_log_event("%s zaklada Pulapke Goblina." % _unit_name_log_text(caster))
+
+
+func _can_place_summoned_statue_at(cell: Vector2i) -> bool:
+	if not _find_unit_at_cell(cell).is_empty():
+		return false
+	return not _is_cell_obstacle(cell)
+
+
+func _find_summoned_statue_index(caster_id: int) -> int:
+	for index in obstacles.size():
+		var obstacle: Dictionary = obstacles[index]
+		if str(obstacle.get("type", "")) != "elf_statue":
+			continue
+		if str(obstacle.get("source", "")) != "skill":
+			continue
+		if int(obstacle.get("summoned_by_id", -1)) != caster_id:
+			continue
+		return index
+	return -1
+
+
+func _remove_caster_summoned_statue(caster_id: int) -> void:
+	var index: int = _find_summoned_statue_index(caster_id)
+	if index >= 0:
+		obstacles.remove_at(index)
+
+
+func _refresh_elf_statue_buffs() -> void:
+	for unit in units:
+		_apply_elf_statue_buff(unit)
+
+
+func _execute_summon_statue(caster: Dictionary, cell: Vector2i) -> void:
+	if not _can_place_summoned_statue_at(cell):
+		_log_event("%s nie moze przyzwac Pomnika w tym miejscu." % _unit_name_log_text(caster))
+		return
+	var had_statue: bool = _find_summoned_statue_index(int(caster.id)) >= 0
+	_remove_caster_summoned_statue(int(caster.id))
+	obstacles.append({
+		"grid_x": cell.x,
+		"grid_y": cell.y,
+		"type": "elf_statue",
+		"variant": "elf_statue",
+		"source": "skill",
+		"summoned_by_id": int(caster.id),
+		"summoned_by_side": str(caster.side),
+	})
+	_refresh_elf_statue_buffs()
+	if had_statue:
+		_log_event("%s przenosi Pomnik Elfow." % _unit_name_log_text(caster))
+	else:
+		_log_event("%s przyzywa Pomnik Elfow." % _unit_name_log_text(caster))
 
 
 func _trigger_goblin_trap(unit: Dictionary, trap: Dictionary) -> void:
@@ -3072,13 +3215,22 @@ func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dict
 func _get_piercing_shot_cells(caster: Dictionary, target: Dictionary) -> Array[Vector2i]:
 	var source_cell := Vector2i(caster.grid_x, caster.grid_y)
 	var target_cell := Vector2i(target.grid_x, target.grid_y)
-	var cells: Array[Vector2i] = [target_cell]
+	if source_cell == target_cell:
+		return [target_cell]
 	var line_cells: Array[Vector2i] = _get_hex_line(source_cell, target_cell)
 	if line_cells.size() < 2:
-		return cells
-	var step_cube: Vector3i = _oddr_to_cube(line_cells[line_cells.size() - 1]) - _oddr_to_cube(line_cells[line_cells.size() - 2])
-	var current_cube: Vector3i = _oddr_to_cube(target_cell)
-	for _index in range(1, PIERCING_SHOT_HEX_COUNT):
+		return [target_cell]
+	var target_index: int = line_cells.size() - 1
+	var start_index: int = maxi(1, target_index - PIERCING_SHOT_HEX_COUNT + 1)
+	var cells: Array[Vector2i] = []
+	if target_index - start_index + 1 < PIERCING_SHOT_HEX_COUNT:
+		cells.append(target_cell)
+	else:
+		for index in range(start_index, target_index + 1):
+			cells.append(line_cells[index])
+	var step_cube: Vector3i = _oddr_to_cube(line_cells[target_index]) - _oddr_to_cube(line_cells[target_index - 1])
+	var current_cube: Vector3i = _oddr_to_cube(cells[cells.size() - 1])
+	while cells.size() < PIERCING_SHOT_HEX_COUNT:
 		current_cube += step_cube
 		var cell: Vector2i = _cube_to_oddr(current_cube)
 		if cell.x < 0 or cell.x >= GRID_COLUMNS or cell.y < 0 or cell.y >= GRID_ROWS:
@@ -4778,6 +4930,10 @@ func _validate_setup() -> void:
 			assert(int(type_data.speed) <= 10 and int(type_data.move_range) <= 6 and int(type_data.attack_range) <= 5, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
 			assert(int(type_data.hp) <= 32 and int(type_data.dmg) <= 12 and int(type_data.def) <= 12 and int(type_data.count) <= 14, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna"), "Umiejetnosci bierne nie moga byc uzywane recznie.")
+	assert(skill_library.has("tanczacy_ostrze"), "Brak skilla tanczacy_ostrze w bibliotece.")
+	assert(str(skill_library["tanczacy_ostrze"].get("effect_type", "")) == "dancing_blade", "Tanczacy Ostrze musi miec efekt dancing_blade.")
+	assert(skill_library.has("przyzwij_pomnik"), "Brak skilla przyzwij_pomnik w bibliotece.")
+	assert(str(skill_library["przyzwij_pomnik"].get("effect_type", "")) == "summon_statue", "Przyzwij Pomnik musi miec efekt summon_statue.")
 	assert(skill_library.has("utwardzenie"), "Brak skilla utwardzenie w bibliotece.")
 	assert(str(skill_library["utwardzenie"].get("effect_type", "")) == "utwardzenie", "Utwardzenie musi miec efekt utwardzenie.")
 	assert(skill_library.has("walniecie_mlotem"), "Brak skilla walniecie_mlotem w bibliotece.")
@@ -5028,6 +5184,16 @@ func _validate_setup() -> void:
 	})
 	var pierce_cells: Array[Vector2i] = _get_piercing_shot_cells({"grid_x": 0, "grid_y": 0}, {"grid_x": 2, "grid_y": 0})
 	assert(pierce_cells.size() == 3 and pierce_cells[1] == Vector2i(3, 0) and pierce_cells[2] == Vector2i(4, 0), "Przebijajacy strzal musi obejmowac 3 hexy w linii.")
+	units.append({
+		"id": 1104,
+		"side": "enemy",
+		"grid_x": 2,
+		"grid_y": 0,
+		"name": "Przod",
+		"count": 1
+	})
+	var pierce_rear_cells: Array[Vector2i] = _get_piercing_shot_cells({"grid_x": 0, "grid_y": 0}, {"grid_x": 4, "grid_y": 0})
+	assert(pierce_rear_cells.size() == 3 and pierce_rear_cells[0] == Vector2i(2, 0) and pierce_rear_cells[2] == Vector2i(4, 0), "Przebijajacy strzal musi trafiac wrogow przed pustym hexem.")
 	var pierce_behind: Dictionary = _find_unit_at_cell(pierce_cells[1])
 	assert(not pierce_behind.is_empty() and int(pierce_behind.id) == 1103, "Przebijajacy strzal musi trafiac jednostke na drugim hexie linii.")
 	var pierce_preview: Array[Vector2i] = _get_piercing_shot_preview_cells({"grid_x": 0, "grid_y": 0}, {"grid_x": 2, "grid_y": 0})

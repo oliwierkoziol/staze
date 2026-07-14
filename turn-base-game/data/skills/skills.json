@@ -82,6 +82,16 @@
 	  "target_type": "enemy_unit",
 	  "effect_type": "shield_push"
 	},
+	"tanczacy_ostrze": {
+	  "id": "tanczacy_ostrze",
+	  "name": "Tanczacy Ostrze",
+	  "description": "Zadaje 50% standardowych obrazen wszystkim wrogom na sasiednich hexach.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "dancing_blade"
+	},
 	"walniecie_mlotem": {
 	  "id": "walniecie_mlotem",
 	  "name": "Walniecie Mlotem",
@@ -141,6 +151,17 @@
 	  "range": 3,
 	  "target_type": "cell",
 	  "effect_type": "bear_trap"
+	},
+	"przyzwij_pomnik": {
+	  "id": "przyzwij_pomnik",
+	  "name": "Przyzwij Pomnik",
+	  "description": "Przyzywa pomnik elfow w zasiegu 3 hexow. Sasiadujaca sojusznicza jednostka otrzymuje +2 do obrazen. Drugie uzycie usuwa poprzedni pomnik.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 3,
+	  "target_type": "cell",
+	  "effect_type": "summon_statue",
+	  "icon": "res://assets/elfStatue.png"
 	},
 	"bariera_energetyczna": {
 	  "id": "bariera_energetyczna",

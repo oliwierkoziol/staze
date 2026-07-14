@@ -19,7 +19,7 @@
 		"resistance": "Brak",
 		"portrait": "res://assets/characters/humans/elfArcher.png",
 		"skill_ids": [
-		  "strzal_w_kolano",
+		  "deszcz_strzal",
 		  "sokole_oko",
           "przebijajacy_strzal"
 		]
@@ -42,7 +42,7 @@
 		"skill_ids": [
 		  "runiczna_ochrona",
 		  "zaklete_ciecie",
-          "odepchniecie_tarcza"
+          "tanczacy_ostrze"
 		]
 	  },
 	  {
@@ -84,7 +84,7 @@
 		"skill_ids": [
 		  "magiczna_projekcja",
 		  "runiczna_ochrona",
-          "pulapka_na_niedzwiedzie"
+          "przyzwij_pomnik"
 		]
 	  }
 	]

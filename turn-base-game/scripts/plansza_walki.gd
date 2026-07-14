@@ -87,6 +87,7 @@ var fireball_overlay_alpha: float = 0.0
 var ice_ground_overlay_cells: Array[Vector2i] = []
 var ice_ground_overlay_alpha: float = 0.0
 var obstacles: Array = []
+var statue_buff_cells: Array[Vector2i] = []
 var terrain_effects: Array[Dictionary] = []
 var hovered_cell := Vector2i(-1, -1)
 var viewer_side := "player"
@@ -147,6 +148,7 @@ func set_obstacles(new_obstacles: Array) -> void:
 	for obstacle in obstacles:
 		var obstacle_cell := Vector2i(int(obstacle.get("grid_x", -1)), int(obstacle.get("grid_y", -1)))
 		obstacle["connection_mask"] = _get_obstacle_connection_mask(obstacle_cell, str(obstacle.get("type", "")), types_by_cell)
+	_rebuild_statue_buff_cells()
 	queue_redraw()
 
 
@@ -270,6 +272,7 @@ func _draw() -> void:
 	if grid_visible:
 		draw_hex_grid()
 	draw_obstacles()
+	_draw_statue_buff_cells()
 	draw_terrain_effects()
 	_draw_cell_highlights(map_event_warning_cells, Color(1.0, 0.25, 0.08, 0.32), Color(1.0, 0.55, 0.12, 0.95))
 	_draw_cell_highlights(detonator_warning_cells, Color(0.92, 0.12, 0.12, 0.42), Color(1.0, 0.18, 0.18, 0.95))
@@ -783,6 +786,35 @@ func draw_obstacles() -> void:
 			continue
 		draw_texture_rect(texture, Rect2(center - texture_draw_size / 2.0, texture_draw_size), false)
 	_draw_obstacle_connection_placeholders()
+
+
+func _rebuild_statue_buff_cells() -> void:
+	statue_buff_cells.clear()
+	var statue_cells: Dictionary = {}
+	for obstacle in obstacles:
+		if str(obstacle.get("type", "")) != "elf_statue":
+			continue
+		var cell := Vector2i(int(obstacle.get("grid_x", -1)), int(obstacle.get("grid_y", -1)))
+		if cell.x < 0:
+			continue
+		statue_cells[cell] = true
+	for statue_cell in statue_cells.keys():
+		for neighbor in HexUtilsScript.neighbors(statue_cell, GRID_COLUMNS, GRID_ROWS):
+			if statue_cells.has(neighbor):
+				continue
+			if not statue_buff_cells.has(neighbor):
+				statue_buff_cells.append(neighbor)
+
+
+func _draw_statue_buff_cells() -> void:
+	if statue_buff_cells.is_empty():
+		return
+	_draw_cell_highlights(
+		statue_buff_cells,
+		Color(0.58, 0.38, 0.92, 0.063),
+		Color(0.68, 0.48, 0.98, 0.154),
+		HEX_RADIUS - 2.0
+	)
 
 
 func _draw_obstacle_connection_placeholders() -> void:
