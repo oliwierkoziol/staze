@@ -110,4 +110,6 @@ static func _can_place_cell(cell: Vector2i, occupied: Dictionary, obstacle_types
 		var neighbor_type: String = str(obstacle_types_by_cell.get(neighbor, ""))
 		if neighbor_type != "" and neighbor_type != obstacle_type:
 			return false
+		if obstacle_type == "detonator" and neighbor_type == "detonator":
+			return false
 	return true
