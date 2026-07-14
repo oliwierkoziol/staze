@@ -26,6 +26,16 @@
 	  "permanent": true,
 	  "stat_changes": []
 	},
+	"utwardzenie": {
+	  "id": "utwardzenie",
+	  "name": "Utwardzenie",
+	  "description": "Na stale zwieksza DEF o 1 do konca bitwy.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/defence.png",
+	  "color": "#8FBDFB",
+	  "permanent": true,
+	  "stat_changes": []
+	},
 	"bitewny_trucht": {
 	  "id": "bitewny_trucht",
 	  "name": "Bitewny Trucht",

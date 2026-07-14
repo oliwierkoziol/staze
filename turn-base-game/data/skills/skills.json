@@ -82,6 +82,26 @@
 	  "target_type": "enemy_unit",
 	  "effect_type": "shield_push"
 	},
+	"walniecie_mlotem": {
+	  "id": "walniecie_mlotem",
+	  "name": "Walniecie Mlotem",
+	  "description": "Zadaje 100% standardowych obrazen i naklada Ogluszenie na 1 ture.",
+	  "ap_cost": 1,
+	  "cooldown": 2,
+	  "range": 1,
+	  "target_type": "enemy_unit",
+	  "effect_type": "hammer_strike"
+	},
+	"utwardzenie": {
+	  "id": "utwardzenie",
+	  "name": "Utwardzenie",
+	  "description": "Na stale zwieksza DEF o 1 do konca bitwy. Kazde uzycie kumuluje efekt.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "utwardzenie"
+	},
 	"kula_ognia": {
 	  "id": "kula_ognia",
 	  "name": "Kula Ognia",
@@ -224,6 +244,16 @@
 	  "range": 5,
 	  "target_type": "enemy_unit",
 	  "effect_type": "focused_strike"
+	},
+	"przebijajacy_strzal": {
+	  "id": "przebijajacy_strzal",
+	  "name": "Przebijajacy Strzal",
+	  "description": "Strzal przebijajacy zadajacy 100% obrazen na 3 hexach w linii strzalu.",
+	  "ap_cost": 1,
+	  "cooldown": 2,
+	  "range": 5,
+	  "target_type": "enemy_unit",
+	  "effect_type": "piercing_shot"
 	},
 	"deszcz_strzal": {
 	  "id": "deszcz_strzal",

@@ -19,7 +19,7 @@
 		"resistance": "Brak",
 		"portrait": "res://assets/characters/humans/dwarfWarrior.png",
 		"skill_ids": [
-		  "odepchniecie_tarcza",
+		  "utwardzenie",
 		  "zelazna_kurtyna",
           "tarcza"
 		]
@@ -47,7 +47,7 @@
 	  },
 	  {
 		"id": "dwarf_axeman",
-		"name": "Krasnolud Topornik",
+		"name": "Krasnolud Mlotnik",
 		"short_name": "KTO",
 		"role": "Ciezka piechota uderzeniowa",
 		"hp": 26,
@@ -61,7 +61,7 @@
 		"resistance": "Brak",
 		"portrait": "res://assets/characters/humans/dwarfHammer.png",
 		"skill_ids": [
-		  "odepchniecie_tarcza",
+		  "walniecie_mlotem",
 		  "skupiony_cios",
           "berserk"
 		]
@@ -82,7 +82,7 @@
 		"resistance": "Brak",
 		"portrait": "res://assets/characters/humans/dwarfDigger.png",
 		"skill_ids": [
-		  "strzal_w_kolano",
+		  "rzut_hakiem",
 		  "precyzyjny_strzal",
           "rzut_dynamitem"
 		]

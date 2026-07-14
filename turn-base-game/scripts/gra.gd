@@ -13,6 +13,7 @@ const WINTER_OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "zimowy_krzak"
 const DESERT_OBSTACLE_TYPES: Array[String] = ["ruchome_piaski", "kamienie"]
 const MAX_EVENT_LOG_ENTRIES := 60
 const KRWAWIENIE_TICK_DAMAGE := 2
+const PIERCING_SHOT_HEX_COUNT := 3
 const PLONIECIE_TICK_DAMAGE := 2
 const PLONIECIE_TURNS := 3
 const MAX_VISIBLE_QUEUE_CARDS := 8
@@ -1558,6 +1559,9 @@ func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
 		if target_type == "self" and str(skill.get("effect_type", "")) == "zadza_krwi":
 			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
 			return true
+		if target_type == "self" and str(skill.get("effect_type", "")) == "utwardzenie":
+			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
+			return true
 		if str(skill.get("effect_type", "")) == "charge" and _try_enemy_charge(enemy_unit, target, skill):
 			return true
 		if target_type == "enemy_unit" and _hex_distance(Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), target_cell) <= int(skill.get("range", 0)) and not _is_attack_blocked(enemy_unit, target_cell):
@@ -1783,6 +1787,9 @@ func _handle_enemy_unit_skill_hover(active_unit: Dictionary, skill: Dictionary, 
 	var hovered_unit: Dictionary = _find_unit_at_cell(cell)
 	if hovered_unit.is_empty() or not _can_target_enemy_with_skill(active_unit, hovered_unit, skill):
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		return
+	if str(skill.get("effect_type", "")) == "piercing_shot":
+		board.set_hovered_area_skill(cell, _get_piercing_shot_preview_cells(active_unit, hovered_unit))
 		return
 	board.set_hovered_attack_cell(cell)
 
@@ -2519,6 +2526,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_curse_throw(caster, target)
 		"shield_push":
 			await _execute_shield_push(caster, target)
+		"hammer_strike":
+			_execute_hammer_strike(caster, target)
 		"hook_throw":
 			await _execute_hook_throw(caster, target)
 		"fireball":
@@ -2543,8 +2552,12 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_self_buff(caster, skill)
 		"zadza_krwi":
 			_execute_zadza_krwi(caster, skill)
+		"utwardzenie":
+			_execute_utwardzenie(caster, skill)
 		"focused_strike":
 			_execute_focused_strike(caster, target, skill)
+		"piercing_shot":
+			_execute_piercing_shot(caster, target, skill)
 		"zaklete_ciecie":
 			_execute_zaklete_ciecie(caster, target)
 		"rozszarpanie":
@@ -2729,6 +2742,34 @@ func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
 			_color_log_text(str(casualties), LOG_COLOR_DAMAGE),
 			suffix
+		]
+	)
+	_cleanup_destroyed_unit(hit_target)
+
+
+func _execute_hammer_strike(caster: Dictionary, target: Dictionary) -> void:
+	var total_damage := _calculate_damage(caster, target)
+	var result := _apply_attack_damage(caster, target, total_damage, true)
+	var hit_target: Dictionary = result.get("target", target)
+	var casualties := int(result.get("casualties", 0))
+	var stun_suffix := ""
+	if int(result.get("damage", 0)) > 0 and int(hit_target.get("count", 0)) > 0:
+		_apply_or_refresh_effect(hit_target, {
+			"id": "ogluszenie",
+			"name": "Ogluszenie",
+			"category": "debuff",
+			"remaining_turns": 1,
+			"stat_changes": [],
+			"skip_turn": true
+		})
+		stun_suffix = " Cel zostaje ogluszony."
+	_log_event(
+		"%s uderza %s Walnieciem Mlotem za %s obrazen i %s strat.%s" % [
+			_unit_name_log_text(caster),
+			_unit_name_log_text(hit_target),
+			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
+			_color_log_text(str(casualties), LOG_COLOR_DAMAGE),
+			stun_suffix
 		]
 	)
 	_cleanup_destroyed_unit(hit_target)
@@ -2987,6 +3028,30 @@ func _execute_zadza_krwi(caster: Dictionary, skill: Dictionary) -> void:
 	)
 
 
+func _execute_utwardzenie(caster: Dictionary, skill: Dictionary) -> void:
+	caster["base_def"] = int(caster.get("base_def", caster.get("def", 0))) + 1
+	var stack_amount: int = 1
+	for effect in caster.get("active_effects", []):
+		if str(effect.get("id", "")) == "utwardzenie":
+			stack_amount = int(effect.get("stack_amount", 1)) + 1
+			break
+	_apply_or_refresh_effect(caster, {
+		"id": "utwardzenie",
+		"name": "Utwardzenie",
+		"category": "buff",
+		"permanent": true,
+		"stack_amount": stack_amount,
+		"stat_changes": []
+	})
+	_recalculate_unit_stats(caster)
+	_log_event(
+		"%s uzywa Utwardzenia i zyskuje stale +1 DEF (lacznie +%d DEF do konca bitwy)." % [
+			_unit_name_log_text(caster),
+			stack_amount
+		]
+	)
+
+
 func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dictionary = {}) -> void:
 	var total_damage := _calculate_damage(caster, target)
 	var projectile_kind: String = str(skill.get("projectile_kind", ""))
@@ -3002,6 +3067,63 @@ func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dict
 		]
 	)
 	_cleanup_destroyed_unit(hit_target)
+
+
+func _get_piercing_shot_cells(caster: Dictionary, target: Dictionary) -> Array[Vector2i]:
+	var source_cell := Vector2i(caster.grid_x, caster.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	var cells: Array[Vector2i] = [target_cell]
+	var line_cells: Array[Vector2i] = _get_hex_line(source_cell, target_cell)
+	if line_cells.size() < 2:
+		return cells
+	var step_cube: Vector3i = _oddr_to_cube(line_cells[line_cells.size() - 1]) - _oddr_to_cube(line_cells[line_cells.size() - 2])
+	var current_cube: Vector3i = _oddr_to_cube(target_cell)
+	for _index in range(1, PIERCING_SHOT_HEX_COUNT):
+		current_cube += step_cube
+		var cell: Vector2i = _cube_to_oddr(current_cube)
+		if cell.x < 0 or cell.x >= GRID_COLUMNS or cell.y < 0 or cell.y >= GRID_ROWS:
+			break
+		if _is_cell_obstacle(cell):
+			break
+		cells.append(cell)
+	return cells
+
+
+func _get_piercing_shot_preview_cells(caster: Dictionary, target: Dictionary) -> Array[Vector2i]:
+	return _get_piercing_shot_cells(caster, target)
+
+
+func _execute_piercing_shot(caster: Dictionary, target: Dictionary, skill: Dictionary = {}) -> void:
+	var projectile_kind: String = str(skill.get("projectile_kind", ""))
+	var pierce_cells: Array[Vector2i] = _get_piercing_shot_cells(caster, target)
+	for cell_index in pierce_cells.size():
+		var cell: Vector2i = pierce_cells[cell_index]
+		var hit_unit: Dictionary = _find_unit_at_cell(cell)
+		if hit_unit.is_empty() or int(hit_unit.get("count", 0)) <= 0:
+			continue
+		var total_damage := _calculate_damage(caster, hit_unit)
+		var play_animation: bool = cell_index == 0
+		var result := _apply_attack_damage(caster, hit_unit, total_damage, false, play_animation, projectile_kind)
+		var hit_target: Dictionary = result.get("target", hit_unit)
+		var casualties := int(result.get("casualties", 0))
+		if cell_index == 0:
+			_log_event(
+				"%s trafia %s Przebijajacym Strzalem za %s obrazen i %s strat." % [
+					_unit_name_log_text(caster),
+					_unit_name_log_text(hit_target),
+					_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
+					_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+				]
+			)
+		else:
+			_log_event(
+				"Strzal przebija i trafia %s za %s obrazen i %s strat." % [
+					_unit_name_log_text(hit_target),
+					_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
+					_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+				]
+			)
+		_cleanup_destroyed_unit(hit_target)
 
 
 func _execute_zaklete_ciecie(caster: Dictionary, target: Dictionary) -> void:
@@ -4656,6 +4778,12 @@ func _validate_setup() -> void:
 			assert(int(type_data.speed) <= 10 and int(type_data.move_range) <= 6 and int(type_data.attack_range) <= 5, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
 			assert(int(type_data.hp) <= 32 and int(type_data.dmg) <= 12 and int(type_data.def) <= 12 and int(type_data.count) <= 14, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna"), "Umiejetnosci bierne nie moga byc uzywane recznie.")
+	assert(skill_library.has("utwardzenie"), "Brak skilla utwardzenie w bibliotece.")
+	assert(str(skill_library["utwardzenie"].get("effect_type", "")) == "utwardzenie", "Utwardzenie musi miec efekt utwardzenie.")
+	assert(skill_library.has("walniecie_mlotem"), "Brak skilla walniecie_mlotem w bibliotece.")
+	assert(str(skill_library["walniecie_mlotem"].get("effect_type", "")) == "hammer_strike", "Walniecie Mlotem musi miec efekt hammer_strike.")
+	assert(skill_library.has("przebijajacy_strzal"), "Brak skilla przebijajacy_strzal w bibliotece.")
+	assert(str(skill_library["przebijajacy_strzal"].get("effect_type", "")) == "piercing_shot", "Przebijajacy Strzal musi miec efekt piercing_shot.")
 	assert(skill_library.has("deszcz_strzal"), "Brak skilla deszcz_strzal w bibliotece.")
 	assert(str(skill_library["deszcz_strzal"].get("effect_type", "")) == "arrow_rain", "Deszcz Strzal musi miec efekt arrow_rain.")
 	assert(skill_library.has("rozszarpanie"), "Brak skilla rozszarpanie w bibliotece.")
@@ -4890,6 +5018,20 @@ func _validate_setup() -> void:
 	hook_target.grid_x = pull_cell.x
 	hook_target.grid_y = pull_cell.y
 	assert(_get_pull_destination(hook_caster, hook_target) == Vector2i(-1, -1), "Rzut Hakiem nie moze przyciagac celu juz stojacego obok.")
+	units.append({
+		"id": 1103,
+		"side": "enemy",
+		"grid_x": 3,
+		"grid_y": 0,
+		"name": "Tyl",
+		"count": 1
+	})
+	var pierce_cells: Array[Vector2i] = _get_piercing_shot_cells({"grid_x": 0, "grid_y": 0}, {"grid_x": 2, "grid_y": 0})
+	assert(pierce_cells.size() == 3 and pierce_cells[1] == Vector2i(3, 0) and pierce_cells[2] == Vector2i(4, 0), "Przebijajacy strzal musi obejmowac 3 hexy w linii.")
+	var pierce_behind: Dictionary = _find_unit_at_cell(pierce_cells[1])
+	assert(not pierce_behind.is_empty() and int(pierce_behind.id) == 1103, "Przebijajacy strzal musi trafiac jednostke na drugim hexie linii.")
+	var pierce_preview: Array[Vector2i] = _get_piercing_shot_preview_cells({"grid_x": 0, "grid_y": 0}, {"grid_x": 2, "grid_y": 0})
+	assert(pierce_preview.size() == 3 and pierce_preview[2] == Vector2i(4, 0), "Podglad Przebijajacego Strzalu musi pokazywac 3 hexy w linii.")
 	units = previous_units
 	obstacles = previous_obstacles
 
