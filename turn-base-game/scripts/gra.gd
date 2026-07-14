@@ -12,6 +12,7 @@ const MINE_OBSTACLE_TYPES: Array[String] = ["cart", "detonator", "hole"]
 const WINTER_OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "zimowy_krzak"]
 const DESERT_OBSTACLE_TYPES: Array[String] = ["ruchome_piaski", "kamienie"]
 const MAX_EVENT_LOG_ENTRIES := 60
+const KRWAWIENIE_TICK_DAMAGE := 2
 const MAX_VISIBLE_QUEUE_CARDS := 8
 const SINGLE_CLICK_DELAY := 0.3
 const MAX_EVENT_OBSTACLES: Dictionary = {"woda": 6, "kamienie": 4, "krzok": 6, "ruchome_piaski": 6, "holy_tree": 4, "cart": 3, "elf_statue": 3, "hole": 4, "detonator": 2}
@@ -2325,9 +2326,9 @@ func _try_enemy_charge(enemy_unit: Dictionary, target: Dictionary, skill: Dictio
 
 func _calculate_damage(attacker: Dictionary, target: Dictionary, damage_multiplier := 1.0) -> int:
 	var scaled_damage: float = max(1.0, float(attacker.get("dmg", 1)) * damage_multiplier)
-	var defense: float = max(0.0, float(target.get("def", 0)))
-	var damage_per_unit: int = max(1, int(ceil(scaled_damage * (100.0 / (100.0 + defense * 12.0)))))
-	return max(1, damage_per_unit * int(attacker.get("count", 1)))
+	var raw_total: float = scaled_damage * float(attacker.get("count", 1))
+	var defense_reduction: float = float(target.get("def", 0)) * float(target.get("count", 1))
+	return max(1, int(raw_total - defense_reduction))
 
 
 func _get_incoming_damage_multiplier(unit: Dictionary) -> float:
@@ -2728,7 +2729,14 @@ func _execute_fireball(caster: Dictionary, center: Vector2i) -> void:
 		var total_damage := _calculate_damage(caster, target, multiplier)
 		var result := _apply_attack_damage(caster, target, total_damage, false, false)
 		var hit_target: Dictionary = result.get("target", target)
-		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
+		var casualties: int = int(result.get("casualties", 0))
+		hit_names.append(
+			"trafia %s za %s obrazen i %s strat" % [
+				_unit_name_log_text(hit_target),
+				_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
+				_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+			]
+		)
 		_cleanup_destroyed_unit(hit_target)
 	_add_terrain_effect(center, "fire", 1)
 	is_animating = false
@@ -2830,7 +2838,7 @@ func _trigger_goblin_trap(unit: Dictionary, trap: Dictionary) -> void:
 		"category": "debuff",
 		"remaining_turns": 2,
 		"stat_changes": [],
-		"tick_damage": max(1, int(trap.get("tick_damage", 1)))
+		"tick_damage": KRWAWIENIE_TICK_DAMAGE
 	})
 	terrain_effects.erase(trap)
 	_log_event("%s wpada w Pulapke Goblina za %s obrazen i %s strat." % [_unit_name_log_text(unit), _color_log_text(str(damage), LOG_COLOR_DAMAGE), _color_log_text(str(casualties), LOG_COLOR_DAMAGE)])
@@ -2868,6 +2876,7 @@ func _execute_self_buff(caster: Dictionary, skill: Dictionary) -> void:
 
 func _execute_zadza_krwi(caster: Dictionary, skill: Dictionary) -> void:
 	caster["base_dmg"] = int(caster.get("base_dmg", caster.get("dmg", 0))) + 2
+	caster["base_def"] = int(caster.get("base_def", caster.get("def", 0))) - 2
 	var stack_amount: int = 1
 	for effect in caster.get("active_effects", []):
 		if str(effect.get("id", "")) == "zadza_krwi":
@@ -2883,9 +2892,10 @@ func _execute_zadza_krwi(caster: Dictionary, skill: Dictionary) -> void:
 	})
 	_recalculate_unit_stats(caster)
 	_log_event(
-		"%s uzywa %s i zyskuje stale +2 DMG (lacznie +%d do konca bitwy)." % [
+		"%s uzywa %s i zyskuje stale +2 DMG oraz -2 DEF (lacznie +%d DMG, -%d DEF do konca bitwy)." % [
 			_unit_name_log_text(caster),
 			str(skill.get("name", "Żądza krwi")),
+			stack_amount * 2,
 			stack_amount * 2
 		]
 	)
@@ -2909,7 +2919,7 @@ func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dict
 
 
 func _execute_rozszarpanie(caster: Dictionary, target: Dictionary) -> void:
-	var total_damage := _calculate_damage(caster, target)
+	var total_damage := _calculate_damage(caster, target, 0.5)
 	var result := _apply_attack_damage(caster, target, total_damage, false, true)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
@@ -2921,7 +2931,7 @@ func _execute_rozszarpanie(caster: Dictionary, target: Dictionary) -> void:
 			"category": "debuff",
 			"remaining_turns": 2,
 			"stat_changes": [],
-			"tick_damage": max(1, int(ceil(float(caster.dmg) * 0.25)))
+			"tick_damage": KRWAWIENIE_TICK_DAMAGE
 		})
 		bleed_suffix = " Cel krwawi."
 	_log_event(
@@ -3007,7 +3017,7 @@ func _trigger_bear_trap(unit: Dictionary, trap: Dictionary) -> void:
 		"category": "debuff",
 		"remaining_turns": 2,
 		"stat_changes": [],
-		"tick_damage": max(1, int(trap.get("tick_damage", 1)))
+		"tick_damage": KRWAWIENIE_TICK_DAMAGE
 	})
 	terrain_effects.erase(trap)
 	_log_event("%s wpada w Pulapke na Niedzwiedzie za %s obrazen i %s strat." % [_unit_name_log_text(unit), _color_log_text(str(damage), LOG_COLOR_DAMAGE), _color_log_text(str(casualties), LOG_COLOR_DAMAGE)])
@@ -3673,7 +3683,6 @@ func _recalculate_unit_stats(unit: Dictionary) -> void:
 
 
 	unit["dmg"] = max(1, int(unit.get("dmg", 1)))
-	unit["def"] = max(0, int(unit.get("def", 0)))
 	unit["speed"] = max(0, int(unit.get("speed", 0)))
 	unit["move_range"] = max(0, int(unit.get("move_range", 0)))
 	unit["attack_range"] = max(1, int(unit.get("attack_range", 1)))
@@ -4510,7 +4519,10 @@ func _validate_setup() -> void:
 		assert(event_pool.size() == 4, "Kazdy scenariusz musi miec cztery eventy: %s" % scenario_id)
 		for event_id in event_pool:
 			assert(MAP_EVENT_DATA.has(event_id), "Brak danych eventu: %s" % event_id)
-	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 8}) == 4, "DEF ma redukowac obrazenia miekko, bez zbijania typowego ataku do minimum.")
+	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 8, "count": 1}) == 1, "DEF x count broniacego odejmuje od calego ataku.")
+	assert(_calculate_damage({"dmg": 12, "count": 4}, {"def": 3, "count": 7}) == 27, "Berserker x4 vs elf lucznik x7: 48 - 21 = 27.")
+	assert(_calculate_damage({"dmg": 12, "count": 4}, {"def": 6, "count": 4}) == 24, "Berserker x4 vs def 6 x4: 48 - 24 = 24.")
+	assert(_calculate_damage({"dmg": 10, "count": 1}, {"def": -4, "count": 1}) > _calculate_damage({"dmg": 10, "count": 1}, {"def": 0, "count": 1}), "Ujemna DEF powinna zwiekszac otrzymywane obrazenia.")
 	for faction_id in UnitTypeLibraryScript.get_faction_ids():
 		for type_data in UnitTypeLibraryScript.get_faction_units(faction_id):
 			assert(int(type_data.action_points) == 1, "Jednostki prototypu powinny miec 1 AP: %s" % str(type_data.id))

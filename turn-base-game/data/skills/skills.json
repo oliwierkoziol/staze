@@ -104,7 +104,7 @@
 	"pulapka_na_niedzwiedzie": {
 	  "id": "pulapka_na_niedzwiedzie",
 	  "name": "Pulapka na Niedzwiedzie",
-	  "description": "Zaklada pulapke w zasiegu 3 hexow. Wejscie zadaje 25% DMG rzucajacego na kazda zywa jednostke w oddziale celu, naklada Unieruchomienie na 1 ture i Krwawienie na 2 tury. Krwawienie powtarza te obrazenia na poczatku tury.",
+	  "description": "Zaklada pulapke w zasiegu 3 hexow. Wejscie zadaje 25% DMG rzucajacego na kazda zywa jednostke w oddziale celu, naklada Unieruchomienie na 1 ture i Krwawienie na 2 tury (2 obrazenia za jednostke na ture).",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 3,
@@ -164,9 +164,9 @@
 	"rozszarpanie": {
 	  "id": "rozszarpanie",
 	  "name": "Rozszarpanie",
-	  "description": "Atak wręcz zadający 100% obrażeń i nakładający Krwawienie na 2 tury.",
+	  "description": "Atak wręcz zadający 50% obrażeń i nakładający Krwawienie na 2 tury (2 obrażenia za jednostkę na turę).",
 	  "ap_cost": 1,
-	  "cooldown": 2,
+	  "cooldown": 3,
 	  "range": 1,
 	  "target_type": "enemy_unit",
 	  "effect_type": "rozszarpanie"
@@ -338,7 +338,7 @@
 	"zadza_krwi": {
 	  "id": "zadza_krwi",
 	  "name": "Żądza krwi",
-	  "description": "Na stałe zwiększa obrażenia o 2 do końca bitwy. Każde użycie kumuluje bonus.",
+	  "description": "Na stałe zwiększa obrażenia o 2 i zmniejsza obronę o 2 do końca bitwy. Każde użycie kumuluje efekt.",
 	  "ap_cost": 1,
 	  "cooldown": 4,
 	  "range": 0,
@@ -370,7 +370,7 @@
 	"pulapka_goblina": {
 	  "id": "pulapka_goblina",
 	  "name": "Pulapka Goblina",
-	  "description": "Zaklada pulapke w zasiegu 3 hexow. Wejscie zadaje 25% DMG rzucajacego na kazda zywa jednostke w oddziale celu, naklada Unieruchomienie na 2 tury i Krwawienie na 2 tury. Krwawienie powtarza te obrazenia na poczatku tury.",
+	  "description": "Zaklada pulapke w zasiegu 3 hexow. Wejscie zadaje 25% DMG rzucajacego na kazda zywa jednostke w oddziale celu, naklada Unieruchomienie na 2 tury i Krwawienie na 2 tury (2 obrazenia za jednostke na ture).",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 3,

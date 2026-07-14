@@ -29,7 +29,7 @@
         "name": "Ork Berserker",
         "short_name": "OBE",
         "role": "Kruchy zabojca",
-        "hp": 17,
+        "hp": 12,
         "dmg": 12,
         "def": 3,
         "speed": 6,

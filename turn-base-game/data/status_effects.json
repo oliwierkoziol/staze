@@ -19,7 +19,7 @@
 	"zadza_krwi": {
 	  "id": "zadza_krwi",
 	  "name": "Żądza krwi",
-	  "description": "Na stałe zwieksza obrazenia o 2 do konca bitwy.",
+	  "description": "Na stałe zwieksza obrazenia o 2 i zmniejsza obrone o 2 do konca bitwy.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/berserk.png",
 	  "color": "#B83232",
@@ -98,7 +98,7 @@
 	"krwawienie": {
 	  "id": "krwawienie",
 	  "name": "Krwawienie",
-	  "description": "Przez 2 tury zadaje na poczatku tury 25% DMG twórcy pulapki na kazda zywa jednostke w oddziale celu (minimum 1 obrazenie na jednostke).",
+	  "description": "Przez 2 tury zadaje na poczatku tury 2 obrazenia za kazda zywa jednostke w oddziale.",
 	  "category": "debuff",
 	  "icon": "res://assets/ui/bleed.png",
 	  "color": "#E62429"
