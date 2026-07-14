@@ -58,3 +58,15 @@ Dzień 9 (13.07.2026)
 - rozpoczęcia pracy nad projektem odnośnie audio
 - dodanie możliwości przywoływania dźwięku pod kursorem
 - dodanie zmniejszającego się poziomu głośności w zależności od dystansu dźwięku
+
+Dzień 10 (14.07.2026)
+- dodanie ucha, które stanowi miejsce przyjmowania odgłosów
+- dodanie paska głośności dla efektów dźwiękowych
+- dodanie możliwości skrolowania kamery (zmiana zooma)
+- importowanie i dostosowanie skryptu postaci z poprzedniego projektu
+- dodanie różnych terenówz którymi może interaktować gracz 
+- dodanie gramofonu oraz paska głośności dla muzyki
+- dodanie możliwości poruszania gramofonem przez myszkę
+- dodanie pokoju, który wygłusza dźwięki jeżeli ucho znajduje się na zewnątrz
+- dodanie możliwości poruszania ucha 
+- dodanie większego pokoju, który tak samo wygłusza, ale ponieważ jest większy to posiada echo
