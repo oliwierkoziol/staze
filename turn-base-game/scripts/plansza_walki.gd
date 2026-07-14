@@ -41,6 +41,7 @@ const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
 const PROJECTILE_PATH_ARROWS := "res://assets/arrows_projectile.png"
 const PROJECTILE_PATH_SPELL := "res://assets/spell_projectile.png"
+const PROJECTILE_PATH_FIREBALL := "res://assets/spell_fireball.png"
 const PROJECTILE_PATH_DYNAMITE := "res://assets/dynamite.png"
 const PROJECTILE_PATH_THROWING_AXE := "res://assets/throwing_axe.png"
 const SHIELD_TEXTURE: Texture2D = preload("res://assets/ui/energy_shield.png")
@@ -70,6 +71,10 @@ var active_projectiles: Array[Dictionary] = []
 var active_falling_arrows: Array[Dictionary] = []
 var arrow_rain_overlay_cells: Array[Vector2i] = []
 var arrow_rain_overlay_alpha: float = 0.0
+var fireball_overlay_cells: Array[Vector2i] = []
+var fireball_overlay_alpha: float = 0.0
+var ice_ground_overlay_cells: Array[Vector2i] = []
+var ice_ground_overlay_alpha: float = 0.0
 var obstacles: Array = []
 var terrain_effects: Array[Dictionary] = []
 var hovered_cell := Vector2i(-1, -1)
@@ -233,6 +238,8 @@ func _draw() -> void:
 	_draw_cell_highlights(detonator_warning_cells, Color(0.92, 0.12, 0.12, 0.42), Color(1.0, 0.18, 0.18, 0.95))
 	draw_highlighted_cells()
 	_draw_arrow_rain_overlay()
+	_draw_fireball_overlay()
+	_draw_ice_ground_overlay()
 	draw_units()
 	draw_projectiles()
 
@@ -370,6 +377,62 @@ func play_arrow_rain_animation(caster_id: int, cells: Array) -> void:
 		for _arrow_index in arrows_per_cell:
 			_spawn_falling_arrow(texture, cell_center, rng, float(spawn_index) * 0.026)
 			spawn_index += 1
+
+
+func play_ice_ground_animation(caster_id: int, cells: Array) -> void:
+	if cells.is_empty():
+		return
+
+	ice_ground_overlay_cells.clear()
+	for cell in cells:
+		ice_ground_overlay_cells.append(cell)
+
+	var overlay_tween: Tween = create_tween()
+	overlay_tween.tween_method(_set_ice_ground_overlay_alpha, 0.0, 0.58, 0.10)
+	overlay_tween.tween_method(_set_ice_ground_overlay_alpha, 0.58, 0.24, 0.28)
+	overlay_tween.tween_method(_set_ice_ground_overlay_alpha, 0.24, 0.0, 0.18)
+
+	if caster_id >= 0:
+		var caster_tween: Tween = create_tween()
+		caster_tween.tween_method(_set_unit_attack_offset.bind(caster_id), Vector2.ZERO, Vector2(0.0, -7.0), 0.08)
+		caster_tween.tween_method(_set_unit_attack_offset.bind(caster_id), Vector2(0.0, -7.0), Vector2.ZERO, 0.18)
+
+
+func play_fireball_animation(caster_id: int, center: Vector2i, cells: Array) -> void:
+	var texture: Texture2D = _get_projectile_texture("fireball")
+	if texture == null:
+		return
+
+	if caster_id >= 0:
+		var caster_tween: Tween = create_tween()
+		caster_tween.tween_method(_set_unit_attack_offset.bind(caster_id), Vector2.ZERO, Vector2(5.0, -6.0), 0.07)
+		caster_tween.tween_method(_set_unit_attack_offset.bind(caster_id), Vector2(5.0, -6.0), Vector2.ZERO, 0.14)
+
+	var caster_position: Vector2 = visual_positions.get(caster_id, Vector2.ZERO) if caster_id >= 0 else Vector2.ZERO
+	var center_position: Vector2 = axial_to_pixel(center.x, center.y)
+	var travel_direction: Vector2 = center_position - caster_position
+	var travel_duration: float = clampf(caster_position.distance_to(center_position) / 480.0, 0.16, 0.40)
+	var projectile: Dictionary = {
+		"position": caster_position,
+		"texture": texture,
+		"rotation": travel_direction.angle()
+	}
+	active_projectiles.append(projectile)
+	var tween: Tween = create_tween()
+	tween.tween_method(_set_projectile_position.bind(projectile), caster_position, center_position, travel_duration)
+	tween.finished.connect(_on_fireball_projectile_arrived.bind(projectile, cells))
+
+
+func _on_fireball_projectile_arrived(projectile: Dictionary, cells: Array) -> void:
+	active_projectiles.erase(projectile)
+	fireball_overlay_cells.clear()
+	for cell in cells:
+		fireball_overlay_cells.append(cell)
+	var overlay_tween: Tween = create_tween()
+	overlay_tween.tween_method(_set_fireball_overlay_alpha, 0.0, 0.72, 0.08)
+	overlay_tween.tween_method(_set_fireball_overlay_alpha, 0.72, 0.38, 0.16)
+	overlay_tween.tween_method(_set_fireball_overlay_alpha, 0.38, 0.0, 0.22)
+	queue_redraw()
 
 
 func play_falling_rocks_animation(cells: Array) -> void:
@@ -563,6 +626,16 @@ func _set_arrow_rain_overlay_alpha(alpha: float) -> void:
 	queue_redraw()
 
 
+func _set_fireball_overlay_alpha(alpha: float) -> void:
+	fireball_overlay_alpha = alpha
+	queue_redraw()
+
+
+func _set_ice_ground_overlay_alpha(alpha: float) -> void:
+	ice_ground_overlay_alpha = alpha
+	queue_redraw()
+
+
 func _get_projectile_texture(projectile_kind: String) -> Texture2D:
 	if projectile_textures.has(projectile_kind):
 		return projectile_textures[projectile_kind]
@@ -570,6 +643,8 @@ func _get_projectile_texture(projectile_kind: String) -> Texture2D:
 	match projectile_kind:
 		"spell":
 			path = PROJECTILE_PATH_SPELL
+		"fireball":
+			path = PROJECTILE_PATH_FIREBALL
 		"arrows":
 			path = PROJECTILE_PATH_ARROWS
 		"dynamite":
@@ -1052,6 +1127,34 @@ func _draw_arrow_rain_overlay() -> void:
 		draw_polyline(
 			points + PackedVector2Array([points[0]]),
 			Color(1.0, 0.9, 0.45, arrow_rain_overlay_alpha * 0.88),
+			2.5
+		)
+
+
+func _draw_fireball_overlay() -> void:
+	if fireball_overlay_alpha <= 0.0 or fireball_overlay_cells.is_empty():
+		return
+	for cell in fireball_overlay_cells:
+		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
+		var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 4.0)
+		draw_colored_polygon(points, Color(1.0, 0.38, 0.05, fireball_overlay_alpha * 0.40))
+		draw_polyline(
+			points + PackedVector2Array([points[0]]),
+			Color(1.0, 0.68, 0.14, fireball_overlay_alpha * 0.92),
+			2.5
+		)
+
+
+func _draw_ice_ground_overlay() -> void:
+	if ice_ground_overlay_alpha <= 0.0 or ice_ground_overlay_cells.is_empty():
+		return
+	for cell in ice_ground_overlay_cells:
+		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
+		var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 4.0)
+		draw_colored_polygon(points, Color(0.45, 0.85, 1.0, ice_ground_overlay_alpha * 0.34))
+		draw_polyline(
+			points + PackedVector2Array([points[0]]),
+			Color(0.78, 0.94, 1.0, ice_ground_overlay_alpha * 0.90),
 			2.5
 		)
 

@@ -74,6 +74,17 @@
 	  "icon": "res://assets/ui/blood_offering.png",
 	  "color": "#E03333"
 	},
+	"klatwa": {
+	  "id": "klatwa",
+	  "name": "Klątwa",
+	  "description": "Jednostka otrzymuje o 50% więcej obrażeń.",
+	  "category": "debuff",
+	  "icon": "res://assets/ui/curse.png",
+	  "color": "#9B59B6",
+	  "remaining_turns": 2,
+	  "incoming_damage_percent": 50,
+	  "stat_changes": []
+	},
 	"krwawienie": {
 	  "id": "krwawienie",
 	  "name": "Krwawienie",

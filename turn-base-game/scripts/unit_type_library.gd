@@ -168,6 +168,8 @@ static func _normalize_status_effect_config(effect_id: String, raw_effect: Dicti
 		effect["remaining_turns"] = int(effect.get("remaining_turns", 1))
 	if effect.has("tick_damage"):
 		effect["tick_damage"] = int(effect.get("tick_damage", 0))
+	if effect.has("incoming_damage_percent"):
+		effect["incoming_damage_percent"] = int(effect.get("incoming_damage_percent", 0))
 	for flag_key in ["hides_unit", "skip_turn", "instant_death", "block_next_attack", "forward_only"]:
 		if effect.has(flag_key):
 			effect[flag_key] = bool(effect.get(flag_key, false))

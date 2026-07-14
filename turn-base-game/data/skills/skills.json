@@ -336,6 +336,17 @@
 	  "effect_type": "dynamite_throw",
 	  "icon": "res://assets/dynamite.png"
 	},
+	"rzut_klatwa": {
+	  "id": "rzut_klatwa",
+	  "name": "Rzut Klątwą",
+	  "description": "Rzuca klątwą we wroga w zasięgu 3 hexów, nakładając Klątwę na 2 tury. Klątwa zwiększa otrzymywane obrażenia o 50%.",
+	  "ap_cost": 1,
+	  "cooldown": 3,
+	  "range": 3,
+	  "target_type": "enemy_unit",
+	  "effect_type": "curse_throw",
+	  "icon": "res://assets/ui/curse.png"
+	},
 	"pulapka_goblina": {
 	  "id": "pulapka_goblina",
 	  "name": "Pulapka Goblina",
