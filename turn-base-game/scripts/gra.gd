@@ -3543,21 +3543,17 @@ func _get_pull_destination(source: Dictionary, target: Dictionary) -> Vector2i:
 	var target_cell := Vector2i(target.grid_x, target.grid_y)
 	if _hex_distance(source_cell, target_cell) <= 1:
 		return Vector2i(-1, -1)
-	var best_cell := Vector2i(-1, -1)
-	var best_distance: int = _hex_distance(source_cell, target_cell)
-	for neighbor in _get_neighbors(source_cell):
-		if neighbor.x < 0 or neighbor.x >= GRID_COLUMNS or neighbor.y < 0 or neighbor.y >= GRID_ROWS:
-			continue
-		if _is_cell_obstacle(neighbor):
-			continue
-		if not _find_unit_at_cell(neighbor).is_empty():
-			continue
-		var neighbor_distance: int = _hex_distance(neighbor, target_cell)
-		if neighbor_distance >= best_distance:
-			continue
-		best_distance = neighbor_distance
-		best_cell = neighbor
-	return best_cell
+	var pull_line: Array[Vector2i] = _get_hex_line(target_cell, source_cell)
+	if pull_line.size() < 2:
+		return Vector2i(-1, -1)
+	var destination: Vector2i = pull_line[pull_line.size() - 2]
+	if destination.x < 0 or destination.x >= GRID_COLUMNS or destination.y < 0 or destination.y >= GRID_ROWS:
+		return Vector2i(-1, -1)
+	if _is_cell_obstacle(destination):
+		return Vector2i(-1, -1)
+	if not _find_unit_at_cell(destination).is_empty():
+		return Vector2i(-1, -1)
+	return destination
 
 
 func _ensure_energy_barrier(unit: Dictionary) -> void:
@@ -4449,9 +4445,9 @@ func _validate_setup() -> void:
 	assert(not _is_in_attack_range(charge_unit, Vector2i(11, 5), charge_skill), "Szarza wroga nie moze atakowac w prawo.")
 	active_unit_id = previous_active_unit_id
 	pending_skill_id = previous_pending_skill_id
-	units = previous_units
-	obstacles = previous_obstacles
 	terrain_effects = previous_terrain_effects
+	units = []
+	obstacles = []
 	var hook_caster := {
 		"id": 1101,
 		"side": "player",
@@ -4471,6 +4467,8 @@ func _validate_setup() -> void:
 	hook_target.grid_x = pull_cell.x
 	hook_target.grid_y = pull_cell.y
 	assert(_get_pull_destination(hook_caster, hook_target) == Vector2i(-1, -1), "Rzut Hakiem nie moze przyciagac celu juz stojacego obok.")
+	units = previous_units
+	obstacles = previous_obstacles
 
 
 func _on_board_animation_finished(_unit_id: int) -> void:
