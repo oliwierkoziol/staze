@@ -13,6 +13,7 @@ const WINTER_OBSTACLE_TYPES: Array[String] = ["woda", "kamienie", "zimowy_krzak"
 const DESERT_OBSTACLE_TYPES: Array[String] = ["ruchome_piaski", "kamienie"]
 const MAX_EVENT_LOG_ENTRIES := 60
 const MAX_VISIBLE_QUEUE_CARDS := 8
+const SINGLE_CLICK_DELAY := 0.3
 const MAX_EVENT_OBSTACLES: Dictionary = {"woda": 6, "kamienie": 4, "krzok": 6, "ruchome_piaski": 6, "holy_tree": 4, "cart": 3, "elf_statue": 3, "hole": 4, "detonator": 2}
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const MAP_EVENT_POOLS: Dictionary = {
@@ -23,26 +24,26 @@ const MAP_EVENT_POOLS: Dictionary = {
 	"humans_vs_goblins_desert": ["burza_piaskowa", "zapadlisko", "palacy_skwar", "pustynny_podmuch"],
 }
 const MAP_EVENT_DATA: Dictionary = {
-	"gniew_korzeni": {"name": "Gniew Korzeni", "icon": preload("res://assets/ui/root.png")},
-	"przebudzenie_gaju": {"name": "Przebudzenie Gaju", "icon": preload("res://assets/mapTiles/bush.png")},
-	"lesne_opary": {"name": "Lesne Opary", "icon": preload("res://assets/ui/reveal.png")},
-	"magiczny_rozkwit": {"name": "Magiczny Rozkwit", "icon": preload("res://assets/ui/aura.png")},
-	"spadajacy_rumosz": {"name": "Spadajacy Rumosz", "icon": preload("res://assets/mapTiles/rock1.png")},
-	"wybuch_gazu": {"name": "Wybuch Gazu", "icon": preload("res://assets/ui/poison_cloud.png")},
-	"pekniecie_chodnika": {"name": "Pekniecie Chodnika", "icon": preload("res://assets/ui/water.png")},
-	"zawal_kopalni": {"name": "Zawal Kopalni", "icon": preload("res://assets/mapTiles/rock2.png")},
-	"rozprzestrzeniajacy_sie_pozar": {"name": "Rozprzestrzeniajacy sie Pozar", "icon": preload("res://assets/ui/fire.png")},
-	"gesty_dym": {"name": "Gesty Dym", "icon": preload("res://assets/ui/reveal.png")},
-	"przerwanie_grobli": {"name": "Przerwanie Grobli", "icon": preload("res://assets/ui/water.png")},
-	"plonace_zabudowania": {"name": "Plonace Zabudowania", "icon": preload("res://assets/ui/fire.png")},
-	"wichura_lodowa": {"name": "Wichura Lodowa", "icon": preload("res://assets/ui/frost.png")},
-	"sniezna_zamiec": {"name": "Sniezna Zamiec", "icon": preload("res://assets/ui/frost.png")},
-	"oblodzenie": {"name": "Oblodzenie", "icon": preload("res://assets/ui/frost.png")},
-	"lawina": {"name": "Lawina", "icon": preload("res://assets/mapTiles/rock3.png")},
-	"burza_piaskowa": {"name": "Burza Piaskowa", "icon": preload("res://assets/ui/reveal.png")},
-	"zapadlisko": {"name": "Zapadlisko", "icon": preload("res://assets/ui/exhaust.png")},
-	"palacy_skwar": {"name": "Palacy Skwar", "icon": preload("res://assets/ui/fire.png")},
-	"pustynny_podmuch": {"name": "Pustynny Podmuch", "icon": preload("res://assets/ui/speed.png")},
+	"gniew_korzeni": {"name": "Gniew Korzeni", "icon": preload("res://assets/ui/root.png"), "description": "Oznacza 3 pola. Jednostki stojace na nich otrzymuja zasieg ruchu 0 przez 1 ture."},
+	"przebudzenie_gaju": {"name": "Przebudzenie Gaju", "icon": preload("res://assets/mapTiles/bush.png"), "description": "Tworzy 3 nowe krzaki na oznaczonych polach."},
+	"lesne_opary": {"name": "Lesne Opary", "icon": preload("res://assets/ui/reveal.png"), "description": "Zmniejsza zasieg ataku wszystkich jednostek o 1 przez 1 ture."},
+	"magiczny_rozkwit": {"name": "Magiczny Rozkwit", "icon": preload("res://assets/ui/aura.png"), "description": "Oznacza 3 pola. Kazdy stojacy na nich oddzial odzyskuje HP rowne bazowemu HP jednej jednostki, nie przekraczajac maksimum."},
+	"spadajacy_rumosz": {"name": "Spadajacy Rumosz", "icon": preload("res://assets/mapTiles/rock1.png"), "description": "Oznacza 3 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
+	"wybuch_gazu": {"name": "Wybuch Gazu", "icon": preload("res://assets/ui/poison_cloud.png"), "description": "Tworzy toksyczna chmure na 5-8 polach na 2 rundy. Zatrucie zadaje 1 obrazenie za kazda zywa jednostke w oddziale przez 2 tury."},
+	"pekniecie_chodnika": {"name": "Pekniecie Chodnika", "icon": preload("res://assets/ui/water.png"), "description": "Tworzy 3 pola wody. Wejscie zuzywa caly pozostaly ruch jednostki."},
+	"zawal_kopalni": {"name": "Zawal Kopalni", "icon": preload("res://assets/mapTiles/rock2.png"), "description": "Tworzy kamienie na 2 polach. Jednostka na oznaczonym polu otrzymuje 1 obrazenie za kazdego zywego czlonka oddzialu; kamienie powstaja, jesli pole zostanie zwolnione."},
+	"rozprzestrzeniajacy_sie_pozar": {"name": "Rozprzestrzeniajacy sie Pozar", "icon": preload("res://assets/ui/fire.png"), "description": "Tworzy ogien na 5-8 polach na 2 rundy. Ploniecie zadaje 1 obrazenie za kazda zywa jednostke w oddziale przez 2 tury."},
+	"gesty_dym": {"name": "Gesty Dym", "icon": preload("res://assets/ui/reveal.png"), "description": "Zmniejsza zasieg ataku wszystkich jednostek o 1 przez 1 ture."},
+	"przerwanie_grobli": {"name": "Przerwanie Grobli", "icon": preload("res://assets/ui/water.png"), "description": "Tworzy 3 pola wody. Wejscie zuzywa caly pozostaly ruch jednostki."},
+	"plonace_zabudowania": {"name": "Plonace Zabudowania", "icon": preload("res://assets/ui/fire.png"), "description": "Oznacza 3 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
+	"wichura_lodowa": {"name": "Wichura Lodowa", "icon": preload("res://assets/ui/frost.png"), "description": "Zmniejsza Szybkosc i zasieg ruchu wszystkich jednostek o 2 przez 1 ture."},
+	"sniezna_zamiec": {"name": "Sniezna Zamiec", "icon": preload("res://assets/ui/frost.png"), "description": "Zmniejsza zasieg ataku wszystkich jednostek o 1 przez 1 ture."},
+	"oblodzenie": {"name": "Oblodzenie", "icon": preload("res://assets/ui/frost.png"), "description": "Tworzy lod na 5-8 polach na 2 rundy. Lodowe Podloze zmniejsza Szybkosc i zasieg ruchu o 2 przez 1 ture."},
+	"lawina": {"name": "Lawina", "icon": preload("res://assets/mapTiles/rock3.png"), "description": "Oznacza 4 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
+	"burza_piaskowa": {"name": "Burza Piaskowa", "icon": preload("res://assets/ui/reveal.png"), "description": "Zmniejsza zasieg ataku wszystkich jednostek o 1 przez 1 ture."},
+	"zapadlisko": {"name": "Zapadlisko", "icon": preload("res://assets/ui/exhaust.png"), "description": "Tworzy 3 pola ruchomych piaskow. Wejscie zuzywa caly pozostaly ruch jednostki."},
+	"palacy_skwar": {"name": "Palacy Skwar", "icon": preload("res://assets/ui/fire.png"), "description": "Oznacza 3 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
+	"pustynny_podmuch": {"name": "Pustynny Podmuch", "icon": preload("res://assets/ui/speed.png"), "description": "Zmniejsza Szybkosc i zasieg ruchu wszystkich jednostek o 2 przez 1 ture."},
 }
 const DEFAULT_GENERAL_PORTRAIT: Texture2D = preload("res://assets/ui/general1.png")
 const GENERAL_PORTRAITS: Dictionary = {
@@ -71,6 +72,7 @@ const BattleSetupPositionsScript = preload("res://scripts/battle_setup_positions
 const TurnQueueCardScript = preload("res://scripts/turn_queue_card.gd")
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 const ObstacleGeneratorScript = preload("res://scripts/obstacle_generator.gd")
+const UnitDetailsPopupScript = preload("res://scripts/unit_details_popup.gd")
 
 var OBSTACLE_PORTRAITS: Dictionary = {
 	"woda": preload("res://assets/mapTiles/water.png"),
@@ -101,12 +103,12 @@ const OBSTACLE_NAMES: Dictionary = {
 const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"woda": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
 	"kamienie": "Przez kamienie nie da sie przejsc. Blokuja linie strzalu.",
-	"krzok": "Jednostka w krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
-	"zimowy_krzak": "Jednostka w zimowym krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
+	"krzok": "Jednostka w krzaku jest ukryta. Wróg może ją zobaczyć z sąsiedniego pola zapewniającego ukrycie. Atak lub otrzymanie obrażeń nakłada Wykrycie na 2 tury.",
+	"zimowy_krzak": "Jednostka w zimowym krzaku jest ukryta. Wróg może ją zobaczyć z sąsiedniego pola zapewniającego ukrycie. Atak lub otrzymanie obrażeń nakłada Wykrycie na 2 tury.",
 	"ruchome_piaski": "Wejscie w ruchome piaski zuzywa caly pozostaly ruch w tej turze.",
 	"wydmy": "Strome wydmy blokuja ruch i linie strzalu.",
-	"holy_tree": "Jednostka w swietym drzewie jest niewidzialna dla wrogow poza sasiednim swietym drzewem lub wozem.",
-	"cart": "Jednostka przy wozie moze sie schowac i jest niewidzialna dla wrogow poza sasiednim wozem.",
+	"holy_tree": "Jednostka w Świętym Drzewie jest ukryta. Wróg może ją zobaczyć z sąsiedniego pola zapewniającego ukrycie. Atak lub otrzymanie obrażeń nakłada Wykrycie na 2 tury.",
+	"cart": "Jednostka na polu wozu jest ukryta. Wróg może ją zobaczyć z sąsiedniego pola zapewniającego ukrycie. Atak lub otrzymanie obrażeń nakłada Wykrycie na 2 tury.",
 	"elf_statue": "Posag blokuje ruch i linie strzalu. Sasiadujaca jednostka otrzymuje +2 do obrazen.",
 	"hole": "Jednostka ktora wpadnie do dziury ginie natychmiast.",
 	"detonator": "Jednorazowy detonator. Aktywowany z sasiedniego hexa. Przywoluje spadajace kamienie na cztery losowe hexy.",
@@ -114,7 +116,7 @@ const OBSTACLE_DESCRIPTIONS: Dictionary = {
 const OBSTACLE_WINTER_DESCRIPTIONS: Dictionary = {
 	"woda": "Lod jest kruchy. Wejscie zuzywa caly ruch i ma 10%% szans na zapadniecie sie zabijajace jednostke.",
 	"kamienie": "Oblodzone skaly blokuja ruch i linie strzalu.",
-	"zimowy_krzak": "Jednostka w zimowym krzaku jest niewidzialna dla wrogow poza sasiednim krzakiem.",
+	"zimowy_krzak": "Jednostka w zimowym krzaku jest ukryta. Wróg może ją zobaczyć z sąsiedniego pola zapewniającego ukrycie. Atak lub otrzymanie obrażeń nakłada Wykrycie na 2 tury.",
 }
 
 @onready var board: Node2D = $BattleLayer/PlanszaWalki
@@ -195,6 +197,8 @@ var selected_obstacle_cell := Vector2i(-1, -1)
 var screen_message_label: Label
 var screen_message_tween: Tween
 var detonator_activated := false
+var unit_details_popup: PopupPanel
+var cell_click_revision := 0
 
 
 func _ready() -> void:
@@ -203,6 +207,8 @@ func _ready() -> void:
 	_build_help_popup()
 	_build_victory_overlay()
 	_build_screen_message_label()
+	unit_details_popup = UnitDetailsPopupScript.new()
+	add_child(unit_details_popup)
 	_load_terrain_types()
 	_unit_type_library_warn()
 	_show_team_setup()
@@ -483,6 +489,7 @@ func _compute_enemy_positions(count: int) -> Array[Vector2i]:
 func _setup_battle_scene() -> void:
 	_build_setup_controls()
 	_connect_signal_once(board.cell_clicked, _on_cell_clicked)
+	_connect_signal_once(board.cell_double_clicked, _on_cell_double_clicked)
 	_connect_signal_once(board.cell_left_released, _on_cell_left_released)
 	_connect_signal_once(board.cell_right_clicked, _on_cell_right_clicked)
 	_connect_signal_once(board.cell_hovered, _on_board_cell_hovered)
@@ -1058,8 +1065,7 @@ func _render_obstacle_details(cell: Vector2i) -> void:
 	var terrain: Dictionary = _get_terrain_at(cell)
 	if terrain.is_empty():
 		return
-	var type_id: String = str(terrain.get("id", ""))
-	var display_type: String = "wydmy" if _is_desert_scenario() and type_id == "kamienie" else type_id
+	var display_type: String = _get_obstacle_display_type(terrain)
 	unit_portrait.visible = true
 	var tex: Texture2D = OBSTACLE_PORTRAITS.get(display_type, null)
 	if tex != null:
@@ -1070,8 +1076,17 @@ func _render_obstacle_details(cell: Vector2i) -> void:
 	unit_status_panel.clear()
 	unit_abilities_panel.clear()
 	if actions_label != null:
-		var descriptions: Dictionary = OBSTACLE_WINTER_DESCRIPTIONS if _is_winter_scenario() else OBSTACLE_DESCRIPTIONS
-		actions_label.text = str(descriptions.get(display_type, OBSTACLE_DESCRIPTIONS.get(display_type, "")))
+		actions_label.text = _get_obstacle_description(display_type)
+
+
+func _get_obstacle_display_type(terrain: Dictionary) -> String:
+	var type_id: String = str(terrain.get("id", ""))
+	return "wydmy" if _is_desert_scenario() and type_id == "kamienie" else type_id
+
+
+func _get_obstacle_description(display_type: String) -> String:
+	var descriptions: Dictionary = OBSTACLE_WINTER_DESCRIPTIONS if _is_winter_scenario() else OBSTACLE_DESCRIPTIONS
+	return str(descriptions.get(display_type, OBSTACLE_DESCRIPTIONS.get(display_type, "")))
 
 func _show_obstacle_details(cell: Vector2i) -> void:
 	selected_unit_id = -1
@@ -1124,6 +1139,12 @@ func _stop_unit_on_terrain(unit: Dictionary) -> void:
 func _on_cell_clicked(cell: Vector2i) -> void:
 	if setup_mode:
 		_handle_setup_cell_pressed(cell)
+		return
+
+	cell_click_revision += 1
+	var click_revision: int = cell_click_revision
+	await get_tree().create_timer(SINGLE_CLICK_DELAY).timeout
+	if click_revision != cell_click_revision:
 		return
 
 	if is_animating or not _is_manual_turn():
@@ -1191,9 +1212,29 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	_clear_move_cost_label()
 	_log_event("%s porusza sie." % _unit_name_log_text(active_unit))
 	_apply_terrain_effects_to_unit(active_unit)
+	if _find_unit_by_id(int(active_unit.id)).is_empty():
+		_end_current_activation()
+		return
 	_stop_unit_on_terrain(active_unit)
 	_try_trigger_agility(active_unit)
 	_sync_board()
+
+
+func _on_cell_double_clicked(cell: Vector2i) -> void:
+	cell_click_revision += 1
+	var unit: Dictionary = _find_unit_at_cell(cell)
+	if not unit.is_empty():
+		unit_details_popup.show_unit(unit, skill_library, _load_unit_portrait(unit))
+		return
+	var terrain: Dictionary = _get_terrain_at(cell)
+	if terrain.is_empty():
+		return
+	var display_type: String = _get_obstacle_display_type(terrain)
+	unit_details_popup.show_map_object(
+		str(OBSTACLE_NAMES.get(display_type, display_type)),
+		_get_obstacle_description(display_type),
+		OBSTACLE_PORTRAITS.get(display_type, null)
+	)
 
 
 func _on_cell_right_clicked(cell: Vector2i) -> void:
@@ -2160,6 +2201,9 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 			await board.animation_finished
 			is_animating = false
 			_apply_terrain_effects_to_unit(attacker)
+			if _find_unit_by_id(int(attacker.id)).is_empty():
+				_end_current_activation()
+				return
 			_stop_unit_on_terrain(attacker)
 			_try_trigger_agility(attacker)
 		else:
@@ -2233,6 +2277,9 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 	_commit_charge_skill(unit, skill)
 	_log_event("%s szarzuje do przodu." % _unit_name_log_text(unit))
 	_apply_terrain_effects_to_unit(unit)
+	if _find_unit_by_id(int(unit.id)).is_empty():
+		_end_current_activation()
+		return
 	_stop_unit_on_terrain(unit)
 	_try_trigger_agility(unit)
 	_sync_board()
@@ -4807,7 +4854,7 @@ func _create_map_event_queue_card() -> Button:
 		event_unit,
 		-100000,
 		-1,
-		true,
+		false,
 		event_data.get("icon", TURN_QUEUE_PLACEHOLDER_PORTRAIT),
 		TURN_QUEUE_PLACEHOLDER_PORTRAIT,
 		_on_turn_queue_pressed,
@@ -4853,8 +4900,24 @@ func _on_turn_queue_pressed(unit_id: int) -> void:
 	_on_unit_selected(unit)
 
 
-func _on_turn_queue_gui_input(_event: InputEvent, _unit_id: int) -> void:
-	return
+func _on_turn_queue_gui_input(event: InputEvent, unit_id: int) -> void:
+	if not event is InputEventMouseButton:
+		return
+	var mouse_event: InputEventMouseButton = event
+	if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_LEFT or not mouse_event.double_click:
+		return
+	if unit_id == -100000:
+		var event_data: Dictionary = MAP_EVENT_DATA.get(next_map_event_id, {})
+		unit_details_popup.show_map_object(
+			str(event_data.get("name", "Event mapy")),
+			str(event_data.get("description", "Brak opisu eventu.")),
+			event_data.get("icon", TURN_QUEUE_PLACEHOLDER_PORTRAIT)
+		)
+		return
+	var unit: Dictionary = _find_unit_by_id(unit_id)
+	if unit.is_empty():
+		return
+	unit_details_popup.show_unit(unit, skill_library, _load_unit_portrait(unit))
 
 
 func _build_skill_tooltip(unit: Dictionary, index: int) -> String:

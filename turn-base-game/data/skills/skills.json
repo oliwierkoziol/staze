@@ -3,7 +3,7 @@
 	"prowokacja": {
 	  "id": "prowokacja",
 	  "name": "Prowokacja",
-	  "description": "Wrogowie w promieniu 2 hexow musza atakowac ta jednostke przez 1 ture i traca 20% DMG.",
+	  "description": "Naklada Prowokacja na wrogow w promieniu 2 hexow na 1 ture: musza atakowac prowokujaca jednostke i zadaja o 20% mniej DMG.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 0,
@@ -23,7 +23,7 @@
 	"zatruty_sztylet": {
 	  "id": "zatruty_sztylet",
 	  "name": "Zatruty Sztylet",
-	  "description": "Zadaje 70% obrazen i naklada Toksyne na 3 tury, obnizajac DEF celu.",
+	  "description": "Zadaje 70% standardowych obrazen i naklada Toksyna na 3 tury. Toksyna zadaje co ture 50% DMG rzucajacego na kazda zywa jednostke w oddziale celu i zmniejsza DEF o 15%.",
 	  "ap_cost": 1,
 	  "cooldown": 2,
 	  "range": 1,
@@ -33,7 +33,7 @@
 	"sokole_oko": {
 	  "id": "sokole_oko",
 	  "name": "Sokole Oko",
-	  "description": "Jednostka traci reszte ruchu w tej turze, ale w nastepnej turze zyskuje +2 zasiegu i +25% DMG.",
+	  "description": "Jednostka traci reszte ruchu i naklada na siebie Sokole Oko na 2 tury: +2 do zasiegu ataku i +25% DMG.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 0,
@@ -43,7 +43,7 @@
 	"pnacza": {
 	  "id": "pnacza",
 	  "name": "Pnacza",
-	  "description": "Oplata wroga w zasiegu 3 hexow pnaczami, unieruchamiajac go na 2 tury.",
+	  "description": "Naklada Unieruchomienie na wroga w zasiegu 3 hexow na 2 tury, ustawiajac jego zasieg ruchu na 0.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 3,
@@ -64,7 +64,7 @@
 	"odepchniecie_tarcza": {
 	  "id": "odepchniecie_tarcza",
 	  "name": "Odepchniecie Tarcza",
-	  "description": "Uderza tarcza, zadaje standardowe obrazenia i odepycha cel o 1 hex. Jesli trafi w przeszkode lub blokade, cel zostaje ogluszony na 1 ture.",
+	  "description": "Zadaje 100% standardowych obrazen i odpycha cel o 1 hex. Jesli ruch blokuje przeszkoda lub jednostka, naklada Ogluszenie na 1 ture.",
 	  "ap_cost": 1,
 	  "cooldown": 2,
 	  "range": 1,
@@ -74,7 +74,7 @@
 	"kula_ognia": {
 	  "id": "kula_ognia",
 	  "name": "Kula Ognia",
-	  "description": "Zadaje 100% obrazen w centrum i 50% obrazen na 6 sasiednich hexach.",
+	  "description": "Zadaje 100% obrazen w centrum i 50% na 6 sasiednich hexach. W centrum pozostawia ogien na 1 runde; wejscie w niego naklada Ploniecie na 2 tury.",
 	  "ap_cost": 1,
 	  "cooldown": 2,
 	  "range": 7,
@@ -84,7 +84,7 @@
 	"lodowe_podloze": {
 	  "id": "lodowe_podloze",
 	  "name": "Lodowe Podloze",
-	  "description": "Zamraza 3 sasiednie hexy na 2 tury. Jednostki na lodzie traca Szybkosc i 2 punkty ruchu.",
+	  "description": "Zamraza 3 sasiednie hexy na 2 tury. Lodowe Podloze zmniejsza Szybkosc o 2 i zasieg ruchu o 2 na 1 ture.",
 	  "ap_cost": 1,
 	  "cooldown": 6,
 	  "range": 10,
@@ -94,7 +94,7 @@
 	"chmura_toksyczna": {
 	  "id": "chmura_toksyczna",
 	  "name": "Chmura Toksyczna",
-	  "description": "Tworzy trujaca chmure na wybranym hexie i 6 sasiednich hexach na 2 tury.",
+	  "description": "Tworzy trujaca chmure na wybranym hexie i 6 sasiednich hexach na 2 tury. Zatrucie zadaje przez 2 tury 25% DMG rzucajacego na kazda zywa jednostke w oddziale celu.",
 	  "ap_cost": 1,
 	  "cooldown": 4,
 	  "range": 2,
@@ -104,7 +104,7 @@
 	"pulapka_na_niedzwiedzie": {
 	  "id": "pulapka_na_niedzwiedzie",
 	  "name": "Pulapka na Niedzwiedzie",
-	  "description": "Zaklada pulapke w zasiegu 3. Wejscie zadaje male obrazenia, unieruchamia i naklada Krwawienie.",
+	  "description": "Zaklada pulapke w zasiegu 3 hexow. Wejscie zadaje 25% DMG rzucajacego na kazda zywa jednostke w oddziale celu, naklada Unieruchomienie na 1 ture i Krwawienie na 2 tury. Krwawienie powtarza te obrazenia na poczatku tury.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 3,
@@ -114,7 +114,7 @@
 	"bariera_energetyczna": {
 	  "id": "bariera_energetyczna",
 	  "name": "Bariera Energetyczna",
-	  "description": "Automatycznie blokuje pierwszy otrzymany atak. Po zniszczeniu odnawia sie 5 tur.",
+	  "description": "Nadaje Bariera Energetyczna: blokuje 100% obrazen z pierwszego otrzymanego ataku lub efektu okresowego. Po zuzyciu odnawia sie przez 5 tur.",
 	  "ap_cost": 0,
 	  "cooldown": 5,
 	  "range": 0,
@@ -124,7 +124,7 @@
 	"zelazna_kurtyna": {
 	  "id": "zelazna_kurtyna",
 	  "name": "Zelazna Kurtyna",
-	  "description": "Chroni sojusznika w zasiegu 3. Atak wrecz trafia Rycerza z redukcja 20% obrazen.",
+	  "description": "Naklada Zelazna Kurtyna na sojusznika w zasiegu 3 hexow na 2 tury. Atak wrecz przejmuje oslaniajacy i otrzymuje o 20% mniej obrazen.",
 	  "ap_cost": 1,
 	  "cooldown": 2,
 	  "range": 3,
@@ -144,7 +144,7 @@
 	"mistrz_trucizn": {
 	  "id": "mistrz_trucizn",
 	  "name": "Mistrz Trucizn",
-	  "description": "Zwykle ataki maja 50% szansy na Zatrucie, gdy aktywne umiejetnosci sa na cooldownie. Jednostka jest odporna na trucizny.",
+	  "description": "Gdy wszystkie aktywne umiejetnosci sa na cooldownie, zwykly atak ma 50% szansy nalozyc Zatrucie na 1 ture. Zatrucie zadaje 25% DMG atakujacego na kazda zywa jednostke w oddziale celu. Jednostka jest odporna na trucizny.",
 	  "ap_cost": 0,
 	  "cooldown": 0,
 	  "range": 0,
@@ -186,7 +186,7 @@
 	"zatruta_strzala": {
 	  "id": "zatruta_strzala",
 	  "name": "Zatruta Strzala",
-	  "description": "Strzal z dystansu zadający 70% obrażeń i nakładający Toksynnę na 3 tury.",
+	  "description": "Zadaje 70% standardowych obrazen i naklada Toksyna na 3 tury. Toksyna zadaje co ture 50% DMG strzelca na kazda zywa jednostke w oddziale celu i zmniejsza DEF o 15%.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 4,
@@ -216,7 +216,7 @@
 	"berserk": {
 	  "id": "berserk",
 	  "name": "Berserk",
-	  "description": "Jednostka wpadza w szał bojowy: +30% DMG i -15% DEF przez 2 tury.",
+	  "description": "Naklada Berserk na 2 tury: +30% DMG i -15% DEF.",
 	  "ap_cost": 1,
 	  "cooldown": 4,
 	  "range": 0,
@@ -234,7 +234,7 @@
 	"tarcza": {
 	  "id": "tarcza",
 	  "name": "Tarcza",
-	  "description": "Jednostka zwiększa obronę o 25% przez 2 tury.",
+	  "description": "Naklada Tarcza na 2 tury: +25% DEF.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 0,
@@ -251,7 +251,7 @@
 	"przyspieszenie": {
 	  "id": "przyspieszenie",
 	  "name": "Przyspieszenie",
-	  "description": "Jednostka zyskuje +2 do szybkości na 1 turę.",
+	  "description": "Naklada Przyspieszenie na 1 ture: +2 do Szybkosci.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 0,
@@ -268,7 +268,7 @@
 	"medytacja": {
 	  "id": "medytacja",
 	  "name": "Medytacja",
-	  "description": "Jednostka skupia się: +25% DMG przez 2 tury, ale traci resztę ruchu.",
+	  "description": "Naklada Medytacja na 2 tury: +25% DMG. Jednostka traci caly pozostaly ruch w turze użycia.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 0,
@@ -285,7 +285,7 @@
 	"runiczna_ochrona": {
 	  "id": "runiczna_ochrona",
 	  "name": "Runiczna Ochrona",
-	  "description": "Magia run zwiększa DEF o 2 i zasięg ataku o 1 na 2 tury.",
+	  "description": "Naklada Runiczna Ochrona na 2 tury: +2 DEF i +1 do zasiegu ataku.",
 	  "ap_cost": 1,
 	  "cooldown": 4,
 	  "range": 0,
@@ -320,7 +320,7 @@
 	"krwawa_ofiara": {
 	  "id": "krwawa_ofiara",
 	  "name": "Krwawa Ofiara",
-	  "description": "Jednostka poświęca obronę za siłę: +40% DMG i -20% DEF na 1 turę.",
+	  "description": "Naklada Krwawa Ofiara na 1 ture: +40% DMG i -20% DEF.",
 	  "ap_cost": 1,
 	  "cooldown": 4,
 	  "range": 0,
@@ -370,7 +370,7 @@
 	"pulapka_goblina": {
 	  "id": "pulapka_goblina",
 	  "name": "Pulapka Goblina",
-	  "description": "Zaklada pulapke w zasiegu 3. Wejscie zadaje male obrazenia, unieruchamia na 2 tury i naklada Krwawienie.",
+	  "description": "Zaklada pulapke w zasiegu 3 hexow. Wejscie zadaje 25% DMG rzucajacego na kazda zywa jednostke w oddziale celu, naklada Unieruchomienie na 2 tury i Krwawienie na 2 tury. Krwawienie powtarza te obrazenia na poczatku tury.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 3,

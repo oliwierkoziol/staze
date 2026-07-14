@@ -3,7 +3,7 @@
 	"bariera_energetyczna": {
 	  "id": "bariera_energetyczna",
 	  "name": "Bariera Energetyczna",
-	  "description": "Blokuje kolejny otrzymany atak (1 raz), efekt utrzymuje sie do zuzycia.",
+	  "description": "Blokuje 100% obrazen z jednego nastepnego ataku lub efektu okresowego. Po zuzyciu odnawia sie przez 5 tur.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/energy_shield.png",
 	  "color": "#57C7F5"
@@ -49,7 +49,7 @@
 	"cart": {
 	  "id": "cart",
 	  "name": "Woz",
-	  "description": "Jednostka przy wozie jest niewidzialna dla wrogow poza sasiednim wozem.",
+	  "description": "Jednostka na polu wozu jest ukryta. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/invisibility.png",
 	  "color": "#A88B5C",
@@ -98,7 +98,7 @@
 	"krwawienie": {
 	  "id": "krwawienie",
 	  "name": "Krwawienie",
-	  "description": "Zadaje obrazenia na poczatku tury przez 2 tury (wartosc zrodla, np. pulapki).",
+	  "description": "Przez 2 tury zadaje na poczatku tury 25% DMG twórcy pulapki na kazda zywa jednostke w oddziale celu (minimum 1 obrazenie na jednostke).",
 	  "category": "debuff",
 	  "icon": "res://assets/ui/bleed.png",
 	  "color": "#E62429"
@@ -106,7 +106,7 @@
 	"holy_tree": {
 	  "id": "holy_tree",
 	  "name": "Swiete Drzewo",
-	  "description": "Jednostka w swietym drzewie jest niewidzialna dla wrogow poza sasiednim swietym drzewem lub wozem.",
+	  "description": "Jednostka w Swietym Drzewie jest ukryta. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/invisibility.png",
 	  "color": "#7AD67A",
@@ -117,7 +117,7 @@
 	"krzok": {
 	  "id": "krzok",
 	  "name": "Krzak",
-	  "description": "Jednostka pozostaje ukryta, dopoki stoi w krzaku.",
+	  "description": "Jednostka pozostaje ukryta w krzaku. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/invisibility.png",
 	  "color": "#57C757",
@@ -253,7 +253,7 @@
 	"toksyna": {
 	  "id": "toksyna",
 	  "name": "Toksyna",
-	  "description": "Przez 3 tury zadaje obrazenia co ture i dodatkowo zmniejsza obrone o 15%.",
+	  "description": "Przez 3 tury zadaje na poczatku tury 50% DMG atakujacego na kazda zywa jednostke w oddziale celu (minimum 1) i zmniejsza DEF o 15%.",
 	  "category": "debuff",
 	  "icon": "res://assets/ui/poison_cloud.png",
 	  "color": "#6BE04D"
@@ -295,7 +295,7 @@
 	"zatrucie": {
 	  "id": "zatrucie",
 	  "name": "Zatrucie",
-	  "description": "Zadaje obrazenia co ture przez ograniczony czas.",
+	  "description": "Zadaje na poczatku tury 25% DMG atakujacego na kazda zywa jednostke w oddziale celu (minimum 1). Trwa 2 tury z chmury albo 1 ture z Mistrza Trucizn.",
 	  "category": "debuff",
 	  "icon": "res://assets/ui/poison_cloud.png",
 	  "color": "#52C747"
@@ -319,7 +319,7 @@
 	"zimowy_krzak": {
 	  "id": "zimowy_krzak",
 	  "name": "Zimowy Krzak",
-	  "description": "Jednostka pozostaje ukryta, dopoki stoi w zimowym krzaku.",
+	  "description": "Jednostka pozostaje ukryta w zimowym krzaku. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/invisibility.png",
 	  "color": "#80D6FF",

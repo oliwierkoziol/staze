@@ -2,6 +2,7 @@ extends Node2D
 
 signal unit_selected(unit_data: Dictionary)
 signal cell_clicked(cell: Vector2i)
+signal cell_double_clicked(cell: Vector2i)
 signal cell_left_released(cell: Vector2i)
 signal cell_right_clicked(cell: Vector2i)
 signal cell_hovered(cell: Vector2i)
@@ -705,7 +706,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			cell_clicked.emit(clicked_cell)
+			if event.double_click:
+				cell_double_clicked.emit(clicked_cell)
+			else:
+				cell_clicked.emit(clicked_cell)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			cell_right_clicked.emit(clicked_cell)
 	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
