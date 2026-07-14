@@ -226,7 +226,7 @@ func set_hovered_pull_destination_cell(cell: Vector2i) -> void:
 	queue_redraw()
 
 
-func set_hovered_detonator_preview(cells: Array[Vector2i]) -> void:
+func set_hovered_detonator_preview(cells: Array) -> void:
 	hovered_detonator_preview_cells.clear()
 	hovered_detonator_preview_rocks.clear()
 	if cells.is_empty():
@@ -235,6 +235,8 @@ func set_hovered_detonator_preview(cells: Array[Vector2i]) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	for cell in cells:
+		if not cell is Vector2i:
+			continue
 		hovered_detonator_preview_cells.append(cell)
 		var cell_center: Vector2 = axial_to_pixel(cell.x, cell.y)
 		for _index in 3:

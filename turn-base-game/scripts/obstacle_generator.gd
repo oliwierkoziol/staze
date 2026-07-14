@@ -30,12 +30,31 @@ static func generate(units: Array, obstacle_types: Array[String], columns: int, 
 			obstacle_types_by_cell[cell] = obstacle_type
 			if obstacle_type == "detonator":
 				detonator_count += 1
-			result.append({
+			var obstacle_data: Dictionary = {
 				"grid_x": cell.x,
 				"grid_y": cell.y,
 				"type": obstacle_type,
 				"variant": _pick_variant(obstacle_type, rng, winter_mode)
-			})
+			}
+			if obstacle_type == "detonator":
+				obstacle_data["target_cells"] = _random_detonator_target_cells(cell, columns, rows, rng)
+			result.append(obstacle_data)
+	return result
+
+
+static func _random_detonator_target_cells(excluded_cell: Vector2i, columns: int, rows: int, rng: RandomNumberGenerator) -> Array:
+	var candidates: Array = []
+	for column in columns:
+		for row in rows:
+			var candidate := Vector2i(column, row)
+			if candidate == excluded_cell:
+				continue
+			candidates.append(candidate)
+	candidates.shuffle()
+	var count: int = mini(4, candidates.size())
+	var result: Array = []
+	for index in count:
+		result.append(candidates[index])
 	return result
 
 

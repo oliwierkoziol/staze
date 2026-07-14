@@ -1618,7 +1618,13 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
 		_clear_move_cost_label()
-		board.set_hovered_detonator_preview(_random_detonator_target_cells(cell))
+		var detonator_index := _find_detonator_index(cell)
+		var preview_cells: Array = []
+		if detonator_index >= 0:
+			var stored: Variant = obstacles[detonator_index].get("target_cells", [])
+			if stored is Array:
+				preview_cells = stored
+		board.set_hovered_detonator_preview(preview_cells)
 		return
 	board.set_hovered_detonator_preview([])
 
@@ -2866,7 +2872,14 @@ func _trigger_detonator(active_unit: Dictionary, cell: Vector2i, detonator_index
 	_log_event("%s aktywuje detonator." % _unit_name_log_text(active_unit))
 	_show_screen_message("Detonator aktywowany!", 2.0)
 
-	var target_cells: Array[Vector2i] = _random_detonator_target_cells(cell)
+	var target_cells: Array[Vector2i] = []
+	var stored_targets: Variant = obstacles[detonator_index].get("target_cells", [])
+	if stored_targets is Array:
+		for stored in stored_targets:
+			if stored is Vector2i:
+				target_cells.append(stored)
+	else:
+		target_cells = _random_detonator_target_cells(cell)
 	board.set_detonator_warning_cells(target_cells)
 	_sync_board()
 	await get_tree().create_timer(0.8).timeout
