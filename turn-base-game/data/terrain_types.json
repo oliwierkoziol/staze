@@ -85,8 +85,8 @@
 	  "id": "detonator",
 	  "name": "Detonator",
 	  "description": "Jednorazowy detonator. Aktywowany z sasiedniego hexa naciskiem. Przywoluje spadajace kamienie na cztery losowe hexy.",
-	  "movement_cost": 1,
-	  "blocks_movement": false,
+	  "movement_cost": 999,
+	  "blocks_movement": true,
 	  "blocks_line_of_sight": false,
 	  "entry_effect": null
 	}

@@ -3,11 +3,12 @@ class_name ObstacleGenerator
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 
 
-static func generate(units: Array, obstacle_types: Array[String], columns: int, rows: int, setup_columns: int, winter_mode: bool = false, max_detonators: int = 2) -> Array[Dictionary]:
+static func generate(units: Array, obstacle_types: Array[String], columns: int, rows: int, setup_columns: int, winter_mode: bool = false, max_detonators: int = 2, max_elf_statues: int = 3) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var occupied: Dictionary = {}
 	var obstacle_types_by_cell: Dictionary = {}
 	var detonator_count: int = 0
+	var elf_statue_count: int = 0
 	for unit in units:
 		occupied[Vector2i(unit.grid_x, unit.grid_y)] = true
 
@@ -17,20 +18,53 @@ static func generate(units: Array, obstacle_types: Array[String], columns: int, 
 	for cluster_index in range(cluster_count):
 		var obstacle_type: String = obstacle_types[rng.randi_range(0, obstacle_types.size() - 1)]
 		if obstacle_type == "detonator" and detonator_count >= max_detonators:
-			obstacle_type = "holy_tree" if rng.randi_range(0, 1) == 0 else "cart"
-		var cluster_size: int = rng.randi_range(1, 3) + (1 if cluster_index < 2 else 0)
+			var fallback_types: Array[String] = obstacle_types.duplicate()
+			while fallback_types.has("detonator"):
+				fallback_types.erase("detonator")
+			if fallback_types.is_empty():
+				continue
+			obstacle_type = fallback_types[rng.randi_range(0, fallback_types.size() - 1)]
+		if obstacle_type == "elf_statue" and elf_statue_count >= max_elf_statues:
+			var fallback_types: Array[String] = obstacle_types.duplicate()
+			while fallback_types.has("elf_statue"):
+				fallback_types.erase("elf_statue")
+			if fallback_types.is_empty():
+				continue
+			obstacle_type = fallback_types[rng.randi_range(0, fallback_types.size() - 1)]
+		var cluster_size: int = 1 if obstacle_type == "detonator" or obstacle_type == "elf_statue" else (rng.randi_range(1, 3) + (1 if cluster_index < 2 else 0))
 		var cluster: Array[Vector2i] = _generate_cluster(cluster_size, occupied, obstacle_types_by_cell, obstacle_type, rng, columns, rows, setup_columns)
 		for cell in cluster:
 			occupied[cell] = true
 			obstacle_types_by_cell[cell] = obstacle_type
 			if obstacle_type == "detonator":
 				detonator_count += 1
-			result.append({
+			if obstacle_type == "elf_statue":
+				elf_statue_count += 1
+			var obstacle_data: Dictionary = {
 				"grid_x": cell.x,
 				"grid_y": cell.y,
 				"type": obstacle_type,
 				"variant": _pick_variant(obstacle_type, rng, winter_mode)
-			})
+			}
+			if obstacle_type == "detonator":
+				obstacle_data["target_cells"] = _random_detonator_target_cells(cell, columns, rows, rng)
+			result.append(obstacle_data)
+	return result
+
+
+static func _random_detonator_target_cells(excluded_cell: Vector2i, columns: int, rows: int, rng: RandomNumberGenerator) -> Array:
+	var candidates: Array = []
+	for column in columns:
+		for row in rows:
+			var candidate := Vector2i(column, row)
+			if candidate == excluded_cell:
+				continue
+			candidates.append(candidate)
+	candidates.shuffle()
+	var count: int = mini(4, candidates.size())
+	var result: Array = []
+	for index in count:
+		result.append(candidates[index])
 	return result
 
 
@@ -104,5 +138,9 @@ static func _can_place_cell(cell: Vector2i, occupied: Dictionary, obstacle_types
 			continue
 		var neighbor_type: String = str(obstacle_types_by_cell.get(neighbor, ""))
 		if neighbor_type != "" and neighbor_type != obstacle_type:
+			return false
+		if obstacle_type == "detonator" and neighbor_type == "detonator":
+			return false
+		if obstacle_type == "elf_statue" and neighbor_type == "elf_statue":
 			return false
 	return true

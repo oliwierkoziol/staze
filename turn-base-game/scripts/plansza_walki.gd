@@ -61,6 +61,8 @@ var hovered_move_path: Array[Vector2i] = []
 var hovered_attack_cell := Vector2i(-1, -1)
 var hovered_area_cells: Array[Vector2i] = []
 var hovered_pull_destination_cell := Vector2i(-1, -1)
+var hovered_detonator_preview_cells: Array[Vector2i] = []
+var hovered_detonator_preview_rocks: Array[Dictionary] = []
 var visual_positions: Dictionary = {}
 var active_tweens: Dictionary = {}
 var unit_attack_offsets: Dictionary = {}
@@ -229,6 +231,32 @@ func set_hovered_pull_destination_cell(cell: Vector2i) -> void:
 	queue_redraw()
 
 
+func set_hovered_detonator_preview(cells: Array) -> void:
+	hovered_detonator_preview_cells.clear()
+	hovered_detonator_preview_rocks.clear()
+	if cells.is_empty():
+		queue_redraw()
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	for cell in cells:
+		if not cell is Vector2i:
+			continue
+		hovered_detonator_preview_cells.append(cell)
+		var cell_center: Vector2 = axial_to_pixel(cell.x, cell.y)
+		for _index in 3:
+			var lateral_offset: float = rng.randf_range(-18.0, 18.0)
+			var start_height: float = HEX_RADIUS * rng.randf_range(1.6, 2.8)
+			var position: Vector2 = cell_center + Vector2(lateral_offset, -start_height)
+			hovered_detonator_preview_rocks.append({
+				"position": position,
+				"rotation": rng.randf_range(-0.45, 0.45),
+				"scale": rng.randf_range(0.45, 0.80),
+				"texture": ROCK1_TEXTURE
+			})
+	queue_redraw()
+
+
 func _draw() -> void:
 	if grid_visible:
 		draw_hex_grid()
@@ -237,6 +265,7 @@ func _draw() -> void:
 	_draw_cell_highlights(map_event_warning_cells, Color(1.0, 0.25, 0.08, 0.32), Color(1.0, 0.55, 0.12, 0.95))
 	_draw_cell_highlights(detonator_warning_cells, Color(0.92, 0.12, 0.12, 0.42), Color(1.0, 0.18, 0.18, 0.95))
 	draw_highlighted_cells()
+	_draw_hovered_detonator_preview()
 	_draw_arrow_rain_overlay()
 	_draw_fireball_overlay()
 	_draw_ice_ground_overlay()
@@ -1157,6 +1186,27 @@ func _draw_ice_ground_overlay() -> void:
 			Color(0.78, 0.94, 1.0, ice_ground_overlay_alpha * 0.90),
 			2.5
 		)
+func _draw_hovered_detonator_preview() -> void:
+	if hovered_detonator_preview_cells.is_empty():
+		return
+	_draw_cell_highlights(hovered_detonator_preview_cells, Color(0.92, 0.12, 0.12, 0.36), Color(1.0, 0.18, 0.18, 0.90))
+	var projectile_size := Vector2(42.0, 42.0)
+	for rock in hovered_detonator_preview_rocks:
+		var texture: Texture2D = rock.get("texture", null)
+		if texture == null:
+			continue
+		var position: Vector2 = rock.get("position", Vector2.ZERO)
+		var rotation: float = float(rock.get("rotation", 0.0))
+		var scale: float = float(rock.get("scale", 1.0))
+		var size: Vector2 = projectile_size * scale
+		draw_set_transform(position, rotation, Vector2.ONE * scale)
+		draw_texture_rect(
+			texture,
+			Rect2(-size / 2.0, size),
+			false,
+			Color(1.0, 1.0, 1.0, 0.42)
+		)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _load_unit_portrait(unit: Dictionary) -> Texture2D:
