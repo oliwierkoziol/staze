@@ -25,8 +25,8 @@ window/stretch/mode="canvas_items"
 
 [gui]
 
-theme/custom="res://theme/georgia_theme.tres"
 timers/tooltip_delay_sec=0.0
+theme/custom="res://theme/georgia_theme.tres"
 
 [physics]
 
