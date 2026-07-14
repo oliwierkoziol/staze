@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=3 format=3 uid="uid://cna4ihybudjlx"]
+[gd_resource type="Theme" format=3 uid="uid://cna4ihybudjlx"]
 
 [ext_resource type="FontFile" uid="uid://b7at424svjkvy" path="res://theme/georgia.ttf" id="1_georgia"]
 

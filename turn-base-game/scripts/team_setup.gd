@@ -10,6 +10,27 @@ const UnitSelectPanelClass = preload("res://scripts/unit_select_panel.gd")
 const BATTLE_BACKGROUND: Texture2D = preload("res://assets/backgrounds/back.png")
 const SCENARIOS: Array[Dictionary] = [
 	{
+		"id": "zamek",
+		"name": "Szturm na Zamek",
+		"description": "Orkowie przebijaja sie przez trzy etapy ludzkiej stolicy.",
+		"player_faction": "orcs",
+		"enemy_faction": "humans",
+		"background": "res://assets/backgrounds/scenarios/zamek_etap_1_mury.png",
+		"player_units": [
+			{"type_id": "orc_warrior", "count": 14},
+			{"type_id": "orc_berserker", "count": 10},
+			{"type_id": "orc_shaman", "count": 10},
+			{"type_id": "orc_shieldman", "count": 12},
+		],
+		"enemy_units": [
+			{"type_id": "human_knights", "count": 8,"grid_x": 11, "grid_y": 6},
+			{"type_id": "human_knights", "count": 8,"grid_x": 11, "grid_y": 4},
+			{"type_id": "human_archers", "count": 8,"grid_x": 14, "grid_y": 9},
+			{"type_id": "human_archers", "count": 8,"grid_x": 13, "grid_y": 2},
+
+		],
+	},
+	{
 		"id": "orcs_vs_elves_forest",
 		"name": "Najazd na Swiety Gaj",
 		"description": "Orkowie atakuja elfy na granicy ich lasu.",
@@ -175,9 +196,9 @@ func _show_scenarios_placeholder() -> void:
 	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
 	column.add_child(title)
 
-	var scenarios_row := HBoxContainer.new()
+	var scenarios_row := GridContainer.new()
+	scenarios_row.columns = 3
 	scenarios_row.add_theme_constant_override("separation", 18)
-	scenarios_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	scenarios_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(scenarios_row)
 
@@ -252,12 +273,16 @@ func _append_scenario_units(unit_configs: Array[Dictionary], raw_units: Variant,
 		if typeof(raw_unit) != TYPE_DICTIONARY:
 			continue
 		var unit_data: Dictionary = raw_unit
-		unit_configs.append({
+		var config := {
 			"id": next_id,
 			"type_id": str(unit_data.get("type_id", "")),
 			"side": side,
 			"count": int(unit_data.get("count", 1)),
-		})
+		}
+		if unit_data.has("grid_x") and unit_data.has("grid_y"):
+			config["grid_x"] = int(unit_data.grid_x)
+			config["grid_y"] = int(unit_data.grid_y)
+		unit_configs.append(config)
 		next_id += 1
 	return next_id
 

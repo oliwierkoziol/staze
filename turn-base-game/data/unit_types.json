@@ -8,5 +8,24 @@
 	"elves.json",
 	"dwarves.json",
     "testowa.json"
+  ],
+  "special_units": [
+	{
+	  "id": "human_king",
+	  "name": "Król Aldren",
+	  "short_name": "KRL",
+	  "role": "Boss",
+	  "hp": 200,
+	  "dmg": 20,
+	  "def": 10,
+	  "speed": 2,
+	  "action_points": 2,
+	  "count": 1,
+	  "move_range": 4,
+	  "attack_range": 1,
+	  "resistance": "Brak",
+	  "portrait": "res://assets/characters/humans/king.png",
+	  "skill_ids": ["odepchniecie_tarcza", "zelazna_kurtyna", "tarcza"]
+	}
   ]
 }
