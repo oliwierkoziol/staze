@@ -121,9 +121,12 @@ static func _pick_variant(obstacle_type: String, rng: RandomNumberGenerator, win
 
 static func _generate_holy_tree_cluster(occupied: Dictionary, obstacle_types_by_cell: Dictionary, rng: RandomNumberGenerator, columns: int, rows: int, setup_columns: int) -> Array[Vector2i]:
 	# ponytail: krzyz z centralnym rightem, left po lewej, top i bottom w trojkaty
+	var margin: int = 2
 	for _attempt in range(100):
 		var right_cell: Vector2i = _random_empty_cell(occupied, obstacle_types_by_cell, "holy_tree", rng, columns, rows, setup_columns)
 		if right_cell == Vector2i(-1, -1):
+			continue
+		if right_cell.x < setup_columns + margin or right_cell.x >= columns - setup_columns - margin or right_cell.y < margin or right_cell.y >= rows - margin:
 			continue
 		var left_cell: Vector2i = right_cell + Vector2i(-1, 0)
 		var top_cell: Vector2i
@@ -165,9 +168,12 @@ static func _assign_holy_tree_variants(cluster: Array[Vector2i], result: Array[D
 
 static func _generate_statue_cluster(occupied: Dictionary, obstacle_types_by_cell: Dictionary, rng: RandomNumberGenerator, columns: int, rows: int, setup_columns: int) -> Array[Vector2i]:
 	# ponytail: left-right w poziomie, bottom w dolny trojkat pod ich polaczeniem
+	var margin: int = 2
 	for _attempt in range(100):
 		var left_cell: Vector2i = _random_empty_cell(occupied, obstacle_types_by_cell, "elf_statue", rng, columns, rows, setup_columns)
 		if left_cell == Vector2i(-1, -1):
+			continue
+		if left_cell.x < setup_columns + margin or left_cell.x >= columns - setup_columns - margin or left_cell.y < margin or left_cell.y >= rows - margin:
 			continue
 		var right_cell: Vector2i = left_cell + Vector2i(1, 0)
 		var bottom_cell: Vector2i
