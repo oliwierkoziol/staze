@@ -1,0 +1,104 @@
+{
+  "scenarios": [
+	{
+	  "id": "orcs_vs_elves_forest",
+	  "name": "Najazd na Swiety Gaj",
+	  "description": "Orkowie atakuja elfy na granicy ich lasu.",
+	  "player_faction": "orcs",
+	  "enemy_faction": "elves",
+	  "background": "res://assets/backgrounds/scenarios/orcs_vs_elves_forest.png",
+	  "player_units": [
+		{"type_id": "orc_warrior", "count": 6},
+		{"type_id": "orc_berserker", "count": 4},
+		{"type_id": "orc_shaman", "count": 5},
+		{"type_id": "orc_shieldman", "count": 4}
+	  ],
+	  "enemy_units": [
+		{"type_id": "elf_archer", "count": 7},
+		{"type_id": "elf_swordsman", "count": 5},
+		{"type_id": "elf_mage", "count": 4},
+		{"type_id": "elf_arcanotechnic", "count": 5}
+	  ]
+	},
+	{
+	  "id": "dwarves_vs_goblins_mine",
+	  "name": "Brama Kopalni",
+	  "description": "Krasnoludy odbijaja wejscie do kopalni z rak goblinow.",
+	  "player_faction": "dwarves",
+	  "enemy_faction": "goblins",
+	  "background": "res://assets/backgrounds/scenarios/dwarves_vs_goblins_mine.png",
+	  "player_units": [
+		{"type_id": "dwarf_warrior", "count": 6},
+		{"type_id": "dwarf_guardian", "count": 5},
+		{"type_id": "dwarf_axeman", "count": 4},
+		{"type_id": "dwarf_digger", "count": 5}
+	  ],
+	  "enemy_units": [
+		{"type_id": "goblin_thief", "count": 12},
+		{"type_id": "goblin_warrior", "count": 12},
+		{"type_id": "goblin_shaman", "count": 9},
+		{"type_id": "goblin_trapper", "count": 10}
+	  ]
+	},
+	{
+	  "id": "humans_vs_orcs_village",
+	  "name": "Spalony Brod",
+	  "description": "Ludzie bronia zniszczonej wioski przed orkami.",
+	  "player_faction": "humans",
+	  "enemy_faction": "orcs",
+	  "background": "res://assets/backgrounds/scenarios/humans_vs_orcs_village.png",
+	  "player_units": [
+		{"type_id": "human_knights", "count": 6},
+		{"type_id": "human_cavalry", "count": 3},
+		{"type_id": "human_archers", "count": 8},
+		{"type_id": "human_mages", "count": 5}
+	  ],
+	  "enemy_units": [
+		{"type_id": "orc_warrior", "count": 6},
+		{"type_id": "orc_berserker", "count": 4},
+		{"type_id": "orc_shaman", "count": 6},
+		{"type_id": "orc_shieldman", "count": 4}
+	  ]
+	},
+	{
+	  "id": "elves_vs_dwarves_pass",
+	  "name": "Mrozna Przelecz",
+	  "description": "Elfy i krasnoludy walcza o stary gorski posterunek.",
+	  "player_faction": "elves",
+	  "enemy_faction": "dwarves",
+	  "background": "res://assets/backgrounds/scenarios/elves_vs_dwarves_pass.png",
+	  "player_units": [
+		{"type_id": "elf_archer", "count": 7},
+		{"type_id": "elf_swordsman", "count": 5},
+		{"type_id": "elf_mage", "count": 5},
+		{"type_id": "elf_arcanotechnic", "count": 5}
+	  ],
+	  "enemy_units": [
+		{"type_id": "dwarf_warrior", "count": 5},
+		{"type_id": "dwarf_guardian", "count": 4},
+		{"type_id": "dwarf_axeman", "count": 4},
+		{"type_id": "dwarf_digger", "count": 5}
+	  ]
+	},
+	{
+	  "id": "humans_vs_goblins_desert",
+	  "name": "Zasadzka na Szlaku",
+	  "description": "Gobliny zasadzaja sie na ludzka karawane na pustyni.",
+	  "player_faction": "goblins",
+	  "enemy_faction": "humans",
+	  "background": "res://assets/backgrounds/scenarios/humans_vs_goblins_desert.png",
+	  "player_units": [
+		{"type_id": "goblin_thief", "count": 12},
+		{"type_id": "goblin_warrior", "count": 10},
+		{"type_id": "goblin_shaman", "count": 8},
+		{"type_id": "goblin_trapper", "count": 10}
+	  ],
+	  "enemy_units": [
+		{"type_id": "human_knights", "count": 5},
+		{"type_id": "human_cavalry", "count": 4},
+		{"type_id": "human_archers", "count": 7},
+		{"type_id": "human_mages", "count": 4}
+	  ]
+	}
+  ]
+}

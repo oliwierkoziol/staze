@@ -8,129 +8,8 @@ const UnitSelectPanelScene: PackedScene = preload("res://scenes/unit_select_pane
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const UnitSelectPanelClass = preload("res://scripts/unit_select_panel.gd")
 const BATTLE_BACKGROUND: Texture2D = preload("res://assets/backgrounds/back.png")
-const SCENARIOS: Array[Dictionary] = [
-	{
-		"id": "zamek",
-		"name": "Szturm na Zamek",
-		"description": "Orkowie przebijaja sie przez trzy etapy ludzkiej stolicy.",
-		"player_faction": "orcs",
-		"enemy_faction": "humans",
-		"background": "res://assets/backgrounds/scenarios/zamek_etap_1_mury.png",
-		"player_units": [
-			{"type_id": "orc_warrior", "count": 14},
-			{"type_id": "orc_berserker", "count": 10},
-			{"type_id": "orc_shaman", "count": 10},
-			{"type_id": "orc_shieldman", "count": 12},
-		],
-		"enemy_units": [
-			{"type_id": "human_knights", "count": 8,"grid_x": 11, "grid_y": 6},
-			{"type_id": "human_knights", "count": 8,"grid_x": 11, "grid_y": 4},
-			{"type_id": "human_archers", "count": 8,"grid_x": 14, "grid_y": 9},
-			{"type_id": "human_archers", "count": 8,"grid_x": 13, "grid_y": 2},
-
-		],
-	},
-	{
-		"id": "orcs_vs_elves_forest",
-		"name": "Najazd na Swiety Gaj",
-		"description": "Orkowie atakuja elfy na granicy ich lasu.",
-		"player_faction": "orcs",
-		"enemy_faction": "elves",
-		"background": "res://assets/backgrounds/scenarios/orcs_vs_elves_forest.png",
-		"player_units": [
-			{"type_id": "orc_warrior", "count": 6},
-			{"type_id": "orc_berserker", "count": 4},
-			{"type_id": "orc_shaman", "count": 5},
-			{"type_id": "orc_shieldman", "count": 4},
-		],
-		"enemy_units": [
-			{"type_id": "elf_archer", "count": 7},
-			{"type_id": "elf_swordsman", "count": 5},
-			{"type_id": "elf_mage", "count": 4},
-			{"type_id": "elf_arcanotechnic", "count": 5},
-		],
-	},
-	{
-		"id": "dwarves_vs_goblins_mine",
-		"name": "Brama Kopalni",
-		"description": "Krasnoludy odbijaja wejscie do kopalni z rak goblinow.",
-		"player_faction": "dwarves",
-		"enemy_faction": "goblins",
-		"background": "res://assets/backgrounds/scenarios/dwarves_vs_goblins_mine.png",
-		"player_units": [
-			{"type_id": "dwarf_warrior", "count": 5},
-			{"type_id": "dwarf_guardian", "count": 4},
-			{"type_id": "dwarf_axeman", "count": 4},
-			{"type_id": "dwarf_digger", "count": 5},
-		],
-		"enemy_units": [
-			{"type_id": "goblin_thief", "count": 12},
-			{"type_id": "goblin_warrior", "count": 12},
-			{"type_id": "goblin_shaman", "count": 9},
-			{"type_id": "goblin_trapper", "count": 10},
-		],
-	},
-	{
-		"id": "humans_vs_orcs_village",
-		"name": "Spalony Brod",
-		"description": "Ludzie bronia zniszczonej wioski przed orkami.",
-		"player_faction": "humans",
-		"enemy_faction": "orcs",
-		"background": "res://assets/backgrounds/scenarios/humans_vs_orcs_village.png",
-		"player_units": [
-			{"type_id": "human_knights", "count": 6},
-			{"type_id": "human_cavalry", "count": 3},
-			{"type_id": "human_archers", "count": 8},
-			{"type_id": "human_mages", "count": 5},
-		],
-		"enemy_units": [
-			{"type_id": "orc_warrior", "count": 6},
-			{"type_id": "orc_berserker", "count": 4},
-			{"type_id": "orc_shaman", "count": 6},
-			{"type_id": "orc_shieldman", "count": 4},
-		],
-	},
-	{
-		"id": "elves_vs_dwarves_pass",
-		"name": "Mrozna Przelecz",
-		"description": "Elfy i krasnoludy walcza o stary gorski posterunek.",
-		"player_faction": "elves",
-		"enemy_faction": "dwarves",
-		"background": "res://assets/backgrounds/scenarios/elves_vs_dwarves_pass.png",
-		"player_units": [
-			{"type_id": "elf_archer", "count": 7},
-			{"type_id": "elf_swordsman", "count": 5},
-			{"type_id": "elf_mage", "count": 5},
-			{"type_id": "elf_arcanotechnic", "count": 5},
-		],
-		"enemy_units": [
-			{"type_id": "dwarf_warrior", "count": 5},
-			{"type_id": "dwarf_guardian", "count": 4},
-			{"type_id": "dwarf_axeman", "count": 4},
-			{"type_id": "dwarf_digger", "count": 5},
-		],
-	},
-	{
-		"id": "humans_vs_goblins_desert",
-		"name": "Zasadzka na Szlaku",
-		"description": "Gobliny zasadzaja sie na ludzka karawane na pustyni.",
-		"player_faction": "goblins",
-		"enemy_faction": "humans",
-		"background": "res://assets/backgrounds/scenarios/humans_vs_goblins_desert.png",
-		"player_units": [
-			{"type_id": "goblin_thief", "count": 12},
-			{"type_id": "goblin_warrior", "count": 10},
-			{"type_id": "goblin_shaman", "count": 8},
-			{"type_id": "goblin_trapper", "count": 10},
-		],
-		"enemy_units": [
-			{"type_id": "human_knights", "count": 5},
-			{"type_id": "human_cavalry", "count": 4},
-			{"type_id": "human_archers", "count": 7},
-			{"type_id": "human_mages", "count": 4},
-		],
-	},
-]
+const SCENARIOS_PATH := "res://data/scenarios/scenarios.json"
+const CASTLE_SCENARIO_PATH := "res://data/scenarios/zamek.json"
 
 var _player_panel: UnitSelectPanelClass
 var _enemy_panel: UnitSelectPanelClass
@@ -140,11 +19,38 @@ var _load_dialog: FileDialog
 var _rows: Array[Dictionary] = []
 var _sandbox_player_faction: String = ""
 var _sandbox_enemy_faction: String = ""
-var _debug_background_path: String = str(SCENARIOS[0].get("background", ""))
+var _debug_background_path := ""
 
 
 func _ready() -> void:
+	var scenarios: Array[Dictionary] = _get_scenarios()
+	if not scenarios.is_empty():
+		_debug_background_path = str(scenarios[0].get("background", ""))
 	_show_mode_menu()
+
+
+func _get_scenarios() -> Array[Dictionary]:
+	var scenarios: Array[Dictionary] = []
+	var scenarios_file := FileAccess.open(SCENARIOS_PATH, FileAccess.READ)
+	if scenarios_file != null:
+		var scenarios_data: Variant = JSON.parse_string(scenarios_file.get_as_text())
+		if typeof(scenarios_data) == TYPE_DICTIONARY:
+			for scenario in (scenarios_data as Dictionary).get("scenarios", []):
+				if typeof(scenario) == TYPE_DICTIONARY:
+					scenarios.append((scenario as Dictionary).duplicate(true))
+	var file := FileAccess.open(CASTLE_SCENARIO_PATH, FileAccess.READ)
+	if file == null:
+		return scenarios
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return scenarios
+	var castle: Dictionary = parsed
+	var stages: Array = castle.get("stages", [])
+	if stages.is_empty() or typeof(stages[0]) != TYPE_DICTIONARY:
+		return scenarios
+	castle.merge(stages[0], true)
+	scenarios.push_front(castle)
+	return scenarios
 
 
 func _show_mode_menu() -> void:
@@ -207,7 +113,7 @@ func _show_scenarios_placeholder() -> void:
 	column.add_child(scenarios_row)
 
 	var castle_scenario: Dictionary = {}
-	for scenario in SCENARIOS:
+	for scenario in _get_scenarios():
 		if str(scenario.get("id", "")) == "zamek":
 			castle_scenario = scenario
 		else:
@@ -435,7 +341,7 @@ func _show_count_config(title_text: String, unit_types: Array[Dictionary], back_
 	if show_map_select:
 		var map_select := OptionButton.new()
 		map_select.custom_minimum_size = Vector2(320, 42)
-		for scenario in SCENARIOS:
+		for scenario in _get_scenarios():
 			map_select.add_item(str(scenario.get("name", "")))
 			map_select.set_item_metadata(map_select.item_count - 1, str(scenario.get("background", "")))
 			if str(scenario.get("background", "")) == _debug_background_path:

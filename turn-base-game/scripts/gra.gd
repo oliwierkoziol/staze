@@ -2,28 +2,9 @@ extends Control
 
 const BATTLE_CONFIG_PATH := "res://data/battle_config.json"
 const TERRAIN_TYPES_PATH := "res://data/terrain_types.json"
+const SCENARIOS_PATH := "res://data/scenarios/scenarios.json"
 const DEFAULT_BATTLE_BACKGROUND_PATH := "res://assets/backgrounds/back.png"
-const CASTLE_BACKGROUNDS: Array[String] = [
-	"res://assets/backgrounds/scenarios/zamek_etap_1_mury.png",
-	"res://assets/backgrounds/scenarios/zamek_etap_2_przedmiescia.png",
-	"res://assets/backgrounds/scenarios/zamek_etap_3_centrum.png",
-]
-# Ręczny układ: {"grid_x": 7, "grid_y": 4, "type": "kamienie"}.
-const CASTLE_STAGE_OBSTACLES: Dictionary = {1: [], 2: [], 3: []}
-const CASTLE_STAGE_ENEMIES: Dictionary = {
-	2: [
-		{"type_id": "human_cavalry", "count": 5, "grid_x": 12, "grid_y": 2},
-		{"type_id": "human_knights", "count": 8, "grid_x": 13, "grid_y": 4},
-		{"type_id": "human_archers", "count": 8, "grid_x": 12, "grid_y": 6},
-		{"type_id": "human_mages", "count": 5, "grid_x": 13, "grid_y": 8},
-	],
-	3: [
-		{"type_id": "human_knights", "count": 10, "grid_x": 12, "grid_y": 3},
-		{"type_id": "human_knights", "count": 10, "grid_x": 12, "grid_y": 7},
-		{"type_id": "human_knights", "count": 10, "grid_x": 12, "grid_y": 6},
-		{"type_id": "human_king", "count": 1, "grid_x": 14, "grid_y": 5},
-	],
-}
+const CASTLE_SCENARIO_PATH := "res://data/scenarios/zamek.json"
 const GRID_COLUMNS := 15
 const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
@@ -288,7 +269,7 @@ func _input(event: InputEvent) -> void:
 	if save_setup_dialog != null and save_setup_dialog.visible:
 		return
 
-	if event.keycode == KEY_RIGHT and castle_stage > 0 and castle_stage < CASTLE_BACKGROUNDS.size() and not setup_mode and not is_animating:
+	if event.keycode == KEY_RIGHT and castle_stage > 0 and castle_stage < _get_castle_stages().size() and not setup_mode and not is_animating:
 		_advance_castle_stage()
 		get_viewport().set_input_as_handled()
 		return
@@ -383,7 +364,7 @@ func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: 
 		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
-	castle_stage = 1 if background_path == CASTLE_BACKGROUNDS[0] else 0
+	castle_stage = 1 if background_path.get_file().get_basename() == "zamek_etap_1_mury" else 0
 	free_setup_mode = player_faction == "testowa" and enemy_faction == "testowa"
 	_set_battle_background(background_path if background_path != "" else DEFAULT_BATTLE_BACKGROUND_PATH)
 	skill_library = UnitTypeLibraryScript.get_skill_library()
@@ -809,25 +790,48 @@ func _on_reset_battle_pressed() -> void:
 
 func _on_reload_json_pressed() -> void:
 	UnitTypeLibraryScript.reload()
-	_reload_selected_factions()
+	var scenario_reloaded: bool = _reload_selected_factions()
 	_validate_setup()
-	if setup_mode:
+	if setup_mode or scenario_reloaded:
 		_enter_setup_mode()
 		return
 	_apply_live_reload()
 
 
-func _reload_selected_factions() -> void:
+func _reload_selected_factions() -> bool:
 	skill_library = UnitTypeLibraryScript.get_skill_library()
 	_load_general_skills()
 	last_battle_config_source = ProjectSettings.globalize_path(UnitTypeLibraryScript.UNIT_TYPES_PATH)
 	if current_player_faction == "" or current_enemy_faction == "":
 		_load_battle_config()
-		return
-	_build_battle_config_from_factions(current_player_faction, current_enemy_faction)
-	_debug_reload_snapshot("JSON", unit_configs)
+		return false
+	var scenario_reloaded: bool = _reload_current_scenario_config()
 	_refresh_general_display()
 	_refresh_general_ability_buttons()
+	return scenario_reloaded
+
+
+func _reload_current_scenario_config() -> bool:
+	var parsed: Variant = JSON.parse_string(_read_json_text(SCENARIOS_PATH))
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return false
+	var scenario_id: String = current_battle_background_path.get_file().get_basename()
+	for raw_scenario in (parsed as Dictionary).get("scenarios", []):
+		if typeof(raw_scenario) != TYPE_DICTIONARY or str(raw_scenario.get("id", "")) != scenario_id:
+			continue
+		var scenario: Dictionary = raw_scenario
+		var scenario_units: Array[Dictionary] = []
+		for side: String in ["player", "enemy"]:
+			for raw_unit in scenario.get("%s_units" % side, []):
+				if typeof(raw_unit) != TYPE_DICTIONARY:
+					continue
+				var unit: Dictionary = raw_unit.duplicate(true)
+				unit["side"] = side
+				scenario_units.append(unit)
+		_build_test_battle_config(scenario_units)
+		last_battle_config_source = ProjectSettings.globalize_path(SCENARIOS_PATH)
+		return true
+	return false
 
 
 func _load_battle_config() -> void:
@@ -981,16 +985,17 @@ func _load_unit_portrait(unit_data: Dictionary) -> Texture2D:
 
 
 func _apply_live_reload() -> void:
-	var current_units_by_id: Dictionary = {}
-	for unit in units:
-		current_units_by_id[int(unit.id)] = unit
-
 	var rebuilt_units: Array = []
-	for unit_config in unit_configs:
-		var rebuilt_unit: Dictionary = _prepare_unit(unit_config.duplicate(true))
-		var existing_unit: Dictionary = current_units_by_id.get(int(rebuilt_unit.id), {})
-		if not existing_unit.is_empty():
-			_reapply_runtime_state(rebuilt_unit, existing_unit)
+	for existing_unit in units:
+		var rebuilt_unit: Dictionary = _prepare_unit({
+			"id": int(existing_unit.get("id", 0)),
+			"type_id": str(existing_unit.get("type_id", "")),
+			"side": str(existing_unit.get("side", "")),
+			"count": int(existing_unit.get("count", 1)),
+			"grid_x": int(existing_unit.get("grid_x", 0)),
+			"grid_y": int(existing_unit.get("grid_y", 0)),
+		})
+		_reapply_runtime_state(rebuilt_unit, existing_unit)
 		rebuilt_units.append(rebuilt_unit)
 
 	units = rebuilt_units
@@ -1011,6 +1016,13 @@ func _apply_live_reload() -> void:
 func _reapply_runtime_state(target_unit: Dictionary, existing_unit: Dictionary) -> void:
 	target_unit["grid_x"] = int(existing_unit.get("grid_x", 0))
 	target_unit["grid_y"] = int(existing_unit.get("grid_y", 0))
+	var count: int = int(existing_unit.get("count", 0))
+	var unit_hp: int = int(target_unit.get("base_hp", 1))
+	var front_hp: int = mini(int(existing_unit.get("current_hp", unit_hp)), unit_hp)
+	target_unit["current_total_hp"] = max(0, (count - 1) * unit_hp + front_hp) if count > 0 else 0
+	for key in ["active_effects", "skill_cooldowns", "remaining_move", "action_points", "is_hidden", "is_revealed"]:
+		if existing_unit.has(key):
+			target_unit[key] = existing_unit[key].duplicate(true) if existing_unit[key] is Array or existing_unit[key] is Dictionary else existing_unit[key]
 	_recalculate_unit_stats(target_unit)
 
 
@@ -4337,7 +4349,8 @@ func _are_active_skills_on_cooldown(unit: Dictionary) -> bool:
 
 func _generate_obstacles() -> Array[Dictionary]:
 	if _is_castle_scenario():
-		return _typed_dictionary_array(CASTLE_STAGE_OBSTACLES.get(castle_stage, []))
+		var stages: Array[Dictionary] = _get_castle_stages()
+		return _typed_dictionary_array(stages[castle_stage - 1].get("obstacles", [])) if castle_stage > 0 and castle_stage <= stages.size() else []
 	var winter_mode: bool = _is_winter_scenario()
 	var desert_mode: bool = _is_desert_scenario()
 	var forest_mode: bool = _is_forest_scenario()
@@ -4363,6 +4376,13 @@ func _generate_obstacles() -> Array[Dictionary]:
 
 func _is_castle_scenario() -> bool:
 	return current_battle_background_path.get_file().get_basename().begins_with("zamek_etap_")
+
+
+func _get_castle_stages() -> Array[Dictionary]:
+	var parsed: Variant = JSON.parse_string(_read_json_text(CASTLE_SCENARIO_PATH))
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return []
+	return _typed_dictionary_array((parsed as Dictionary).get("stages", []))
 
 
 func _is_mine_scenario() -> bool:
@@ -4914,7 +4934,12 @@ func _disable_hud_mouse(node: Node) -> void:
 
 func _validate_setup() -> void:
 	assert(GRID_COLUMNS == 15 and GRID_ROWS == 10, "Scenariusz Zamek wymaga planszy 15x10.")
-	assert(CASTLE_BACKGROUNDS.size() == 3 and CASTLE_STAGE_ENEMIES.has(2) and CASTLE_STAGE_ENEMIES.has(3), "Scenariusz Zamek musi miec trzy etapy.")
+	assert(_get_castle_stages().size() == 3, "Scenariusz Zamek musi miec trzy etapy.")
+	var reload_existing: Dictionary = _prepare_unit({"type_id": "human_knights", "count": 3})
+	reload_existing["current_hp"] = 5
+	var reload_target: Dictionary = _prepare_unit({"type_id": "human_knights", "count": 3})
+	_reapply_runtime_state(reload_target, reload_existing)
+	assert(int(reload_target.count) == 3 and int(reload_target.current_hp) == 5, "Reload nie moze zwiekszac liczebnosci ani leczyc oddzialu.")
 	for unit in unit_configs:
 		assert(unit.grid_x >= 0 and unit.grid_x < GRID_COLUMNS)
 		assert(unit.grid_y >= 0 and unit.grid_y < GRID_ROWS)
@@ -5002,6 +5027,8 @@ func _validate_setup() -> void:
 	var previous_units: Array = units.duplicate(true)
 	var previous_obstacles: Array[Dictionary] = obstacles.duplicate(true)
 	var previous_terrain_effects: Array[Dictionary] = terrain_effects.duplicate(true)
+	var previous_event_log: Array[String] = event_log.duplicate()
+	var previous_active_turn_has_log: bool = active_turn_has_log
 	obstacles = [
 		{"grid_x": 4, "grid_y": 4, "type": "kamienie"},
 		{"grid_x": 5, "grid_y": 3, "type": "krzok"},
@@ -5245,6 +5272,9 @@ func _validate_setup() -> void:
 	assert(pierce_preview.size() == 3 and pierce_preview[2] == Vector2i(4, 0), "Podglad Przebijajacego Strzalu musi pokazywac 3 hexy w linii.")
 	units = previous_units
 	obstacles = previous_obstacles
+	event_log = previous_event_log
+	active_turn_has_log = previous_active_turn_has_log
+	event_log_label.text = "\n".join(event_log)
 
 
 func _on_board_animation_finished(_unit_id: int) -> void:
@@ -5612,7 +5642,7 @@ func _check_victory() -> bool:
 	if has_player and has_enemy:
 		return false
 	var winner_side := "player" if has_player else "enemy"
-	if winner_side == "player" and castle_stage > 0 and castle_stage < CASTLE_BACKGROUNDS.size():
+	if winner_side == "player" and castle_stage > 0 and castle_stage < _get_castle_stages().size():
 		_advance_castle_stage()
 		return true
 	active_unit_id = -1
@@ -5633,7 +5663,8 @@ func _check_victory() -> bool:
 
 func _advance_castle_stage() -> void:
 	castle_stage += 1
-	_set_battle_background(CASTLE_BACKGROUNDS[castle_stage - 1])
+	var stage: Dictionary = _get_castle_stages()[castle_stage - 1]
+	_set_battle_background(str(stage.get("background", DEFAULT_BATTLE_BACKGROUND_PATH)))
 	var survivors: Array[Dictionary] = []
 	for unit in units:
 		if str(unit.side) == "player":
@@ -5645,7 +5676,7 @@ func _advance_castle_stage() -> void:
 		survivors[index]["remaining_move"] = int(survivors[index].get("move_range", 0))
 		survivors[index]["action_points"] = int(survivors[index].get("base_action_points", 1))
 
-	var enemy_configs: Array[Dictionary] = _typed_dictionary_array(CASTLE_STAGE_ENEMIES.get(castle_stage, []))
+	var enemy_configs: Array[Dictionary] = _typed_dictionary_array(stage.get("enemy_units", []))
 	for index in enemy_configs.size():
 		var config: Dictionary = enemy_configs[index]
 		survivors.append(_prepare_unit({
