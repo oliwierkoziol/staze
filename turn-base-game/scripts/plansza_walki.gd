@@ -55,6 +55,7 @@ const PROJECTILE_PATH_THROWING_AXE := "res://assets/throwing_axe.png"
 const SHIELD_TEXTURE: Texture2D = preload("res://assets/ui/energy_shield.png")
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 var TRAP_TEXTURE: Texture2D = load("res://assets/trap-removebg-preview.png")
+var MAGIC_PROJECTION_TEXTURE: Texture2D = load("res://assets/magic_projection.png")
 
 var units: Array = []
 var unit_textures: Dictionary = {}
@@ -770,6 +771,7 @@ func draw_obstacles() -> void:
 		"cart": CART_TEXTURE,
 		"woz": CART_TEXTURE,
 		"detonator": DETONATOR_TEXTURE,
+		"magic_projection": MAGIC_PROJECTION_TEXTURE
 	}
 	var texture_draw_size := Vector2(HEX_RADIUS * 2.0, HEX_RADIUS * 2.0)
 	for obstacle in obstacles:
