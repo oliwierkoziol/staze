@@ -7,14 +7,7 @@
 	  "movement_cost": 1,
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": false,
-	  "entry_effect": {
-		"id": "woda",
-		"name": "Woda",
-		"category": "debuff",
-		"remaining_turns": 2,
-		"skip_turn": true,
-		"stat_changes": []
-	  }
+	  "entry_effect": "woda"
 	},
 	"ruchome_piaski": {
 	  "id": "ruchome_piaski",
@@ -23,14 +16,7 @@
 	  "movement_cost": 1,
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": false,
-	  "entry_effect": {
-		"id": "ruchome_piaski",
-		"name": "Ruchome Piaski",
-		"category": "debuff",
-		"remaining_turns": 2,
-		"skip_turn": true,
-		"stat_changes": []
-	  }
+	  "entry_effect": "ruchome_piaski"
 	},
 	"kamienie": {
 	  "id": "kamienie",
@@ -48,14 +34,7 @@
 	  "movement_cost": 1,
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": true,
-	  "entry_effect": {
-	    "id": "krzok",
-	    "name": "Krzak",
-	    "category": "buff",
-	    "remaining_turns": 2,
-	    "hides_unit": true,
-	    "stat_changes": []
-	  }
+	  "entry_effect": "krzok"
 	},
 	"zimowy_krzak": {
 	  "id": "zimowy_krzak",
@@ -64,14 +43,7 @@
 	  "movement_cost": 1,
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": true,
-	  "entry_effect": {
-	    "id": "zimowy_krzak",
-	    "name": "Zimowy Krzak",
-	    "category": "buff",
-	    "remaining_turns": 2,
-	    "hides_unit": true,
-	    "stat_changes": []
-	  }
+	  "entry_effect": "zimowy_krzak"
 	},
 	"holy_tree": {
 	  "id": "holy_tree",
@@ -80,14 +52,7 @@
 	  "movement_cost": 1,
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": true,
-	  "entry_effect": {
-	    "id": "holy_tree",
-	    "name": "Swiete Drzewo",
-	  	"category": "buff",
-	  	"remaining_turns": 2,
-	  	"hides_unit": true,
-	  	"stat_changes": []
-	  }
+	  "entry_effect": "holy_tree"
 	},
 	"cart": {
 	  "id": "cart",
@@ -96,14 +61,7 @@
 	  "movement_cost": 1,
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": true,
-	  "entry_effect": {
-	    "id": "cart",
-	    "name": "Woz",
-	  	"category": "buff",
-	  	"remaining_turns": 2,
-	  	"hides_unit": true,
-	  	"stat_changes": []
-	  }
+	  "entry_effect": "cart"
 	},
 	"elf_statue": {
 	  "id": "elf_statue",
@@ -121,14 +79,7 @@
 	  "movement_cost": 1,
 	  "blocks_movement": false,
 	  "blocks_line_of_sight": false,
-	  "entry_effect": {
-	    "id": "hole",
-	    "name": "Dziura",
-	  	"category": "debuff",
-	  	"remaining_turns": 1,
-	  	"instant_death": true,
-	  	"stat_changes": []
-	  }
+	  "entry_effect": "hole"
 	},
 	"detonator": {
 	  "id": "detonator",

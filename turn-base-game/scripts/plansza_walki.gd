@@ -80,6 +80,7 @@ var grid_visible := true
 func _ready() -> void:
 	if OS.is_debug_build():
 		_validate_obstacle_connections()
+		_validate_unit_count_badge_layout()
 	queue_redraw()
 
 
@@ -738,13 +739,136 @@ func draw_terrain_effects() -> void:
 		draw_polyline(points + PackedVector2Array([points[0]]), color.lightened(0.35), 2.0)
 
 
+const COUNT_REFERENCE_DIGIT := "8"
+const COUNT_BASELINE_UP_DIGITS: Array[String] = ["3", "4", "5", "9"]
+const STATUS_ARROW_HALF_WIDTH := 4.0
+const STATUS_ARROW_HEIGHT := 6.0
+const STATUS_ARROW_SPACING := 4.0
+const STATUS_ARROW_VERTICAL_GAP := 2.0
+const BUFF_ARROW_COLOR := Color(0.32, 0.78, 0.28, 1.0)
+const DEBUFF_ARROW_COLOR := Color(0.90, 0.25, 0.22, 1.0)
+
+
+func _count_baseline_nudge(count_text: String, text_size: Vector2, font: Font, font_size: int) -> float:
+	var ref_text_height: float = font.get_string_size(COUNT_REFERENCE_DIGIT, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).y
+	var half_height_delta: float = (ref_text_height - text_size.y) / 2.0
+	if count_text == "6":
+		return maxf(1.0, half_height_delta)
+	if COUNT_BASELINE_UP_DIGITS.has(count_text):
+		return minf(-1.0, -half_height_delta) - 1.0
+	return 0.0
+
+
+func _unit_has_effect_category(unit: Dictionary, category: String) -> bool:
+	for effect in unit.get("active_effects", []):
+		if str(effect.get("category", "")) == category:
+			return true
+	return false
+
+
+func _count_unit_status_arrows(unit: Dictionary) -> int:
+	var count := 0
+	if _unit_has_effect_category(unit, "buff"):
+		count += 1
+	if _unit_has_effect_category(unit, "debuff"):
+		count += 1
+	return count
+
+
+func _status_arrows_extra_width(status_arrow_count: int) -> float:
+	if status_arrow_count <= 0:
+		return 0.0
+	return STATUS_ARROW_HALF_WIDTH * 2.0 + STATUS_ARROW_SPACING
+
+
+func _draw_status_arrow(tip: Vector2, points_up: bool, color: Color) -> void:
+	var half_width: float = STATUS_ARROW_HALF_WIDTH
+	var height: float = STATUS_ARROW_HEIGHT
+	var points: PackedVector2Array
+	if points_up:
+		points = PackedVector2Array([
+			tip,
+			tip + Vector2(-half_width, height),
+			tip + Vector2(half_width, height),
+		])
+	else:
+		points = PackedVector2Array([
+			tip,
+			tip + Vector2(-half_width, -height),
+			tip + Vector2(half_width, -height),
+		])
+	draw_colored_polygon(points, color)
+
+
+func _draw_unit_status_arrows(unit: Dictionary, text_position: Vector2, text_size: Vector2, alpha: float) -> void:
+	var show_buff: bool = _unit_has_effect_category(unit, "buff")
+	var show_debuff: bool = _unit_has_effect_category(unit, "debuff")
+	if not show_buff and not show_debuff:
+		return
+	var column_center_x: float = text_position.x - STATUS_ARROW_SPACING - STATUS_ARROW_HALF_WIDTH
+	var text_center_y: float = text_position.y - text_size.y * 0.42
+	if show_buff and show_debuff:
+		var gap_half: float = STATUS_ARROW_VERTICAL_GAP * 0.5
+		var buff_tip_y: float = text_center_y - gap_half - STATUS_ARROW_HEIGHT
+		var debuff_tip_y: float = text_center_y + gap_half + STATUS_ARROW_HEIGHT
+		var buff_color: Color = BUFF_ARROW_COLOR
+		buff_color.a *= alpha
+		_draw_status_arrow(Vector2(column_center_x, buff_tip_y), true, buff_color)
+		var debuff_color: Color = DEBUFF_ARROW_COLOR
+		debuff_color.a *= alpha
+		_draw_status_arrow(Vector2(column_center_x, debuff_tip_y), false, debuff_color)
+	elif show_buff:
+		var buff_color: Color = BUFF_ARROW_COLOR
+		buff_color.a *= alpha
+		_draw_status_arrow(Vector2(column_center_x, text_center_y - STATUS_ARROW_HEIGHT * 0.15), true, buff_color)
+	else:
+		var debuff_color: Color = DEBUFF_ARROW_COLOR
+		debuff_color.a *= alpha
+		_draw_status_arrow(Vector2(column_center_x, text_center_y + STATUS_ARROW_HEIGHT * 0.15), false, debuff_color)
+
+
+func _compute_unit_count_badge(
+	center: Vector2,
+	count_text: String,
+	font: Font,
+	font_size: int,
+	status_arrow_count: int = 0
+) -> Dictionary:
+	var font_ascent: float = font.get_ascent(font_size)
+	var font_descent: float = font.get_descent(font_size)
+	var text_size: Vector2 = font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
+	var badge_padding := Vector2(8.0, 4.0)
+	var arrow_extra_width: float = _status_arrows_extra_width(status_arrow_count)
+	var content_width: float = text_size.x + arrow_extra_width
+	var badge_size := Vector2(
+		maxf(HEX_RADIUS * 0.95 - 6.0, content_width + badge_padding.x),
+		font_ascent + font_descent + badge_padding.y
+	)
+	var badge_rect := Rect2(center + Vector2(-badge_size.x / 2.0, HEX_RADIUS * 0.28), badge_size)
+	var base_baseline: float = badge_rect.position.y + (badge_rect.size.y - font_descent - font_ascent) / 2.0 + font_ascent
+	var text_position := Vector2(
+		badge_rect.position.x + (badge_rect.size.x - content_width) / 2.0 + arrow_extra_width,
+		base_baseline + _count_baseline_nudge(count_text, text_size, font, font_size)
+	)
+	return {"badge_rect": badge_rect, "text_position": text_position, "text_size": text_size}
+
+
+func _validate_unit_count_badge_layout() -> void:
+	var font: Font = GEORGIA_FONT
+	var font_size: int = 22
+	var text_size_5: Vector2 = font.get_string_size("5", HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
+	var text_size_6: Vector2 = font.get_string_size("6", HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
+	assert(_count_baseline_nudge("5", text_size_5, font, font_size) <= -2.0, "Cyfra 5 musi byc lekko podniesiona.")
+	assert(_count_baseline_nudge("6", text_size_6, font, font_size) >= 1.0, "Cyfra 6 musi byc lekko opusczona.")
+	assert(_count_baseline_nudge("8", font.get_string_size("8", HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size), font, font_size) == 0.0, "Cyfra 8 jest punktem odniesienia.")
+
+
 func _draw_unit_immobilize_vines(unit: Dictionary, center: Vector2, alpha: float, font: Font, font_size: int) -> void:
 	if VINES_TEXTURE == null or not _unit_is_immobilized(unit):
 		return
 	var count_text: String = str(unit.get("count", 0))
-	var text_size: Vector2 = font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
-	var badge_size := Vector2(HEX_RADIUS * 0.95, text_size.y + 10.0)
-	var badge_rect := Rect2(center + Vector2(-badge_size.x / 2.0, HEX_RADIUS * 0.28), badge_size)
+	var status_arrow_count: int = _count_unit_status_arrows(unit)
+	var badge_rect: Rect2 = _compute_unit_count_badge(center, count_text, font, font_size, status_arrow_count)["badge_rect"]
 	var texture_size: Vector2 = VINES_TEXTURE.get_size()
 	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
 		return
@@ -844,13 +968,11 @@ func draw_units() -> void:
 		_draw_unit_immobilize_vines(unit, center, alpha, font, font_size)
 
 		var count_text: String = str(unit.get("count", 0))
-		var text_size: Vector2 = font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
-		var badge_size := Vector2(HEX_RADIUS * 0.95, text_size.y + 10.0)
-		var badge_rect := Rect2(center + Vector2(-badge_size.x / 2.0, HEX_RADIUS * 0.28), badge_size)
-		var text_position := Vector2(
-			badge_rect.position.x + (badge_rect.size.x - text_size.x) / 2.0,
-			badge_rect.position.y + (badge_rect.size.y + text_size.y) / 2.0 - 2.0
-		)
+		var status_arrow_count: int = _count_unit_status_arrows(unit)
+		var badge_data: Dictionary = _compute_unit_count_badge(center, count_text, font, font_size, status_arrow_count)
+		var badge_rect: Rect2 = badge_data["badge_rect"]
+		var text_position: Vector2 = badge_data["text_position"]
+		var text_size: Vector2 = badge_data["text_size"]
 		var badge_bg := UNIT_COUNT_BADGE_BG
 		var badge_border := UNIT_COUNT_BADGE_BORDER
 		var badge_text := UNIT_COUNT_BADGE_TEXT
@@ -859,6 +981,7 @@ func draw_units() -> void:
 		badge_text.a *= alpha
 		draw_rect(badge_rect, badge_bg, true)
 		draw_rect(badge_rect, badge_border, false, 2.0)
+		_draw_unit_status_arrows(unit, text_position, text_size, alpha)
 		draw_string(font, text_position, count_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, badge_text)
 
 
@@ -1008,6 +1131,8 @@ func _draw_hovered_move_path() -> void:
 		return
 
 	var path_points: Array[Vector2] = []
+	if selected_unit_id != -1 and visual_positions.has(selected_unit_id):
+		path_points.append(visual_positions[selected_unit_id])
 	for cell in hovered_move_path:
 		path_points.append(axial_to_pixel(cell.x, cell.y))
 

@@ -164,6 +164,24 @@ static func _normalize_status_effect_config(effect_id: String, raw_effect: Dicti
 	effect["category"] = str(effect.get("category", ""))
 	effect["icon"] = str(effect.get("icon", ""))
 	effect["color"] = str(effect.get("color", ""))
+	if effect.has("remaining_turns"):
+		effect["remaining_turns"] = int(effect.get("remaining_turns", 1))
+	if effect.has("tick_damage"):
+		effect["tick_damage"] = int(effect.get("tick_damage", 0))
+	for flag_key in ["hides_unit", "skip_turn", "instant_death", "block_next_attack", "forward_only"]:
+		if effect.has(flag_key):
+			effect[flag_key] = bool(effect.get(flag_key, false))
+	var stat_changes: Array[Dictionary] = []
+	for change in effect.get("stat_changes", []):
+		if typeof(change) != TYPE_DICTIONARY:
+			continue
+		stat_changes.append({
+			"stat": str(change.get("stat", "")),
+			"mode": str(change.get("mode", "flat")),
+			"value": int(change.get("value", 0))
+		})
+	if effect.has("stat_changes"):
+		effect["stat_changes"] = stat_changes
 	return effect
 
 
@@ -227,6 +245,16 @@ static func get_status_effect(effect_id: String) -> Dictionary:
 	if _status_effects.has(lookup_id):
 		return _status_effects[lookup_id].duplicate(true)
 	return {}
+
+
+static func build_active_effect(effect_id: String, overrides: Dictionary = {}) -> Dictionary:
+	var effect: Dictionary = get_status_effect(effect_id)
+	if effect.is_empty():
+		return overrides.duplicate(true)
+	var merged: Dictionary = effect.duplicate(true)
+	for key in overrides.keys():
+		merged[key] = overrides[key]
+	return merged
 
 
 static func get_faction_ids() -> Array[String]:

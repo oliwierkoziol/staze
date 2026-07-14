@@ -59,6 +59,8 @@ const GENERAL_NAMES: Dictionary = {
 	"goblins": "Król Skrawek",
 	"humans": "Kapitan Alaric",
 }
+const ORC_GENERAL_KISHAK_NAME := "Wódz Kish'ak"
+const ORC_GENERAL_KISHAK_PORTRAIT: Texture2D = preload("res://assets/ui/general_kishak.png")
 const LOG_COLOR_YELLOW := Color(0.95, 0.82, 0.25, 1.0)
 const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
 const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
@@ -162,6 +164,7 @@ var skill_library: Dictionary = {}
 var general_skills: Dictionary = {}
 var general_skill_ids: Array[String] = []
 var general_skill_used := false
+var orc_general_is_kishak := false
 var terrain_effects: Array[Dictionary] = []
 var setup_mode := true
 var setup_drag_unit_id := -1
@@ -238,8 +241,37 @@ func _read_json_text(path: String) -> String:
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+
+	if event.keycode == KEY_TAB:
 		_toggle_help_popup()
+		get_viewport().set_input_as_handled()
+		return
+
+	if hud == null or not hud.visible:
+		return
+
+	if save_setup_dialog != null and save_setup_dialog.visible:
+		return
+
+	if event.keycode == KEY_ESCAPE:
+		_on_reset_battle_pressed()
+		get_viewport().set_input_as_handled()
+		return
+
+	if event.keycode == KEY_SPACE:
+		if help_popup != null and help_popup.visible:
+			if help_mode_tutorial:
+				_on_tutorial_ok_pressed()
+			get_viewport().set_input_as_handled()
+			return
+		if setup_mode:
+			if not tutorial_acknowledged or is_animating:
+				return
+			_on_start_battle_pressed()
+		else:
+			_on_end_turn_button_pressed()
 		get_viewport().set_input_as_handled()
 
 
@@ -281,6 +313,7 @@ func _on_team_setup_finished(player_faction: String, enemy_faction: String) -> v
 	if board != null:
 		board.visible = true
 	_build_battle_config_from_factions(player_faction, enemy_faction)
+	_roll_orc_general_variant()
 	_setup_battle_scene()
 
 
@@ -289,6 +322,7 @@ func _on_team_setup_loaded(save_data: Dictionary) -> void:
 		victory_overlay.visible = false
 	current_player_faction = str(save_data.get("player_faction", ""))
 	current_enemy_faction = str(save_data.get("enemy_faction", ""))
+	orc_general_is_kishak = bool(save_data.get("orc_general_is_kishak", false))
 	free_setup_mode = bool(save_data.get("free_setup_mode", false))
 	_set_battle_background(str(save_data.get("background_path", DEFAULT_BATTLE_BACKGROUND_PATH)))
 	skill_library = UnitTypeLibraryScript.get_skill_library()
@@ -321,7 +355,12 @@ func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: 
 	if board != null:
 		board.visible = true
 	_build_test_battle_config(custom_units)
+	_roll_orc_general_variant()
 	_setup_battle_scene()
+
+
+func _roll_orc_general_variant() -> void:
+	orc_general_is_kishak = current_player_faction == "orcs" and randi_range(1, 10) == 1
 
 
 func _load_general_skills() -> void:
@@ -505,11 +544,15 @@ func _make_setup_button(text: String) -> Button:
 	return button
 
 
+func _should_skip_tutorial() -> bool:
+	return free_setup_mode
+
+
 func _enter_setup_mode() -> void:
 	setup_mode = true
 	help_mode_tutorial = true
 	tutorial_page = 0
-	tutorial_acknowledged = false
+	tutorial_acknowledged = _should_skip_tutorial()
 	_update_setup_hint_visibility()
 	units = unit_configs.map(func(unit: Dictionary) -> Dictionary: return _prepare_unit(unit.duplicate(true)))
 	obstacles = _generate_obstacles()
@@ -539,7 +582,7 @@ func _enter_setup_mode() -> void:
 	_log_event(_color_log_text("Tryb przygotowania: ustaw jednostki i kliknij START po prawej.", LOG_COLOR_YELLOW))
 	_update_action_buttons()
 	_sync_board()
-	if help_popup != null and hud.visible:
+	if help_popup != null and hud.visible and not _should_skip_tutorial():
 		help_popup.visible = true
 
 
@@ -604,6 +647,7 @@ func _make_save_data() -> Dictionary:
 		"turn_queue_index": turn_queue_index,
 		"pending_skill_id": pending_skill_id,
 		"general_skill_used": general_skill_used,
+		"orc_general_is_kishak": orc_general_is_kishak,
 		"detonator_activated": detonator_activated,
 	}
 
@@ -650,6 +694,7 @@ func _apply_save_data(save_data: Dictionary) -> void:
 	turn_queue_index = int(save_data.get("turn_queue_index", -1))
 	pending_skill_id = str(save_data.get("pending_skill_id", ""))
 	general_skill_used = bool(save_data.get("general_skill_used", false))
+	orc_general_is_kishak = bool(save_data.get("orc_general_is_kishak", false))
 	is_animating = false
 	selected_obstacle_cell = Vector2i(-1, -1)
 	detonator_activated = bool(save_data.get("detonator_activated", false))
@@ -2688,26 +2733,10 @@ func _apply_terrain_effects_to_unit(unit: Dictionary, apply_entry_effect := true
 			continue
 		match str(effect.get("id", "")):
 			"fire":
-				_apply_or_refresh_effect(unit, {
-					"id": "ploniecie",
-					"name": "Ploniecie",
-					"category": "debuff",
-					"remaining_turns": 2,
-					"stat_changes": [],
-					"tick_damage": 1
-				})
+				_apply_or_refresh_effect(unit, {"id": "ploniecie"})
 				_log_event("%s staje w ogniu." % _unit_name_log_text(unit))
 			"ice":
-				_apply_or_refresh_effect(unit, {
-					"id": "lodowe_podloze",
-					"name": "Lodowe Podloze",
-					"category": "debuff",
-					"remaining_turns": 1,
-					"stat_changes": [
-						{"stat": "speed", "mode": "flat", "value": -2},
-						{"stat": "move_range", "mode": "flat", "value": -2}
-					]
-				})
+				_apply_or_refresh_effect(unit, {"id": "lodowe_podloze"})
 				_log_event("%s slizga sie na lodzie." % _unit_name_log_text(unit))
 			"poison_cloud":
 				if _apply_poison_effect(unit, "zatrucie", "Zatrucie", 2, int(effect.get("tick_damage", 1))):
@@ -2785,15 +2814,7 @@ func _apply_elf_statue_buff(unit: Dictionary) -> void:
 			has_statue_neighbor = true
 			break
 	if has_statue_neighbor:
-		_apply_or_refresh_effect(unit, {
-			"id": "blogoslawienstwo_elfow",
-			"name": "Blogoslawienstwo Elfow",
-			"category": "buff",
-			"remaining_turns": 1,
-			"stat_changes": [
-				{"stat": "dmg", "mode": "flat", "value": 2}
-			]
-		})
+		_apply_or_refresh_effect(unit, {"id": "blogoslawienstwo_elfow"})
 	else:
 		_remove_effect(unit, "blogoslawienstwo_elfow")
 
@@ -3256,12 +3277,9 @@ func _can_use_skill(unit: Dictionary, skill_id: String) -> bool:
 
 
 func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void:
-	var metadata: Dictionary = UnitTypeLibrary.get_status_effect(str(effect_data.get("id", "")))
-	if not metadata.is_empty():
-		effect_data["name"] = str(metadata.get("name", effect_data.get("name", "")))
-		var category: String = str(metadata.get("category", ""))
-		if category != "":
-			effect_data["category"] = category
+	var effect_id: String = str(effect_data.get("id", ""))
+	if effect_id != "":
+		effect_data = UnitTypeLibrary.build_active_effect(effect_id, effect_data)
 	var effects: Array = unit.get("active_effects", [])
 	var previous_move_range: int = int(unit.get("move_range", 0))
 	for existing in effects:
@@ -3525,21 +3543,17 @@ func _get_pull_destination(source: Dictionary, target: Dictionary) -> Vector2i:
 	var target_cell := Vector2i(target.grid_x, target.grid_y)
 	if _hex_distance(source_cell, target_cell) <= 1:
 		return Vector2i(-1, -1)
-	var best_cell := Vector2i(-1, -1)
-	var best_distance: int = _hex_distance(source_cell, target_cell)
-	for neighbor in _get_neighbors(source_cell):
-		if neighbor.x < 0 or neighbor.x >= GRID_COLUMNS or neighbor.y < 0 or neighbor.y >= GRID_ROWS:
-			continue
-		if _is_cell_obstacle(neighbor):
-			continue
-		if not _find_unit_at_cell(neighbor).is_empty():
-			continue
-		var neighbor_distance: int = _hex_distance(neighbor, target_cell)
-		if neighbor_distance >= best_distance:
-			continue
-		best_distance = neighbor_distance
-		best_cell = neighbor
-	return best_cell
+	var pull_line: Array[Vector2i] = _get_hex_line(target_cell, source_cell)
+	if pull_line.size() < 2:
+		return Vector2i(-1, -1)
+	var destination: Vector2i = pull_line[pull_line.size() - 2]
+	if destination.x < 0 or destination.x >= GRID_COLUMNS or destination.y < 0 or destination.y >= GRID_ROWS:
+		return Vector2i(-1, -1)
+	if _is_cell_obstacle(destination):
+		return Vector2i(-1, -1)
+	if not _find_unit_at_cell(destination).is_empty():
+		return Vector2i(-1, -1)
+	return destination
 
 
 func _ensure_energy_barrier(unit: Dictionary) -> void:
@@ -3690,10 +3704,27 @@ func _get_terrain_entry_effect(cell: Vector2i) -> Dictionary:
 	var terrain: Dictionary = _get_terrain_at(cell)
 	if terrain.is_empty():
 		return {}
-	var effect: Variant = terrain.get("entry_effect", null)
-	if effect == null or typeof(effect) != TYPE_DICTIONARY:
+	var raw_entry: Variant = terrain.get("entry_effect", null)
+	if raw_entry == null:
 		return {}
-	return effect.duplicate(true)
+	var effect_id: String = ""
+	var overrides: Dictionary = {}
+	if typeof(raw_entry) == TYPE_STRING:
+		effect_id = str(raw_entry)
+	elif typeof(raw_entry) == TYPE_DICTIONARY:
+		var raw_dict: Dictionary = raw_entry
+		effect_id = str(raw_dict.get("id", raw_dict.get("effect_id", "")))
+		overrides = raw_dict.duplicate(true)
+		overrides.erase("id")
+		overrides.erase("effect_id")
+	else:
+		return {}
+	if effect_id.is_empty():
+		return {}
+	var effect: Dictionary = UnitTypeLibrary.build_active_effect(effect_id, overrides)
+	if effect.is_empty():
+		push_warning("Brak efektu terenu '%s' w status_effects.json" % effect_id)
+	return effect
 
 
 func _terrain_hides_unit(cell: Vector2i) -> bool:
@@ -3958,7 +3989,7 @@ func _build_tutorial_pages() -> void:
 	help_popup_page_label.text = "STRONA %d / %d" % [page_index + 1, pages.size()]
 	help_popup_prev_button.disabled = page_index == 0
 	help_popup_next_button.disabled = page_index == pages.size() - 1
-	help_popup_action_button.text = "ROZPOCZNIJ" if page_index == pages.size() - 1 else "DALEJ"
+	help_popup_action_button.text = "ROZPOCZNIJ" if page_index == pages.size() - 1 else "POMIŃ"
 
 
 func _build_controls_reference() -> void:
@@ -4015,11 +4046,10 @@ func _on_help_next_pressed() -> void:
 
 func _on_help_action_pressed() -> void:
 	if help_mode_tutorial:
-		if tutorial_page < 4:
-			tutorial_page += 1
-			_help_rebuild_content()
-			return
-	_on_tutorial_ok_pressed()
+		_on_tutorial_ok_pressed()
+		return
+	if help_popup != null:
+		help_popup.visible = false
 
 
 func _on_tutorial_ok_pressed() -> void:
@@ -4193,6 +4223,13 @@ func _validate_setup() -> void:
 		assert(int(prepared.get("base_action_points", 0)) == int(prepared.get("action_points", 0)), "AP z JSON musi byc startowym AP jednostki.")
 
 	assert(_calculate_tick_damage({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
+	for terrain_id in terrain_types.keys():
+		var raw_entry: Variant = terrain_types[terrain_id].get("entry_effect", null)
+		if raw_entry == null:
+			continue
+		var effect_id: String = str(raw_entry) if typeof(raw_entry) == TYPE_STRING else str((raw_entry as Dictionary).get("id", ""))
+		var resolved: Dictionary = UnitTypeLibraryScript.build_active_effect(effect_id, {})
+		assert(not resolved.is_empty() and str(resolved.get("category", "")) != "", "Efekt terenu musi byc w status_effects: %s" % effect_id)
 	assert(next_map_event_round == 0 or next_map_event_round >= 2, "Event mapy nie moze wystapic przed druga runda.")
 	assert(_is_map_event_warning_round(2, 3) and not _is_map_event_warning_round(1, 3), "Pola eventu maja byc widoczne tylko runde przed jego aktywacja.")
 	for scenario_id in MAP_EVENT_POOLS:
@@ -4408,9 +4445,9 @@ func _validate_setup() -> void:
 	assert(not _is_in_attack_range(charge_unit, Vector2i(11, 5), charge_skill), "Szarza wroga nie moze atakowac w prawo.")
 	active_unit_id = previous_active_unit_id
 	pending_skill_id = previous_pending_skill_id
-	units = previous_units
-	obstacles = previous_obstacles
 	terrain_effects = previous_terrain_effects
+	units = []
+	obstacles = []
 	var hook_caster := {
 		"id": 1101,
 		"side": "player",
@@ -4430,6 +4467,8 @@ func _validate_setup() -> void:
 	hook_target.grid_x = pull_cell.x
 	hook_target.grid_y = pull_cell.y
 	assert(_get_pull_destination(hook_caster, hook_target) == Vector2i(-1, -1), "Rzut Hakiem nie moze przyciagac celu juz stojacego obok.")
+	units = previous_units
+	obstacles = previous_obstacles
 
 
 func _on_board_animation_finished(_unit_id: int) -> void:
@@ -4868,10 +4907,14 @@ func _use_general_skill_by_index(index: int) -> void:
 
 func _refresh_general_display() -> void:
 	var faction: String = current_player_faction
-	general_name_label.text = str(GENERAL_NAMES.get(faction, "Generał"))
+	if faction == "orcs" and orc_general_is_kishak:
+		general_name_label.text = ORC_GENERAL_KISHAK_NAME
+		general_portrait.texture = ORC_GENERAL_KISHAK_PORTRAIT
+	else:
+		general_name_label.text = str(GENERAL_NAMES.get(faction, "Generał"))
+		var portrait: Texture2D = GENERAL_PORTRAITS.get(faction, DEFAULT_GENERAL_PORTRAIT)
+		general_portrait.texture = portrait if portrait != null else DEFAULT_GENERAL_PORTRAIT
 	general_level_label.text = "Poziom 5"
-	var portrait: Texture2D = GENERAL_PORTRAITS.get(faction, DEFAULT_GENERAL_PORTRAIT)
-	general_portrait.texture = portrait if portrait != null else DEFAULT_GENERAL_PORTRAIT
 
 
 func _refresh_general_ability_buttons() -> void:
