@@ -92,21 +92,21 @@ const SCENARIOS: Array[Dictionary] = [
 	{
 		"id": "humans_vs_goblins_desert",
 		"name": "Zasadzka na Szlaku",
-		"description": "Ludzka karawana przebija sie przez goblinska zasadzke na pustyni.",
-		"player_faction": "humans",
-		"enemy_faction": "goblins",
+		"description": "Gobliny zasadzaja sie na ludzka karawane na pustyni.",
+		"player_faction": "goblins",
+		"enemy_faction": "humans",
 		"background": "res://assets/backgrounds/scenarios/humans_vs_goblins_desert.png",
 		"player_units": [
-			{"type_id": "human_knights", "count": 5},
-			{"type_id": "human_cavalry", "count": 4},
-			{"type_id": "human_archers", "count": 7},
-			{"type_id": "human_mages", "count": 4},
-		],
-		"enemy_units": [
 			{"type_id": "goblin_thief", "count": 12},
 			{"type_id": "goblin_warrior", "count": 10},
 			{"type_id": "goblin_shaman", "count": 8},
 			{"type_id": "goblin_trapper", "count": 10},
+		],
+		"enemy_units": [
+			{"type_id": "human_knights", "count": 5},
+			{"type_id": "human_cavalry", "count": 4},
+			{"type_id": "human_archers", "count": 7},
+			{"type_id": "human_mages", "count": 4},
 		],
 	},
 ]

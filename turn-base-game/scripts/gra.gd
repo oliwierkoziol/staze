@@ -2532,6 +2532,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_zadza_krwi(caster, skill)
 		"focused_strike":
 			_execute_focused_strike(caster, target, skill)
+		"zaklete_ciecie":
+			_execute_zaklete_ciecie(caster, target)
 		"rozszarpanie":
 			_execute_rozszarpanie(caster, target)
 
@@ -2915,6 +2917,30 @@ func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dict
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
 			_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+		]
+	)
+	_cleanup_destroyed_unit(hit_target)
+
+
+func _execute_zaklete_ciecie(caster: Dictionary, target: Dictionary) -> void:
+	var total_damage := _calculate_damage(caster, target, 0.5)
+	var result := _apply_attack_damage(caster, target, total_damage, false, true)
+	var hit_target: Dictionary = result.get("target", target)
+	var casualties := int(result.get("casualties", 0))
+	var curse_suffix := ""
+	if int(result.get("damage", 0)) > 0:
+		_apply_or_refresh_effect(hit_target, {
+			"id": "klatwa",
+			"remaining_turns": 2,
+		})
+		curse_suffix = " Cel jest przeklęty."
+	_log_event(
+		"%s tnie %s Zakletym Cieciem za %s obrazen i %s strat.%s" % [
+			_unit_name_log_text(caster),
+			_unit_name_log_text(hit_target),
+			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
+			_color_log_text(str(casualties), LOG_COLOR_DAMAGE),
+			curse_suffix
 		]
 	)
 	_cleanup_destroyed_unit(hit_target)
@@ -4539,6 +4565,9 @@ func _validate_setup() -> void:
 	assert(str(skill_library["deszcz_strzal"].get("effect_type", "")) == "arrow_rain", "Deszcz Strzal musi miec efekt arrow_rain.")
 	assert(skill_library.has("rozszarpanie"), "Brak skilla rozszarpanie w bibliotece.")
 	assert(str(skill_library["rozszarpanie"].get("effect_type", "")) == "rozszarpanie", "Rozszarpanie musi miec efekt rozszarpanie.")
+	assert(skill_library.has("zaklete_ciecie"), "Brak skilla zaklete_ciecie w bibliotece.")
+	assert(int(skill_library["zaklete_ciecie"].get("range", 0)) == 2, "Zaklete Ciecie musi miec zasieg 2 hexow.")
+	assert(str(skill_library["zaklete_ciecie"].get("effect_type", "")) == "zaklete_ciecie", "Zaklete Ciecie musi miec efekt zaklete_ciecie.")
 	assert(skill_library.has("zadza_krwi"), "Brak skilla zadza_krwi w bibliotece.")
 	assert(str(skill_library["zadza_krwi"].get("effect_type", "")) == "zadza_krwi", "Zadza krwi musi miec efekt zadza_krwi.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}, "skill_ids": []}, "pulapka_na_niedzwiedzie"), "Jednostka nie moze uzywac umiejetnosci spoza skill_ids.")

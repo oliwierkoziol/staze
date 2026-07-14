@@ -161,6 +161,17 @@
 	  "target_type": "enemy_unit",
 	  "effect_type": "focused_strike"
 	},
+	"zaklete_ciecie": {
+	  "id": "zaklete_ciecie",
+	  "name": "Zaklete Ciecie",
+	  "description": "Atak wręcz w zasięgu 2 hexów zadający 50% obrażeń i nakładający Klątwę na 2 tury.",
+	  "ap_cost": 1,
+	  "cooldown": 2,
+	  "range": 2,
+	  "target_type": "enemy_unit",
+	  "effect_type": "zaklete_ciecie",
+	  "icon": "res://assets/ui/curse.png"
+	},
 	"rozszarpanie": {
 	  "id": "rozszarpanie",
 	  "name": "Rozszarpanie",

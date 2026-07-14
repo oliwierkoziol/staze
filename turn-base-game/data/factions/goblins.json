@@ -82,9 +82,9 @@
 		"resistance": "Brak",
 		"portrait": "res://assets/characters/humans/goblinTrapper.png",
 		"skill_ids": [
-		  "strzal_w_kolano",
+		  "pulapka_goblina",
 		  "zatruta_strzala",
-          "pulapka_goblina"
+          "strzal_w_kolano"
 		]
 	  }
 	]
