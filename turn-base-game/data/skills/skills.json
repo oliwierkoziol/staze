@@ -40,6 +40,17 @@
 	  "target_type": "self",
 	  "effect_type": "eagle_eye"
 	},
+	"magiczna_projekcja": {
+	  "id": "magiczna_projekcja",
+	  "name": "Magiczna Projekcja",
+	  "description": "Tworzy 3 magiczne bariery w ukladzie V na 3 tury. Klikniety hex to srodkowa bariera; dwie pozostale pojawiaja sie po jej lewej stronie (gracz) lub prawej (wróg).",
+	  "ap_cost": 1,
+	  "cooldown": 6,
+	  "range": 4,
+	  "target_type": "cell",
+	  "effect_type": "magic_projection",
+	  "icon": "res://assets/magic_projection.png"
+	},
 	"pnacza": {
 	  "id": "pnacza",
 	  "name": "Pnacza",

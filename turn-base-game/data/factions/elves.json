@@ -82,7 +82,7 @@
 		"resistance": "Brak",
 		"portrait": "res://assets/characters/humans/elfArcheMague.png",
 		"skill_ids": [
-		  "sokole_oko",
+		  "magiczna_projekcja",
 		  "runiczna_ochrona",
           "pulapka_na_niedzwiedzie"
 		]

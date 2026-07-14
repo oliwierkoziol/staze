@@ -89,6 +89,7 @@ var OBSTACLE_PORTRAITS: Dictionary = {
 	"elf_statue": load("res://assets/elfStatue.png"),
 	"hole": load("res://assets/hole.png"),
 	"detonator": load("res://assets/detonator.png"),
+	"magiczna_bariera": load("res://assets/magic_projection.png"),
 }
 const OBSTACLE_NAMES: Dictionary = {
 	"woda": "Woda",
@@ -102,6 +103,7 @@ const OBSTACLE_NAMES: Dictionary = {
 	"elf_statue": "Posag Elfow",
 	"hole": "Dziura",
 	"detonator": "Detonator",
+	"magiczna_bariera": "Magiczna Bariera",
 }
 const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"woda": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
@@ -115,6 +117,7 @@ const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"elf_statue": "Posag blokuje ruch i linie strzalu. Sasiadujaca jednostka otrzymuje +2 do obrazen.",
 	"hole": "Jednostka ktora wpadnie do dziury ginie natychmiast.",
 	"detonator": "Jednorazowy detonator. Aktywowany z sasiedniego hexa. Przywoluje spadajace kamienie na cztery losowe hexy.",
+	"magiczna_bariera": "Tymczasowa bariera blokuje ruch i linie strzalu. Znika po kilku turach.",
 }
 const OBSTACLE_WINTER_DESCRIPTIONS: Dictionary = {
 	"woda": "Lod jest kruchy. Wejscie zuzywa caly ruch i ma 10%% szans na zapadniecie sie zabijajace jednostke.",
@@ -1571,6 +1574,8 @@ func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
 
 
 func _find_enemy_area_skill_cell(enemy_unit: Dictionary, skill: Dictionary) -> Vector2i:
+	if str(skill.get("effect_type", "")) == "magic_projection":
+		return _find_enemy_magic_projection_cell(enemy_unit, skill)
 	var best_cell := Vector2i(-1, -1)
 	var best_score := 0
 	for cell in _get_skill_target_cells(enemy_unit, str(skill.get("id", ""))):
@@ -1853,10 +1858,12 @@ func _handle_cell_skill_hover(active_unit: Dictionary, skill: Dictionary, cell: 
 	if not _can_target_cell_with_skill(active_unit, cell, skill):
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		return
-	board.set_hovered_area_skill(cell, _get_cell_skill_preview_cells(skill, cell))
+	board.set_hovered_area_skill(cell, _get_cell_skill_preview_cells(skill, cell, active_unit))
 
 
-func _get_cell_skill_preview_cells(skill: Dictionary, center: Vector2i) -> Array[Vector2i]:
+func _get_cell_skill_preview_cells(skill: Dictionary, center: Vector2i, caster: Dictionary = {}) -> Array[Vector2i]:
+	if str(skill.get("effect_type", "")) == "magic_projection":
+		return _get_magic_projection_cells(center, str(caster.get("side", "")))
 	if str(skill.get("effect_type", "")) == "ice_ground":
 		var cells: Array[Vector2i] = []
 		for neighbor in _get_neighbors(center).slice(0, 3):
@@ -1877,6 +1884,8 @@ func _can_target_cell_with_skill(caster: Dictionary, cell: Vector2i, skill: Dict
 		return _find_unit_at_cell(cell).is_empty() and _get_terrain_effect_at(cell, "bear_trap").is_empty()
 	if effect_type == "goblin_trap":
 		return _find_unit_at_cell(cell).is_empty() and _get_terrain_effect_at(cell, "goblin_trap").is_empty()
+	if effect_type == "magic_projection":
+		return _can_place_magic_projection_at(caster, cell)
 	return true
 
 
@@ -2081,6 +2090,8 @@ func _get_skill_target_cells(unit: Dictionary, skill_id: String) -> Array[Vector
 			if _is_attack_blocked(unit, cell):
 				continue
 			if str(skill.get("target_type", "")) == "cell" and _blocks_cell_skill_target(cell):
+				continue
+			if str(skill.get("effect_type", "")) == "magic_projection" and not _can_place_magic_projection_at(unit, cell):
 				continue
 			cells.append(cell)
 	return cells
@@ -2462,6 +2473,8 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
 			return
 		if str(skill.get("effect_type", "")) == "goblin_trap" and (not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, "goblin_trap").is_empty()):
 			return
+		if str(skill.get("effect_type", "")) == "magic_projection" and not _can_place_magic_projection_at(unit, cell):
+			return
 		await _execute_skill(unit, {}, skill, cell)
 		return
 
@@ -2536,6 +2549,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_zaklete_ciecie(caster, target)
 		"rozszarpanie":
 			_execute_rozszarpanie(caster, target)
+		"magic_projection":
+			_execute_magic_projection(caster, target_cell)
 
 	_sync_board()
 
@@ -2796,6 +2811,73 @@ func _execute_ice_ground(caster: Dictionary, center: Vector2i) -> void:
 	_apply_terrain_effects_in_cells(cells)
 	is_animating = false
 	_log_event("%s zamraza podloze." % _unit_name_log_text(caster))
+
+
+func _get_magic_projection_cells(middle: Vector2i, side: String) -> Array[Vector2i]:
+	if middle.x < 0 or side == "":
+		return []
+	var row_offset: int = middle.y & 1
+	var wing_offsets: Array[Vector2i] = []
+	if str(side) == "player":
+		wing_offsets = [Vector2i(row_offset - 1, -1), Vector2i(row_offset - 1, 1)]
+	else:
+		wing_offsets = [Vector2i(row_offset, -1), Vector2i(row_offset, 1)]
+	var cells: Array[Vector2i] = []
+	for offset in wing_offsets:
+		var wing: Vector2i = middle + offset
+		if wing.x < 0 or wing.x >= GRID_COLUMNS or wing.y < 0 or wing.y >= GRID_ROWS:
+			return []
+		if cells.has(wing):
+			return []
+		cells.append(wing)
+	cells.append(middle)
+	return cells
+
+
+func _can_place_magic_projection_at(_caster: Dictionary, anchor: Vector2i) -> bool:
+	var cells: Array[Vector2i] = _get_magic_projection_cells(anchor, str(_caster.get("side", "")))
+	if cells.size() != 3:
+		return false
+	for cell in cells:
+		if not _find_unit_at_cell(cell).is_empty():
+			return false
+		if _is_cell_obstacle(cell):
+			return false
+	return true
+
+
+func _find_enemy_magic_projection_cell(enemy_unit: Dictionary, skill: Dictionary) -> Vector2i:
+	var best_cell := Vector2i(-1, -1)
+	var best_score := 0
+	for cell in _get_skill_target_cells(enemy_unit, str(skill.get("id", ""))):
+		var score := 0
+		for projection_cell in _get_magic_projection_cells(cell, str(enemy_unit.side)):
+			for neighbor in _get_neighbors(projection_cell):
+				var unit := _find_unit_at_cell(neighbor)
+				if unit.is_empty() or unit.side == enemy_unit.side:
+					continue
+				score += 2
+		if score > best_score:
+			best_score = score
+			best_cell = cell
+	return best_cell
+
+
+func _execute_magic_projection(caster: Dictionary, anchor: Vector2i) -> void:
+	var cells: Array[Vector2i] = _get_magic_projection_cells(anchor, str(caster.side))
+	if cells.size() != 3:
+		_log_event("%s nie moze postawic Magicznej Projekcji w tym miejscu." % _unit_name_log_text(caster))
+		return
+	for cell in cells:
+		obstacles.append({
+			"grid_x": cell.x,
+			"grid_y": cell.y,
+			"type": "magiczna_bariera",
+			"variant": "magic_projection",
+			"remaining_turns": 3,
+			"source": "skill",
+		})
+	_log_event("%s tworzy Magiczna Projekcje na 3 tury." % _unit_name_log_text(caster))
 
 
 func _execute_poison_cloud(caster: Dictionary, center: Vector2i) -> void:
@@ -3304,6 +3386,19 @@ func _advance_terrain_effects() -> void:
 		if int(effect["remaining_turns"]) > 0:
 			kept_effects.append(effect)
 	terrain_effects = kept_effects
+	_advance_temporary_obstacles()
+
+
+func _advance_temporary_obstacles() -> void:
+	var kept_obstacles: Array[Dictionary] = []
+	for obstacle in obstacles:
+		if not obstacle.has("remaining_turns"):
+			kept_obstacles.append(obstacle)
+			continue
+		obstacle["remaining_turns"] = int(obstacle.get("remaining_turns", 0)) - 1
+		if int(obstacle["remaining_turns"]) > 0:
+			kept_obstacles.append(obstacle)
+	obstacles = kept_obstacles
 
 
 func _try_trigger_map_event() -> void:
@@ -4568,6 +4663,10 @@ func _validate_setup() -> void:
 	assert(skill_library.has("zaklete_ciecie"), "Brak skilla zaklete_ciecie w bibliotece.")
 	assert(int(skill_library["zaklete_ciecie"].get("range", 0)) == 2, "Zaklete Ciecie musi miec zasieg 2 hexow.")
 	assert(str(skill_library["zaklete_ciecie"].get("effect_type", "")) == "zaklete_ciecie", "Zaklete Ciecie musi miec efekt zaklete_ciecie.")
+	assert(skill_library.has("magiczna_projekcja"), "Brak skilla magiczna_projekcja w bibliotece.")
+	assert(int(skill_library["magiczna_projekcja"].get("cooldown", 0)) == 6, "Magiczna Projekcja musi miec cooldown 6 tur.")
+	assert(_get_magic_projection_cells(Vector2i(4, 4), "player").size() == 3, "Magiczna Projekcja gracza musi tworzyc 3 hexy.")
+	assert(_get_magic_projection_cells(Vector2i(10, 4), "enemy").size() == 3, "Magiczna Projekcja wroga musi tworzyc 3 hexy.")
 	assert(skill_library.has("zadza_krwi"), "Brak skilla zadza_krwi w bibliotece.")
 	assert(str(skill_library["zadza_krwi"].get("effect_type", "")) == "zadza_krwi", "Zadza krwi musi miec efekt zadza_krwi.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}, "skill_ids": []}, "pulapka_na_niedzwiedzie"), "Jednostka nie moze uzywac umiejetnosci spoza skill_ids.")

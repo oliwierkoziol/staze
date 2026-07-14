@@ -769,7 +769,7 @@ func draw_obstacles() -> void:
 		"dziura": HOLE_TEXTURE,
 		"cart": CART_TEXTURE,
 		"woz": CART_TEXTURE,
-		"detonator": DETONATOR_TEXTURE
+		"detonator": DETONATOR_TEXTURE,
 	}
 	var texture_draw_size := Vector2(HEX_RADIUS * 2.0, HEX_RADIUS * 2.0)
 	for obstacle in obstacles:
