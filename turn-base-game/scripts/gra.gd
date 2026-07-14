@@ -15,7 +15,7 @@ const MAX_EVENT_LOG_ENTRIES := 60
 const KRWAWIENIE_TICK_DAMAGE := 2
 const MAX_VISIBLE_QUEUE_CARDS := 8
 const SINGLE_CLICK_DELAY := 0.3
-const MAX_EVENT_OBSTACLES: Dictionary = {"woda": 6, "kamienie": 4, "krzok": 6, "ruchome_piaski": 6, "holy_tree": 4, "cart": 3, "elf_statue": 3, "hole": 4, "detonator": 2}
+const MAX_EVENT_OBSTACLES: Dictionary = {"woda": 6, "kamienie": 4, "krzok": 6, "ruchome_piaski": 6, "holy_tree": 5, "cart": 3, "elf_statue": 6, "hole": 4, "detonator": 2}
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const MAP_EVENT_POOLS: Dictionary = {
 	"orcs_vs_elves_forest": ["gniew_korzeni", "przebudzenie_gaju", "lesne_opary", "magiczny_rozkwit"],

@@ -34,7 +34,14 @@ var QUICKSAND_TEXTURE: Texture2D = load("res://assets/mapTiles/quicksand.png")
 var DUNE_TEXTURE: Texture2D = load("res://assets/mapTiles/dune.png")
 var ICE_TEXTURE: Texture2D = load("res://assets/mapTiles/ice.png")
 var HOLY_TREE_TEXTURE: Texture2D = load("res://assets/holy_tree.png")
+var HOLY_TREE_LEFT_TEXTURE: Texture2D = load("res://assets/mapTiles/holy_tree/holy_tree_left.png")
+var HOLY_TREE_RIGHT_TEXTURE: Texture2D = load("res://assets/mapTiles/holy_tree/holy_tree_right.png")
+var HOLY_TREE_TOP_TEXTURE: Texture2D = load("res://assets/mapTiles/holy_tree/holy_tree_top.png")
+var HOLY_TREE_BOTTOM_TEXTURE: Texture2D = load("res://assets/mapTiles/holy_tree/holy_tree_bottom.png")
 var ELF_STATUE_TEXTURE: Texture2D = load("res://assets/elfStatue.png")
+var STATUE_LEFT_TEXTURE: Texture2D = load("res://assets/mapTiles/statue/statue_left.png")
+var STATUE_RIGHT_TEXTURE: Texture2D = load("res://assets/mapTiles/statue/statue_right.png")
+var STATUE_BOTTOM_TEXTURE: Texture2D = load("res://assets/mapTiles/statue/statue_bottom.png")
 var HOLE_TEXTURE: Texture2D = load("res://assets/hole.png")
 var CART_TEXTURE: Texture2D = load("res://assets/cart.png")
 var DETONATOR_TEXTURE: Texture2D = load("res://assets/detonator.png")
@@ -747,8 +754,16 @@ func draw_obstacles() -> void:
 		"zimowykszok": ZIMOWY_KRZOK_TEXTURE,
 		"ice": ICE_TEXTURE,
 		"holy_tree": HOLY_TREE_TEXTURE,
+		"holy_tree_single": HOLY_TREE_TEXTURE,
+		"holy_tree_left": HOLY_TREE_LEFT_TEXTURE,
+		"holy_tree_right": HOLY_TREE_RIGHT_TEXTURE,
+		"holy_tree_top": HOLY_TREE_TOP_TEXTURE,
+		"holy_tree_bottom": HOLY_TREE_BOTTOM_TEXTURE,
 		"swiete_drzewo": HOLY_TREE_TEXTURE,
 		"elf_statue": ELF_STATUE_TEXTURE,
+		"statue_left": STATUE_LEFT_TEXTURE,
+		"statue_right": STATUE_RIGHT_TEXTURE,
+		"statue_bottom": STATUE_BOTTOM_TEXTURE,
 		"posag_elfow": ELF_STATUE_TEXTURE,
 		"hole": HOLE_TEXTURE,
 		"dziura": HOLE_TEXTURE,
@@ -770,6 +785,9 @@ func draw_obstacles() -> void:
 
 func _draw_obstacle_connection_placeholders() -> void:
 	for obstacle in obstacles:
+		var obstacle_type: String = str(obstacle.get("type", ""))
+		if obstacle_type == "holy_tree" or obstacle_type == "elf_statue":
+			continue
 		var mask: int = int(obstacle.get("connection_mask", 0))
 		if mask == 0:
 			continue
