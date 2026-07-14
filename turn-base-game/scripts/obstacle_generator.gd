@@ -3,11 +3,12 @@ class_name ObstacleGenerator
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 
 
-static func generate(units: Array, obstacle_types: Array[String], columns: int, rows: int, setup_columns: int, winter_mode: bool = false, max_detonators: int = 2) -> Array[Dictionary]:
+static func generate(units: Array, obstacle_types: Array[String], columns: int, rows: int, setup_columns: int, winter_mode: bool = false, max_detonators: int = 2, max_elf_statues: int = 3) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var occupied: Dictionary = {}
 	var obstacle_types_by_cell: Dictionary = {}
 	var detonator_count: int = 0
+	var elf_statue_count: int = 0
 	for unit in units:
 		occupied[Vector2i(unit.grid_x, unit.grid_y)] = true
 
@@ -23,13 +24,22 @@ static func generate(units: Array, obstacle_types: Array[String], columns: int, 
 			if fallback_types.is_empty():
 				continue
 			obstacle_type = fallback_types[rng.randi_range(0, fallback_types.size() - 1)]
-		var cluster_size: int = 1 if obstacle_type == "detonator" else (rng.randi_range(1, 3) + (1 if cluster_index < 2 else 0))
+		if obstacle_type == "elf_statue" and elf_statue_count >= max_elf_statues:
+			var fallback_types: Array[String] = obstacle_types.duplicate()
+			while fallback_types.has("elf_statue"):
+				fallback_types.erase("elf_statue")
+			if fallback_types.is_empty():
+				continue
+			obstacle_type = fallback_types[rng.randi_range(0, fallback_types.size() - 1)]
+		var cluster_size: int = 1 if obstacle_type == "detonator" or obstacle_type == "elf_statue" else (rng.randi_range(1, 3) + (1 if cluster_index < 2 else 0))
 		var cluster: Array[Vector2i] = _generate_cluster(cluster_size, occupied, obstacle_types_by_cell, obstacle_type, rng, columns, rows, setup_columns)
 		for cell in cluster:
 			occupied[cell] = true
 			obstacle_types_by_cell[cell] = obstacle_type
 			if obstacle_type == "detonator":
 				detonator_count += 1
+			if obstacle_type == "elf_statue":
+				elf_statue_count += 1
 			var obstacle_data: Dictionary = {
 				"grid_x": cell.x,
 				"grid_y": cell.y,
@@ -130,5 +140,7 @@ static func _can_place_cell(cell: Vector2i, occupied: Dictionary, obstacle_types
 		if neighbor_type != "" and neighbor_type != obstacle_type:
 			return false
 		if obstacle_type == "detonator" and neighbor_type == "detonator":
+			return false
+		if obstacle_type == "elf_statue" and neighbor_type == "elf_statue":
 			return false
 	return true
