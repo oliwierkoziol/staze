@@ -59,6 +59,8 @@ const GENERAL_NAMES: Dictionary = {
 	"goblins": "Król Skrawek",
 	"humans": "Kapitan Alaric",
 }
+const ORC_GENERAL_KISHAK_NAME := "Wódz Kish'ak"
+const ORC_GENERAL_KISHAK_PORTRAIT: Texture2D = preload("res://assets/ui/general_kishak.png")
 const LOG_COLOR_YELLOW := Color(0.95, 0.82, 0.25, 1.0)
 const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
 const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
@@ -162,6 +164,7 @@ var skill_library: Dictionary = {}
 var general_skills: Dictionary = {}
 var general_skill_ids: Array[String] = []
 var general_skill_used := false
+var orc_general_is_kishak := false
 var terrain_effects: Array[Dictionary] = []
 var setup_mode := true
 var setup_drag_unit_id := -1
@@ -310,6 +313,7 @@ func _on_team_setup_finished(player_faction: String, enemy_faction: String) -> v
 	if board != null:
 		board.visible = true
 	_build_battle_config_from_factions(player_faction, enemy_faction)
+	_roll_orc_general_variant()
 	_setup_battle_scene()
 
 
@@ -318,6 +322,7 @@ func _on_team_setup_loaded(save_data: Dictionary) -> void:
 		victory_overlay.visible = false
 	current_player_faction = str(save_data.get("player_faction", ""))
 	current_enemy_faction = str(save_data.get("enemy_faction", ""))
+	orc_general_is_kishak = bool(save_data.get("orc_general_is_kishak", false))
 	free_setup_mode = bool(save_data.get("free_setup_mode", false))
 	_set_battle_background(str(save_data.get("background_path", DEFAULT_BATTLE_BACKGROUND_PATH)))
 	skill_library = UnitTypeLibraryScript.get_skill_library()
@@ -350,7 +355,12 @@ func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: 
 	if board != null:
 		board.visible = true
 	_build_test_battle_config(custom_units)
+	_roll_orc_general_variant()
 	_setup_battle_scene()
+
+
+func _roll_orc_general_variant() -> void:
+	orc_general_is_kishak = current_player_faction == "orcs" and randi_range(1, 10) == 1
 
 
 func _load_general_skills() -> void:
@@ -637,6 +647,7 @@ func _make_save_data() -> Dictionary:
 		"turn_queue_index": turn_queue_index,
 		"pending_skill_id": pending_skill_id,
 		"general_skill_used": general_skill_used,
+		"orc_general_is_kishak": orc_general_is_kishak,
 		"detonator_activated": detonator_activated,
 	}
 
@@ -683,6 +694,7 @@ func _apply_save_data(save_data: Dictionary) -> void:
 	turn_queue_index = int(save_data.get("turn_queue_index", -1))
 	pending_skill_id = str(save_data.get("pending_skill_id", ""))
 	general_skill_used = bool(save_data.get("general_skill_used", false))
+	orc_general_is_kishak = bool(save_data.get("orc_general_is_kishak", false))
 	is_animating = false
 	selected_obstacle_cell = Vector2i(-1, -1)
 	detonator_activated = bool(save_data.get("detonator_activated", false))
@@ -4897,10 +4909,14 @@ func _use_general_skill_by_index(index: int) -> void:
 
 func _refresh_general_display() -> void:
 	var faction: String = current_player_faction
-	general_name_label.text = str(GENERAL_NAMES.get(faction, "Generał"))
+	if faction == "orcs" and orc_general_is_kishak:
+		general_name_label.text = ORC_GENERAL_KISHAK_NAME
+		general_portrait.texture = ORC_GENERAL_KISHAK_PORTRAIT
+	else:
+		general_name_label.text = str(GENERAL_NAMES.get(faction, "Generał"))
+		var portrait: Texture2D = GENERAL_PORTRAITS.get(faction, DEFAULT_GENERAL_PORTRAIT)
+		general_portrait.texture = portrait if portrait != null else DEFAULT_GENERAL_PORTRAIT
 	general_level_label.text = "Poziom 5"
-	var portrait: Texture2D = GENERAL_PORTRAITS.get(faction, DEFAULT_GENERAL_PORTRAIT)
-	general_portrait.texture = portrait if portrait != null else DEFAULT_GENERAL_PORTRAIT
 
 
 func _refresh_general_ability_buttons() -> void:
