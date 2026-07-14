@@ -6,3 +6,4 @@
 08.07.2026 - Dodanie pozostałych grafik, dodanie nowych funkcjonalności do baraków, zrealizowanie zamysłu wojskowości miasta. Stworzenie planu na dalszy rozwój gry.
 09.07.2026 - Wprowadzenie większej dynamiki do gry. Stworzenie wrogich obozowisk na mapie, dodanie ich statystyk, armii. Restrukturyzacja całego projektu, rozłożenie plików i folderów na mniejsze, co ułatwia przegląd projektu i czytleność.
 10.07.2026 - Poprawa błędów po restrukturyzacji. Dodanie ograniczeń i zależności do wrogich obozowisk. Poprawa zliczania jednostek w armii i powiększenie mapy. Dodanie mgły wojny.
+13.07.2026 - Naprawa błędów logicznych w aplikacji m.in. brak resetu stanu przy nowej grze, brak ostrzeżeń o wyczerpaniu surowców, błędne przeliczniki jednostek po ulepszaniu budynku baraków, nieładowanie się tekstur. Początkowe prace nad generowaniem nowych grafik.
