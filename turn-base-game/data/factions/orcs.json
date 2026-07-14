@@ -40,9 +40,9 @@
         "resistance": "Brak",
         "portrait": "res://assets/characters/humans/orcBerserker.png",
         "skill_ids": [
-          "skupiony_cios",
+          "rozszarpanie",
           "berserk",
-          "krwawa_ofiara"
+          "zadza_krwi"
         ]
       },
       {

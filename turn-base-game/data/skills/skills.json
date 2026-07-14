@@ -161,6 +161,16 @@
 	  "target_type": "enemy_unit",
 	  "effect_type": "focused_strike"
 	},
+	"rozszarpanie": {
+	  "id": "rozszarpanie",
+	  "name": "Rozszarpanie",
+	  "description": "Atak wręcz zadający 100% obrażeń i nakładający Krwawienie na 2 tury.",
+	  "ap_cost": 1,
+	  "cooldown": 2,
+	  "range": 1,
+	  "target_type": "enemy_unit",
+	  "effect_type": "rozszarpanie"
+	},
 	"rzut_toporem": {
 	  "id": "rzut_toporem",
 	  "name": "Rzut Toporem",
@@ -324,6 +334,16 @@
 		  {"stat": "def", "mode": "percent", "value": -20}
 		]
 	  }
+	},
+	"zadza_krwi": {
+	  "id": "zadza_krwi",
+	  "name": "Żądza krwi",
+	  "description": "Na stałe zwiększa obrażenia o 2 do końca bitwy. Każde użycie kumuluje bonus.",
+	  "ap_cost": 1,
+	  "cooldown": 4,
+	  "range": 0,
+	  "target_type": "self",
+	  "effect_type": "zadza_krwi"
 	},
 	"rzut_dynamitem": {
 	  "id": "rzut_dynamitem",

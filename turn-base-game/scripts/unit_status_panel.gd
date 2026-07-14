@@ -5,6 +5,7 @@ const TEXT_COLOR := Color(0.9, 0.87, 0.78, 1.0)
 const MUTED_COLOR := Color(0.55, 0.52, 0.48, 1.0)
 const EFFECT_ICON_SIZE := Vector2(28, 28)
 const EFFECT_TURNS_FONT_SIZE := 12
+const EFFECT_COUNTER_MIN_HEIGHT := 14
 const EFFECT_ITEM_SEPARATION := 8
 const EFFECT_ROW_SEPARATION := 2
 const EFFECT_ENTRY_SEPARATION := 1
@@ -19,6 +20,7 @@ const EFFECT_PANEL_MARGIN_H := 4
 const EFFECT_PANEL_MARGIN_V := 6
 const BUFF_ICON_TINT := Color(0.35, 0.72, 0.32, 1.0)
 const DEFAULT_DEBUFF_ICON_TINT := Color(0.55, 0.32, 0.72, 1.0)
+const EFFECT_HOVER_BRIGHTNESS := 1.18
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 
 var _buffs_list: VBoxContainer
@@ -134,8 +136,7 @@ func _make_effect_entry(effect: Dictionary) -> Control:
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_theme_constant_override("separation", EFFECT_ENTRY_SEPARATION)
 	column.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	column.tooltip_text = tooltip
-	column.mouse_filter = Control.MOUSE_FILTER_STOP
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var icon := TextureRect.new()
 	icon.texture = effect_icon
@@ -144,18 +145,55 @@ func _make_effect_entry(effect: Dictionary) -> Control:
 	icon.custom_minimum_size = EFFECT_ICON_SIZE
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.tooltip_text = tooltip
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(icon)
 
-	var turns_label := Label.new()
-	turns_label.text = str(int(effect.get("remaining_turns", 0)))
-	turns_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	turns_label.add_theme_color_override("font_color", TEXT_COLOR)
-	turns_label.add_theme_font_size_override("font_size", EFFECT_TURNS_FONT_SIZE)
-	turns_label.tooltip_text = tooltip
-	column.add_child(turns_label)
+	var counter_text := _format_effect_counter(effect)
+	var counter_label := Label.new()
+	counter_label.text = counter_text
+	counter_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	counter_label.add_theme_color_override("font_color", TEXT_COLOR)
+	counter_label.add_theme_font_size_override("font_size", EFFECT_TURNS_FONT_SIZE)
+	counter_label.custom_minimum_size.y = EFFECT_COUNTER_MIN_HEIGHT
+	counter_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(counter_label)
 
-	return _wrap_in_panel(column, tooltip)
+	var entry := _wrap_in_panel(column, tooltip)
+	_bind_effect_entry_hover(entry)
+	return entry
+
+
+func _bind_effect_entry_hover(entry: Control) -> void:
+	var base_modulate := Color.WHITE
+	entry.mouse_entered.connect(func() -> void:
+		entry.modulate = base_modulate * EFFECT_HOVER_BRIGHTNESS
+	)
+	entry.mouse_exited.connect(func() -> void:
+		entry.modulate = base_modulate
+	)
+
+
+func _is_terrain_bound_effect(effect: Dictionary) -> bool:
+	if bool(effect.get("terrain_bound", false)):
+		return true
+	var meta: Dictionary = UnitTypeLibraryScript.get_status_effect(str(effect.get("id", "")))
+	return bool(meta.get("terrain_bound", false))
+
+
+func _format_effect_counter(effect: Dictionary) -> String:
+	if _is_terrain_bound_effect(effect):
+		return ""
+	if effect.has("stack_amount"):
+		return "%dx" % int(effect.get("stack_amount", 1))
+	return str(int(effect.get("remaining_turns", 0)))
+
+
+func _format_effect_duration_line(effect: Dictionary) -> String:
+	if _is_terrain_bound_effect(effect):
+		return ""
+	if effect.has("stack_amount"):
+		return "Nałożeń efektu: %d" % int(effect.get("stack_amount", 1))
+	return "Pozostale tury: %d" % int(effect.get("remaining_turns", 0))
 
 
 func _resolve_effect_tint(effect: Dictionary) -> Color:
@@ -221,5 +259,7 @@ func _build_effect_tooltip(effect: Dictionary) -> String:
 	if description != "":
 		lines.append(description)
 
-	lines.append("Pozostale tury: %d" % int(effect.get("remaining_turns", 0)))
+	var duration_line := _format_effect_duration_line(effect)
+	if duration_line != "":
+		lines.append(duration_line)
 	return "\n".join(lines)

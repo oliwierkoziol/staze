@@ -16,6 +16,16 @@
 	  "icon": "res://assets/ui/berserk.png",
 	  "color": "#DB5959"
 	},
+	"zadza_krwi": {
+	  "id": "zadza_krwi",
+	  "name": "Żądza krwi",
+	  "description": "Na stałe zwieksza obrazenia o 2 do konca bitwy.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/berserk.png",
+	  "color": "#B83232",
+	  "permanent": true,
+	  "stat_changes": []
+	},
 	"bitewny_trucht": {
 	  "id": "bitewny_trucht",
 	  "name": "Bitewny Trucht",
@@ -31,7 +41,7 @@
 	  "category": "buff",
 	  "icon": "res://assets/ui/aura.png",
 	  "color": "#7AD67A",
-	  "remaining_turns": 1,
+	  "terrain_bound": true,
 	  "stat_changes": [
 		{"stat": "dmg", "mode": "flat", "value": 2}
 	  ]
@@ -43,7 +53,7 @@
 	  "category": "buff",
 	  "icon": "res://assets/ui/invisibility.png",
 	  "color": "#A88B5C",
-	  "remaining_turns": 2,
+	  "terrain_bound": true,
 	  "hides_unit": true,
 	  "stat_changes": []
 	},
@@ -100,7 +110,7 @@
 	  "category": "buff",
 	  "icon": "res://assets/ui/invisibility.png",
 	  "color": "#7AD67A",
-	  "remaining_turns": 2,
+	  "terrain_bound": true,
 	  "hides_unit": true,
 	  "stat_changes": []
 	},
@@ -111,7 +121,7 @@
 	  "category": "buff",
 	  "icon": "res://assets/ui/invisibility.png",
 	  "color": "#57C757",
-	  "remaining_turns": 2,
+	  "terrain_bound": true,
 	  "hides_unit": true,
 	  "stat_changes": []
 	},
@@ -313,7 +323,7 @@
 	  "category": "buff",
 	  "icon": "res://assets/ui/invisibility.png",
 	  "color": "#80D6FF",
-	  "remaining_turns": 2,
+	  "terrain_bound": true,
 	  "hides_unit": true,
 	  "stat_changes": []
 	},

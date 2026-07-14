@@ -1508,6 +1508,9 @@ func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
 		if target_type == "self" and str(skill.get("effect_type", "")) == "self_buff" and not _has_effect(enemy_unit, str(skill.get("id", ""))):
 			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
 			return true
+		if target_type == "self" and str(skill.get("effect_type", "")) == "zadza_krwi":
+			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
+			return true
 		if str(skill.get("effect_type", "")) == "charge" and _try_enemy_charge(enemy_unit, target, skill):
 			return true
 		if target_type == "enemy_unit" and _hex_distance(Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), target_cell) <= int(skill.get("range", 0)) and not _is_attack_blocked(enemy_unit, target_cell):
@@ -2475,8 +2478,12 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_iron_curtain(caster, target)
 		"self_buff":
 			_execute_self_buff(caster, skill)
+		"zadza_krwi":
+			_execute_zadza_krwi(caster, skill)
 		"focused_strike":
 			_execute_focused_strike(caster, target, skill)
+		"rozszarpanie":
+			_execute_rozszarpanie(caster, target)
 
 	_sync_board()
 
@@ -2812,6 +2819,31 @@ func _execute_self_buff(caster: Dictionary, skill: Dictionary) -> void:
 	_log_event("%s uzywa %s." % [_unit_name_log_text(caster), str(skill.get("name", skill.get("id", "")))])
 
 
+func _execute_zadza_krwi(caster: Dictionary, skill: Dictionary) -> void:
+	caster["base_dmg"] = int(caster.get("base_dmg", caster.get("dmg", 0))) + 2
+	var stack_amount: int = 1
+	for effect in caster.get("active_effects", []):
+		if str(effect.get("id", "")) == "zadza_krwi":
+			stack_amount = int(effect.get("stack_amount", 1)) + 1
+			break
+	_apply_or_refresh_effect(caster, {
+		"id": "zadza_krwi",
+		"name": "Żądza krwi",
+		"category": "buff",
+		"permanent": true,
+		"stack_amount": stack_amount,
+		"stat_changes": []
+	})
+	_recalculate_unit_stats(caster)
+	_log_event(
+		"%s uzywa %s i zyskuje stale +2 DMG (lacznie +%d do konca bitwy)." % [
+			_unit_name_log_text(caster),
+			str(skill.get("name", "Żądza krwi")),
+			stack_amount * 2
+		]
+	)
+
+
 func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dictionary = {}) -> void:
 	var total_damage := _calculate_damage(caster, target)
 	var projectile_kind: String = str(skill.get("projectile_kind", ""))
@@ -2824,6 +2856,34 @@ func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dict
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
 			_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+		]
+	)
+	_cleanup_destroyed_unit(hit_target)
+
+
+func _execute_rozszarpanie(caster: Dictionary, target: Dictionary) -> void:
+	var total_damage := _calculate_damage(caster, target)
+	var result := _apply_attack_damage(caster, target, total_damage, false, true)
+	var hit_target: Dictionary = result.get("target", target)
+	var casualties := int(result.get("casualties", 0))
+	var bleed_suffix := ""
+	if int(result.get("damage", 0)) > 0:
+		_apply_or_refresh_effect(hit_target, {
+			"id": "krwawienie",
+			"name": "Krwawienie",
+			"category": "debuff",
+			"remaining_turns": 2,
+			"stat_changes": [],
+			"tick_damage": max(1, int(ceil(float(caster.dmg) * 0.25)))
+		})
+		bleed_suffix = " Cel krwawi."
+	_log_event(
+		"%s rozszarpa %s za %s obrazen i %s strat.%s" % [
+			_unit_name_log_text(caster),
+			_unit_name_log_text(hit_target),
+			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
+			_color_log_text(str(casualties), LOG_COLOR_DAMAGE),
+			bleed_suffix
 		]
 	)
 	_cleanup_destroyed_unit(hit_target)
@@ -2950,6 +3010,20 @@ func _apply_elf_statue_buff(unit: Dictionary) -> void:
 		_apply_or_refresh_effect(unit, {"id": "blogoslawienstwo_elfow"})
 	else:
 		_remove_effect(unit, "blogoslawienstwo_elfow")
+
+
+func _refresh_terrain_bound_effects(unit: Dictionary) -> void:
+	var cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
+	if _terrain_hides_unit(cell):
+		var terrain_effect: Dictionary = _get_terrain_entry_effect(cell)
+		if not terrain_effect.is_empty():
+			_apply_or_refresh_effect(unit, terrain_effect)
+			unit["is_hidden"] = true
+		return
+	for effect in unit.get("active_effects", []):
+		if bool(effect.get("terrain_bound", false)) and bool(effect.get("hides_unit", false)):
+			_remove_hiding_effects(unit)
+			return
 
 
 func _get_terrain_type_at(cell: Vector2i) -> String:
@@ -3425,7 +3499,10 @@ func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void
 	for existing in effects:
 		if str(existing.get("id", "")) != str(effect_data.get("id", "")):
 			continue
-		existing["remaining_turns"] = int(effect_data.get("remaining_turns", 0))
+		if effect_data.has("remaining_turns"):
+			existing["remaining_turns"] = int(effect_data.get("remaining_turns", 0))
+		if effect_data.has("stack_amount"):
+			existing["stack_amount"] = int(effect_data.get("stack_amount", 1))
 		existing["stat_changes"] = effect_data.get("stat_changes", [])
 		if effect_data.has("tick_damage"):
 			existing["tick_damage"] = int(effect_data.get("tick_damage", 0))
@@ -3437,6 +3514,10 @@ func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void
 			existing["block_next_attack"] = bool(effect_data.get("block_next_attack", false))
 		if effect_data.has("forward_only"):
 			existing["forward_only"] = bool(effect_data.get("forward_only", false))
+		if effect_data.has("permanent"):
+			existing["permanent"] = bool(effect_data.get("permanent", false))
+		if effect_data.has("terrain_bound"):
+			existing["terrain_bound"] = bool(effect_data.get("terrain_bound", false))
 		_recalculate_unit_stats(unit)
 		_add_current_move_gain(unit, previous_move_range)
 		return
@@ -3458,6 +3539,7 @@ func _process_turn_start(unit: Dictionary) -> void:
 	_ensure_energy_barrier(unit)
 	_remove_effect(unit, "woda")
 	_apply_elf_statue_buff(unit)
+	_refresh_terrain_bound_effects(unit)
 	var effects: Array = unit.get("active_effects", [])
 	var skipped_turn := false
 	for effect in effects:
@@ -3507,6 +3589,9 @@ func _advance_unit_effects(unit: Dictionary) -> void:
 	var kept_effects: Array = []
 	var was_hidden := bool(unit.get("is_hidden", false))
 	for effect in unit.get("active_effects", []):
+		if bool(effect.get("permanent", false)) or bool(effect.get("terrain_bound", false)):
+			kept_effects.append(effect)
+			continue
 		effect["remaining_turns"] = int(effect.get("remaining_turns", 0)) - 1
 		if int(effect["remaining_turns"]) > 0:
 			kept_effects.append(effect)
@@ -4387,6 +4472,10 @@ func _validate_setup() -> void:
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna"), "Umiejetnosci bierne nie moga byc uzywane recznie.")
 	assert(skill_library.has("deszcz_strzal"), "Brak skilla deszcz_strzal w bibliotece.")
 	assert(str(skill_library["deszcz_strzal"].get("effect_type", "")) == "arrow_rain", "Deszcz Strzal musi miec efekt arrow_rain.")
+	assert(skill_library.has("rozszarpanie"), "Brak skilla rozszarpanie w bibliotece.")
+	assert(str(skill_library["rozszarpanie"].get("effect_type", "")) == "rozszarpanie", "Rozszarpanie musi miec efekt rozszarpanie.")
+	assert(skill_library.has("zadza_krwi"), "Brak skilla zadza_krwi w bibliotece.")
+	assert(str(skill_library["zadza_krwi"].get("effect_type", "")) == "zadza_krwi", "Zadza krwi musi miec efekt zadza_krwi.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}, "skill_ids": []}, "pulapka_na_niedzwiedzie"), "Jednostka nie moze uzywac umiejetnosci spoza skill_ids.")
 	var previous_units: Array = units.duplicate(true)
 	var previous_obstacles: Array[Dictionary] = obstacles.duplicate(true)
