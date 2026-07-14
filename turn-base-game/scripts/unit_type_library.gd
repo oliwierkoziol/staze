@@ -74,6 +74,10 @@ static func _load() -> void:
 		_skill_library[str(skill_id)] = _normalize_skill_config(str(skill_id), raw_skill)
 
 	var factions_dir: String = str(config.get("factions_path", "res://data/factions/"))
+	for raw_unit in config.get("special_units", []):
+		if typeof(raw_unit) == TYPE_DICTIONARY:
+			var special_unit: Dictionary = _normalize_unit_type(raw_unit)
+			_unit_lookup[special_unit.id] = special_unit
 	var faction_files: Array = config.get("factions", [])
 	for faction_file in faction_files:
 		if typeof(faction_file) != TYPE_STRING:

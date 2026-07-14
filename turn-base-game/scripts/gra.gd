@@ -3,6 +3,27 @@ extends Control
 const BATTLE_CONFIG_PATH := "res://data/battle_config.json"
 const TERRAIN_TYPES_PATH := "res://data/terrain_types.json"
 const DEFAULT_BATTLE_BACKGROUND_PATH := "res://assets/backgrounds/back.png"
+const CASTLE_BACKGROUNDS: Array[String] = [
+	"res://assets/backgrounds/scenarios/zamek_etap_1_mury.png",
+	"res://assets/backgrounds/scenarios/zamek_etap_2_przedmiescia.png",
+	"res://assets/backgrounds/scenarios/zamek_etap_3_centrum.png",
+]
+# Ręczny układ: {"grid_x": 7, "grid_y": 4, "type": "kamienie"}.
+const CASTLE_STAGE_OBSTACLES: Dictionary = {1: [], 2: [], 3: []}
+const CASTLE_STAGE_ENEMIES: Dictionary = {
+	2: [
+		{"type_id": "human_cavalry", "count": 5, "grid_x": 12, "grid_y": 2},
+		{"type_id": "human_knights", "count": 8, "grid_x": 13, "grid_y": 4},
+		{"type_id": "human_archers", "count": 8, "grid_x": 12, "grid_y": 6},
+		{"type_id": "human_mages", "count": 5, "grid_x": 13, "grid_y": 8},
+	],
+	3: [
+		{"type_id": "human_knights", "count": 10, "grid_x": 12, "grid_y": 3},
+		{"type_id": "human_knights", "count": 10, "grid_x": 12, "grid_y": 7},
+		{"type_id": "human_knights", "count": 10, "grid_x": 12, "grid_y": 6},
+		{"type_id": "human_king", "count": 1, "grid_x": 14, "grid_y": 5},
+	],
+}
 const GRID_COLUMNS := 15
 const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
@@ -185,6 +206,7 @@ var save_setup_dialog: FileDialog
 var current_player_faction := ""
 var current_enemy_faction := ""
 var current_battle_background_path: String = DEFAULT_BATTLE_BACKGROUND_PATH
+var castle_stage := 0
 var free_setup_mode := false
 var help_popup: PanelContainer
 var help_popup_content: VBoxContainer
@@ -266,6 +288,11 @@ func _input(event: InputEvent) -> void:
 	if save_setup_dialog != null and save_setup_dialog.visible:
 		return
 
+	if event.keycode == KEY_RIGHT and castle_stage > 0 and castle_stage < CASTLE_BACKGROUNDS.size() and not setup_mode and not is_animating:
+		_advance_castle_stage()
+		get_viewport().set_input_as_handled()
+		return
+
 	if event.keycode == KEY_ESCAPE:
 		_on_reset_battle_pressed()
 		get_viewport().set_input_as_handled()
@@ -312,6 +339,7 @@ func _on_team_setup_finished(player_faction: String, enemy_faction: String) -> v
 		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
+	castle_stage = 0
 	free_setup_mode = false
 	_set_battle_background(DEFAULT_BATTLE_BACKGROUND_PATH)
 	skill_library = UnitTypeLibraryScript.get_skill_library()
@@ -333,6 +361,7 @@ func _on_team_setup_loaded(save_data: Dictionary) -> void:
 		victory_overlay.visible = false
 	current_player_faction = str(save_data.get("player_faction", ""))
 	current_enemy_faction = str(save_data.get("enemy_faction", ""))
+	castle_stage = int(save_data.get("castle_stage", 0))
 	orc_general_is_kishak = bool(save_data.get("orc_general_is_kishak", false))
 	free_setup_mode = bool(save_data.get("free_setup_mode", false))
 	_set_battle_background(str(save_data.get("background_path", DEFAULT_BATTLE_BACKGROUND_PATH)))
@@ -354,6 +383,7 @@ func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: 
 		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
+	castle_stage = 1 if background_path == CASTLE_BACKGROUNDS[0] else 0
 	free_setup_mode = player_faction == "testowa" and enemy_faction == "testowa"
 	_set_battle_background(background_path if background_path != "" else DEFAULT_BATTLE_BACKGROUND_PATH)
 	skill_library = UnitTypeLibraryScript.get_skill_library()
@@ -444,6 +474,8 @@ func _build_test_battle_config(custom_units: Array[Dictionary]) -> void:
 			enemy_index += 1
 		else:
 			continue
+		if unit.has("grid_x") and unit.has("grid_y"):
+			pos = Vector2i(int(unit.grid_x), int(unit.grid_y))
 		unit_configs.append({
 			"id": int(unit.get("id", unit_configs.size() + 1)),
 			"type_id": str(unit.get("type_id", "")),
@@ -641,6 +673,7 @@ func _make_save_data() -> Dictionary:
 		"player_faction": current_player_faction,
 		"enemy_faction": current_enemy_faction,
 		"background_path": current_battle_background_path,
+		"castle_stage": castle_stage,
 		"free_setup_mode": free_setup_mode,
 		"setup_mode": setup_mode,
 		"units": units.duplicate(true),
@@ -755,6 +788,7 @@ func _on_reset_battle_pressed() -> void:
 	current_player_faction = ""
 	current_enemy_faction = ""
 	free_setup_mode = false
+	castle_stage = 0
 	_set_battle_background(DEFAULT_BATTLE_BACKGROUND_PATH)
 	selected_unit_id = -1
 	setup_drag_unit_id = -1
@@ -2370,10 +2404,12 @@ func _try_enemy_charge(enemy_unit: Dictionary, target: Dictionary, skill: Dictio
 
 
 func _calculate_damage(attacker: Dictionary, target: Dictionary, damage_multiplier := 1.0) -> int:
+	var attacker_count: int = max(1, int(attacker.get("count", 1)))
+	var effective_count: float = sqrt(float(attacker_count))
 	var scaled_damage: float = max(1.0, float(attacker.get("dmg", 1)) * damage_multiplier)
-	var raw_total: float = scaled_damage * float(attacker.get("count", 1))
-	var defense_reduction: float = float(target.get("def", 0)) * float(target.get("count", 1))
-	return max(1, int(raw_total - defense_reduction))
+	var defense: float = float(target.get("def", 0))
+	var defense_multiplier: float = 100.0 / (100.0 + defense * 10.0) if defense >= 0.0 else 1.0 + abs(defense) * 0.1
+	return max(int(ceil(effective_count)), int(scaled_damage * effective_count * defense_multiplier * 1.35))
 
 
 func _get_incoming_damage_multiplier(unit: Dictionary) -> float:
@@ -4300,6 +4336,8 @@ func _are_active_skills_on_cooldown(unit: Dictionary) -> bool:
 
 
 func _generate_obstacles() -> Array[Dictionary]:
+	if _is_castle_scenario():
+		return _typed_dictionary_array(CASTLE_STAGE_OBSTACLES.get(castle_stage, []))
 	var winter_mode: bool = _is_winter_scenario()
 	var desert_mode: bool = _is_desert_scenario()
 	var forest_mode: bool = _is_forest_scenario()
@@ -4321,6 +4359,10 @@ func _generate_obstacles() -> Array[Dictionary]:
 			if str(obstacle.get("type", "")) == "kamienie":
 				obstacle["variant"] = "dune"
 	return generated
+
+
+func _is_castle_scenario() -> bool:
+	return current_battle_background_path.get_file().get_basename().begins_with("zamek_etap_")
 
 
 func _is_mine_scenario() -> bool:
@@ -4828,6 +4870,7 @@ func _on_victory_finish_pressed() -> void:
 	current_player_faction = ""
 	current_enemy_faction = ""
 	free_setup_mode = false
+	castle_stage = 0
 	_set_battle_background(DEFAULT_BATTLE_BACKGROUND_PATH)
 	selected_unit_id = -1
 	setup_drag_unit_id = -1
@@ -4870,6 +4913,8 @@ func _disable_hud_mouse(node: Node) -> void:
 
 
 func _validate_setup() -> void:
+	assert(GRID_COLUMNS == 15 and GRID_ROWS == 10, "Scenariusz Zamek wymaga planszy 15x10.")
+	assert(CASTLE_BACKGROUNDS.size() == 3 and CASTLE_STAGE_ENEMIES.has(2) and CASTLE_STAGE_ENEMIES.has(3), "Scenariusz Zamek musi miec trzy etapy.")
 	for unit in unit_configs:
 		assert(unit.grid_x >= 0 and unit.grid_x < GRID_COLUMNS)
 		assert(unit.grid_y >= 0 and unit.grid_y < GRID_ROWS)
@@ -4920,9 +4965,9 @@ func _validate_setup() -> void:
 		assert(event_pool.size() == 4, "Kazdy scenariusz musi miec cztery eventy: %s" % scenario_id)
 		for event_id in event_pool:
 			assert(MAP_EVENT_DATA.has(event_id), "Brak danych eventu: %s" % event_id)
-	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 8, "count": 1}) == 1, "DEF x count broniacego odejmuje od calego ataku.")
-	assert(_calculate_damage({"dmg": 12, "count": 4}, {"def": 3, "count": 7}) == 27, "Berserker x4 vs elf lucznik x7: 48 - 21 = 27.")
-	assert(_calculate_damage({"dmg": 12, "count": 4}, {"def": 6, "count": 4}) == 24, "Berserker x4 vs def 6 x4: 48 - 24 = 24.")
+	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 4, "count": 10}) == 6, "Liczebnosc obroncy nie moze wplywac na redukcje DEF.")
+	assert(_calculate_damage({"dmg": 12, "count": 4}, {"def": 1, "count": 5}) == 29, "Berserker x4 vs elf mag x5 powinien zadac 29 obrazen.")
+	assert(_calculate_damage({"dmg": 1, "count": 10}, {"def": 6, "count": 10}) == 4, "Minimalne obrazenia musza skalowac sie pierwiastkiem liczebnosci.")
 	assert(_calculate_damage({"dmg": 10, "count": 1}, {"def": -4, "count": 1}) > _calculate_damage({"dmg": 10, "count": 1}, {"def": 0, "count": 1}), "Ujemna DEF powinna zwiekszac otrzymywane obrazenia.")
 	for faction_id in UnitTypeLibraryScript.get_faction_ids():
 		for type_data in UnitTypeLibraryScript.get_faction_units(faction_id):
@@ -5567,6 +5612,9 @@ func _check_victory() -> bool:
 	if has_player and has_enemy:
 		return false
 	var winner_side := "player" if has_player else "enemy"
+	if winner_side == "player" and castle_stage > 0 and castle_stage < CASTLE_BACKGROUNDS.size():
+		_advance_castle_stage()
+		return true
 	active_unit_id = -1
 	current_turn = ""
 	selected_unit_id = -1
@@ -5581,6 +5629,58 @@ func _check_victory() -> bool:
 	_refresh_turn_queue()
 	_show_victory_overlay(winner_side)
 	return true
+
+
+func _advance_castle_stage() -> void:
+	castle_stage += 1
+	_set_battle_background(CASTLE_BACKGROUNDS[castle_stage - 1])
+	var survivors: Array[Dictionary] = []
+	for unit in units:
+		if str(unit.side) == "player":
+			survivors.append(unit)
+	var player_positions: Array[Vector2i] = _compute_player_positions(survivors.size())
+	for index in survivors.size():
+		survivors[index]["grid_x"] = player_positions[index].x
+		survivors[index]["grid_y"] = player_positions[index].y
+		survivors[index]["remaining_move"] = int(survivors[index].get("move_range", 0))
+		survivors[index]["action_points"] = int(survivors[index].get("base_action_points", 1))
+
+	var enemy_configs: Array[Dictionary] = _typed_dictionary_array(CASTLE_STAGE_ENEMIES.get(castle_stage, []))
+	for index in enemy_configs.size():
+		var config: Dictionary = enemy_configs[index]
+		survivors.append(_prepare_unit({
+			"id": 100 * castle_stage + index,
+			"type_id": str(config.type_id),
+			"side": "enemy",
+			"count": int(config.count),
+			"grid_x": int(config.grid_x),
+			"grid_y": int(config.grid_y),
+		}))
+
+	units = survivors
+	obstacles = _generate_obstacles()
+	terrain_effects = []
+	round_number = 1
+	next_map_event_id = ""
+	next_map_event_round = 0
+	map_event_cells.clear()
+	_schedule_next_map_event(0)
+	selected_unit_id = -1
+	active_unit_id = -1
+	current_turn = ""
+	pending_skill_id = ""
+	turn_queue_index = -1
+	turn_queue.clear()
+	event_log.clear()
+	board.set_selected_unit(-1)
+	board.set_units(units)
+	board.reset_unit_positions(units)
+	board.set_obstacles(obstacles)
+	board.set_terrain_effects(terrain_effects)
+	_sync_board()
+	_log_event(_color_log_text("ETAP %d/3: szturm trwa." % castle_stage, LOG_COLOR_YELLOW))
+	_rebuild_turn_queue()
+	_start_next_activation()
 
 
 func _get_visible_turn_queue() -> Array[int]:
