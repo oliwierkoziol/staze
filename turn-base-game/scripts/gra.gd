@@ -1613,6 +1613,15 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 
 
 func _on_board_cell_hovered(cell: Vector2i) -> void:
+	if not setup_mode and cell.x != -1 and _get_terrain_type_at(cell) == "detonator":
+		board.set_hovered_move_path([])
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
+		_clear_move_cost_label()
+		board.set_hovered_detonator_preview(_random_detonator_target_cells(cell))
+		return
+	board.set_hovered_detonator_preview([])
+
 	if setup_mode:
 		board.set_hovered_move_path([])
 		_clear_move_cost_label()

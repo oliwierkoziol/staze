@@ -23,7 +23,7 @@ static func generate(units: Array, obstacle_types: Array[String], columns: int, 
 			if fallback_types.is_empty():
 				continue
 			obstacle_type = fallback_types[rng.randi_range(0, fallback_types.size() - 1)]
-		var cluster_size: int = rng.randi_range(1, 3) + (1 if cluster_index < 2 else 0)
+		var cluster_size: int = 1 if obstacle_type == "detonator" else (rng.randi_range(1, 3) + (1 if cluster_index < 2 else 0))
 		var cluster: Array[Vector2i] = _generate_cluster(cluster_size, occupied, obstacle_types_by_cell, obstacle_type, rng, columns, rows, setup_columns)
 		for cell in cluster:
 			occupied[cell] = true
