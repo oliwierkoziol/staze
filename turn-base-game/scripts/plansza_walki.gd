@@ -15,6 +15,7 @@ const SQRT_THREE := 1.7320508
 const HEX_FILL_COLOR := Color(0.07, 0.05, 0.02, 0.20)
 const HEX_OUTER_BORDER_COLOR := Color(0.14, 0.08, 0.03, 0.86)
 const HEX_INNER_BORDER_COLOR := Color(0.76, 0.62, 0.36, 0.42)
+const SHOW_OBSTACLE_CONNECTION_DEBUG := false
 const UNIT_COUNT_BADGE_BG := Color(0.10, 0.10, 0.08, 0.96)
 const UNIT_COUNT_BADGE_BORDER := Color(0.65, 0.52, 0.20, 0.90)
 const UNIT_COUNT_BADGE_TEXT := Color(0.95, 0.90, 0.78, 1.0)
@@ -818,6 +819,8 @@ func _draw_statue_buff_cells() -> void:
 
 
 func _draw_obstacle_connection_placeholders() -> void:
+	if not SHOW_OBSTACLE_CONNECTION_DEBUG:
+		return
 	for obstacle in obstacles:
 		var obstacle_type: String = str(obstacle.get("type", ""))
 		if obstacle_type == "holy_tree" or obstacle_type == "elf_statue":
