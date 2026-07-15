@@ -6,6 +6,7 @@
   "enemy_faction": "humans",
   "stages": [
 	{
+	  "name": "Mury",
 	  "background": "res://assets/backgrounds/scenarios/zamek_etap_1_mury.png",
 	  "player_units": [
 		{"type_id": "orc_warrior", "count": 14},
@@ -22,6 +23,7 @@
 	  "obstacles": []
 	},
 	{
+	  "name": "Przedmieścia",
 	  "background": "res://assets/backgrounds/scenarios/zamek_etap_2_przedmiescia.png",
 	  "enemy_units": [
 		{"type_id": "human_cavalry", "count": 5, "grid_x": 12, "grid_y": 2},
@@ -32,6 +34,7 @@
 	  "obstacles": []
 	},
 	{
+	  "name": "Centrum",
 	  "background": "res://assets/backgrounds/scenarios/zamek_etap_3_centrum.png",
 	  "enemy_units": [
 		{"type_id": "human_knights", "count": 10, "grid_x": 12, "grid_y": 3},

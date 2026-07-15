@@ -8,6 +8,7 @@ static var _factions: Array[Dictionary] = []
 static var _unit_lookup: Dictionary = {}
 static var _skill_library: Dictionary = {}
 static var _general_skills: Dictionary = {}
+static var _faction_general_skills: Dictionary = {}
 static var _status_effects: Dictionary = {}
 static var _loaded := false
 
@@ -46,6 +47,7 @@ static func _load() -> void:
 	_unit_lookup.clear()
 	_skill_library.clear()
 	_general_skills.clear()
+	_faction_general_skills.clear()
 	_status_effects.clear()
 
 	var status_effects_data: Dictionary = _load_json_file(STATUS_EFFECTS_PATH)
@@ -58,6 +60,7 @@ static func _load() -> void:
 
 	var general_data: Dictionary = _load_json_file(GENERAL_SKILLS_PATH)
 	var raw_general_skills: Dictionary = general_data.get("general_skills", {})
+	_faction_general_skills = general_data.get("faction_skills", {}).duplicate(true)
 	for skill_id in raw_general_skills.keys():
 		var raw_skill: Variant = raw_general_skills[skill_id]
 		if typeof(raw_skill) != TYPE_DICTIONARY:
@@ -154,6 +157,9 @@ static func _normalize_general_skill(skill_id: String, raw_skill: Dictionary) ->
 	skill["name"] = str(skill.get("name", skill_id))
 	skill["description"] = str(skill.get("description", ""))
 	skill["cooldown"] = int(skill.get("cooldown", 0))
+	skill["effect_type"] = str(skill.get("effect_type", "army_buff"))
+	skill["radius"] = int(skill.get("radius", 0))
+	skill["damage_per_unit"] = int(skill.get("damage_per_unit", 0))
 	var raw_effect: Variant = skill.get("effect", {})
 	if typeof(raw_effect) == TYPE_DICTIONARY and not raw_effect.is_empty():
 		skill["effect"] = _normalize_skill_effect(str(skill.get("id", skill_id)), skill, raw_effect)
@@ -236,6 +242,14 @@ static func get_general_skill(skill_id: String) -> Dictionary:
 	if _general_skills.has(skill_id):
 		return _general_skills[skill_id].duplicate(true)
 	return {}
+
+
+static func get_faction_general_skill_ids(faction_id: String) -> Array[String]:
+	_ensure_loaded()
+	var result: Array[String] = []
+	for skill_id in _faction_general_skills.get(faction_id, []):
+		result.append(str(skill_id))
+	return result
 
 
 static func get_status_effects() -> Dictionary:
