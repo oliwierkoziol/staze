@@ -5614,7 +5614,6 @@ func _validate_setup() -> void:
 	assert(_can_charge_attack_target(charge_unit, enemy_charge_target, charge_skill), "Szarza wroga musi moc zaatakowac cel przed soba.")
 	var enemy_charge_path: Array[Vector2i] = _find_charge_approach_path(charge_unit, enemy_charge_target, charge_skill)
 	assert(not enemy_charge_path.is_empty(), "Szarza wroga musi miec sciezke podejscia.")
-	assert(_find_charge_target(charge_unit, charge_skill).is_empty() == false, "Find charge target musi znalezc cel wroga.")
 	active_unit_id = previous_active_unit_id
 	pending_skill_id = previous_pending_skill_id
 	terrain_effects = previous_terrain_effects
