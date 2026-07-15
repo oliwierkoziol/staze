@@ -1387,47 +1387,388 @@ func _enemy_take_turn() -> void:
 	await get_tree().create_timer(1.0).timeout
 	if setup_mode or is_animating or active_unit_id != int(enemy_unit.id) or _find_unit_by_id(int(enemy_unit.id)).is_empty():
 		return
+	await _ai_execute_plan(enemy_unit, _ai_choose_plan(enemy_unit))
 
-	var target := _find_nearest_player_unit(enemy_unit)
+
+func _ai_choose_plan(unit: Dictionary) -> Dictionary:
+	var origin := Vector2i(int(unit.grid_x), int(unit.grid_y))
+	var destinations: Array[Dictionary] = [{"cell": origin, "path": []}]
+	if not _is_immobilized(unit):
+		for cell in _get_reachable_cells(unit, _get_remaining_move(unit)):
+			var path: Array[Vector2i] = _get_executable_move_path(_find_path(unit, origin, cell))
+			if path.is_empty() or _get_path_cost(path) > _get_remaining_move(unit):
+				continue
+			destinations.append({"cell": path[path.size() - 1], "path": path})
+
+	var best_plan: Dictionary = {"kind": "pass", "score": -1000000, "path": []}
+	for destination_data in destinations:
+		var destination: Vector2i = destination_data.cell
+		var path: Array[Vector2i] = []
+		for step in destination_data.get("path", []):
+			path.append(step)
+		unit.grid_x = destination.x
+		unit.grid_y = destination.y
+		var plans: Array[Dictionary] = _ai_generate_action_plans(unit, path)
+		plans.append({
+			"kind": "move" if not path.is_empty() else "pass",
+			"path": path,
+			"score": _ai_score_position(unit, destination) + _ai_score_approach(unit, destination),
+		})
+		for plan in plans:
+			plan["score"] = int(plan.get("score", 0)) - _get_path_hazard_penalty(unit, path)
+			if _ai_is_better_plan(plan, best_plan):
+				best_plan = plan
+	unit.grid_x = origin.x
+	unit.grid_y = origin.y
+	return best_plan
+
+
+func _ai_generate_action_plans(unit: Dictionary, path: Array[Vector2i]) -> Array[Dictionary]:
+	var plans: Array[Dictionary] = []
+	var unit_cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
+	if _can_unit_attack(unit):
+		for target in units:
+			if target.side == unit.side or not _can_see_target(unit, target):
+				continue
+			var target_cell := Vector2i(int(target.grid_x), int(target.grid_y))
+			if _is_in_attack_range(unit, target_cell):
+				plans.append({
+					"kind": "basic_attack",
+					"target_id": int(target.id),
+					"path": path,
+					"score": _ai_score_damage(unit, target, 1.0) + _ai_score_position(unit, unit_cell),
+				})
+
+	for raw_skill_id in unit.get("skill_ids", []):
+		var skill_id: String = str(raw_skill_id)
+		if not _can_use_skill(unit, skill_id):
+			continue
+		var skill: Dictionary = skill_library.get(skill_id, {})
+		var target_type: String = str(skill.get("target_type", ""))
+		var effect_type: String = str(skill.get("effect_type", ""))
+		if effect_type == "charge":
+			if path.is_empty():
+				for target in units:
+					if target.side != unit.side and _can_charge_attack_target(unit, target, skill):
+						plans.append({"kind": "charge", "skill_id": skill_id, "target_id": int(target.id), "path": [], "score": _ai_score_damage(unit, target, 1.5) + 60})
+			continue
+		if target_type == "self":
+			var self_score: int = _ai_score_skill(unit, unit, unit_cell, skill)
+			if self_score > 0:
+				plans.append({"kind": "skill", "skill_id": skill_id, "target_id": int(unit.id), "target_cell": unit_cell, "path": path, "score": self_score + _ai_score_position(unit, unit_cell)})
+		elif target_type == "enemy_unit":
+			for target in units:
+				if _can_target_enemy_with_skill(unit, target, skill):
+					var target_cell := Vector2i(int(target.grid_x), int(target.grid_y))
+					plans.append({"kind": "skill", "skill_id": skill_id, "target_id": int(target.id), "target_cell": target_cell, "path": path, "score": _ai_score_skill(unit, target, target_cell, skill) + _ai_score_position(unit, unit_cell)})
+		elif target_type == "ally_unit":
+			for target in units:
+				if _can_target_ally_with_skill(unit, target, skill):
+					var ally_score: int = _ai_score_skill(unit, target, Vector2i(int(target.grid_x), int(target.grid_y)), skill)
+					if ally_score > 0:
+						plans.append({"kind": "skill", "skill_id": skill_id, "target_id": int(target.id), "target_cell": Vector2i(int(target.grid_x), int(target.grid_y)), "path": path, "score": ally_score + _ai_score_position(unit, unit_cell)})
+		elif target_type == "cell":
+			var best_cell := Vector2i(-1, -1)
+			var best_score := 0
+			for cell in _get_skill_target_cells(unit, skill_id):
+				if not _can_target_cell_with_skill(unit, cell, skill):
+					continue
+				var cell_score: int = _ai_score_skill(unit, {}, cell, skill)
+				if cell_score > best_score:
+					best_score = cell_score
+					best_cell = cell
+			if best_cell != Vector2i(-1, -1):
+				plans.append({"kind": "skill", "skill_id": skill_id, "target_id": -1, "target_cell": best_cell, "path": path, "score": best_score + _ai_score_position(unit, unit_cell)})
+	return plans
+
+
+func _ai_score_skill(caster: Dictionary, target: Dictionary, target_cell: Vector2i, skill: Dictionary) -> int:
+	var effect_type: String = str(skill.get("effect_type", ""))
+	var cooldown_cost: int = int(skill.get("cooldown", 0)) * 8
+	match effect_type:
+		"focused_strike", "shield_push":
+			return _ai_score_damage(caster, target, 1.0) + (70 if effect_type == "shield_push" and _get_push_destination(caster, target) == Vector2i(-1, -1) else 0) - cooldown_cost
+		"shattering_strike":
+			return _ai_score_damage(caster, target, 1.5) + (80 if _ai_will_kill(caster, target, 1.5) else 0) - cooldown_cost
+		"knee_shot":
+			return _ai_score_damage(caster, target, 0.7) + _ai_score_control(target, 1) - cooldown_cost
+		"poison_dagger":
+			return _ai_score_damage(caster, target, 0.7) + (0 if _is_poison_immune(target) or _has_effect(target, "toksyna") else 110) - cooldown_cost
+		"hammer_strike":
+			return _ai_score_damage(caster, target, 1.0) + _ai_score_control(target, 1) + 60 - cooldown_cost
+		"pnacza":
+			return (0 if _has_effect(target, "immobilize") else _ai_score_control(target, 2)) - cooldown_cost
+		"curse_throw":
+			return (0 if _has_effect(target, "klatwa") else 100 + int(_ai_unit_value(target) / 5.0)) - cooldown_cost
+		"hook_throw":
+			return 80 + _ai_score_forced_destination(target, _get_pull_destination(caster, target)) - cooldown_cost
+		"zaklete_ciecie":
+			return _ai_score_damage(caster, target, 0.5) + (0 if _has_effect(target, "klatwa") else 100) - cooldown_cost
+		"rozszarpanie":
+			return _ai_score_damage(caster, target, 0.5) + (0 if _has_effect(target, "krwawienie") else 70) - cooldown_cost
+		"piercing_shot":
+			var pierce_score := 0
+			for cell in _get_piercing_shot_cells(caster, target):
+				var hit: Dictionary = _find_unit_at_cell(cell)
+				if not hit.is_empty():
+					pierce_score += _ai_score_damage(caster, hit, 1.0) * (1 if hit.side != caster.side else -2)
+			return pierce_score - cooldown_cost
+		"dancing_blade":
+			return _ai_score_area_damage(caster, Vector2i(int(caster.grid_x), int(caster.grid_y)), 0.5, 0.5) - cooldown_cost
+		"fireball", "dynamite_throw":
+			return _ai_score_area_damage(caster, target_cell, 1.0, 0.5) + (35 if effect_type == "fireball" else 0) - cooldown_cost
+		"arrow_rain":
+			return _ai_score_area_damage(caster, target_cell, 0.5, 0.35) - cooldown_cost
+		"ice_ground", "poison_cloud":
+			return _ai_score_area_control(caster, target_cell, effect_type) - cooldown_cost
+		"bear_trap", "goblin_trap":
+			return _ai_score_trap(caster, target_cell) - cooldown_cost
+		"magic_projection":
+			return _ai_score_projection(caster, target_cell) - cooldown_cost
+		"summon_statue":
+			return _ai_score_statue(caster, target_cell) - cooldown_cost
+		"sztandar":
+			return _get_total_skill_cooldown(target) * 45 - cooldown_cost
+		"iron_curtain":
+			if _has_effect(target, "zelazna_kurtyna"):
+				return 0
+			return _ai_expected_threat(target, Vector2i(int(target.grid_x), int(target.grid_y))) + int(_ai_unit_value(target) / 8.0) - cooldown_cost
+		"taunt_burst":
+			var affected := 0
+			for other in units:
+				if other.side != caster.side and _hex_distance(Vector2i(int(caster.grid_x), int(caster.grid_y)), Vector2i(int(other.grid_x), int(other.grid_y))) <= 2:
+					affected += 1
+			return affected * 100 - int(_ai_expected_threat(caster, target_cell) / 2.0) - cooldown_cost
+		"eagle_eye":
+			return 0 if _has_effect(caster, "sokole_oko") else 100 + int(float(int(caster.get("dmg", 0)) * int(caster.get("count", 1))) / 3.0) - cooldown_cost
+		"self_buff":
+			if _has_effect(caster, str(skill.get("id", ""))):
+				return 0
+			if str(skill.get("id", "")) == "mistrz_trucizn":
+				return 160 - cooldown_cost
+			var duration: int = int(skill.get("effect", {}).get("remaining_turns", 1))
+			if duration <= 1 and int(caster.get("action_points", 0)) <= int(skill.get("ap_cost", 0)):
+				return 0
+			return _ai_score_stat_changes(caster, skill.get("effect", {}).get("stat_changes", []), duration) - cooldown_cost
+		"zadza_krwi":
+			return 100 + int(caster.get("count", 1)) * 3 - int(_ai_expected_threat(caster, target_cell) / 3.0) - cooldown_cost
+		"utwardzenie":
+			return 75 + int(_ai_expected_threat(caster, target_cell) / 3.0) - cooldown_cost
+	return 0
+
+
+func _ai_score_damage(attacker: Dictionary, target: Dictionary, multiplier: float) -> int:
 	if target.is_empty():
-		_end_current_activation()
-		return
-	if await _try_enemy_use_skill(enemy_unit, target):
-		target = _find_nearest_player_unit(enemy_unit)
-		if enemy_unit.is_empty() or target.is_empty():
+		return 0
+	var damage: int = _calculate_damage(attacker, target, multiplier)
+	if _has_effect(target, "bariera_energetyczna"):
+		damage = 0
+	else:
+		damage = _adjust_incoming_damage(target, damage)
+	var current_hp: int = int(target.get("current_total_hp", int(target.get("hp", 1)) * int(target.get("count", 1))))
+	var base_hp: int = max(1, int(target.get("base_hp", target.get("hp", 1))))
+	var casualties: int = min(int(target.get("count", 1)), int(ceil(float(min(damage, current_hp)) / float(base_hp))))
+	return min(damage, current_hp) * 4 + casualties * 90 + (600 if damage >= current_hp else 0) + int(_ai_unit_value(target) / 10.0)
+
+
+func _ai_score_area_damage(caster: Dictionary, center: Vector2i, center_multiplier: float, neighbor_multiplier: float) -> int:
+	var score := 0
+	for cell in _get_area_cells(center):
+		var target: Dictionary = _find_unit_at_cell(cell)
+		if target.is_empty() or target.side == caster.side:
+			continue
+		var multiplier: float = center_multiplier if cell == center else neighbor_multiplier
+		score += _ai_score_damage(caster, target, multiplier)
+	return score
+
+
+func _ai_score_area_control(caster: Dictionary, center: Vector2i, effect_type: String) -> int:
+	var cells: Array[Vector2i] = _get_cell_skill_preview_cells({"effect_type": effect_type}, center, caster)
+	var score := 0
+	for cell in cells:
+		var target: Dictionary = _find_unit_at_cell(cell)
+		if not target.is_empty():
+			var value := 90 + _ai_score_control(target, 1)
+			if effect_type == "poison_cloud" and _is_poison_immune(target):
+				value = 0
+			score += value if target.side != caster.side else -value * 3
+		for player in units:
+			if player.side != caster.side and _hex_distance(cell, Vector2i(int(player.grid_x), int(player.grid_y))) <= int(player.get("move_range", 0)):
+				score += 12
+	return score
+
+
+func _ai_score_control(target: Dictionary, turns: int) -> int:
+	if target.is_empty():
+		return 0
+	return (int(target.get("move_range", 0)) * 14 + int(target.get("dmg", 0)) * 5 + int(target.get("speed", 0)) * 3) * turns
+
+
+func _ai_score_stat_changes(unit: Dictionary, changes: Array, turns: int) -> int:
+	var score := 0
+	for change in changes:
+		var stat_name: String = str(change.get("stat", ""))
+		var value: int = int(change.get("value", 0))
+		var base: int = int(unit.get("base_%s" % stat_name, unit.get(stat_name, 0)))
+		var delta: int = int(ceil(float(base) * float(value) / 100.0)) if str(change.get("mode", "flat")) == "percent" else value
+		var weight: int = {"dmg": 18, "def": 10, "attack_range": 35, "move_range": 22, "speed": 4}.get(stat_name, 2)
+		score += delta * weight * max(1, turns)
+	return score
+
+
+func _ai_score_trap(caster: Dictionary, cell: Vector2i) -> int:
+	if _has_trap_near_cell_for_side(cell, str(caster.side)):
+		return 0
+	var score := 20
+	for target in units:
+		if target.side == caster.side:
+			continue
+		var distance: int = _hex_distance(cell, Vector2i(int(target.grid_x), int(target.grid_y)))
+		if distance <= int(target.get("move_range", 0)):
+			score += 100 - distance * 10
+		if distance == 1:
+			score += 80
+	return score
+
+
+func _ai_score_projection(caster: Dictionary, cell: Vector2i) -> int:
+	var score := 0
+	for projection_cell in _get_magic_projection_cells(cell, str(caster.side)):
+		for neighbor in _get_neighbors(projection_cell):
+			var target: Dictionary = _find_unit_at_cell(neighbor)
+			if not target.is_empty():
+				score += 45 if target.side != caster.side else -25
+	return score
+
+
+func _ai_score_statue(caster: Dictionary, cell: Vector2i) -> int:
+	var score := 0
+	for neighbor in _get_neighbors(cell):
+		var ally: Dictionary = _find_unit_at_cell(neighbor)
+		if not ally.is_empty() and ally.side == caster.side:
+			score += 55 + int(ally.get("count", 1)) * 4
+	return score
+
+
+func _ai_score_forced_destination(target: Dictionary, cell: Vector2i) -> int:
+	if cell == Vector2i(-1, -1):
+		return 70
+	var score := 0
+	if _is_hostile_terrain_effect_for_unit(target, cell):
+		score += 180
+	if str(_get_terrain_at(cell).get("id", "")) == "hole":
+		score += 1000
+	for attacker in units:
+		if attacker.side != target.side and _hex_distance(cell, Vector2i(int(attacker.grid_x), int(attacker.grid_y))) <= int(attacker.get("attack_range", 1)):
+			score += 35
+	return score
+
+
+func _ai_score_position(unit: Dictionary, cell: Vector2i) -> int:
+	var score: int = -_get_path_hazard_penalty(unit, [cell])
+	if map_event_cells.has(cell) and _is_map_event_warning_round(round_number, next_map_event_round):
+		score -= 500
+	if _terrain_hides_unit(cell):
+		score += 80 if int(unit.get("attack_range", 1)) > 1 else 35
+	score -= _ai_expected_threat(unit, cell)
+	return score
+
+
+func _ai_score_approach(unit: Dictionary, cell: Vector2i) -> int:
+	var best_distance := 1000
+	for target in units:
+		if target.side != unit.side:
+			best_distance = min(best_distance, _hex_distance(cell, Vector2i(int(target.grid_x), int(target.grid_y))))
+	if best_distance == 1000:
+		return 0
+	var preferred: int = max(1, int(unit.get("attack_range", 1)))
+	return -abs(best_distance - preferred) * 12
+
+
+func _ai_expected_threat(unit: Dictionary, cell: Vector2i) -> int:
+	var threat := 0
+	var original := Vector2i(int(unit.grid_x), int(unit.grid_y))
+	unit.grid_x = cell.x
+	unit.grid_y = cell.y
+	for attacker in units:
+		if attacker.side == unit.side or not _can_see_target(attacker, unit):
+			continue
+		var distance: int = _hex_distance(Vector2i(int(attacker.grid_x), int(attacker.grid_y)), cell)
+		if distance <= int(attacker.get("attack_range", 1)) + int(attacker.get("move_range", 0)):
+			threat += _calculate_damage(attacker, unit)
+	unit.grid_x = original.x
+	unit.grid_y = original.y
+	return threat * 3
+
+
+func _ai_unit_value(unit: Dictionary) -> int:
+	return int(unit.get("current_total_hp", int(unit.get("hp", 1)) * int(unit.get("count", 1)))) + int(unit.get("dmg", 0)) * int(unit.get("count", 1)) + int(unit.get("attack_range", 1)) * 20
+
+
+func _ai_will_kill(attacker: Dictionary, target: Dictionary, multiplier: float) -> bool:
+	var damage: int = _adjust_incoming_damage(target, _calculate_damage(attacker, target, multiplier))
+	return damage >= int(target.get("current_total_hp", int(target.get("hp", 1)) * int(target.get("count", 1))))
+
+
+func _ai_is_better_plan(candidate: Dictionary, current: Dictionary) -> bool:
+	var candidate_score: int = int(candidate.get("score", -1000000))
+	var current_score: int = int(current.get("score", -1000000))
+	if candidate_score != current_score:
+		return candidate_score > current_score
+	var candidate_key: String = "%s:%s:%s:%s" % [candidate.get("kind", ""), candidate.get("skill_id", ""), candidate.get("target_id", -1), candidate.get("target_cell", Vector2i(-1, -1))]
+	var current_key: String = "%s:%s:%s:%s" % [current.get("kind", ""), current.get("skill_id", ""), current.get("target_id", -1), current.get("target_cell", Vector2i(-1, -1))]
+	return candidate_key < current_key
+
+
+func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
+	var path: Array[Vector2i] = []
+	for cell in plan.get("path", []):
+		path.append(cell)
+	if not path.is_empty() and not _is_immobilized(unit):
+		var destination: Vector2i = path[path.size() - 1]
+		var path_cost: int = _get_path_cost(path)
+		unit.grid_x = destination.x
+		unit.grid_y = destination.y
+		unit.remaining_move = max(0, _get_remaining_move(unit) - path_cost)
+		is_animating = true
+		_sync_board()
+		_show_move_cost_label(path_cost, int(unit.remaining_move))
+		board.animate_unit_path(int(unit.id), path)
+		await board.animation_finished
+		is_animating = false
+		_clear_move_cost_label()
+		_log_event("%s porusza się." % _unit_name_log_text(unit))
+		_apply_terrain_effects_to_unit(unit)
+		if _find_unit_by_id(int(unit.id)).is_empty():
 			_end_current_activation()
 			return
+		_stop_unit_on_terrain(unit)
+		_try_trigger_agility(unit)
 
-	var best_path := _find_best_enemy_path(enemy_unit, target)
-	if _is_immobilized(enemy_unit):
-		_log_event("%s nie rusza się, ponieważ jest unieruchomiony." % _unit_name_log_text(enemy_unit))
-	elif not best_path.is_empty():
-		best_path = _get_executable_move_path(best_path)
-		var destination: Vector2i = best_path[best_path.size() - 1]
-		var path_cost: int = _get_path_cost(best_path)
-		is_animating = true
-		enemy_unit.grid_x = destination.x
-		enemy_unit.grid_y = destination.y
-		enemy_unit.remaining_move = max(0, _get_remaining_move(enemy_unit) - path_cost)
-		_sync_board()
-		_show_move_cost_label(path_cost, enemy_unit.remaining_move)
-		board.animate_unit_path(enemy_unit.id, best_path)
-		await board.animation_finished
-		_clear_move_cost_label()
-		_log_event("%s porusza się." % _unit_name_log_text(enemy_unit))
-		_apply_terrain_effects_to_unit(enemy_unit)
-		_stop_unit_on_terrain(enemy_unit)
-		_try_trigger_agility(enemy_unit)
-
-	target = _find_nearest_player_unit(enemy_unit)
-	if not enemy_unit.is_empty() and not target.is_empty() and await _try_enemy_use_skill(enemy_unit, target):
-		_end_current_activation()
+	var kind: String = str(plan.get("kind", "pass"))
+	var target: Dictionary = _find_unit_by_id(int(plan.get("target_id", -1)))
+	if kind == "basic_attack" and not target.is_empty() and _can_unit_attack(unit) and _can_see_target(unit, target) and _is_in_attack_range(unit, Vector2i(int(target.grid_x), int(target.grid_y))):
+		_perform_basic_attack(unit, target, false)
+	elif kind == "charge" and not target.is_empty():
+		var charge_skill: Dictionary = skill_library.get(str(plan.get("skill_id", "")), {})
+		if _can_use_skill(unit, str(plan.get("skill_id", ""))) and _can_charge_attack_target(unit, target, charge_skill):
+			await _perform_charge_attack(unit, target, charge_skill, false, true)
+	elif kind == "skill":
+		var skill_id: String = str(plan.get("skill_id", ""))
+		var skill: Dictionary = skill_library.get(skill_id, {})
+		var target_cell: Vector2i = plan.get("target_cell", Vector2i(int(unit.grid_x), int(unit.grid_y)))
+		var target_type: String = str(skill.get("target_type", ""))
+		var legal: bool = target_type == "self"
+		if target_type == "enemy_unit":
+			legal = _can_target_enemy_with_skill(unit, target, skill)
+		elif target_type == "ally_unit":
+			legal = _can_target_ally_with_skill(unit, target, skill)
+		elif target_type == "cell":
+			legal = _can_target_cell_with_skill(unit, target_cell, skill)
+		if legal and _can_use_skill(unit, skill_id):
+			await _execute_skill(unit, target, skill, target_cell)
+	if active_unit_id != int(unit.id):
 		return
-	if not enemy_unit.is_empty() and not target.is_empty() and _can_see_target(enemy_unit, target) and _can_unit_attack(enemy_unit) and _is_in_attack_range(enemy_unit, Vector2i(target.grid_x, target.grid_y)):
-		_perform_basic_attack(enemy_unit, target, false)
-		_end_current_activation()
-		return
-
 	_end_current_activation()
 
 
@@ -1569,31 +1910,6 @@ func _is_known_trap_for_unit(unit: Dictionary, cell: Vector2i) -> bool:
 	return false
 
 
-func _try_enemy_use_trap(enemy_unit: Dictionary, target: Dictionary, skill_id: String) -> bool:
-	if not _can_use_skill(enemy_unit, skill_id):
-		return false
-	var skill: Dictionary = skill_library.get(skill_id, {})
-	if skill.is_empty():
-		return false
-	var target_cell := Vector2i(target.grid_x, target.grid_y)
-	if _can_see_target(enemy_unit, target) and _can_unit_attack(enemy_unit) and _is_in_attack_range(enemy_unit, target_cell):
-		return false
-	if _has_trap_near_cell_for_side(target_cell, str(enemy_unit.side)):
-		return false
-	var origin := Vector2i(enemy_unit.grid_x, enemy_unit.grid_y)
-	var trap_effect_id: String = str(skill.get("effect_type", ""))
-	for cell in _get_neighbors(target_cell):
-		if _hex_distance(origin, cell) > int(skill.get("range", 0)):
-			continue
-		if _is_attack_blocked(enemy_unit, cell) or _blocks_cell_skill_target(cell):
-			continue
-		if not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, trap_effect_id).is_empty():
-			continue
-		_execute_skill(enemy_unit, {}, skill, cell)
-		return true
-	return false
-
-
 func _has_trap_near_cell_for_side(center: Vector2i, side: String) -> bool:
 	for cell in _get_area_cells(center):
 		for trap_id in ["bear_trap", "goblin_trap"]:
@@ -1601,77 +1917,6 @@ func _has_trap_near_cell_for_side(center: Vector2i, side: String) -> bool:
 			if not trap.is_empty() and str(trap.get("caster_side", "")) == side:
 				return true
 	return false
-
-
-func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
-	if not _can_see_target(enemy_unit, target):
-		return false
-	for trap_skill_id in ["pulapka_na_niedzwiedzie", "pulapka_goblina"]:
-		if _try_enemy_use_trap(enemy_unit, target, trap_skill_id):
-			return true
-	for skill_id in enemy_unit.get("skill_ids", []):
-		var skill: Dictionary = skill_library.get(str(skill_id), {})
-		if skill.is_empty() or not _can_use_skill(enemy_unit, str(skill_id)):
-			continue
-		var target_type := str(skill.get("target_type", ""))
-		var target_cell := Vector2i(target.grid_x, target.grid_y)
-		if target_type == "self" and str(skill.get("effect_type", "")) == "self_buff" and not _has_effect(enemy_unit, str(skill.get("id", ""))):
-			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
-			return true
-		if target_type == "self" and str(skill.get("effect_type", "")) == "zadza_krwi":
-			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
-			return true
-		if target_type == "self" and str(skill.get("effect_type", "")) == "utwardzenie":
-			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
-			return true
-		if target_type == "self" and str(skill.get("effect_type", "")) == "dancing_blade" and _has_adjacent_enemy_unit(enemy_unit):
-			_execute_skill(enemy_unit, enemy_unit, skill, Vector2i(enemy_unit.grid_x, enemy_unit.grid_y))
-			return true
-		if str(skill.get("effect_type", "")) == "charge" and _try_enemy_charge(enemy_unit, target, skill):
-			return true
-		if target_type == "enemy_unit" and _hex_distance(Vector2i(enemy_unit.grid_x, enemy_unit.grid_y), target_cell) <= int(skill.get("range", 0)) and not _is_attack_blocked(enemy_unit, target_cell):
-			if str(skill.get("effect_type", "")) == "hook_throw" and not _can_hook_throw_target(enemy_unit, target, skill):
-				continue
-			await _execute_skill(enemy_unit, target, skill, target_cell)
-			return true
-		if target_type == "ally_unit" and str(skill.get("effect_type", "")) == "sztandar":
-			var sztandar_target: Dictionary = _find_sztandar_target(enemy_unit)
-			if not sztandar_target.is_empty():
-				await _execute_skill(
-					enemy_unit,
-					sztandar_target,
-					skill,
-					Vector2i(sztandar_target.grid_x, sztandar_target.grid_y)
-				)
-				return true
-		if target_type == "cell" and str(skill.get("effect_type", "")) not in ["bear_trap", "goblin_trap"]:
-			var cell := _find_enemy_area_skill_cell(enemy_unit, skill)
-			if cell != Vector2i(-1, -1):
-				await _execute_skill(enemy_unit, {}, skill, cell)
-				return true
-	return false
-
-
-func _find_enemy_area_skill_cell(enemy_unit: Dictionary, skill: Dictionary) -> Vector2i:
-	if str(skill.get("effect_type", "")) == "magic_projection":
-		return _find_enemy_magic_projection_cell(enemy_unit, skill)
-	if str(skill.get("effect_type", "")) == "summon_statue":
-		return _find_enemy_summon_statue_cell(enemy_unit, skill)
-	var best_cell := Vector2i(-1, -1)
-	var best_score := 0
-	for cell in _get_skill_target_cells(enemy_unit, str(skill.get("id", ""))):
-		var score := 0
-		for area_cell in _get_area_cells(cell):
-			var unit := _find_unit_at_cell(area_cell)
-			if unit.is_empty():
-				continue
-			score += 2 if unit.side != enemy_unit.side else -3
-		if score > best_score:
-			best_score = score
-			best_cell = cell
-	return best_cell
-
-
 func _sync_board() -> void:
 	for unit in units:
 		_recalculate_unit_stats(unit)
@@ -2429,44 +2674,6 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 	_sync_board()
 
 
-func _try_enemy_charge(enemy_unit: Dictionary, target: Dictionary, skill: Dictionary) -> bool:
-	if not _can_use_skill(enemy_unit, str(skill.get("id", ""))):
-		return false
-	var target_cell := Vector2i(target.grid_x, target.grid_y)
-	if _can_unit_attack(enemy_unit) and _can_charge_attack_target(enemy_unit, target, skill):
-		_perform_charge_attack(enemy_unit, target, skill, false, false)
-		return true
-
-	var move_budget: int = _get_remaining_move(enemy_unit) + _get_charge_stat_bonus(skill, "move_range")
-	if move_budget <= 0:
-		return false
-
-	var origin := Vector2i(enemy_unit.grid_x, enemy_unit.grid_y)
-	var best_path: Array[Vector2i] = []
-	var best_score: int = 1000000
-	for cell in _get_reachable_cells(enemy_unit, move_budget, skill):
-		var candidate_path: Array[Vector2i] = _get_executable_move_path(_find_path(enemy_unit, origin, cell, skill))
-		if candidate_path.is_empty():
-			continue
-		var score: int = _hex_distance(cell, target_cell)
-		if score < best_score:
-			best_score = score
-			best_path = candidate_path
-	if best_path.is_empty():
-		return false
-
-	var destination: Vector2i = best_path[best_path.size() - 1]
-	enemy_unit.grid_x = destination.x
-	enemy_unit.grid_y = destination.y
-	enemy_unit.remaining_move = 0
-	_commit_charge_skill(enemy_unit, skill)
-	_log_event("%s szarżuje do przodu." % _unit_name_log_text(enemy_unit))
-	_apply_terrain_effects_to_unit(enemy_unit)
-	_stop_unit_on_terrain(enemy_unit)
-	_sync_board()
-	return true
-
-
 func _calculate_damage(attacker: Dictionary, target: Dictionary, damage_multiplier := 1.0) -> int:
 	var attacker_count: int = max(1, int(attacker.get("count", 1)))
 	var effective_count: float = sqrt(float(attacker_count))
@@ -2731,27 +2938,6 @@ func _execute_sztandar(caster: Dictionary, target: Dictionary) -> void:
 			", ".join(refreshed_names)
 		]
 	)
-
-
-func _find_sztandar_target(caster: Dictionary) -> Dictionary:
-	var best_target: Dictionary = {}
-	var best_cooldown_total: int = 0
-	var caster_cell := Vector2i(caster.grid_x, caster.grid_y)
-	for other in units:
-		if other.side != caster.side or other.id == caster.id:
-			continue
-		var other_cell := Vector2i(other.grid_x, other.grid_y)
-		if _hex_distance(caster_cell, other_cell) != 1:
-			continue
-		if _is_attack_blocked(caster, other_cell):
-			continue
-		var cooldown_total: int = _get_total_skill_cooldown(other)
-		if cooldown_total <= 0:
-			continue
-		if cooldown_total > best_cooldown_total:
-			best_cooldown_total = cooldown_total
-			best_target = other
-	return best_target
 
 
 func _get_total_skill_cooldown(unit: Dictionary) -> int:
@@ -3122,39 +3308,6 @@ func _can_place_magic_projection_at(_caster: Dictionary, anchor: Vector2i) -> bo
 		if _is_cell_obstacle(cell):
 			return false
 	return true
-
-
-func _find_enemy_magic_projection_cell(enemy_unit: Dictionary, skill: Dictionary) -> Vector2i:
-	var best_cell := Vector2i(-1, -1)
-	var best_score := 0
-	for cell in _get_skill_target_cells(enemy_unit, str(skill.get("id", ""))):
-		var score := 0
-		for projection_cell in _get_magic_projection_cells(cell, str(enemy_unit.side)):
-			for neighbor in _get_neighbors(projection_cell):
-				var unit := _find_unit_at_cell(neighbor)
-				if unit.is_empty() or unit.side == enemy_unit.side:
-					continue
-				score += 2
-		if score > best_score:
-			best_score = score
-			best_cell = cell
-	return best_cell
-
-
-func _find_enemy_summon_statue_cell(enemy_unit: Dictionary, skill: Dictionary) -> Vector2i:
-	var best_cell := Vector2i(-1, -1)
-	var best_score := 0
-	for cell in _get_skill_target_cells(enemy_unit, str(skill.get("id", ""))):
-		var score := 0
-		for neighbor in _get_neighbors(cell):
-			var unit := _find_unit_at_cell(neighbor)
-			if unit.is_empty() or unit.side != enemy_unit.side:
-				continue
-			score += 2
-		if score > best_score:
-			best_score = score
-			best_cell = cell
-	return best_cell
 
 
 func _execute_magic_projection(caster: Dictionary, anchor: Vector2i) -> void:
@@ -5302,6 +5455,27 @@ func _validate_setup() -> void:
 	obstacles = []
 	terrain_effects = []
 	assert(_find_best_enemy_path(ai_archer, ai_target).is_empty(), "Dystansowy wróg nie powinien podchodzic, gdy ma czysty strzal.")
+	var ai_origin := Vector2i(int(ai_archer.grid_x), int(ai_archer.grid_y))
+	var ai_plan: Dictionary = _ai_choose_plan(ai_archer)
+	assert(str(ai_plan.get("kind", "")) == "basic_attack" and int(ai_plan.get("target_id", -1)) == int(ai_target.id), "AI musi wybrac dostepny atak zamiast bezcelowego ruchu.")
+	assert(Vector2i(int(ai_archer.grid_x), int(ai_archer.grid_y)) == ai_origin, "Planowanie AI nie moze zmieniac stanu jednostki.")
+	var weak_target: Dictionary = ai_target.duplicate(true)
+	weak_target["id"] = 1008
+	weak_target["grid_x"] = 4
+	weak_target["current_total_hp"] = 1
+	weak_target["hp"] = 10
+	weak_target["base_hp"] = 10
+	weak_target["count"] = 1
+	ai_target["current_total_hp"] = 100
+	ai_target["hp"] = 10
+	ai_target["base_hp"] = 10
+	ai_target["count"] = 10
+	ai_archer["dmg"] = 6
+	ai_archer["count"] = 4
+	units = [ai_archer, ai_target, weak_target]
+	ai_plan = _ai_choose_plan(ai_archer)
+	assert(int(ai_plan.get("target_id", -1)) == int(weak_target.id), "AI musi preferowac pewne dobicie oddzialu.")
+	units = [ai_archer, ai_target]
 	ai_target["is_hidden"] = true
 	assert(int(_find_nearest_player_unit(ai_archer).id) == int(ai_target.id), "AI musi miec cel do ruchu, nawet gdy wszyscy gracze sa ukryci.")
 	assert(not _find_best_enemy_path(ai_archer, ai_target).is_empty(), "AI powinno isc w strone ukrytego gracza zamiast konczyc ture.")

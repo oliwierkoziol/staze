@@ -9,10 +9,10 @@
   "general_skills": {
 	"grad_strzal": {
 	  "name": "Grad Strzał",
-	  "description": "Zalej strzałami 19 heksów. Wrogowie tracą 2 PŻ za każdą żywą jednostkę oddziału.",
+	  "description": "Zalej strzałami 19 heksów. Wrogowie tracą 4 PŻ za każdą żywą jednostkę oddziału.",
 	  "effect_type": "area",
 	  "radius": 2,
-	  "damage_per_unit": 2,
+	  "damage_per_unit": 4,
 	  "animation": "arrows"
 	},
 	"tempo_lowow": {
@@ -37,13 +37,13 @@
 	},
 	"zelazna_dyscyplina": {
 	  "name": "Równy Krok",
-	  "description": "Wszyscy sojusznicy otrzymują +1 DMG i +1 ruchu przez 2 tury.",
+	  "description": "Wszyscy sojusznicy otrzymują +3 DMG i +1 ruchu przez 2 tury.",
 	  "effect_type": "army_buff",
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 2,
 		"stat_changes": [
-		  {"stat": "dmg", "mode": "flat", "value": 1},
+		  {"stat": "dmg", "mode": "flat", "value": 3},
 		  {"stat": "move_range", "mode": "flat", "value": 1}
 		]
 	  }
