@@ -20,7 +20,7 @@
 		"portrait": "res://assets/characters/humans/dwarfWarrior.png",
 		"skill_ids": [
 		  "utwardzenie",
-		  "zelazna_kurtyna",
+		  "szarza",
           "tarcza"
 		]
 	  },
@@ -62,7 +62,7 @@
 		"portrait": "res://assets/characters/humans/dwarfHammer.png",
 		"skill_ids": [
 		  "walniecie_mlotem",
-		  "skupiony_cios",
+		  "druzgocacy_cios",
           "berserk"
 		]
 	  },
@@ -83,7 +83,7 @@
 		"portrait": "res://assets/characters/humans/dwarfDigger.png",
 		"skill_ids": [
 		  "rzut_hakiem",
-		  "precyzyjny_strzal",
+		  "pulapka_na_niedzwiedzie",
           "rzut_dynamitem"
 		]
 	  }

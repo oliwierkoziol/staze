@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://otoxsct44md6"]
 
-[ext_resource type="Script" uid="uid://teamsetup" path="res://scripts/team_setup.gd" id="1_setup"]
+[ext_resource type="Script" uid="uid://iqp58h4x72gy" path="res://scripts/team_setup.gd" id="1_setup"]
 
-[node name="TeamSetup" type="Control"]
+[node name="TeamSetup" type="Control" unique_id=49584961]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

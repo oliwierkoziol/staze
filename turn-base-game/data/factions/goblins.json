@@ -62,7 +62,7 @@
 		"portrait": "res://assets/characters/humans/goblinShaman.png",
 		"skill_ids": [
 		  "pnacza",
-		  "medytacja",
+		  "sztandar",
           "rzut_klatwa"
 		]
 	  },
@@ -82,7 +82,7 @@
 		"resistance": "Brak",
 		"portrait": "res://assets/characters/humans/goblinTrapper.png",
 		"skill_ids": [
-		  "pulapka_goblina",
+		  "pulapka_na_niedzwiedzie",
 		  "zatruta_strzala",
           "strzal_w_kolano"
 		]

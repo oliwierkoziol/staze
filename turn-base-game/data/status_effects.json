@@ -148,6 +148,14 @@
 		{"stat": "move_range", "mode": "flat", "value": -2}
 	  ]
 	},
+	"mistrz_trucizn": {
+	  "id": "mistrz_trucizn",
+	  "name": "Mistrz Trucizn",
+	  "description": "Przez 5 tur zwykle ataki nakladaja Zatrucie, jednostka jest odporna na trucizny.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/poison_master.png",
+	  "color": "#52C747"
+	},
 	"medytacja": {
 	  "id": "medytacja",
 	  "name": "Medytacja",
@@ -305,7 +313,7 @@
 	"zatrucie": {
 	  "id": "zatrucie",
 	  "name": "Zatrucie",
-	  "description": "Zadaje na poczatku tury 25% DMG atakujacego na kazda zywa jednostke w oddziale celu (minimum 1). Trwa 2 tury z chmury albo 1 ture z Mistrza Trucizn.",
+	  "description": "Zadaje na poczatku tury 25% DMG atakujacego na kazda zywa jednostke w oddziale celu (minimum 1). Trwa 2 tury z chmury albo 1 ture z truciznego ataku.",
 	  "category": "debuff",
 	  "icon": "res://assets/ui/poison_cloud.png",
 	  "color": "#52C747"

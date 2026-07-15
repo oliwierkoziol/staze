@@ -1609,6 +1609,16 @@ func _try_enemy_use_skill(enemy_unit: Dictionary, target: Dictionary) -> bool:
 				continue
 			await _execute_skill(enemy_unit, target, skill, target_cell)
 			return true
+		if target_type == "ally_unit" and str(skill.get("effect_type", "")) == "sztandar":
+			var sztandar_target: Dictionary = _find_sztandar_target(enemy_unit)
+			if not sztandar_target.is_empty():
+				await _execute_skill(
+					enemy_unit,
+					sztandar_target,
+					skill,
+					Vector2i(sztandar_target.grid_x, sztandar_target.grid_y)
+				)
+				return true
 		if target_type == "cell" and str(skill.get("effect_type", "")) not in ["bear_trap", "goblin_trap"]:
 			var cell := _find_enemy_area_skill_cell(enemy_unit, skill)
 			if cell != Vector2i(-1, -1):
@@ -2322,7 +2332,6 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 			_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
 		]
 	)
-	_try_apply_poison_master(attacker, hit_target)
 	_cleanup_destroyed_unit(hit_target)
 	_sync_board()
 	if end_turn_after:
@@ -2589,6 +2598,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 	match String(skill.get("effect_type", "")):
 		"taunt_burst":
 			_execute_taunt_burst(caster)
+		"sztandar":
+			_execute_sztandar(caster, target)
 		"dancing_blade":
 			_execute_dancing_blade(caster)
 		"knee_shot":
@@ -2635,6 +2646,8 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_utwardzenie(caster, skill)
 		"focused_strike":
 			_execute_focused_strike(caster, target, skill)
+		"shattering_strike":
+			_execute_shattering_strike(caster, target, skill)
 		"piercing_shot":
 			_execute_piercing_shot(caster, target, skill)
 		"zaklete_ciecie":
@@ -2645,6 +2658,63 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 			_execute_magic_projection(caster, target_cell)
 
 	_sync_board()
+
+
+func _execute_sztandar(caster: Dictionary, target: Dictionary) -> void:
+	if target.is_empty():
+		return
+	if not target.has("skill_cooldowns"):
+		target["skill_cooldowns"] = {}
+	var refreshed_names: Array[String] = []
+	for skill_id in target.get("skill_ids", []):
+		var skill_id_str := str(skill_id)
+		var remaining: int = int(target.get("skill_cooldowns", {}).get(skill_id_str, 0))
+		if remaining > 0:
+			refreshed_names.append(_get_skill_name(skill_id_str))
+		target.skill_cooldowns[skill_id_str] = 0
+	if refreshed_names.is_empty():
+		_log_event(
+			"%s wznosi Sztandar nad %s — wszystkie umiejetnosci sa gotowe." % [
+				_unit_name_log_text(caster),
+				_unit_name_log_text(target)
+			]
+		)
+		return
+	_log_event(
+		"%s wznosi Sztandar nad %s: odswiezono %s." % [
+			_unit_name_log_text(caster),
+			_unit_name_log_text(target),
+			", ".join(refreshed_names)
+		]
+	)
+
+
+func _find_sztandar_target(caster: Dictionary) -> Dictionary:
+	var best_target: Dictionary = {}
+	var best_cooldown_total: int = 0
+	var caster_cell := Vector2i(caster.grid_x, caster.grid_y)
+	for other in units:
+		if other.side != caster.side or other.id == caster.id:
+			continue
+		var other_cell := Vector2i(other.grid_x, other.grid_y)
+		if _hex_distance(caster_cell, other_cell) != 1:
+			continue
+		if _is_attack_blocked(caster, other_cell):
+			continue
+		var cooldown_total: int = _get_total_skill_cooldown(other)
+		if cooldown_total <= 0:
+			continue
+		if cooldown_total > best_cooldown_total:
+			best_cooldown_total = cooldown_total
+			best_target = other
+	return best_target
+
+
+func _get_total_skill_cooldown(unit: Dictionary) -> int:
+	var total: int = 0
+	for skill_id in unit.get("skill_ids", []):
+		total += int(unit.get("skill_cooldowns", {}).get(str(skill_id), 0))
+	return total
 
 
 func _execute_taunt_burst(caster: Dictionary) -> void:
@@ -3260,6 +3330,28 @@ func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dict
 	_cleanup_destroyed_unit(hit_target)
 
 
+func _execute_shattering_strike(caster: Dictionary, target: Dictionary, skill: Dictionary = {}) -> void:
+	var total_damage := _calculate_damage(caster, target, 1.5)
+	var result := _apply_attack_damage(caster, target, total_damage, true)
+	var hit_target: Dictionary = result.get("target", target)
+	var hit_target_id: int = int(hit_target.get("id", -1))
+	var casualties := int(result.get("casualties", 0))
+	_log_event(
+		"%s uderza %s Druzgocacym Ciosem za %s obrazen i %s strat." % [
+			_unit_name_log_text(caster),
+			_unit_name_log_text(hit_target),
+			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
+			_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+		]
+	)
+	_cleanup_destroyed_unit(hit_target)
+	if hit_target_id != -1 and _find_unit_by_id(hit_target_id).is_empty():
+		if not caster.has("skill_cooldowns"):
+			caster["skill_cooldowns"] = {}
+		caster.skill_cooldowns[str(skill.get("id", "druzgocacy_cios"))] = 0
+		_log_event("%s — cooldown Druzgocacego Ciosu zostaje odswiezony." % _unit_name_log_text(caster))
+
+
 func _get_piercing_shot_cells(caster: Dictionary, target: Dictionary) -> Array[Vector2i]:
 	var source_cell := Vector2i(caster.grid_x, caster.grid_y)
 	var target_cell := Vector2i(target.grid_x, target.grid_y)
@@ -3682,15 +3774,13 @@ func _apply_poison_effect(unit: Dictionary, id: String, name: String, turns: int
 
 
 func _is_poison_immune(unit: Dictionary) -> bool:
-	return _has_skill_id(unit, "mistrz_trucizn") or str(unit.get("resistance", "")).to_lower().contains("truciz")
+	return _has_effect(unit, "mistrz_trucizn") or str(unit.get("resistance", "")).to_lower().contains("truciz")
 
 
 func _try_apply_poison_master(attacker: Dictionary, target: Dictionary) -> void:
 	if target.is_empty() or int(target.get("count", 0)) <= 0:
 		return
-	if not _has_skill_id(attacker, "mistrz_trucizn") or not _are_active_skills_on_cooldown(attacker):
-		return
-	if randi() % 2 != 0:
+	if not _has_effect(attacker, "mistrz_trucizn"):
 		return
 	_apply_poison_effect(target, "zatrucie", "Zatrucie", 1, max(1, int(ceil(float(attacker.dmg) * 0.25))))
 
@@ -4335,16 +4425,6 @@ func _has_skill_id(unit: Dictionary, skill_id: String) -> bool:
 		if str(id) == skill_id:
 			return true
 	return false
-
-
-func _are_active_skills_on_cooldown(unit: Dictionary) -> bool:
-	for skill_id in unit.get("skill_ids", []):
-		var skill: Dictionary = skill_library.get(str(skill_id), {})
-		if str(skill.get("target_type", "")) == "passive":
-			continue
-		if int(unit.get("skill_cooldowns", {}).get(str(skill_id), 0)) == 0:
-			return false
-	return true
 
 
 func _generate_obstacles() -> Array[Dictionary]:
@@ -5008,6 +5088,9 @@ func _validate_setup() -> void:
 	assert(str(skill_library["utwardzenie"].get("effect_type", "")) == "utwardzenie", "Utwardzenie musi miec efekt utwardzenie.")
 	assert(skill_library.has("walniecie_mlotem"), "Brak skilla walniecie_mlotem w bibliotece.")
 	assert(str(skill_library["walniecie_mlotem"].get("effect_type", "")) == "hammer_strike", "Walniecie Mlotem musi miec efekt hammer_strike.")
+	assert(skill_library.has("druzgocacy_cios"), "Brak skilla druzgocacy_cios w bibliotece.")
+	assert(str(skill_library["druzgocacy_cios"].get("effect_type", "")) == "shattering_strike", "Druzgocacy Cios musi miec efekt shattering_strike.")
+	assert(int(skill_library["druzgocacy_cios"].get("cooldown", 0)) == 1, "Druzgocacy Cios musi miec cooldown 1 tury.")
 	assert(skill_library.has("przebijajacy_strzal"), "Brak skilla przebijajacy_strzal w bibliotece.")
 	assert(str(skill_library["przebijajacy_strzal"].get("effect_type", "")) == "piercing_shot", "Przebijajacy Strzal musi miec efekt piercing_shot.")
 	assert(skill_library.has("deszcz_strzal"), "Brak skilla deszcz_strzal w bibliotece.")
@@ -5021,6 +5104,35 @@ func _validate_setup() -> void:
 	assert(int(skill_library["magiczna_projekcja"].get("cooldown", 0)) == 6, "Magiczna Projekcja musi miec cooldown 6 tur.")
 	assert(_get_magic_projection_cells(Vector2i(4, 4), "player").size() == 3, "Magiczna Projekcja gracza musi tworzyc 3 hexy.")
 	assert(_get_magic_projection_cells(Vector2i(10, 4), "enemy").size() == 3, "Magiczna Projekcja wroga musi tworzyc 3 hexy.")
+	assert(skill_library.has("sztandar"), "Brak skilla sztandar w bibliotece.")
+	assert(str(skill_library["sztandar"].get("effect_type", "")) == "sztandar", "Sztandar musi miec efekt sztandar.")
+	assert(str(skill_library["sztandar"].get("target_type", "")) == "ally_unit", "Sztandar musi celowac w sojusznika.")
+	assert(int(skill_library["sztandar"].get("range", 0)) == 1, "Sztandar musi dzialac tylko na sasiednich sojusznikow.")
+	assert(int(skill_library["sztandar"].get("cooldown", 0)) == 6, "Sztandar musi miec cooldown 6 tur.")
+	var sztandar_target: Dictionary = {
+		"id": 901,
+		"side": "player",
+		"grid_x": 6,
+		"grid_y": 5,
+		"skill_ids": ["odepchniecie_tarcza", "szarza", "sztandar"],
+		"skill_cooldowns": {"szarza": 2, "odepchniecie_tarcza": 1}
+	}
+	_execute_sztandar({"id": 900, "name": "Konnica", "side": "player", "grid_x": 5, "grid_y": 5}, sztandar_target)
+	assert(int(sztandar_target.get("skill_cooldowns", {}).get("szarza", -1)) == 0, "Sztandar musi zerowac cooldowny celu.")
+	assert(int(sztandar_target.get("skill_cooldowns", {}).get("odepchniecie_tarcza", -1)) == 0, "Sztandar musi zerowac wszystkie cooldowny celu.")
+	assert(skill_library.has("mistrz_trucizn"), "Brak skilla mistrz_trucizn w bibliotece.")
+	assert(str(skill_library["mistrz_trucizn"].get("target_type", "")) == "self", "Mistrz Trucizn musi byc uzywany na siebie.")
+	assert(int(skill_library["mistrz_trucizn"].get("cooldown", 0)) == 7, "Mistrz Trucizn musi miec cooldown 7 tur.")
+	assert(int(skill_library["mistrz_trucizn"].get("effect", {}).get("remaining_turns", 0)) == 5, "Mistrz Trucizn musi trwac 5 tur.")
+	var poison_master_attacker: Dictionary = {
+		"id": 902,
+		"dmg": 8,
+		"active_effects": [{"id": "mistrz_trucizn", "remaining_turns": 5}]
+	}
+	var poison_master_target: Dictionary = {"id": 903, "count": 5, "active_effects": []}
+	_try_apply_poison_master(poison_master_attacker, poison_master_target)
+	assert(_has_effect(poison_master_target, "zatrucie"), "Mistrz Trucizn musi nakladac Zatrucie zwyklym atakiem.")
+	assert(_is_poison_immune(poison_master_attacker), "Mistrz Trucizn musi dawac odpornosc na trucizny.")
 	assert(skill_library.has("zadza_krwi"), "Brak skilla zadza_krwi w bibliotece.")
 	assert(str(skill_library["zadza_krwi"].get("effect_type", "")) == "zadza_krwi", "Zadza krwi musi miec efekt zadza_krwi.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}, "skill_ids": []}, "pulapka_na_niedzwiedzie"), "Jednostka nie moze uzywac umiejetnosci spoza skill_ids.")

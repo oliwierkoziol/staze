@@ -22,7 +22,7 @@ func _ready() -> void:
 	_build_ui()
 	assert(_tabs.get_tab_count() == 3, "Podgląd jednostki musi mieć trzy zakładki.")
 	assert(_portrait != null, "Podgląd jednostki musi zawsze zawierać portret.")
-	assert(_resistance_text({"resistance": "Brak", "skill_ids": ["mistrz_trucizn"]}) == "Trucizna")
+	assert(_resistance_text({"resistance": "Brak", "active_effects": [{"id": "mistrz_trucizn"}]}) == "Trucizna")
 
 
 func show_unit(unit: Dictionary, skills: Dictionary, portrait: Texture2D) -> void:
@@ -253,6 +253,13 @@ func _side_name(side: String) -> String:
 
 func _resistance_text(unit: Dictionary) -> String:
 	var resistance: String = str(unit.get("resistance", "Brak"))
-	if unit.get("skill_ids", []).has("mistrz_trucizn"):
+	var has_poison_immunity := false
+	for effect in unit.get("active_effects", []):
+		if str(effect.get("id", "")) == "mistrz_trucizn":
+			has_poison_immunity = true
+			break
+	if not has_poison_immunity:
+		has_poison_immunity = str(unit.get("resistance", "")).to_lower().contains("truciz")
+	if has_poison_immunity:
 		return "Trucizna" if resistance == "" or resistance == "Brak" else "%s, Trucizna" % resistance
 	return resistance if resistance != "" else "Brak"
