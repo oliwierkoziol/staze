@@ -8,3 +8,4 @@
 10.07.2026 - Poprawa błędów po restrukturyzacji. Dodanie ograniczeń i zależności do wrogich obozowisk. Poprawa zliczania jednostek w armii i powiększenie mapy. Dodanie mgły wojny.
 13.07.2026 - Naprawa błędów logicznych w aplikacji m.in. brak resetu stanu przy nowej grze, brak ostrzeżeń o wyczerpaniu surowców, błędne przeliczniki jednostek po ulepszaniu budynku baraków, nieładowanie się tekstur. Początkowe prace nad generowaniem nowych grafik.
 14.07.2026 - Stworzenie nowych grafik do pól mapy i do budynków. Zamiana starych grafik na nowe.
+15.07.2026 - Zaprojektowanie drzewa kultury i drzewa technologicznego, a następnie implementacja ich w kodzie. Lekkie poprawki i dodanie konta administratora w celu szybszego i łatwiejszego testowania gry.
