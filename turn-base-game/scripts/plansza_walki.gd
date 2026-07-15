@@ -44,6 +44,8 @@ var STATUE_LEFT_TEXTURE: Texture2D = load("res://assets/mapTiles/statue/statue_l
 var STATUE_RIGHT_TEXTURE: Texture2D = load("res://assets/mapTiles/statue/statue_right.png")
 var STATUE_BOTTOM_TEXTURE: Texture2D = load("res://assets/mapTiles/statue/statue_bottom.png")
 var HOLE_TEXTURE: Texture2D = load("res://assets/hole.png")
+var HOLE_LEFT_TEXTURE: Texture2D = load("res://assets/newAssets/holeLeft.png")
+var HOLE_RIGHT_TEXTURE: Texture2D = load("res://assets/newAssets/holeRight.png")
 var CART_TEXTURE: Texture2D = load("res://assets/cart.png")
 var DETONATOR_TEXTURE: Texture2D = load("res://assets/detonator.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
@@ -771,6 +773,8 @@ func draw_obstacles() -> void:
 		"statue_bottom": STATUE_BOTTOM_TEXTURE,
 		"posag_elfow": ELF_STATUE_TEXTURE,
 		"hole": HOLE_TEXTURE,
+		"hole_left": HOLE_LEFT_TEXTURE,
+		"hole_right": HOLE_RIGHT_TEXTURE,
 		"dziura": HOLE_TEXTURE,
 		"cart": CART_TEXTURE,
 		"woz": CART_TEXTURE,

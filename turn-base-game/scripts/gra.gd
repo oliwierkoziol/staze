@@ -90,6 +90,8 @@ var OBSTACLE_PORTRAITS: Dictionary = {
 	"cart": load("res://assets/cart.png"),
 	"elf_statue": load("res://assets/elfStatue.png"),
 	"hole": load("res://assets/hole.png"),
+	"hole_left": load("res://assets/newAssets/holeLeft.png"),
+	"hole_right": load("res://assets/newAssets/holeRight.png"),
 	"detonator": load("res://assets/detonator.png"),
 	"magiczna_bariera": load("res://assets/magic_projection.png"),
 }
