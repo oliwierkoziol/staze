@@ -2579,11 +2579,13 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 		return
 
 	var move_path: Array[Vector2i] = _find_charge_approach_path(attacker, target, skill)
+	var moved := false
 	if not move_path.is_empty():
 		var destination: Vector2i = move_path[move_path.size() - 1]
 		attacker.grid_x = destination.x
 		attacker.grid_y = destination.y
 		attacker.remaining_move = 0
+		moved = true
 		if animate_move:
 			is_animating = true
 			_sync_board()
@@ -2598,12 +2600,13 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 			_try_trigger_agility(attacker)
 		else:
 			_sync_board()
-	else:
-		attacker.remaining_move = 0
+			board.snap_unit_to_cell(attacker.id, destination)
 
 	var attacker_cell := Vector2i(attacker.grid_x, attacker.grid_y)
 	var target_cell := Vector2i(target.grid_x, target.grid_y)
-	if not _is_forward_cell_from(attacker_cell, target_cell, attacker):
+	if not _can_attack_from_cell_for_charge(attacker, attacker_cell, target_cell, skill):
+		if moved and not animate_move:
+			board.snap_unit_to_cell(attacker.id, attacker_cell)
 		return
 
 	_commit_charge_skill(attacker, skill)
@@ -2622,6 +2625,8 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 	)
 	_cleanup_destroyed_unit(hit_target)
 	_sync_board()
+	if moved and not animate_move:
+		board.snap_unit_to_cell(attacker.id, attacker_cell)
 	if end_turn_after:
 		_end_current_activation()
 
@@ -5599,6 +5604,17 @@ func _validate_setup() -> void:
 		assert(cell.y == charge_unit.grid_y, "Szarza wroga moze ruszac tylko bezposrednio przed siebie.")
 		assert(cell.x < charge_unit.grid_x, "Szarza wroga moze ruszac tylko w lewo.")
 	assert(not _is_in_attack_range(charge_unit, Vector2i(11, 5), charge_skill), "Szarza wroga nie moze atakowac w prawo.")
+	var enemy_charge_target: Dictionary = {
+		"id": 1004,
+		"side": "player",
+		"grid_x": 7,
+		"grid_y": 5,
+		"is_hidden": false
+	}
+	assert(_can_charge_attack_target(charge_unit, enemy_charge_target, charge_skill), "Szarza wroga musi moc zaatakowac cel przed soba.")
+	var enemy_charge_path: Array[Vector2i] = _find_charge_approach_path(charge_unit, enemy_charge_target, charge_skill)
+	assert(not enemy_charge_path.is_empty(), "Szarza wroga musi miec sciezke podejscia.")
+	assert(_find_charge_target(charge_unit, charge_skill).is_empty() == false, "Find charge target musi znalezc cel wroga.")
 	active_unit_id = previous_active_unit_id
 	pending_skill_id = previous_pending_skill_id
 	terrain_effects = previous_terrain_effects
