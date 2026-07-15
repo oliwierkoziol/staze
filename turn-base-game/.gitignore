@@ -23,5 +23,9 @@
 Thumbs.db
 desktop.ini
 
+# Generowane raporty balansu
+/raporty/*
+!/raporty/.gdignore
+
 # Agent workspace (local development notes/prompts)
 .agent/

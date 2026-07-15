@@ -107,7 +107,7 @@ static func _normalize_unit_type(raw_unit: Dictionary) -> Dictionary:
 	var unit: Dictionary = raw_unit.duplicate(true)
 	for key in ["hp", "dmg", "def", "speed", "action_points", "count", "move_range", "attack_range"]:
 		unit[key] = int(unit.get(key, 0))
-	for key in ["id", "name", "short_name", "role", "resistance", "portrait"]:
+	for key in ["id", "name", "short_name", "role", "balance_role", "resistance", "portrait"]:
 		unit[key] = str(unit.get(key, ""))
 	var skill_ids: Array[String] = []
 	for skill_id in unit.get("skill_ids", []):

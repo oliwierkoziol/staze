@@ -73,6 +73,7 @@ const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
 const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 const TEAM_SETUP_SCENE: PackedScene = preload("res://scenes/team_setup.tscn")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
+const MatematykaWalkiScript = preload("res://scripts/matematyka_walki.gd")
 const BattleSetupPositionsScript = preload("res://scripts/battle_setup_positions.gd")
 const TurnQueueCardScript = preload("res://scripts/turn_queue_card.gd")
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
@@ -2680,12 +2681,7 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 
 
 func _calculate_damage(attacker: Dictionary, target: Dictionary, damage_multiplier := 1.0) -> int:
-	var attacker_count: int = max(1, int(attacker.get("count", 1)))
-	var effective_count: float = sqrt(float(attacker_count))
-	var scaled_damage: float = max(1.0, float(attacker.get("dmg", 1)) * damage_multiplier)
-	var defense: float = float(target.get("def", 0))
-	var defense_multiplier: float = 100.0 / (100.0 + defense * 10.0) if defense >= 0.0 else 1.0 + abs(defense) * 0.1
-	return max(int(ceil(effective_count)), int(scaled_damage * effective_count * defense_multiplier * 1.35))
+	return MatematykaWalkiScript.oblicz_obrazenia(attacker, target, damage_multiplier)
 
 
 func _get_incoming_damage_multiplier(unit: Dictionary) -> float:
@@ -4434,18 +4430,7 @@ func _recalculate_unit_stats(unit: Dictionary) -> void:
 
 
 func _refresh_unit_health_state(unit: Dictionary) -> void:
-	var unit_hp: int = max(1, int(unit.get("base_hp", unit.get("max_hp", 1))))
-	var total_hp: int = max(0, int(unit.get("current_total_hp", unit_hp * max(1, int(unit.get("count", 1))))))
-	unit["max_hp"] = unit_hp
-	unit["max_total_hp"] = max(unit_hp, int(unit.get("max_total_hp", unit_hp * max(1, int(unit.get("count", 1))))))
-	unit["current_total_hp"] = total_hp
-	if total_hp <= 0:
-		unit["count"] = 0
-		unit["current_hp"] = 0
-		return
-	unit["count"] = int(ceil(float(total_hp) / float(unit_hp)))
-	var remainder: int = total_hp % unit_hp
-	unit["current_hp"] = unit_hp if remainder == 0 else remainder
+	MatematykaWalkiScript.odswiez_stan_hp(unit)
 
 
 func _apply_stat_change(unit: Dictionary, change: Dictionary) -> void:
@@ -5319,8 +5304,8 @@ func _validate_setup() -> void:
 		assert(event_pool.size() == 4, "Kazdy scenariusz musi miec cztery eventy: %s" % scenario_id)
 		for event_id in event_pool:
 			assert(MAP_EVENT_DATA.has(event_id), "Brak danych eventu: %s" % event_id)
-	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 4, "count": 10}) == 6, "Liczebnosc obroncy nie moze wplywac na redukcje DEF.")
-	assert(_calculate_damage({"dmg": 12, "count": 4}, {"def": 1, "count": 5}) == 29, "Berserker x4 vs elf mag x5 powinien zadac 29 obrazen.")
+	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 4, "count": 10}) == 9, "Liczebnosc obroncy nie moze wplywac na redukcje DEF.")
+	assert(_calculate_damage({"dmg": 12, "count": 4}, {"def": 1, "count": 5}) == 42, "Berserker x4 vs elf mag x5 powinien zadac 42 obrazenia.")
 	assert(_calculate_damage({"dmg": 1, "count": 10}, {"def": 6, "count": 10}) == 4, "Minimalne obrazenia musza skalowac sie pierwiastkiem liczebnosci.")
 	assert(_calculate_damage({"dmg": 10, "count": 1}, {"def": -4, "count": 1}) > _calculate_damage({"dmg": 10, "count": 1}, {"def": 0, "count": 1}), "Ujemna DEF powinna zwiekszac otrzymywane obrazenia.")
 	for faction_id in UnitTypeLibraryScript.get_faction_ids():
