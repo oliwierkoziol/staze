@@ -176,6 +176,7 @@ var skill_library: Dictionary = {}
 var general_skills: Dictionary = {}
 var general_skill_ids: Array[String] = []
 var general_skill_used := false
+var pending_general_skill_id := ""
 var orc_general_is_kishak := false
 var terrain_effects: Array[Dictionary] = []
 var setup_mode := true
@@ -207,6 +208,9 @@ var displayed_path_cost := -1
 var selected_obstacle_cell := Vector2i(-1, -1)
 var screen_message_label: Label
 var screen_message_tween: Tween
+var stage_transition_overlay: ColorRect
+var stage_transition_title: Label
+var stage_transition_progress: Label
 var detonator_activated := false
 var unit_details_popup: PopupPanel
 
@@ -217,6 +221,7 @@ func _ready() -> void:
 	_build_help_popup()
 	_build_victory_overlay()
 	_build_screen_message_label()
+	_build_stage_transition_overlay()
 	unit_details_popup = UnitDetailsPopupScript.new()
 	add_child(unit_details_popup)
 	_load_terrain_types()
@@ -381,6 +386,18 @@ func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: 
 	_build_test_battle_config(custom_units)
 	_roll_orc_general_variant()
 	_setup_battle_scene()
+	if castle_stage == 1:
+		is_animating = true
+		var stages: Array[Dictionary] = _get_castle_stages()
+		_set_stage_transition_content(castle_stage, stages)
+		stage_transition_overlay.visible = true
+		var transition: Tween = create_tween()
+		transition.tween_property(stage_transition_overlay, "modulate:a", 1.0, 0.45)
+		transition.tween_interval(2.5)
+		transition.tween_property(stage_transition_overlay, "modulate:a", 0.0, 0.45)
+		await transition.finished
+		stage_transition_overlay.visible = false
+		is_animating = false
 
 
 func _roll_orc_general_variant() -> void:
@@ -389,10 +406,9 @@ func _roll_orc_general_variant() -> void:
 
 func _load_general_skills() -> void:
 	general_skills = UnitTypeLibraryScript.get_general_skills()
-	general_skill_ids = []
-	for skill_id in general_skills.keys():
-		general_skill_ids.append(str(skill_id))
+	general_skill_ids = UnitTypeLibraryScript.get_faction_general_skill_ids(current_player_faction)
 	general_skill_used = false
+	pending_general_skill_id = ""
 
 
 func _set_battle_background(path: String) -> void:
@@ -631,7 +647,7 @@ func _on_start_battle_pressed() -> void:
 	board.clear_falling_rock_cells()
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
-	_log_event(_color_log_text("Bitwa rozpoczeta.", LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("Bitwa rozpoczęta.", LOG_COLOR_YELLOW))
 	_rebuild_turn_queue()
 	_start_next_activation()
 
@@ -645,7 +661,7 @@ func _on_save_setup_file_selected(path: String) -> void:
 	var save_path := path if path.get_extension().to_lower() == "json" else "%s.json" % path
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
-		_log_event(_color_log_text("Nie udalo sie zapisac ustawienia armii.", LOG_COLOR_DAMAGE), false)
+		_log_event(_color_log_text("Nie udało się zapisać ustawienia armii.", LOG_COLOR_DAMAGE), false)
 		return
 	file.store_string(JSON.stringify(_make_save_data(), "\t"))
 	_log_event(_color_log_text("Zapisano stan gry.", LOG_COLOR_YELLOW), false)
@@ -1012,7 +1028,7 @@ func _apply_live_reload() -> void:
 	board.reset_unit_positions(units)
 	_sync_board()
 	_debug_reload_snapshot("RUNTIME", units)
-	_log_event(_color_log_text("Przeladowano JSON w trakcie rozgrywki.", LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("Przeładowano plik JSON w trakcie rozgrywki.", LOG_COLOR_YELLOW))
 
 
 func _reapply_runtime_state(target_unit: Dictionary, existing_unit: Dictionary) -> void:
@@ -1196,6 +1212,9 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 
 	if is_animating or not _is_manual_turn():
 		return
+	if pending_general_skill_id != "":
+		await _try_execute_general_skill(cell)
+		return
 
 	var active_unit := _get_active_unit()
 	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)):
@@ -1257,7 +1276,7 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	board.animate_unit_path(active_unit.id, move_path)
 	await board.animation_finished
 	_clear_move_cost_label()
-	_log_event("%s porusza sie." % _unit_name_log_text(active_unit))
+	_log_event("%s porusza się." % _unit_name_log_text(active_unit))
 	_apply_terrain_effects_to_unit(active_unit)
 	if _find_unit_by_id(int(active_unit.id)).is_empty():
 		_end_current_activation()
@@ -1356,6 +1375,8 @@ func _end_current_activation() -> void:
 	board.set_highlighted_cells([], [])
 	board.set_hovered_move_path([])
 	_update_action_buttons()
+	if setup_mode:
+		return
 	_start_next_activation()
 
 
@@ -1364,6 +1385,8 @@ func _enemy_take_turn() -> void:
 	if enemy_unit.is_empty() or enemy_unit.side != "enemy":
 		return
 	await get_tree().create_timer(1.0).timeout
+	if setup_mode or is_animating or active_unit_id != int(enemy_unit.id) or _find_unit_by_id(int(enemy_unit.id)).is_empty():
+		return
 
 	var target := _find_nearest_player_unit(enemy_unit)
 	if target.is_empty():
@@ -1377,7 +1400,7 @@ func _enemy_take_turn() -> void:
 
 	var best_path := _find_best_enemy_path(enemy_unit, target)
 	if _is_immobilized(enemy_unit):
-		_log_event("%s nie rusza sie, bo jest unieruchomiony." % _unit_name_log_text(enemy_unit))
+		_log_event("%s nie rusza się, ponieważ jest unieruchomiony." % _unit_name_log_text(enemy_unit))
 	elif not best_path.is_empty():
 		best_path = _get_executable_move_path(best_path)
 		var destination: Vector2i = best_path[best_path.size() - 1]
@@ -1391,7 +1414,7 @@ func _enemy_take_turn() -> void:
 		board.animate_unit_path(enemy_unit.id, best_path)
 		await board.animation_finished
 		_clear_move_cost_label()
-		_log_event("%s porusza sie." % _unit_name_log_text(enemy_unit))
+		_log_event("%s porusza się." % _unit_name_log_text(enemy_unit))
 		_apply_terrain_effects_to_unit(enemy_unit)
 		_stop_unit_on_terrain(enemy_unit)
 		_try_trigger_agility(enemy_unit)
@@ -1706,7 +1729,18 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 	var charge_skill: Dictionary = _get_active_charge_skill(unit)
 	var move_cells: Array[Vector2i] = []
 	var attack_cells: Array[Vector2i] = []
-	if not charge_skill.is_empty():
+	if pending_general_skill_id != "":
+		var target_type: String = str(general_skills.get(pending_general_skill_id, {}).get("effect_type", ""))
+		if target_type == "area":
+			for column in GRID_COLUMNS:
+				for row in GRID_ROWS:
+					attack_cells.append(Vector2i(column, row))
+		else:
+			for candidate in units:
+				var active_only: bool = bool(general_skills.get(pending_general_skill_id, {}).get("active_only", false))
+				if ((target_type == "ally" and candidate.side == "player") or (target_type == "enemy" and candidate.side == "enemy")) and (not active_only or candidate.id == active_unit_id):
+					attack_cells.append(Vector2i(candidate.grid_x, candidate.grid_y))
+	elif not charge_skill.is_empty():
 		move_budget += _get_charge_stat_bonus(charge_skill, "move_range")
 		move_cells = _get_reachable_cells(unit, move_budget, charge_skill)
 		if _can_unit_attack(unit):
@@ -1727,6 +1761,13 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 
 
 func _on_board_cell_hovered(cell: Vector2i) -> void:
+	if pending_general_skill_id != "":
+		var general_skill: Dictionary = general_skills.get(pending_general_skill_id, {})
+		if str(general_skill.get("effect_type", "")) == "area":
+			board.set_hovered_area_skill(cell, _get_general_area_cells(cell, int(general_skill.get("radius", 1))))
+		else:
+			board.set_hovered_area_skill(cell, [cell])
+		return
 	if not setup_mode and cell.x != -1 and _get_terrain_type_at(cell) == "detonator":
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
@@ -2264,7 +2305,7 @@ func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_af
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties: int = int(result.get("casualties", 0))
 	_log_event(
-		"%s uderza %s za %s obrazen i zadaje %s strat." % [
+		"%s uderza %s, zadając %s obrażeń i powodując %s strat." % [
 			_unit_name_log_text(attacker),
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -2285,7 +2326,7 @@ func _commit_charge_skill(caster: Dictionary, skill: Dictionary) -> void:
 	caster.skill_cooldowns[str(skill.get("id", ""))] = int(skill.get("cooldown", 0))
 	if int(caster.get("id", -1)) == active_unit_id:
 		pending_skill_id = ""
-	_log_event("%s uzywa %s." % [_unit_name_log_text(caster), str(skill.get("name", skill.get("id", "")))])
+	_log_event("%s używa umiejętności %s." % [_unit_name_log_text(caster), str(skill.get("name", skill.get("id", "")))])
 
 
 func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dictionary, end_turn_after := true, animate_move := true) -> void:
@@ -2327,7 +2368,7 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties: int = int(result.get("casualties", 0))
 	_log_event(
-		"%s szarzuje na %s za %s obrazen i zadaje %s strat." % [
+		"%s szarżuje na %s, zadając %s obrażeń i powodując %s strat." % [
 			_unit_name_log_text(attacker),
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -2378,7 +2419,7 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 	is_animating = false
 	_clear_move_cost_label()
 	_commit_charge_skill(unit, skill)
-	_log_event("%s szarzuje do przodu." % _unit_name_log_text(unit))
+	_log_event("%s szarżuje do przodu." % _unit_name_log_text(unit))
 	_apply_terrain_effects_to_unit(unit)
 	if _find_unit_by_id(int(unit.id)).is_empty():
 		_end_current_activation()
@@ -2419,7 +2460,7 @@ func _try_enemy_charge(enemy_unit: Dictionary, target: Dictionary, skill: Dictio
 	enemy_unit.grid_y = destination.y
 	enemy_unit.remaining_move = 0
 	_commit_charge_skill(enemy_unit, skill)
-	_log_event("%s szarzuje do przodu." % _unit_name_log_text(enemy_unit))
+	_log_event("%s szarżuje do przodu." % _unit_name_log_text(enemy_unit))
 	_apply_terrain_effects_to_unit(enemy_unit)
 	_stop_unit_on_terrain(enemy_unit)
 	_sync_board()
@@ -2471,7 +2512,7 @@ func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage
 		if not guardian.is_empty():
 			hit_target = guardian
 			damage = max(1, int(ceil(float(damage) * 0.8)))
-			_log_event("%s zaslania %s Zelazna Kurtyna." % [_unit_name_log_text(guardian), _unit_name_log_text(target)])
+			_log_event("%s osłania %s Żelazną Kurtyną." % [_unit_name_log_text(guardian), _unit_name_log_text(target)])
 	if play_animation:
 		var projectile_kind: String = projectile_kind_override if projectile_kind_override != "" else _get_attack_projectile_kind(attacker)
 		board.play_attack_animation(int(attacker.id), int(hit_target.id), projectile_kind)
@@ -2516,9 +2557,10 @@ func _consume_energy_barrier(unit: Dictionary) -> bool:
 			continue
 		effects.erase(effect)
 		unit["active_effects"] = effects
-		if not unit.has("skill_cooldowns"):
-			unit["skill_cooldowns"] = {}
-		unit["skill_cooldowns"]["bariera_energetyczna"] = 5
+		if str(effect.get("id", "")) == "bariera_energetyczna":
+			if not unit.has("skill_cooldowns"):
+				unit["skill_cooldowns"] = {}
+			unit["skill_cooldowns"]["bariera_energetyczna"] = 5
 		_recalculate_unit_stats(unit)
 		return true
 	return false
@@ -2531,7 +2573,7 @@ func _calculate_tick_damage(unit: Dictionary, effect_damage: int) -> int:
 func _cleanup_destroyed_unit(target: Dictionary) -> void:
 	if int(target.get("count", 0)) > 0:
 		return
-	_log_event("%s zostaje rozbite." % _unit_name_log_text(target))
+	_log_event("%s zostaje rozbity." % _unit_name_log_text(target))
 	units.erase(target)
 	var removed_queue_index: int = turn_queue.find(int(target.get("id", -1)))
 	turn_queue.erase(int(target.get("id", -1)))
@@ -2739,7 +2781,7 @@ func _execute_taunt_burst(caster: Dictionary) -> void:
 		})
 		affected.append(other.name)
 	if affected.is_empty():
-		_log_event("%s uzywa Prowokacji, ale nikt nie jest w zasiegu." % _unit_name_log_text(caster))
+		_log_event("%s używa Prowokacji, ale nikt nie znajduje się w zasięgu." % _unit_name_log_text(caster))
 		return
 	_log_event("%s prowokuje: %s." % [_unit_name_log_text(caster), ", ".join(affected)])
 
@@ -2768,7 +2810,7 @@ func _execute_dancing_blade(caster: Dictionary) -> void:
 			continue
 		targets.append(other)
 	if targets.is_empty():
-		_log_event("%s uzywa Tanczacego Ostrza, ale nikt nie jest w zasiegu." % _unit_name_log_text(caster))
+		_log_event("%s używa Tańczącego Ostrza, ale nikt nie znajduje się w zasięgu." % _unit_name_log_text(caster))
 		return
 	var play_animation := true
 	for target in targets:
@@ -2778,7 +2820,7 @@ func _execute_dancing_blade(caster: Dictionary) -> void:
 		var hit_target: Dictionary = result.get("target", target)
 		var casualties := int(result.get("casualties", 0))
 		_log_event(
-			"%s tnie %s Tanczacym Ostrzem za %s obrazen i %s strat." % [
+			"%s tnie %s Tańczącym Ostrzem, zadając %s obrażeń i powodując %s strat." % [
 				_unit_name_log_text(caster),
 				_unit_name_log_text(hit_target),
 				_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -2804,7 +2846,7 @@ func _execute_knee_shot(caster: Dictionary, target: Dictionary) -> void:
 			]
 		})
 	_log_event(
-		"%s trafia %s Strzalem w Kolano za %s obrazen i %s strat, unieruchamiajac cel." % [
+		"%s trafia %s Strzałem w Kolano, zadając %s obrażeń, powodując %s strat i unieruchamiając cel." % [
 			_unit_name_log_text(caster),
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -2822,7 +2864,7 @@ func _execute_poison_dagger(caster: Dictionary, target: Dictionary) -> void:
 	if int(result.get("damage", 0)) > 0:
 		_apply_poison_effect(hit_target, "toksyna", "Toksyna", 3, max(1, int(ceil(float(caster.dmg) * 0.5))), true)
 	_log_event(
-		"%s zatruwa %s Sztyletem za %s obrazen i %s strat." % [
+		"%s zatruwa %s Sztyletem, zadając %s obrażeń i powodując %s strat." % [
 			_unit_name_log_text(caster),
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -2844,7 +2886,7 @@ func _execute_eagle_eye(caster: Dictionary) -> void:
 			{"stat": "dmg", "mode": "percent", "value": 25}
 		]
 	})
-	_log_event("%s przygotowuje Sokole Oko na nastepna ture." % _unit_name_log_text(caster))
+	_log_event("%s przygotowuje Sokole Oko na następną turę." % _unit_name_log_text(caster))
 
 
 func _execute_pnacza(caster: Dictionary, target: Dictionary) -> void:
@@ -2871,7 +2913,7 @@ func _execute_curse_throw(caster: Dictionary, target: Dictionary) -> void:
 func _execute_hook_throw(caster: Dictionary, target: Dictionary) -> void:
 	var destination: Vector2i = _get_pull_destination(caster, target)
 	if destination == Vector2i(-1, -1):
-		_log_event("%s rzuca hakiem w %s, ale nie moze przyciagnac celu." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
+		_log_event("%s rzuca hakiem w %s, ale nie może przyciągnąć celu." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
 		return
 	var start_cell := Vector2i(target.grid_x, target.grid_y)
 	var pull_path: Array[Vector2i] = _get_pull_path(start_cell, destination)
@@ -2888,7 +2930,7 @@ func _execute_hook_throw(caster: Dictionary, target: Dictionary) -> void:
 		await board.animation_finished
 	is_animating = false
 	_sync_board()
-	_log_event("%s przyciaga %s Rzutem Hakiem." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
+	_log_event("%s przyciąga %s Rzutem Hakiem." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
 
 
 func _get_pull_path(start_cell: Vector2i, destination_cell: Vector2i) -> Array[Vector2i]:
@@ -2929,9 +2971,9 @@ func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
 	is_animating = false
 	var suffix := " Atak zostaje zablokowany."
 	if int(result.get("damage", 0)) > 0:
-		suffix = " Cel zostaje odepchniety." if pushed else " Cel wpada w blokade i zostaje ogluszony."
+		suffix = " Cel zostaje odepchnięty." if pushed else " Cel wpada na przeszkodę i zostaje ogłuszony."
 	_log_event(
-		"%s odepycha %s Odepchnieciem Tarcza za %s obrazen i %s strat.%s" % [
+		"%s odpycha %s Odepchnięciem Tarczą, zadając %s obrażeń i powodując %s strat.%s" % [
 			_unit_name_log_text(caster),
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -2957,9 +2999,9 @@ func _execute_hammer_strike(caster: Dictionary, target: Dictionary) -> void:
 			"stat_changes": [],
 			"skip_turn": true
 		})
-		stun_suffix = " Cel zostaje ogluszony."
+		stun_suffix = " Cel zostaje ogłuszony."
 	_log_event(
-		"%s uderza %s Walnieciem Mlotem za %s obrazen i %s strat.%s" % [
+		"%s uderza %s Walnięciem Młotem, zadając %s obrażeń i powodując %s strat.%s" % [
 			_unit_name_log_text(caster),
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -2986,7 +3028,7 @@ func _execute_fireball(caster: Dictionary, center: Vector2i) -> void:
 		var hit_target: Dictionary = result.get("target", target)
 		var casualties: int = int(result.get("casualties", 0))
 		hit_names.append(
-			"trafia %s za %s obrazen i %s strat" % [
+			"trafia %s, zadając %s obrażeń i powodując %s strat" % [
 				_unit_name_log_text(hit_target),
 				_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
 				_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
@@ -2995,7 +3037,7 @@ func _execute_fireball(caster: Dictionary, center: Vector2i) -> void:
 		_cleanup_destroyed_unit(hit_target)
 	_add_terrain_effect(center, "fire", 1)
 	is_animating = false
-	_log_event("%s rzuca Kule Ognia: %s." % [_unit_name_log_text(caster), "brak trafien" if hit_names.is_empty() else ", ".join(hit_names)])
+	_log_event("%s rzuca Kulę Ognia: %s." % [_unit_name_log_text(caster), "brak trafień" if hit_names.is_empty() else ", ".join(hit_names)])
 
 
 func _execute_dynamite_throw(caster: Dictionary, center: Vector2i) -> void:
@@ -3010,7 +3052,7 @@ func _execute_dynamite_throw(caster: Dictionary, center: Vector2i) -> void:
 		var hit_target: Dictionary = result.get("target", target)
 		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
 		_cleanup_destroyed_unit(hit_target)
-	_log_event("%s rzuca dynamitem: %s." % [_unit_name_log_text(caster), "brak trafien" if hit_names.is_empty() else ", ".join(hit_names)])
+	_log_event("%s rzuca dynamitem: %s." % [_unit_name_log_text(caster), "brak trafień" if hit_names.is_empty() else ", ".join(hit_names)])
 
 
 func _execute_arrow_rain(caster: Dictionary, center: Vector2i) -> void:
@@ -3030,7 +3072,7 @@ func _execute_arrow_rain(caster: Dictionary, center: Vector2i) -> void:
 		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
 		_cleanup_destroyed_unit(hit_target)
 	is_animating = false
-	_log_event("%s uzywa Deszczu Strzal: %s." % [_unit_name_log_text(caster), "brak trafien" if hit_names.is_empty() else ", ".join(hit_names)])
+	_log_event("%s używa Deszczu Strzał: %s." % [_unit_name_log_text(caster), "brak trafień" if hit_names.is_empty() else ", ".join(hit_names)])
 
 
 func _execute_ice_ground(caster: Dictionary, center: Vector2i) -> void:
@@ -3046,7 +3088,7 @@ func _execute_ice_ground(caster: Dictionary, center: Vector2i) -> void:
 		_add_terrain_effect(cell, "ice", 2)
 	_apply_terrain_effects_in_cells(cells)
 	is_animating = false
-	_log_event("%s zamraza podloze." % _unit_name_log_text(caster))
+	_log_event("%s zamraża podłoże." % _unit_name_log_text(caster))
 
 
 func _get_magic_projection_cells(middle: Vector2i, side: String) -> Array[Vector2i]:
@@ -3118,7 +3160,7 @@ func _find_enemy_summon_statue_cell(enemy_unit: Dictionary, skill: Dictionary) -
 func _execute_magic_projection(caster: Dictionary, anchor: Vector2i) -> void:
 	var cells: Array[Vector2i] = _get_magic_projection_cells(anchor, str(caster.side))
 	if cells.size() != 3:
-		_log_event("%s nie moze postawic Magicznej Projekcji w tym miejscu." % _unit_name_log_text(caster))
+		_log_event("%s nie może postawić Magicznej Projekcji w tym miejscu." % _unit_name_log_text(caster))
 		return
 	for cell in cells:
 		obstacles.append({
@@ -3129,7 +3171,7 @@ func _execute_magic_projection(caster: Dictionary, anchor: Vector2i) -> void:
 			"remaining_turns": 3,
 			"source": "skill",
 		})
-	_log_event("%s tworzy Magiczna Projekcje na 3 tury." % _unit_name_log_text(caster))
+	_log_event("%s tworzy Magiczną Projekcję na 3 tury." % _unit_name_log_text(caster))
 
 
 func _execute_poison_cloud(caster: Dictionary, center: Vector2i) -> void:
@@ -3137,7 +3179,7 @@ func _execute_poison_cloud(caster: Dictionary, center: Vector2i) -> void:
 	for cell in cells:
 		_add_terrain_effect(cell, "poison_cloud", 2, int(caster.id), max(1, int(ceil(float(caster.dmg) * 0.25))))
 	_apply_terrain_effects_in_cells(cells)
-	_log_event("%s tworzy Chmure Toksyczna." % _unit_name_log_text(caster))
+	_log_event("%s tworzy Chmurę Toksyczną." % _unit_name_log_text(caster))
 
 
 func _execute_bear_trap(caster: Dictionary, cell: Vector2i) -> void:
@@ -3146,7 +3188,7 @@ func _execute_bear_trap(caster: Dictionary, cell: Vector2i) -> void:
 	trap["caster_side"] = str(caster.side)
 	trap["visible_until_ms"] = Time.get_ticks_msec() + 5000
 	trap["enemy_memory_until_round"] = round_number + 1 if caster.side == "player" else round_number
-	_log_event("%s zaklada Pulapke na Niedzwiedzie." % _unit_name_log_text(caster))
+	_log_event("%s zastawia Pułapkę na Niedźwiedzie." % _unit_name_log_text(caster))
 
 
 func _execute_goblin_trap(caster: Dictionary, cell: Vector2i) -> void:
@@ -3155,7 +3197,7 @@ func _execute_goblin_trap(caster: Dictionary, cell: Vector2i) -> void:
 	trap["caster_side"] = str(caster.side)
 	trap["visible_until_ms"] = Time.get_ticks_msec() + 5000
 	trap["enemy_memory_until_round"] = round_number + 1 if caster.side == "player" else round_number
-	_log_event("%s zaklada Pulapke Goblina." % _unit_name_log_text(caster))
+	_log_event("%s zastawia Pułapkę Goblina." % _unit_name_log_text(caster))
 
 
 func _can_place_summoned_statue_at(cell: Vector2i) -> bool:
@@ -3190,7 +3232,7 @@ func _refresh_elf_statue_buffs() -> void:
 
 func _execute_summon_statue(caster: Dictionary, cell: Vector2i) -> void:
 	if not _can_place_summoned_statue_at(cell):
-		_log_event("%s nie moze przyzwac Pomnika w tym miejscu." % _unit_name_log_text(caster))
+		_log_event("%s nie może przyzwać Pomnika w tym miejscu." % _unit_name_log_text(caster))
 		return
 	var had_statue: bool = _find_summoned_statue_index(int(caster.id)) >= 0
 	_remove_caster_summoned_statue(int(caster.id))
@@ -3205,9 +3247,9 @@ func _execute_summon_statue(caster: Dictionary, cell: Vector2i) -> void:
 	})
 	_refresh_elf_statue_buffs()
 	if had_statue:
-		_log_event("%s przenosi Pomnik Elfow." % _unit_name_log_text(caster))
+		_log_event("%s przenosi Pomnik Elfów." % _unit_name_log_text(caster))
 	else:
-		_log_event("%s przyzywa Pomnik Elfow." % _unit_name_log_text(caster))
+		_log_event("%s przyzywa Pomnik Elfów." % _unit_name_log_text(caster))
 
 
 func _trigger_goblin_trap(unit: Dictionary, trap: Dictionary) -> void:
@@ -3231,13 +3273,13 @@ func _trigger_goblin_trap(unit: Dictionary, trap: Dictionary) -> void:
 		"tick_damage": KRWAWIENIE_TICK_DAMAGE
 	})
 	terrain_effects.erase(trap)
-	_log_event("%s wpada w Pulapke Goblina za %s obrazen i %s strat." % [_unit_name_log_text(unit), _color_log_text(str(damage), LOG_COLOR_DAMAGE), _color_log_text(str(casualties), LOG_COLOR_DAMAGE)])
+	_log_event("%s wpada w Pułapkę Goblina, otrzymuje %s obrażeń i ponosi %s strat." % [_unit_name_log_text(unit), _color_log_text(str(damage), LOG_COLOR_DAMAGE), _color_log_text(str(casualties), LOG_COLOR_DAMAGE)])
 	_cleanup_destroyed_unit(unit)
 
 
 func _execute_energy_barrier(caster: Dictionary) -> void:
 	_apply_energy_barrier(caster)
-	_log_event("%s otacza sie Bariera Energetyczna." % _unit_name_log_text(caster))
+	_log_event("%s otacza się Barierą Energetyczną." % _unit_name_log_text(caster))
 
 
 func _execute_iron_curtain(caster: Dictionary, target: Dictionary) -> void:
@@ -3249,7 +3291,7 @@ func _execute_iron_curtain(caster: Dictionary, target: Dictionary) -> void:
 		"stat_changes": [],
 		"guarded_by_id": int(caster.id)
 	})
-	_log_event("%s chroni %s Zelazna Kurtyna." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
+	_log_event("%s chroni %s Żelazną Kurtyną." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
 
 
 func _execute_self_buff(caster: Dictionary, skill: Dictionary) -> void:
@@ -3261,7 +3303,7 @@ func _execute_self_buff(caster: Dictionary, skill: Dictionary) -> void:
 	if str(effect.get("name", "")) == "":
 		effect["name"] = str(skill.get("name", skill.get("id", "")))
 	_apply_or_refresh_effect(caster, effect)
-	_log_event("%s uzywa %s." % [_unit_name_log_text(caster), str(skill.get("name", skill.get("id", "")))])
+	_log_event("%s używa umiejętności %s." % [_unit_name_log_text(caster), str(skill.get("name", skill.get("id", "")))])
 
 
 func _execute_zadza_krwi(caster: Dictionary, skill: Dictionary) -> void:
@@ -3282,7 +3324,7 @@ func _execute_zadza_krwi(caster: Dictionary, skill: Dictionary) -> void:
 	})
 	_recalculate_unit_stats(caster)
 	_log_event(
-		"%s uzywa %s i zyskuje stale +2 DMG oraz -2 DEF (lacznie +%d DMG, -%d DEF do konca bitwy)." % [
+		"%s używa umiejętności %s i na stałe zyskuje +2 DMG oraz -2 DEF (łącznie +%d DMG i -%d DEF do końca bitwy)." % [
 			_unit_name_log_text(caster),
 			str(skill.get("name", "Żądza krwi")),
 			stack_amount * 2,
@@ -3308,7 +3350,7 @@ func _execute_utwardzenie(caster: Dictionary, skill: Dictionary) -> void:
 	})
 	_recalculate_unit_stats(caster)
 	_log_event(
-		"%s uzywa Utwardzenia i zyskuje stale +1 DEF (lacznie +%d DEF do konca bitwy)." % [
+		"%s używa Utwardzenia i na stałe zyskuje +1 DEF (łącznie +%d DEF do końca bitwy)." % [
 			_unit_name_log_text(caster),
 			stack_amount
 		]
@@ -3322,7 +3364,7 @@ func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dict
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	_log_event(
-		"%s trafia %s za %s obrazen i %s strat." % [
+		"%s trafia %s, zadając %s obrażeń i powodując %s strat." % [
 			_unit_name_log_text(caster),
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -3402,7 +3444,7 @@ func _execute_piercing_shot(caster: Dictionary, target: Dictionary, skill: Dicti
 		var casualties := int(result.get("casualties", 0))
 		if cell_index == 0:
 			_log_event(
-				"%s trafia %s Przebijajacym Strzalem za %s obrazen i %s strat." % [
+				"%s trafia %s Przebijającym Strzałem, zadając %s obrażeń i powodując %s strat." % [
 					_unit_name_log_text(caster),
 					_unit_name_log_text(hit_target),
 					_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -3411,7 +3453,7 @@ func _execute_piercing_shot(caster: Dictionary, target: Dictionary, skill: Dicti
 			)
 		else:
 			_log_event(
-				"Strzal przebija i trafia %s za %s obrazen i %s strat." % [
+				"Strzała przebija cel i trafia %s, zadając %s obrażeń i powodując %s strat." % [
 					_unit_name_log_text(hit_target),
 					_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
 					_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
@@ -3433,7 +3475,7 @@ func _execute_zaklete_ciecie(caster: Dictionary, target: Dictionary) -> void:
 		})
 		curse_suffix = " Cel jest przeklęty."
 	_log_event(
-		"%s tnie %s Zakletym Cieciem za %s obrazen i %s strat.%s" % [
+		"%s tnie %s Zaklętym Cięciem, zadając %s obrażeń i powodując %s strat.%s" % [
 			_unit_name_log_text(caster),
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -3461,7 +3503,7 @@ func _execute_rozszarpanie(caster: Dictionary, target: Dictionary) -> void:
 		})
 		bleed_suffix = " Cel krwawi."
 	_log_event(
-		"%s rozszarpa %s za %s obrazen i %s strat.%s" % [
+		"%s rozszarpuje %s, zadając %s obrażeń i powodując %s strat.%s" % [
 			_unit_name_log_text(caster),
 			_unit_name_log_text(hit_target),
 			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
@@ -3517,10 +3559,10 @@ func _apply_terrain_effects_to_unit(unit: Dictionary, apply_entry_effect := true
 				_log_event("%s staje w ogniu." % _unit_name_log_text(unit))
 			"ice":
 				_apply_or_refresh_effect(unit, {"id": "lodowe_podloze"})
-				_log_event("%s slizga sie na lodzie." % _unit_name_log_text(unit))
+				_log_event("%s ślizga się na lodzie." % _unit_name_log_text(unit))
 			"poison_cloud":
 				if _apply_poison_effect(unit, "zatrucie", "Zatrucie", 2, int(effect.get("tick_damage", 1))):
-					_log_event("%s wdycha toksyczna chmure." % _unit_name_log_text(unit))
+					_log_event("%s wdycha toksyczną chmurę." % _unit_name_log_text(unit))
 			"bear_trap":
 				_trigger_bear_trap(unit, effect)
 			"goblin_trap":
@@ -3550,7 +3592,7 @@ func _trigger_bear_trap(unit: Dictionary, trap: Dictionary) -> void:
 		"tick_damage": KRWAWIENIE_TICK_DAMAGE
 	})
 	terrain_effects.erase(trap)
-	_log_event("%s wpada w Pulapke na Niedzwiedzie za %s obrazen i %s strat." % [_unit_name_log_text(unit), _color_log_text(str(damage), LOG_COLOR_DAMAGE), _color_log_text(str(casualties), LOG_COLOR_DAMAGE)])
+	_log_event("%s wpada w Pułapkę na Niedźwiedzie, otrzymuje %s obrażeń i ponosi %s strat." % [_unit_name_log_text(unit), _color_log_text(str(damage), LOG_COLOR_DAMAGE), _color_log_text(str(casualties), LOG_COLOR_DAMAGE)])
 	_cleanup_destroyed_unit(unit)
 
 
@@ -3571,7 +3613,7 @@ func _apply_terrain_entry_effect(unit: Dictionary) -> void:
 		_log_event("%s wchodzi w %s i znika z pola widzenia." % [_unit_name_log_text(unit), terrain_name])
 	else:
 		unit["is_hidden"] = false
-		_log_event("%s wchodzi w %s i traci reszte ruchu." % [_unit_name_log_text(unit), terrain_name])
+		_log_event("%s wchodzi w %s i traci resztę ruchu." % [_unit_name_log_text(unit), terrain_name])
 		if _is_winter_scenario() and _is_water_cell(cell):
 			_try_ice_break_death(unit, cell)
 
@@ -3686,7 +3728,7 @@ func _trigger_detonator(active_unit: Dictionary, cell: Vector2i, detonator_index
 	_log_event(
 		"%s wybucha: %s." % [
 			_unit_name_log_text(active_unit),
-			"brak trafien" if hit_names.is_empty() else ", ".join(hit_names)
+			"brak trafień" if hit_names.is_empty() else ", ".join(hit_names)
 		]
 	)
 	_show_screen_message("Detonator wybucha!", 2.0)
@@ -3713,7 +3755,7 @@ func _random_detonator_target_cells(excluded_cell: Vector2i) -> Array[Vector2i]:
 func _try_ice_break_death(unit: Dictionary, cell: Vector2i) -> void:
 	if randi() % 100 >= 10:
 		return
-	_log_event(_color_log_text("%s zapada sie pod lod i ginie!" % _unit_name_log_text(unit), LOG_COLOR_DAMAGE))
+	_log_event(_color_log_text("%s zapada się pod lód i ginie!" % _unit_name_log_text(unit), LOG_COLOR_DAMAGE))
 	unit["count"] = 0
 	unit["current_total_hp"] = 0
 	unit["current_hp"] = 0
@@ -3759,7 +3801,7 @@ func _reveal_if_in_bush(unit: Dictionary) -> void:
 
 func _apply_poison_effect(unit: Dictionary, id: String, name: String, turns: int, tick_damage: int, reduce_def := false) -> bool:
 	if _is_poison_immune(unit):
-		_log_event("%s ignoruje trucizne." % _unit_name_log_text(unit))
+		_log_event("%s jest odporny na truciznę." % _unit_name_log_text(unit))
 		return false
 	var stat_changes: Array[Dictionary] = []
 	if reduce_def:
@@ -3819,7 +3861,7 @@ func _try_trigger_map_event() -> void:
 	if next_map_event_round == 0 or round_number < next_map_event_round:
 		return
 	if next_map_event_id == "brak_eventu":
-		_log_event(_color_log_text("Runda mija bez eventu mapy.", LOG_COLOR_YELLOW), false)
+		_log_event(_color_log_text("Runda mija bez wydarzenia na mapie.", LOG_COLOR_YELLOW), false)
 		_schedule_next_map_event(round_number)
 		_sync_board()
 		return
@@ -3928,19 +3970,19 @@ func _event_forest_roots() -> void:
 			"remaining_turns": 1,
 			"stat_changes": [{"stat": "move_range", "mode": "set", "value": 0}]
 		})
-	_log_event(_color_log_text("EVENT MAPY: Gniew Korzeni unieruchamia jednostki na oznaczonych polach.", LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("WYDARZENIE NA MAPIE: Gniew Korzeni unieruchamia jednostki na oznaczonych polach.", LOG_COLOR_YELLOW))
 
 
 func _event_falling_rubble() -> void:
 	_damage_units_on_event_cells("Spadajacy Rumosz")
-	_log_event(_color_log_text("EVENT MAPY: Wstrzas narusza strop kopalni.", LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("WYDARZENIE NA MAPIE: Wstrząs narusza strop kopalni.", LOG_COLOR_YELLOW))
 
 
 func _event_spreading_fire() -> void:
 	for cell in map_event_cells:
 		_add_terrain_effect(cell, "fire", 2)
 	_apply_terrain_effects_in_cells(map_event_cells)
-	_log_event(_color_log_text("EVENT MAPY: Pozar rozprzestrzenia sie na trzy pola.", LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("WYDARZENIE NA MAPIE: Pożar rozprzestrzenia się na trzy pola.", LOG_COLOR_YELLOW))
 
 
 func _event_global_slow(event_id: String, event_name: String) -> void:
@@ -3955,7 +3997,7 @@ func _event_global_slow(event_id: String, event_name: String) -> void:
 				{"stat": "move_range", "mode": "flat", "value": -2}
 			]
 		})
-	_log_event(_color_log_text("EVENT MAPY: %s spowalnia wszystkie jednostki." % event_name, LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("WYDARZENIE NA MAPIE: %s spowalnia wszystkie jednostki." % event_name, LOG_COLOR_YELLOW))
 
 
 func _event_forest_awakening() -> void:
@@ -3971,7 +4013,7 @@ func _event_global_range(event_name: String) -> void:
 			"remaining_turns": 1,
 			"stat_changes": [{"stat": "attack_range", "mode": "flat", "value": -1}]
 		})
-	_log_event(_color_log_text("EVENT MAPY: %s zmniejsza zasieg ataku wszystkich jednostek o 1." % event_name, LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("WYDARZENIE NA MAPIE: %s zmniejsza zasięg ataku wszystkich jednostek o 1." % event_name, LOG_COLOR_YELLOW))
 
 
 func _event_magic_bloom() -> void:
@@ -3981,15 +4023,15 @@ func _event_magic_bloom() -> void:
 		var healing: int = int(target.get("base_hp", 1))
 		target["current_total_hp"] = mini(int(target.get("max_total_hp", healing)), int(target.get("current_total_hp", 0)) + healing)
 		_refresh_unit_health_state(target)
-		_log_event("%s odzyskuje %s HP dzieki Magicznemu Rozkwitowi." % [_unit_name_log_text(target), healing])
-	_log_event(_color_log_text("EVENT MAPY: Magiczny Rozkwit leczy jednostki na oznaczonych polach.", LOG_COLOR_YELLOW))
+		_log_event("%s odzyskuje %s HP dzięki Magicznemu Rozkwitowi." % [_unit_name_log_text(target), healing])
+	_log_event(_color_log_text("WYDARZENIE NA MAPIE: Magiczny Rozkwit leczy jednostki na oznaczonych polach.", LOG_COLOR_YELLOW))
 
 
 func _event_random_terrain(effect_id: String, count: int, turns: int) -> void:
 	for cell in map_event_cells:
 		_add_terrain_effect(cell, effect_id, turns, -1, 1 if effect_id == "poison_cloud" else 0)
 	_apply_terrain_effects_in_cells(map_event_cells)
-	_log_event(_color_log_text("EVENT MAPY: %s pojawia sie na %d polach." % [_map_event_name(), map_event_cells.size()], LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("WYDARZENIE NA MAPIE: %s pojawia się na %d polach." % [_map_event_name(), map_event_cells.size()], LOG_COLOR_YELLOW))
 
 
 func _event_random_obstacles(type_id: String, variant: String, count: int, message: String) -> void:
@@ -4011,12 +4053,12 @@ func _event_random_obstacles(type_id: String, variant: String, count: int, messa
 	for unit in units:
 		if map_event_cells.has(Vector2i(int(unit.grid_x), int(unit.grid_y))):
 			_apply_terrain_entry_effect(unit)
-	_log_event(_color_log_text("EVENT MAPY: %s" % message, LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("WYDARZENIE NA MAPIE: %s" % message, LOG_COLOR_YELLOW))
 
 
 func _event_damage_on_marked_cells(event_name: String) -> void:
 	_damage_units_on_event_cells(event_name)
-	_log_event(_color_log_text("EVENT MAPY: %s uderza w oznaczone pola." % event_name, LOG_COLOR_YELLOW))
+	_log_event(_color_log_text("WYDARZENIE NA MAPIE: %s uderza w oznaczone pola." % event_name, LOG_COLOR_YELLOW))
 
 
 func _damage_units_on_event_cells(event_name: String) -> void:
@@ -4025,7 +4067,7 @@ func _damage_units_on_event_cells(event_name: String) -> void:
 			continue
 		var damage: int = _calculate_tick_damage(target, 1)
 		_apply_damage_to_unit(target, damage)
-		_log_event("%s otrzymuje %s obrazen przez %s." % [_unit_name_log_text(target), _color_log_text(str(damage), LOG_COLOR_DAMAGE), event_name])
+		_log_event("%s otrzymuje %s obrażeń wskutek wydarzenia %s." % [_unit_name_log_text(target), _color_log_text(str(damage), LOG_COLOR_DAMAGE), event_name])
 		_cleanup_destroyed_unit(target)
 
 
@@ -4068,7 +4110,7 @@ func _prepare_map_event_warning() -> void:
 	if cell_count == 0:
 		return
 	map_event_cells = _random_map_event_cells(cell_count)
-	_log_event(_color_log_text("OSTRZEZENIE: %s uderzy w oznaczone pola w rundzie %d." % [_map_event_name(), next_map_event_round], LOG_COLOR_YELLOW), false)
+	_log_event(_color_log_text("OSTRZEŻENIE: %s uderzy w oznaczone pola w rundzie %d." % [_map_event_name(), next_map_event_round], LOG_COLOR_YELLOW), false)
 
 
 func _is_map_event_warning_round(current_round_number: int, event_round: int) -> bool:
@@ -4132,7 +4174,7 @@ func _add_current_move_gain(unit: Dictionary, previous_move_range: int) -> void:
 	unit["remaining_move"] = int(unit.get("remaining_move", 0)) + gained_move
 
 
-func _process_turn_start(unit: Dictionary) -> void:
+func _process_turn_start(unit: Dictionary) -> bool:
 	_advance_skill_cooldowns(unit)
 	_ensure_energy_barrier(unit)
 	_remove_effect(unit, "woda")
@@ -4155,7 +4197,7 @@ func _process_turn_start(unit: Dictionary) -> void:
 			continue
 		var total_damage := _calculate_tick_damage(unit, tick_damage)
 		if _consume_energy_barrier(unit):
-			_log_event("Bariera Energetyczna blokuje obrazenia od %s na %s." % [str(effect.get("name", "efekt")), _unit_name_log_text(unit)])
+			_log_event("Bariera Energetyczna chroni %s przed obrażeniami od efektu %s." % [_unit_name_log_text(unit), str(effect.get("name", "efekt"))])
 			continue
 		var casualties := _apply_damage_to_unit(unit, total_damage)
 		_log_event(
@@ -4168,10 +4210,11 @@ func _process_turn_start(unit: Dictionary) -> void:
 		)
 		if int(unit.get("count", 0)) <= 0:
 			_cleanup_destroyed_unit(unit)
-			return
+			return skipped_turn
 	if skipped_turn:
-		_log_event("%s jest ogluszona i traci ture." % _unit_name_log_text(unit))
+		_log_event("%s jest ogłuszony i traci turę." % _unit_name_log_text(unit))
 	_recalculate_unit_stats(unit)
+	return skipped_turn
 
 
 func _advance_skill_cooldowns(unit: Dictionary) -> void:
@@ -4341,7 +4384,7 @@ func _try_trigger_agility(moved_unit: Dictionary) -> void:
 		unit.grid_y = destination.y
 		unit.skill_cooldowns["zwinnosc"] = 4
 		board.snap_unit_to_cell(int(unit.id), destination)
-		_log_event("%s odskakuje dzieki Zwinnosci." % _unit_name_log_text(unit))
+		_log_event("%s odskakuje dzięki Zwinności." % _unit_name_log_text(unit))
 
 
 func _get_push_destination(source: Dictionary, target: Dictionary) -> Vector2i:
@@ -4949,6 +4992,47 @@ func _build_screen_message_label() -> void:
 	hud.add_child(screen_message_label)
 
 
+func _build_stage_transition_overlay() -> void:
+	stage_transition_overlay = ColorRect.new()
+	stage_transition_overlay.visible = false
+	stage_transition_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	stage_transition_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	stage_transition_overlay.color = Color.BLACK
+	stage_transition_overlay.modulate.a = 0.0
+	hud.add_child(stage_transition_overlay)
+
+	var content := VBoxContainer.new()
+	content.set_anchors_preset(Control.PRESET_CENTER)
+	content.offset_left = -300
+	content.offset_top = -90
+	content.offset_right = 300
+	content.offset_bottom = 90
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_theme_constant_override("separation", 14)
+	stage_transition_overlay.add_child(content)
+
+	var stage_label := Label.new()
+	stage_label.text = "SZTURM NA ZAMEK"
+	stage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stage_label.add_theme_font_size_override("font_size", 18)
+	stage_label.add_theme_color_override("font_color", Color(0.72, 0.63, 0.45))
+	content.add_child(stage_label)
+
+	stage_transition_title = Label.new()
+	stage_transition_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stage_transition_title.add_theme_font_size_override("font_size", 42)
+	stage_transition_title.add_theme_color_override("font_color", Color(0.96, 0.88, 0.68))
+	stage_transition_title.add_theme_color_override("font_outline_color", Color(0.12, 0.07, 0.03))
+	stage_transition_title.add_theme_constant_override("outline_size", 8)
+	content.add_child(stage_transition_title)
+
+	stage_transition_progress = Label.new()
+	stage_transition_progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stage_transition_progress.add_theme_font_size_override("font_size", 20)
+	stage_transition_progress.add_theme_color_override("font_color", Color(0.72, 0.63, 0.45))
+	content.add_child(stage_transition_progress)
+
+
 func _show_screen_message(text: String, duration := 2.5) -> void:
 	if screen_message_label == null:
 		return
@@ -5066,6 +5150,11 @@ func _validate_setup() -> void:
 		var resolved: Dictionary = UnitTypeLibraryScript.build_active_effect(effect_id, {})
 		assert(not resolved.is_empty() and str(resolved.get("category", "")) != "", "Efekt terenu musi byc w status_effects: %s" % effect_id)
 	assert(next_map_event_round == 0 or next_map_event_round >= 2, "Event mapy nie moze wystapic przed druga runda.")
+	for faction_id in ["elves", "humans", "dwarves", "orcs", "goblins"]:
+		var faction_general_skills: Array[String] = UnitTypeLibraryScript.get_faction_general_skill_ids(faction_id)
+		assert(faction_general_skills.size() == 2, "Frakcja musi miec dokladnie 2 umiejetnosci generala: %s" % faction_id)
+		for general_skill_id in faction_general_skills:
+			assert(general_skills.has(general_skill_id), "Brak umiejetnosci generala: %s" % general_skill_id)
 	assert(_is_map_event_warning_round(2, 3) and not _is_map_event_warning_round(1, 3), "Pola eventu maja byc widoczne tylko runde przed jego aktywacja.")
 	for scenario_id in MAP_EVENT_POOLS:
 		var event_pool: Array = MAP_EVENT_POOLS[scenario_id]
@@ -5624,16 +5713,28 @@ func _rebuild_turn_queue() -> void:
 	turn_queue = []
 	for unit in units:
 		turn_queue.append(int(unit.id))
-	turn_queue.sort_custom(func(a: int, b: int) -> bool:
-		var unit_a: Dictionary = _find_unit_by_id(a)
-		var unit_b: Dictionary = _find_unit_by_id(b)
-		if int(unit_a.speed) == int(unit_b.speed):
-			if unit_a.side == unit_b.side:
-				return a < b
-			return unit_a.side == "player"
-		return int(unit_a.speed) > int(unit_b.speed)
-	)
+	turn_queue.sort_custom(_is_turn_before)
 	turn_queue_index = -1
+
+
+func _resort_remaining_turn_queue() -> void:
+	var first_pending: int = turn_queue_index + 1
+	var remaining: Array[int] = []
+	for index in range(first_pending, turn_queue.size()):
+		remaining.append(turn_queue[index])
+	remaining.sort_custom(_is_turn_before)
+	for index in remaining.size():
+		turn_queue[first_pending + index] = remaining[index]
+
+
+func _is_turn_before(a: int, b: int) -> bool:
+	var unit_a: Dictionary = _find_unit_by_id(a)
+	var unit_b: Dictionary = _find_unit_by_id(b)
+	if int(unit_a.speed) == int(unit_b.speed):
+		if unit_a.side == unit_b.side:
+			return a < b
+		return unit_a.side == "player"
+	return int(unit_a.speed) > int(unit_b.speed)
 
 
 func _start_next_activation() -> void:
@@ -5676,7 +5777,7 @@ func _start_unit_activation(unit: Dictionary) -> void:
 	unit.remaining_move = int(unit.move_range)
 	unit.action_points = int(unit.get("base_action_points", unit.get("action_points", 1)))
 	pending_skill_id = ""
-	_process_turn_start(unit)
+	var skips_turn: bool = _process_turn_start(unit)
 	if _is_manual_side(str(unit.side)):
 		_refresh_general_ability_buttons()
 	_apply_terrain_effects_to_unit(unit, false)
@@ -5684,11 +5785,15 @@ func _start_unit_activation(unit: Dictionary) -> void:
 		_sync_board()
 		_start_next_activation()
 		return
+	if skips_turn:
+		_sync_board()
+		_end_current_activation()
+		return
 	if _is_immobilized(unit) and _is_manual_side(str(unit.side)):
-		_log_event("%s nie rusza sie, bo jest unieruchomiony." % _unit_name_log_text(unit))
+		_log_event("%s nie rusza się, ponieważ jest unieruchomiony." % _unit_name_log_text(unit))
 	if not _is_manual_side(str(unit.side)) and not _can_unit_continue_turn(unit):
 		if _is_immobilized(unit):
-			_log_event("%s nie rusza sie, bo jest unieruchomiony." % _unit_name_log_text(unit))
+			_log_event("%s nie rusza się, ponieważ jest unieruchomiony." % _unit_name_log_text(unit))
 		_sync_board()
 		_end_current_activation()
 		return
@@ -5751,6 +5856,8 @@ func _has_units_on_side(side: String) -> bool:
 
 
 func _check_victory() -> bool:
+	if setup_mode:
+		return false
 	var has_player := _has_units_on_side("player")
 	var has_enemy := _has_units_on_side("enemy")
 	if has_player and has_enemy:
@@ -5776,8 +5883,17 @@ func _check_victory() -> bool:
 
 
 func _advance_castle_stage() -> void:
+	is_animating = true
+	var stages: Array[Dictionary] = _get_castle_stages()
+	var next_stage: int = castle_stage + 1
+	_set_stage_transition_content(next_stage, stages)
+	stage_transition_overlay.visible = true
+	var transition: Tween = create_tween()
+	transition.tween_property(stage_transition_overlay, "modulate:a", 1.0, 0.45)
+	await transition.finished
+
 	castle_stage += 1
-	var stage: Dictionary = _get_castle_stages()[castle_stage - 1]
+	var stage: Dictionary = stages[castle_stage - 1]
 	_set_battle_background(str(stage.get("background", DEFAULT_BATTLE_BACKGROUND_PATH)))
 	var survivors: Array[Dictionary] = []
 	for unit in units:
@@ -5811,6 +5927,7 @@ func _advance_castle_stage() -> void:
 	map_event_cells.clear()
 	_schedule_next_map_event(0)
 	selected_unit_id = -1
+	setup_drag_unit_id = -1
 	active_unit_id = -1
 	current_turn = ""
 	pending_skill_id = ""
@@ -5823,9 +5940,31 @@ func _advance_castle_stage() -> void:
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
 	_sync_board()
-	_log_event(_color_log_text("ETAP %d/3: szturm trwa." % castle_stage, LOG_COLOR_YELLOW))
-	_rebuild_turn_queue()
-	_start_next_activation()
+	await get_tree().create_timer(2.5).timeout
+	transition = create_tween()
+	transition.tween_property(stage_transition_overlay, "modulate:a", 0.0, 0.45)
+	await transition.finished
+	stage_transition_overlay.visible = false
+	is_animating = false
+	setup_mode = true
+	_log_event(_color_log_text("Etap %d/%d: ustaw jednostki i kliknij START po prawej." % [castle_stage, stages.size()], LOG_COLOR_YELLOW))
+	_update_setup_hint_visibility()
+	_update_selection_visibility()
+	_update_action_buttons()
+	_refresh_turn_queue()
+	_sync_board()
+
+
+func _set_stage_transition_content(stage_number: int, stages: Array[Dictionary]) -> void:
+	stage_transition_title.text = str(stages[stage_number - 1].get("name", "ETAP %d" % stage_number)).to_upper()
+	stage_transition_progress.text = "ETAP %d/%d\n%s" % [stage_number, stages.size(), "  ".join(_get_stage_markers(stage_number, stages.size()))]
+
+
+func _get_stage_markers(active_stage: int, stage_count: int) -> PackedStringArray:
+	var markers := PackedStringArray()
+	for stage_number in range(1, stage_count + 1):
+		markers.append("●" if stage_number == active_stage else "○")
+	return markers
 
 
 func _get_visible_turn_queue() -> Array[int]:
@@ -5884,6 +6023,11 @@ func _use_general_skill_by_index(index: int) -> void:
 		return
 	if general_skill_used:
 		return
+	if str(skill.get("effect_type", "")) != "army_buff":
+		pending_general_skill_id = "" if pending_general_skill_id == skill_id else skill_id
+		_update_highlighted_cells(_get_active_unit())
+		_refresh_general_ability_buttons()
+		return
 	var effect: Dictionary = skill.get("effect", {})
 	if effect.is_empty():
 		return
@@ -5891,9 +6035,77 @@ func _use_general_skill_by_index(index: int) -> void:
 		if unit.side != "player":
 			continue
 		_apply_or_refresh_effect(unit, effect.duplicate(true))
+	_finish_general_skill(skill_id, skill)
+
+
+func _try_execute_general_skill(cell: Vector2i) -> void:
+	var skill_id: String = pending_general_skill_id
+	var skill: Dictionary = general_skills.get(skill_id, {})
+	var target_type: String = str(skill.get("effect_type", ""))
+	var target: Dictionary = _find_unit_at_cell(cell)
+	if target_type == "ally" and (target.is_empty() or target.side != "player"):
+		return
+	if bool(skill.get("active_only", false)) and int(target.get("id", -1)) != active_unit_id:
+		return
+	if target_type == "enemy" and (target.is_empty() or target.side != "enemy"):
+		return
+	if target_type == "area":
+		await _execute_general_area_skill(skill_id, skill, cell)
+	else:
+		_execute_general_unit_skill(skill_id, skill, target)
+
+
+func _execute_general_unit_skill(skill_id: String, skill: Dictionary, target: Dictionary) -> void:
+	target["action_points"] = int(target.get("action_points", 0)) + int(skill.get("action_points", 0))
+	var target_effect: Dictionary = skill.get("target_effect", {}).duplicate(true)
+	if not target_effect.is_empty():
+		target_effect["id"] = skill_id
+		target_effect["name"] = str(skill.get("name", skill_id))
+		_apply_or_refresh_effect(target, target_effect)
+	_finish_general_skill(skill_id, skill, " Cel: %s." % _unit_name_log_text(target))
+
+
+func _execute_general_area_skill(skill_id: String, skill: Dictionary, center: Vector2i) -> void:
+	var cells: Array[Vector2i] = _get_general_area_cells(center, int(skill.get("radius", 1)))
+	if str(skill.get("animation", "")) == "arrows":
+		is_animating = true
+		board.play_arrow_rain_animation(-1, cells)
+		await get_tree().create_timer(0.42).timeout
+		is_animating = false
+	var hits := 0
+	for area_cell in cells:
+		var target: Dictionary = _find_unit_at_cell(area_cell)
+		if target.is_empty() or target.side != "enemy":
+			continue
+		hits += 1
+		var damage: int = int(skill.get("damage_per_unit", 0)) * int(target.get("count", 0))
+		_apply_damage_to_unit(target, damage)
+		var target_effect: Dictionary = skill.get("target_effect", {}).duplicate(true)
+		if not target_effect.is_empty() and int(target.get("count", 0)) > 0:
+			target_effect["id"] = skill_id
+			target_effect["name"] = str(skill.get("name", skill_id))
+			_apply_or_refresh_effect(target, target_effect)
+		_cleanup_destroyed_unit(target)
+	_finish_general_skill(skill_id, skill, " Trafione oddziały: %d." % hits)
+
+
+func _get_general_area_cells(center: Vector2i, radius: int) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for column in GRID_COLUMNS:
+		for row in GRID_ROWS:
+			var cell := Vector2i(column, row)
+			if _hex_distance(center, cell) <= radius:
+				cells.append(cell)
+	return cells
+
+
+func _finish_general_skill(skill_id: String, skill: Dictionary, log_suffix: String = "") -> void:
+	pending_general_skill_id = ""
 	general_skill_used = true
-	_log_event("%s uzywa %s." % [general_name_label.text, str(skill.get("name", skill_id))])
+	_log_event("%s używa umiejętności %s.%s" % [general_name_label.text, str(skill.get("name", skill_id)), log_suffix])
 	_refresh_general_ability_buttons()
+	_update_highlighted_cells(_get_active_unit())
+	_resort_remaining_turn_queue()
 	_sync_board()
 
 
@@ -5926,7 +6138,7 @@ func _refresh_general_ability_buttons() -> void:
 		var skill: Dictionary = general_skills.get(skill_id, {})
 		var can_use := not setup_mode and not is_animating and _is_player_turn() and not general_skill_used
 		button.disabled = not can_use
-		button.modulate = Color(0.45, 0.45, 0.45, 0.75) if general_skill_used else Color.WHITE
+		button.modulate = Color(0.75, 0.9, 1.0, 1.0) if pending_general_skill_id == skill_id else (Color(0.45, 0.45, 0.45, 0.75) if general_skill_used else Color.WHITE)
 		name_label.text = str(skill.get("name", skill_id)).to_upper()
 		desc_label.text = str(skill.get("description", ""))
 		cd_label.text = ""

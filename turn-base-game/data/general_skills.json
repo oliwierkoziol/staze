@@ -1,125 +1,126 @@
 {
+  "faction_skills": {
+	"elves": ["grad_strzal", "tempo_lowow"],
+	"humans": ["przegrupowanie", "zelazna_dyscyplina"],
+	"dwarves": ["runiczna_opieka", "kamienny_szyk"],
+	"orcs": ["wyzwanie_wodza", "krwawy_szal"],
+	"goblins": ["toksyczny_deszcz", "ryzykowny_plan"]
+  },
   "general_skills": {
-	"silna_motywacja": {
-	  "id": "silna_motywacja",
-	  "name": "Silna Motywacja",
-	  "description": "Sojusznicy zadaja +25% obrazen przez 2 tury.",
+	"grad_strzal": {
+	  "name": "Grad Strzał",
+	  "description": "Zalej strzałami 19 heksów. Wrogowie tracą 2 PŻ za każdą żywą jednostkę oddziału.",
+	  "effect_type": "area",
+	  "radius": 2,
+	  "damage_per_unit": 2,
+	  "animation": "arrows"
+	},
+	"tempo_lowow": {
+	  "name": "Tempo Łowów",
+	  "description": "Wszyscy sojusznicy: +3 Speed i +1 ruchu przez 2 tury.",
+	  "effect_type": "army_buff",
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 2,
 		"stat_changes": [
-		  {"stat": "dmg", "mode": "percent", "value": 25}
-		]
-	  }
-	},
-	"szybkie_manewry": {
-	  "id": "szybkie_manewry",
-	  "name": "Szybkie Manewry",
-	  "description": "Wszyscy sojusznicy zyskuja +1 do zasiegu ruchu na 1 ture.",
-	  "effect": {
-		"category": "buff",
-		"remaining_turns": 1,
-		"stat_changes": [
+		  {"stat": "speed", "mode": "flat", "value": 3},
 		  {"stat": "move_range", "mode": "flat", "value": 1}
 		]
 	  }
 	},
-	"tarcza_bastionu": {
-	  "id": "tarcza_bastionu",
-	  "name": "Tarcza Bastionu",
-	  "description": "Wszyscy sojusznicy otrzymuja +20% obrony przez 2 tury.",
+	"przegrupowanie": {
+	  "name": "Przegrupowanie",
+	  "description": "Aktywny sojuszniczy oddział otrzymuje +1 punkt akcji.",
+	  "effect_type": "ally",
+	  "active_only": true,
+	  "action_points": 1
+	},
+	"zelazna_dyscyplina": {
+	  "name": "Równy Krok",
+	  "description": "Wszyscy sojusznicy otrzymują +1 DMG i +1 ruchu przez 2 tury.",
+	  "effect_type": "army_buff",
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 2,
 		"stat_changes": [
-		  {"stat": "def", "mode": "percent", "value": 20}
+		  {"stat": "dmg", "mode": "flat", "value": 1},
+		  {"stat": "move_range", "mode": "flat", "value": 1}
 		]
 	  }
 	},
-	"sokole_oko": {
-	  "id": "sokole_oko",
-	  "name": "Sokole Oko",
-	  "description": "Sojusznicy zyskuja +1 do zasiegu ataku na 2 tury.",
-	  "effect": {
+	"runiczna_opieka": {
+	  "name": "Runiczna Opieka",
+	  "description": "Wybierz sojuszniczy oddział: następny atak wymierzony w niego nie zada obrażeń.",
+	  "effect_type": "ally",
+	  "target_effect": {
 		"category": "buff",
 		"remaining_turns": 2,
-		"stat_changes": [
-		  {"stat": "attack_range", "mode": "flat", "value": 1}
-		]
-	  }
-	},
-	"wola_przetrwania": {
-	  "id": "wola_przetrwania",
-	  "name": "Wola Przetrwania",
-	  "description": "Sojusznicy otrzymuja +10% DMG i +10% DEF przez 2 tury.",
-	  "effect": {
-		"category": "buff",
-		"remaining_turns": 2,
-		"stat_changes": [
-		  {"stat": "dmg", "mode": "percent", "value": 10},
-		  {"stat": "def", "mode": "percent", "value": 10}
-		]
-	  }
-	},
-	"zimna_krew": {
-	  "id": "zimna_krew",
-	  "name": "Zimna Krew",
-	  "description": "Sojusznicy sa odporni na ogluszenie przez 1 ture.",
-	  "effect": {
-		"category": "buff",
-		"remaining_turns": 1,
+		"block_next_attack": true,
 		"stat_changes": []
 	  }
 	},
-	"zmasowany_atak": {
-	  "id": "zmasowany_atak",
-	  "name": "Zmasowany Atak",
-	  "description": "Sojusznicy zadaja +15% obrazen i maja +1 zasieg ataku na 1 ture.",
-	  "effect": {
+	"kamienny_szyk": {
+	  "name": "Runiczny Rezonans",
+	  "description": "Wybierz sojuszniczy oddział: +3 DMG i -2 Speed przez 2 tury.",
+	  "effect_type": "ally",
+	  "target_effect": {
 		"category": "buff",
-		"remaining_turns": 1,
+		"remaining_turns": 2,
 		"stat_changes": [
-		  {"stat": "dmg", "mode": "percent", "value": 15},
-		  {"stat": "attack_range", "mode": "flat", "value": 1}
+		  {"stat": "dmg", "mode": "flat", "value": 3},
+		  {"stat": "speed", "mode": "flat", "value": -2}
 		]
 	  }
 	},
-	"twardy_zakaz": {
-	  "id": "twardy_zakaz",
-	  "name": "Twardy Zakaz",
-	  "description": "Wszyscy sojusznicy zyskuja +2 DEF na 2 tury.",
+	"wyzwanie_wodza": {
+	  "name": "Wyzwanie Wodza",
+	  "description": "Wybierz wrogi oddział: otrzymuje -4 Speed i -2 ruchu przez 1 turę.",
+	  "effect_type": "enemy",
+	  "target_effect": {
+		"category": "debuff",
+		"remaining_turns": 1,
+		"stat_changes": [
+		  {"stat": "speed", "mode": "flat", "value": -4},
+		  {"stat": "move_range", "mode": "flat", "value": -2}
+		]
+	  }
+	},
+	"krwawy_szal": {
+	  "name": "Krwawy Szał",
+	  "description": "Wszyscy sojusznicy: +3 DMG i -2 Speed przez 2 tury.",
+	  "effect_type": "army_buff",
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 2,
 		"stat_changes": [
-		  {"stat": "def", "mode": "flat", "value": 2}
+		  {"stat": "dmg", "mode": "flat", "value": 3},
+		  {"stat": "speed", "mode": "flat", "value": -2}
 		]
 	  }
 	},
-	"bitewny_trucht": {
-	  "id": "bitewny_trucht",
-	  "name": "Bitewny Trucht",
-	  "description": "Wszyscy sojusznicy zyskuja +1 do szybkosci i +1 do zasiegu ruchu na 2 tury.",
+	"toksyczny_deszcz": {
+	  "name": "Toksyczny Deszcz",
+	  "description": "Skaź 7 heksów. Wrogowie tracą 1 PŻ na jednostkę i zostają zatruci na 2 tury.",
+	  "effect_type": "area",
+	  "radius": 1,
+	  "damage_per_unit": 1,
+	  "target_effect": {
+		"category": "debuff",
+		"remaining_turns": 2,
+		"tick_damage": 1,
+		"stat_changes": []
+	  }
+	},
+	"ryzykowny_plan": {
+	  "name": "Plan Ucieczki",
+	  "description": "Wszyscy sojusznicy otrzymują +2 ruchu i +2 Speed przez 2 tury.",
+	  "effect_type": "army_buff",
 	  "effect": {
 		"category": "buff",
 		"remaining_turns": 2,
 		"stat_changes": [
-		  {"stat": "speed", "mode": "flat", "value": 1},
-		  {"stat": "move_range", "mode": "flat", "value": 1}
-		]
-	  }
-	},
-	"krzyk_wodza": {
-	  "id": "krzyk_wodza",
-	  "name": "Krzyk Wodza",
-	  "description": "Wszyscy sojusznicy zyskuja +10% DMG, +10% DEF i +1 zasieg ataku na 1 ture.",
-	  "effect": {
-		"category": "buff",
-		"remaining_turns": 1,
-		"stat_changes": [
-		  {"stat": "dmg", "mode": "percent", "value": 10},
-		  {"stat": "def", "mode": "percent", "value": 10},
-		  {"stat": "attack_range", "mode": "flat", "value": 1}
+		  {"stat": "move_range", "mode": "flat", "value": 2},
+		  {"stat": "speed", "mode": "flat", "value": 2}
 		]
 	  }
 	}
