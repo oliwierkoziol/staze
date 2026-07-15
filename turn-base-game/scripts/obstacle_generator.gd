@@ -3,7 +3,7 @@ class_name ObstacleGenerator
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 
 
-static func generate(units: Array, obstacle_types: Array[String], columns: int, rows: int, setup_columns: int, winter_mode: bool = false, max_detonators: int = 2, max_elf_statues: int = 3) -> Array[Dictionary]:
+static func generate(units: Array, obstacle_types: Array[String], columns: int, rows: int, setup_columns: int, winter_mode: bool = false, max_detonators: int = 2, max_elf_statues: int = 3, max_hole_clusters: int = 3) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var occupied: Dictionary = {}
 	var obstacle_types_by_cell: Dictionary = {}
@@ -11,6 +11,7 @@ static func generate(units: Array, obstacle_types: Array[String], columns: int, 
 	var elf_statue_count: int = 0
 	var holy_tree_cluster_count: int = 0
 	var statue_cluster_count: int = 0
+	var hole_cluster_count: int = 0
 	for unit in units:
 		occupied[Vector2i(unit.grid_x, unit.grid_y)] = true
 
@@ -30,6 +31,12 @@ static func generate(units: Array, obstacle_types: Array[String], columns: int, 
 				_assign_statue_variants(statue_cluster, result, occupied, obstacle_types_by_cell)
 				statue_cluster_count += 1
 				elf_statue_count += 3
+	if obstacle_types.has("hole"):
+		for _hole_index in range(max_hole_clusters):
+			var hole_cluster: Array[Vector2i] = _generate_hole_cluster(occupied, obstacle_types_by_cell, rng, columns, rows, setup_columns)
+			if hole_cluster.size() == 2:
+				_assign_hole_variants(hole_cluster, result, occupied, obstacle_types_by_cell)
+				hole_cluster_count += 1
 
 	var cluster_count: int = rng.randi_range(4, 7)
 	for cluster_index in range(cluster_count):
@@ -50,6 +57,13 @@ static func generate(units: Array, obstacle_types: Array[String], columns: int, 
 			obstacle_type = fallback_types[rng.randi_range(0, fallback_types.size() - 1)]
 		if obstacle_type == "holy_tree" and holy_tree_cluster_count >= 1:
 			obstacle_type = "holy_tree_single"
+		if obstacle_type == "hole" and hole_cluster_count >= 1:
+			var fallback_types: Array[String] = obstacle_types.duplicate()
+			while fallback_types.has("hole"):
+				fallback_types.erase("hole")
+			if fallback_types.is_empty():
+				continue
+			obstacle_type = fallback_types[rng.randi_range(0, fallback_types.size() - 1)]
 		var cluster_size: int = 1 if obstacle_type == "detonator" or obstacle_type == "elf_statue" or obstacle_type == "holy_tree_single" else (rng.randi_range(1, 3) + (1 if cluster_index < 2 else 0))
 		var cluster: Array[Vector2i] = _generate_cluster(cluster_size, occupied, obstacle_types_by_cell, obstacle_type, rng, columns, rows, setup_columns)
 		for cell in cluster:
@@ -114,6 +128,10 @@ static func _pick_variant(obstacle_type: String, rng: RandomNumberGenerator, win
 		return "elf_statue"
 	if obstacle_type == "hole":
 		return "hole"
+	if obstacle_type == "hole_left":
+		return "hole_left"
+	if obstacle_type == "hole_right":
+		return "hole_right"
 	if obstacle_type == "detonator":
 		return "detonator"
 	return ""
@@ -212,6 +230,40 @@ static func _assign_statue_variants(cluster: Array[Vector2i], result: Array[Dict
 		occupied[cell] = true
 		obstacle_types_by_cell[cell] = "elf_statue"
 		result.append({"grid_x": cell.x, "grid_y": cell.y, "type": "elf_statue", "variant": variants[cell]})
+
+
+static func _generate_hole_cluster(occupied: Dictionary, obstacle_types_by_cell: Dictionary, rng: RandomNumberGenerator, columns: int, rows: int, setup_columns: int) -> Array[Vector2i]:
+	# ponytail: para hole_left + hole_right w poziomie
+	var margin: int = 2
+	for _attempt in range(100):
+		var right_cell: Vector2i = _random_empty_cell(occupied, obstacle_types_by_cell, "hole", rng, columns, rows, setup_columns)
+		if right_cell == Vector2i(-1, -1):
+			continue
+		if right_cell.x < setup_columns + margin or right_cell.x >= columns - setup_columns - margin or right_cell.y < margin or right_cell.y >= rows - margin:
+			continue
+		var left_cell: Vector2i = right_cell + Vector2i(-1, 0)
+		var cluster_cells: Array[Vector2i] = [right_cell, left_cell]
+		var valid: bool = true
+		for cell in cluster_cells:
+			if not _can_place_cell(cell, occupied, obstacle_types_by_cell, "hole", {}, columns, rows, setup_columns):
+				valid = false
+				break
+		if valid:
+			return cluster_cells
+	return []
+
+
+static func _assign_hole_variants(cluster: Array[Vector2i], result: Array[Dictionary], occupied: Dictionary, obstacle_types_by_cell: Dictionary) -> void:
+	var right_cell: Vector2i = cluster[0]
+	var left_cell: Vector2i = cluster[1]
+	var variants: Dictionary = {
+		right_cell: "hole_right",
+		left_cell: "hole_left"
+	}
+	for cell in cluster:
+		occupied[cell] = true
+		obstacle_types_by_cell[cell] = "hole"
+		result.append({"grid_x": cell.x, "grid_y": cell.y, "type": "hole", "variant": variants[cell]})
 
 
 static func _generate_cluster(target_size: int, occupied: Dictionary, obstacle_types_by_cell: Dictionary, obstacle_type: String, rng: RandomNumberGenerator, columns: int, rows: int, setup_columns: int) -> Array[Vector2i]:
