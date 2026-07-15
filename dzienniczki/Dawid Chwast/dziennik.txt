@@ -8,3 +8,4 @@
 10.07.2026 - Poprawy błędów, stworzenie skryptu ułatwiającego wycinanie tła
 13.07.2026 - Naprawa spirali głodu, usunięcie martwych callbacków i nieużywanego kodu, zmiana działania esc, naprawa drobnych błędów i exploitów. Generowanie assetów.
 14.07.2026 - Generowanie assetów i ich modyfikacja.
+15.07.2026 - Stworzenie designu drzewka technologicznego oraz kulturowego, naprawa błędów w ui oraz usprawnienie przyznawania punktów kultury.
