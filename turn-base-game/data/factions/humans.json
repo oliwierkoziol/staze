@@ -22,6 +22,11 @@
 		  "odepchniecie_tarcza",
 		  "zelazna_kurtyna",
           "tarcza"
+		],
+		"skill_icons": [
+		  "res://assets/ui/ability1xd.png",
+		  "res://assets/ui/ability2xd.png",
+		  "res://assets/ui/ability3xd.png"
 		]
 	  },
 	  {
@@ -64,6 +69,11 @@
 		  "strzal_w_kolano",
 		  "sokole_oko",
           "deszcz_strzal"
+		],
+		"skill_icons": [
+		  "res://assets/ui/ability_strzalawkolano_1.png",
+		  "res://assets/ui/ability_sokoleoko_2.png",
+		  "res://assets/ui/ability_deszczstrzal_1.png"
 		]
 	  },
 	  {
