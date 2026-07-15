@@ -70,3 +70,10 @@ Dzień 10 (14.07.2026)
 - dodanie pokoju, który wygłusza dźwięki jeżeli ucho znajduje się na zewnątrz
 - dodanie możliwości poruszania ucha 
 - dodanie większego pokoju, który tak samo wygłusza, ale ponieważ jest większy to posiada echo
+
+Dzień 11 (15.07.2026)
+- stworzenie narzędzia umożliwiającego łatwiejsze generowanie przez AI audio "text to speech"
+- przegląd dostępnych AI w celu znalezienia najlepiej pasującego do projektu innych stażystów
+- dodanie możliwości pobrania pliku json oraz folderu zawierającego poprzednie audio i pliki json
+- dodanie ostrzeżenia po kliknięciu guzika generuj oraz naprawienie błędu przez który po odświeżeniu strony został wysyłany request do AI
+- stworzenie repo na narzędzie 
