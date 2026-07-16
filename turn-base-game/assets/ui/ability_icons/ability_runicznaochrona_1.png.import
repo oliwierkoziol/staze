@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dobr8lsrjqe4i"
-path="res://.godot/imported/ability_deszczstrzal_1.png-47cad074b9f97279a2da4e3ce1e43968.ctex"
+uid="uid://c03slk04sgqfl"
+path="res://.godot/imported/ability_runicznaochrona_1.png-a124b25bea5ee7b75558fd3e50a9303d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/ability_deszczstrzal_1.png"
-dest_files=["res://.godot/imported/ability_deszczstrzal_1.png-47cad074b9f97279a2da4e3ce1e43968.ctex"]
+source_file="res://assets/ui/ability_icons/ability_runicznaochrona_1.png"
+dest_files=["res://.godot/imported/ability_runicznaochrona_1.png-a124b25bea5ee7b75558fd3e50a9303d.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dpyggq1t68imm"
-path="res://.godot/imported/ability_sokoleoko_2.png-ddd64937e46576c0b59a7402d017a2eb.ctex"
+uid="uid://c4xinmrwky2gv"
+path="res://.godot/imported/ability_zelaznakurtyna_3.png-37f3c477f9155db29d90a4cf046b6c1d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/ability_sokoleoko_2.png"
-dest_files=["res://.godot/imported/ability_sokoleoko_2.png-ddd64937e46576c0b59a7402d017a2eb.ctex"]
+source_file="res://assets/ui/ability_icons/ability_zelaznakurtyna_3.png"
+dest_files=["res://.godot/imported/ability_zelaznakurtyna_3.png-37f3c477f9155db29d90a4cf046b6c1d.ctex"]
 
 [params]
 

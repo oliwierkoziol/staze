@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b3rygtdtjx473"
-path="res://.godot/imported/ability3xd.png-f69912e5a53a9d8e47739998c3f0e6ec.ctex"
+uid="uid://0dnpesvdj0gk"
+path="res://.godot/imported/ability_sztandarbojowy_3.png-b76d9988b2738aa9d0b55bf1466e1568.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/ability3xd.png"
-dest_files=["res://.godot/imported/ability3xd.png-f69912e5a53a9d8e47739998c3f0e6ec.ctex"]
+source_file="res://assets/ui/ability_icons/ability_sztandarbojowy_3.png"
+dest_files=["res://.godot/imported/ability_sztandarbojowy_3.png-b76d9988b2738aa9d0b55bf1466e1568.ctex"]
 
 [params]
 

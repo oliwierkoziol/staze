@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bthyaky2xiu3o"
-path="res://.godot/imported/ability_strzalawkolano_1.png-f734fbec3a06ea07109596bb972c0ec2.ctex"
+uid="uid://7aiksl64jb0u"
+path="res://.godot/imported/ability_berserk_3.png-f49456807a72be75371c6453b3d6a62f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/ability_strzalawkolano_1.png"
-dest_files=["res://.godot/imported/ability_strzalawkolano_1.png-f734fbec3a06ea07109596bb972c0ec2.ctex"]
+source_file="res://assets/ui/ability_icons/ability_berserk_3.png"
+dest_files=["res://.godot/imported/ability_berserk_3.png-f49456807a72be75371c6453b3d6a62f.ctex"]
 
 [params]
 

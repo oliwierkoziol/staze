@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://r1ebuq0bblrw"
-path="res://.godot/imported/ability1xd.png-08a75041a01d95f8a9512a939a3542a5.ctex"
+uid="uid://dypmuf8uy1hbx"
+path="res://.godot/imported/ability_runicznaochrona_2.png-401d86807bdd3e3e558ba225a45ee2e5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/ability1xd.png"
-dest_files=["res://.godot/imported/ability1xd.png-08a75041a01d95f8a9512a939a3542a5.ctex"]
+source_file="res://assets/ui/ability_icons/ability_runicznaochrona_2.png"
+dest_files=["res://.godot/imported/ability_runicznaochrona_2.png-401d86807bdd3e3e558ba225a45ee2e5.ctex"]
 
 [params]
 

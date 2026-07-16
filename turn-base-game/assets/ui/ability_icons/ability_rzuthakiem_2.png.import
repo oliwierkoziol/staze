@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cb8oele6kk7on"
-path="res://.godot/imported/ability2.png-5b63997df614251612062bd34cb3cd97.ctex"
+uid="uid://0dy666e7ikpu"
+path="res://.godot/imported/ability_rzuthakiem_2.png-5d31e16cfbe30da9e6f7d8969c515ea4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/ability2.png"
-dest_files=["res://.godot/imported/ability2.png-5b63997df614251612062bd34cb3cd97.ctex"]
+source_file="res://assets/ui/ability_icons/ability_rzuthakiem_2.png"
+dest_files=["res://.godot/imported/ability_rzuthakiem_2.png-5d31e16cfbe30da9e6f7d8969c515ea4.ctex"]
 
 [params]
 
