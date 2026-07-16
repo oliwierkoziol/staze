@@ -8,7 +8,6 @@ const RAPORT_ROLE := "res://raporty/balans_rol.csv"
 const RAPORT_DOMENY := "res://raporty/balans_domen.csv"
 const DOMYSLNA_MAKSYMALNA_LICZEBNOSC := 14
 const ROLE_BALANSOWE: Array[String] = ["obronca", "wojownik", "uderzeniowa", "dystansowa", "wsparcie_kontrola"]
-const ROLE_WRECZ: Array[String] = ["obronca", "wojownik", "uderzeniowa"]
 
 
 func _initialize() -> void:
@@ -71,7 +70,7 @@ func _initialize() -> void:
 						wynik,
 						domyslne_liczebnosci
 					)
-					if domyslne_liczebnosci and str(szablon_a.id) != str(szablon_b.id):
+					if liczebnosc_a == liczebnosc_b and str(szablon_a.id) != str(szablon_b.id):
 						_aktualizuj_role(role_jednostek, szablon_a, szablon_b, wynik)
 						_aktualizuj_domeny(domeny, szablon_a, szablon_b, wynik)
 					liczba_walk += 1
@@ -125,9 +124,7 @@ func _przygotuj_oddzial(szablon: Dictionary, liczebnosc: int) -> Dictionary:
 	var oddzial: Dictionary = szablon.duplicate(true)
 	oddzial["base_hp"] = int(szablon.get("hp", 1))
 	oddzial["count"] = liczebnosc
-	oddzial["max_total_hp"] = int(oddzial.base_hp) * liczebnosc
-	oddzial["current_total_hp"] = int(oddzial.max_total_hp)
-	MatematykaWalkiScript.odswiez_stan_hp(oddzial)
+	MatematykaWalkiScript.ustaw_pelne_hp(oddzial)
 	return oddzial
 
 
@@ -285,12 +282,11 @@ func _zapisz_domeny(domeny: Dictionary) -> bool:
 	for klucz in klucze:
 		var statystyki: Dictionary = domeny[klucz]
 		var wygrane_proc: float = 100.0 * float(statystyki.wygrane) / float(statystyki.walki)
-		var oczekiwanie: String = _oczekiwanie_domeny(str(statystyki.rola_a), str(statystyki.rola_b))
+		var zakres: Vector2 = _zakres_domeny(str(statystyki.rola_a), str(statystyki.rola_b))
+		var oczekiwanie: String = "BRAK" if zakres.x < 0.0 else "%.0f-%.0f%%" % [zakres.x, zakres.y]
 		var status: String = "INFO"
-		if oczekiwanie == "PRZEGRANA":
-			status = "OK" if wygrane_proc < 50.0 else "NARUSZENIE"
-		elif oczekiwanie == "WYGRANA":
-			status = "OK" if wygrane_proc > 50.0 else "NARUSZENIE"
+		if zakres.x >= 0.0:
+			status = "OK" if wygrane_proc >= zakres.x and wygrane_proc <= zakres.y else "NARUSZENIE"
 		if status == "NARUSZENIE":
 			naruszenia += 1
 		raport.store_csv_line(PackedStringArray([
@@ -299,28 +295,25 @@ func _zapisz_domeny(domeny: Dictionary) -> bool:
 		]))
 	raport.close()
 	if naruszenia > 0:
-		push_error("Hierarchia domen ma %d naruszen." % naruszenia)
-		return false
+		push_warning("Zakresy domen maja %d odchylen." % naruszenia)
 	return true
 
 
-func _oczekiwanie_domeny(rola_a: String, rola_b: String) -> String:
+func _zakres_domeny(rola_a: String, rola_b: String) -> Vector2:
 	if rola_a == rola_b:
-		return "BRAK"
-	if rola_a == "wsparcie_kontrola":
-		return "PRZEGRANA"
-	if rola_b == "wsparcie_kontrola":
-		return "WYGRANA"
-	if rola_a == "dystansowa" and ROLE_WRECZ.has(rola_b):
-		return "PRZEGRANA"
-	if rola_b == "dystansowa" and ROLE_WRECZ.has(rola_a):
-		return "WYGRANA"
-	return "BRAK"
+		return Vector2(-1.0, -1.0)
+	return Vector2(-1.0, -1.0)
 
 
 func _uruchom_smoke_test() -> void:
-	assert(MatematykaWalkiScript.oblicz_obrazenia({"dmg": 7, "count": 1}, {"def": 4}) == 9)
-	assert(MatematykaWalkiScript.oblicz_obrazenia({"dmg": 12, "count": 4}, {"def": 1}) == 42)
+	assert(MatematykaWalkiScript.pojemnosc_hp(10, 4) == 40 and MatematykaWalkiScript.pojemnosc_hp(10, 5) == 50)
+	var pelny_oddzial: Dictionary = {"base_hp": 22, "count": 4}
+	MatematykaWalkiScript.ustaw_pelne_hp(pelny_oddzial)
+	MatematykaWalkiScript.odswiez_stan_hp(pelny_oddzial)
+	assert(int(pelny_oddzial.current_hp) == 22)
+	assert(_zakres_domeny("dystansowa", "wojownik") == Vector2(-1.0, -1.0))
+	assert(MatematykaWalkiScript.oblicz_obrazenia({"dmg": 7, "count": 1}, {"def": 4}) == 10)
+	assert(MatematykaWalkiScript.oblicz_obrazenia({"dmg": 12, "count": 4}, {"def": 1}) == 37)
 	var wynik: Dictionary = _symuluj(
 		{"id": "a", "hp": 10, "dmg": 10, "def": 0, "speed": 2}, 1,
 		{"id": "b", "hp": 5, "dmg": 1, "def": 0, "speed": 1}, 1

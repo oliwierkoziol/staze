@@ -105,7 +105,8 @@ static func _random_detonator_target_cells(excluded_cell: Vector2i, columns: int
 static func _pick_variant(obstacle_type: String, rng: RandomNumberGenerator, winter_mode: bool = false) -> String:
 	if obstacle_type == "kamienie":
 		if winter_mode:
-			return "ice"
+			var ice_variants: Array[String] = ["ice_hex_1", "ice_hex_2", "ice_hex_3"]
+			return ice_variants[rng.randi_range(0, ice_variants.size() - 1)]
 		if rng.randi_range(1, 100) == 1:
 			return "rock2k"
 		var rock_variants: Array[String] = ["rock1", "rock2", "rock3"]

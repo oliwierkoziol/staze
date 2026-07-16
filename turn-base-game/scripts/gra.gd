@@ -930,9 +930,7 @@ func _prepare_unit(unit: Dictionary) -> Dictionary:
 			unit[stat_name] = 0
 		unit["base_%s" % stat_name] = int(unit.get(stat_name, 0))
 	unit["max_hp"] = int(unit["base_hp"])
-	unit["max_total_hp"] = int(unit["base_hp"]) * max(1, int(unit["count"]))
-	unit["current_total_hp"] = int(unit["max_total_hp"])
-	unit["current_hp"] = int(unit["base_hp"])
+	MatematykaWalkiScript.ustaw_pelne_hp(unit)
 	unit["remaining_move"] = int(unit.get("move_range", 0))
 	unit["action_points"] = int(unit.get("base_action_points", unit.get("action_points", 1)))
 	unit["active_effects"] = []
@@ -1035,10 +1033,9 @@ func _apply_live_reload() -> void:
 func _reapply_runtime_state(target_unit: Dictionary, existing_unit: Dictionary) -> void:
 	target_unit["grid_x"] = int(existing_unit.get("grid_x", 0))
 	target_unit["grid_y"] = int(existing_unit.get("grid_y", 0))
-	var count: int = int(existing_unit.get("count", 0))
-	var unit_hp: int = int(target_unit.get("base_hp", 1))
-	var front_hp: int = mini(int(existing_unit.get("current_hp", unit_hp)), unit_hp)
-	target_unit["current_total_hp"] = max(0, (count - 1) * unit_hp + front_hp) if count > 0 else 0
+	var stare_maksimum: int = maxi(1, int(existing_unit.get("max_total_hp", 1)))
+	var udzial_hp: float = float(existing_unit.get("current_total_hp", 0)) / stare_maksimum
+	target_unit["current_total_hp"] = int(round(int(target_unit.max_total_hp) * udzial_hp))
 	for key in ["active_effects", "skill_cooldowns", "remaining_move", "action_points", "is_hidden", "is_revealed"]:
 		if existing_unit.has(key):
 			target_unit[key] = existing_unit[key].duplicate(true) if existing_unit[key] is Array or existing_unit[key] is Dictionary else existing_unit[key]
@@ -2685,7 +2682,10 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 
 
 func _calculate_damage(attacker: Dictionary, target: Dictionary, damage_multiplier := 1.0) -> int:
-	return MatematykaWalkiScript.oblicz_obrazenia(attacker, target, damage_multiplier)
+	var odleglosc: int = 1
+	if attacker.has("grid_x") and attacker.has("grid_y") and target.has("grid_x") and target.has("grid_y"):
+		odleglosc = _hex_distance(Vector2i(int(attacker.grid_x), int(attacker.grid_y)), Vector2i(int(target.grid_x), int(target.grid_y)))
+	return MatematykaWalkiScript.oblicz_obrazenia(attacker, target, damage_multiplier, odleglosc)
 
 
 func _get_incoming_damage_multiplier(unit: Dictionary) -> float:
@@ -5325,9 +5325,9 @@ func _validate_setup() -> void:
 		assert(event_pool.size() == 4, "Kazdy scenariusz musi miec cztery eventy: %s" % scenario_id)
 		for event_id in event_pool:
 			assert(MAP_EVENT_DATA.has(event_id), "Brak danych eventu: %s" % event_id)
-	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 4, "count": 10}) == 9, "Liczebnosc obroncy nie moze wplywac na redukcje DEF.")
-	assert(_calculate_damage({"dmg": 12, "count": 4}, {"def": 1, "count": 5}) == 42, "Berserker x4 vs elf mag x5 powinien zadac 42 obrazenia.")
-	assert(_calculate_damage({"dmg": 1, "count": 10}, {"def": 6, "count": 10}) == 4, "Minimalne obrazenia musza skalowac sie pierwiastkiem liczebnosci.")
+	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 4, "count": 10}) == 10, "Liczebnosc obroncy nie moze wplywac na redukcje DEF.")
+	assert(_calculate_damage({"dmg": 12, "count": 4}, {"def": 1, "count": 5}) == 37, "Berserker x4 vs elf mag x5 powinien zadac 37 obrazen.")
+	assert(_calculate_damage({"dmg": 1, "count": 10}, {"def": 6, "count": 10}) == 3, "Minimalne obrazenia musza skalowac sie lagodnie z liczebnoscia.")
 	assert(_calculate_damage({"dmg": 10, "count": 1}, {"def": -4, "count": 1}) > _calculate_damage({"dmg": 10, "count": 1}, {"def": 0, "count": 1}), "Ujemna DEF powinna zwiekszac otrzymywane obrazenia.")
 	for faction_id in UnitTypeLibraryScript.get_faction_ids():
 		for type_data in UnitTypeLibraryScript.get_faction_units(faction_id):

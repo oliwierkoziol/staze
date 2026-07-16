@@ -107,6 +107,7 @@ static func _load() -> void:
 			if typeof(raw_unit) != TYPE_DICTIONARY:
 				continue
 			var unit_data: Dictionary = _normalize_unit_type(raw_unit)
+			unit_data["faction_damage_multiplier"] = float(faction.get("damage_multiplier", 1.0))
 			normalized_units.append(unit_data)
 			_unit_lookup[unit_data.id] = unit_data
 		faction["units"] = normalized_units

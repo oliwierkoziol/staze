@@ -8,8 +8,8 @@
 	  "enemy_faction": "elves",
 	  "background": "res://assets/backgrounds/scenarios/orcs_vs_elves_forest.png",
 	  "player_units": [
-		{"type_id": "orc_warrior", "count": 6},
-		{"type_id": "orc_berserker", "count": 4},
+		{"type_id": "orc_warrior", "count": 7},
+		{"type_id": "orc_berserker", "count": 5},
 		{"type_id": "orc_shaman", "count": 5},
 		{"type_id": "orc_shieldman", "count": 4}
 	  ],
@@ -34,10 +34,10 @@
 		{"type_id": "dwarf_digger", "count": 5}
 	  ],
 	  "enemy_units": [
-		{"type_id": "goblin_thief", "count": 12},
-		{"type_id": "goblin_warrior", "count": 12},
-		{"type_id": "goblin_shaman", "count": 9},
-		{"type_id": "goblin_trapper", "count": 10}
+		{"type_id": "goblin_thief", "count": 5},
+		{"type_id": "goblin_warrior", "count": 6},
+		{"type_id": "goblin_shaman", "count": 4},
+		{"type_id": "goblin_trapper", "count": 5}
 	  ]
 	},
 	{
@@ -68,15 +68,15 @@
 	  "enemy_faction": "dwarves",
 	  "background": "res://assets/backgrounds/scenarios/elves_vs_dwarves_pass.png",
 	  "player_units": [
-		{"type_id": "elf_archer", "count": 7},
+		{"type_id": "elf_archer", "count": 6},
 		{"type_id": "elf_swordsman", "count": 5},
-		{"type_id": "elf_mage", "count": 5},
+		{"type_id": "elf_mage", "count": 4},
 		{"type_id": "elf_arcanotechnic", "count": 5}
 	  ],
 	  "enemy_units": [
 		{"type_id": "dwarf_warrior", "count": 5},
-		{"type_id": "dwarf_guardian", "count": 4},
-		{"type_id": "dwarf_axeman", "count": 4},
+		{"type_id": "dwarf_guardian", "count": 5},
+		{"type_id": "dwarf_axeman", "count": 5},
 		{"type_id": "dwarf_digger", "count": 5}
 	  ]
 	},
@@ -88,10 +88,10 @@
 	  "enemy_faction": "humans",
 	  "background": "res://assets/backgrounds/scenarios/humans_vs_goblins_desert.png",
 	  "player_units": [
-		{"type_id": "goblin_thief", "count": 12},
-		{"type_id": "goblin_warrior", "count": 10},
-		{"type_id": "goblin_shaman", "count": 8},
-		{"type_id": "goblin_trapper", "count": 10}
+		{"type_id": "goblin_thief", "count": 6},
+		{"type_id": "goblin_warrior", "count": 5},
+		{"type_id": "goblin_shaman", "count": 4},
+		{"type_id": "goblin_trapper", "count": 5}
 	  ],
 	  "enemy_units": [
 		{"type_id": "human_knights", "count": 5},

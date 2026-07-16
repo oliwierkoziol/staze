@@ -34,6 +34,9 @@ const WATER_TEXTURE: Texture2D = preload("res://assets/mapTiles/water.png")
 var QUICKSAND_TEXTURE: Texture2D = load("res://assets/mapTiles/quicksand.png")
 var DUNE_TEXTURE: Texture2D = load("res://assets/mapTiles/dune.png")
 var ICE_TEXTURE: Texture2D = load("res://assets/mapTiles/ice.png")
+const ICE_HEX_1_TEXTURE: Texture2D = preload("res://assets/mapTiles/ice_hex_1.png")
+const ICE_HEX_2_TEXTURE: Texture2D = preload("res://assets/mapTiles/ice_hex_2.png")
+const ICE_HEX_3_TEXTURE: Texture2D = preload("res://assets/mapTiles/ice_hex_3.png")
 var HOLY_TREE_TEXTURE: Texture2D = load("res://assets/holy_tree.png")
 var HOLY_TREE_LEFT_TEXTURE: Texture2D = load("res://assets/mapTiles/holy_tree/holy_tree_left.png")
 var HOLY_TREE_RIGHT_TEXTURE: Texture2D = load("res://assets/mapTiles/holy_tree/holy_tree_right.png")
@@ -760,6 +763,9 @@ func draw_obstacles() -> void:
 		"zimowy_krzak": ZIMOWY_KRZOK_TEXTURE,
 		"zimowykszok": ZIMOWY_KRZOK_TEXTURE,
 		"ice": ICE_TEXTURE,
+		"ice_hex_1": ICE_HEX_1_TEXTURE,
+		"ice_hex_2": ICE_HEX_2_TEXTURE,
+		"ice_hex_3": ICE_HEX_3_TEXTURE,
 		"holy_tree": HOLY_TREE_TEXTURE,
 		"holy_tree_single": HOLY_TREE_TEXTURE,
 		"holy_tree_left": HOLY_TREE_LEFT_TEXTURE,
@@ -789,7 +795,8 @@ func draw_obstacles() -> void:
 		var texture: Texture2D = textures.get(variant)
 		if texture == null:
 			continue
-		draw_texture_rect(texture, Rect2(center - texture_draw_size / 2.0, texture_draw_size), false)
+		var draw_size: Vector2 = Vector2(texture_draw_size.x * 1.1, texture_draw_size.y) if variant.begins_with("ice_hex_") else texture_draw_size
+		draw_texture_rect(texture, Rect2(center - draw_size / 2.0, draw_size), false)
 	_draw_obstacle_connection_placeholders()
 
 
