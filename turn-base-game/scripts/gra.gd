@@ -1108,6 +1108,7 @@ func _build_skill_cards(unit_data: Dictionary) -> Array:
 			"can_use": can_act and _can_use_skill(unit_data, skill_id),
 			"selected": pending_skill_id == skill_id,
 			"tooltip": _build_skill_tooltip(unit_data, index),
+			"icon": UnitTypeLibraryScript.get_skill_icon_path(skill_id, index),
 		})
 	return cards
 
@@ -5261,6 +5262,8 @@ func _validate_setup() -> void:
 				assert(skill_library.has(skill_id), "Brak skilla w bibliotece: %s" % skill_id)
 
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
+	assert(UnitTypeLibraryScript.get_skill_icon_path("tarcza", 1) == "res://assets/ui/ability_icons/ability_tarcza_2.png")
+	assert(UnitTypeLibraryScript.get_skill_icon_path("odepchniecie_tarcza", 0) == "res://assets/ui/ability_icons/ability_odpchniecietarcza_1.png")
 	var test_line: Array[Vector2i] = _get_hex_line(Vector2i(0, 0), Vector2i(3, 0))
 	assert(test_line.size() == 4 and test_line.front() == Vector2i(0, 0) and test_line.back() == Vector2i(3, 0), "Linia heksow musi zawierac oba konce.")
 	for obstacle in obstacles:

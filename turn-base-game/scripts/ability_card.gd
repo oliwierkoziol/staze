@@ -8,11 +8,11 @@ const DESC_COLOR := Color(0.72, 0.68, 0.6, 1.0)
 const CD_COLOR := Color(0.62, 0.58, 0.5, 1.0)
 const CD_ACTIVE_COLOR := Color(0.92, 0.55, 0.3, 1.0)
 
-# ponytail: icons keyed by skill slot are placeholders; a unit with >3 skills reuses these three.
+# ponytail: brak dedykowanej ikony w ability_icons — fallback na ability1/2/3.png z tego samego folderu.
 const PLACEHOLDER_ICONS: Array[Texture2D] = [
-	preload("res://assets/ui/ability1.png"),
-	preload("res://assets/ui/ability2.png"),
-	preload("res://assets/ui/ability3.png"),
+	preload("res://assets/ui/ability_icons/ability1.png"),
+	preload("res://assets/ui/ability_icons/ability2.png"),
+	preload("res://assets/ui/ability_icons/ability3.png"),
 ]
 
 @onready var _icon: TextureRect = %Icon

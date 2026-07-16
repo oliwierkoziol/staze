@@ -48,8 +48,7 @@
 	  "cooldown": 6,
 	  "range": 4,
 	  "target_type": "cell",
-	  "effect_type": "magic_projection",
-	  "icon": "res://assets/magic_projection.png"
+	  "effect_type": "magic_projection"
 	},
 	"pnacza": {
 	  "id": "pnacza",
@@ -59,8 +58,7 @@
 	  "cooldown": 5,
 	  "range": 3,
 	  "target_type": "enemy_unit",
-	  "effect_type": "pnacza",
-	  "icon": "res://assets/ui/root.png"
+	  "effect_type": "pnacza"
 	},
 	"rzut_hakiem": {
 	  "id": "rzut_hakiem",
@@ -160,8 +158,7 @@
 	  "cooldown": 3,
 	  "range": 3,
 	  "target_type": "cell",
-	  "effect_type": "summon_statue",
-	  "icon": "res://assets/elfStatue.png"
+	  "effect_type": "summon_statue"
 	},
 	"bariera_energetyczna": {
 	  "id": "bariera_energetyczna",
@@ -227,8 +224,7 @@
 	  "cooldown": 3,
 	  "range": 2,
 	  "target_type": "enemy_unit",
-	  "effect_type": "zaklete_ciecie",
-	  "icon": "res://assets/ui/curse.png"
+	  "effect_type": "zaklete_ciecie"
 	},
 	"rozszarpanie": {
 	  "id": "rozszarpanie",
@@ -249,8 +245,7 @@
 	  "range": 4,
 	  "target_type": "enemy_unit",
 	  "effect_type": "focused_strike",
-	  "projectile_kind": "throwing_axe",
-	  "icon": "res://assets/throwing_axe.png"
+	  "projectile_kind": "throwing_axe"
 	},
 	"zatruta_strzala": {
 	  "id": "zatruta_strzala",
@@ -442,8 +437,7 @@
 	  "cooldown": 3,
 	  "range": 4,
 	  "target_type": "cell",
-	  "effect_type": "dynamite_throw",
-	  "icon": "res://assets/dynamite.png"
+	  "effect_type": "dynamite_throw"
 	},
 	"rzut_klatwa": {
 	  "id": "rzut_klatwa",
@@ -453,8 +447,7 @@
 	  "cooldown": 4,
 	  "range": 3,
 	  "target_type": "enemy_unit",
-	  "effect_type": "curse_throw",
-	  "icon": "res://assets/ui/curse.png"
+	  "effect_type": "curse_throw"
 	},
 	"pulapka_goblina": {
 	  "id": "pulapka_goblina",
@@ -464,8 +457,7 @@
 	  "cooldown": 4,
 	  "range": 3,
 	  "target_type": "cell",
-	  "effect_type": "goblin_trap",
-	  "icon": "res://assets/trap-removebg-preview.png"
+	  "effect_type": "goblin_trap"
 	}
   }
 }

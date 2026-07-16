@@ -3,6 +3,16 @@ class_name UnitTypeLibrary
 const UNIT_TYPES_PATH := "res://data/unit_types.json"
 const GENERAL_SKILLS_PATH := "res://data/general_skills.json"
 const STATUS_EFFECTS_PATH := "res://data/status_effects.json"
+const ABILITY_ICONS_DIR := "res://assets/ui/ability_icons/"
+
+const SKILL_ICON_BASE_OVERRIDES := {
+	"strzal_w_kolano": "strzalawkolano",
+	"odepchniecie_tarcza": "odpchniecietarcza",
+	"tanczacy_ostrze": "tanczaceostrze",
+	"sztandar": "sztandarbojowy",
+	"pulapka_goblina": "pulapkananiedzwiedzie",
+	"zatruta_strzala": "zatrutysztylet",
+}
 
 static var _factions: Array[Dictionary] = []
 static var _unit_lookup: Dictionary = {}
@@ -275,6 +285,19 @@ static func build_active_effect(effect_id: String, overrides: Dictionary = {}) -
 	for key in overrides.keys():
 		merged[key] = overrides[key]
 	return merged
+
+
+static func get_skill_icon_path(skill_id: String, slot_index: int) -> String:
+	var slot_number := slot_index + 1
+	var bases: Array[String] = []
+	if SKILL_ICON_BASE_OVERRIDES.has(skill_id):
+		bases.append(str(SKILL_ICON_BASE_OVERRIDES[skill_id]))
+	bases.append(skill_id.replace("_", ""))
+	for base in bases:
+		var path := "%sability_%s_%d.png" % [ABILITY_ICONS_DIR, base, slot_number]
+		if ResourceLoader.exists(path):
+			return path
+	return ""
 
 
 static func get_faction_ids() -> Array[String]:
