@@ -77,3 +77,17 @@ Dzień 11 (15.07.2026)
 - dodanie możliwości pobrania pliku json oraz folderu zawierającego poprzednie audio i pliki json
 - dodanie ostrzeżenia po kliknięciu guzika generuj oraz naprawienie błędu przez który po odświeżeniu strony został wysyłany request do AI
 - stworzenie repo na narzędzie 
+
+Dzień 12 (16.07.2026)
+- dodanie piłki z poprzedniego projektu
+- utworzenie TileMapy stanowiącą fundament poziomu, który będzie dostępny w projekcie (na ten moment)
+- utworzenie myszki stanowiącej zasilanie maszyn
+- stworzenie wiatraka, który popycha piłkę 
+- umożliwienie podpinania energii tworzonej przez myszkę do wiatraka (lub innych urządzeń, bo skrypt jest modularny), przez sygnały i zmienne globalne
+- stworzenie pięści, która przez kliknięcie od tyłu przez inny obiekt fizyczny uderza przed siebie
+- stworzenie taśma , który przesuwa obiekty fizyczne 
+- dodanie skryptu z wiatraka i dostosowanie go do taśmy
+- naprawienie błędu, gdzie piłka nie reaguje z maszynami przez to, że śpi (nie marnuje wtedy mocy przeliczeniowej, czy coś)
+- dodanie guzika resetującego poziom
+- dodanie wody reagującej na obiekty fizyczne
+- dodanie projektu do githuba
