@@ -173,7 +173,7 @@
 	"zelazna_kurtyna": {
 	  "id": "zelazna_kurtyna",
 	  "name": "Zelazna Kurtyna",
-	  "description": "Naklada Zelazna Kurtyna na sojusznika na 2 tury. Oslaniajacy przyjmuje atak, pomniejszony o 25%.",
+	  "description": "Naklada Zelazna Kurtyna na sojusznika na 2 tury. Oslaniajacy przyjmuje ataki i umiejetnosci (poza DoT), pomniejszone o 25%, i chroni przed odepchnieciem.",
 	  "ap_cost": 1,
 	  "cooldown": 2,
 	  "range": 3,

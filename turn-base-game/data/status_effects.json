@@ -321,7 +321,7 @@
 	"zelazna_kurtyna": {
 	  "id": "zelazna_kurtyna",
 	  "name": "Zelazna Kurtyna",
-	  "description": "Przez 2 tury oslona przejmuje ataki wymierzone w chronionego sojusznika.",
+	  "description": "Przez 2 tury oslona przejmuje ataki i umiejetnosci wymierzone w chronionego sojusznika (poza DoT) oraz chroni przed odepchnieciem.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/iron_curtain.png",
 	  "color": "#A8BDD1"

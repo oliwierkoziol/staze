@@ -1489,7 +1489,10 @@ func _ai_score_skill(caster: Dictionary, target: Dictionary, target_cell: Vector
 	var cooldown_cost: int = int(skill.get("cooldown", 0)) * 8
 	match effect_type:
 		"focused_strike", "shield_push":
-			return _ai_score_damage(caster, target, 1.0) + (70 if effect_type == "shield_push" and _get_push_destination(caster, target) == Vector2i(-1, -1) else 0) - cooldown_cost
+			var push_score: int = _ai_score_damage(caster, target, 1.0) - cooldown_cost
+			if effect_type == "shield_push":
+				push_score += _ai_score_forced_destination(target, _get_push_destination(caster, target))
+			return push_score
 		"shattering_strike":
 			return _ai_score_damage(caster, target, 1.5) + (80 if _ai_will_kill(caster, target, 1.5) else 0) - cooldown_cost
 		"knee_shot":
@@ -2548,7 +2551,7 @@ func _perform_basic_attack(attacker: Dictionary, target: Dictionary, end_turn_af
 	pending_skill_id = ""
 	_reveal_if_in_bush(attacker)
 	var total_damage: int = _calculate_damage(attacker, target)
-	var result: Dictionary = _apply_attack_damage(attacker, target, total_damage, _hex_distance(Vector2i(attacker.grid_x, attacker.grid_y), Vector2i(target.grid_x, target.grid_y)) == 1)
+	var result: Dictionary = _apply_attack_damage(attacker, target, total_damage)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties: int = int(result.get("casualties", 0))
 	_log_event(
@@ -2614,7 +2617,7 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 	_commit_charge_skill(attacker, skill)
 	_reveal_if_in_bush(attacker)
 	var total_damage: int = _calculate_damage(attacker, target, _get_charge_damage_multiplier(skill))
-	var result: Dictionary = _apply_attack_damage(attacker, target, total_damage, _hex_distance(Vector2i(attacker.grid_x, attacker.grid_y), Vector2i(target.grid_x, target.grid_y)) == 1)
+	var result: Dictionary = _apply_attack_damage(attacker, target, total_damage)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties: int = int(result.get("casualties", 0))
 	_log_event(
@@ -2713,15 +2716,15 @@ func _apply_damage_to_unit(target: Dictionary, total_damage: int) -> int:
 	return max(0, previous_count - int(target.get("count", 0)))
 
 
-func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage: int, melee := false, play_animation := true, projectile_kind_override := "") -> Dictionary:
+func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage: int, play_animation := true, projectile_kind_override := "") -> Dictionary:
 	var hit_target: Dictionary = target
 	var damage := total_damage
-	if melee:
-		var guardian := _get_guardian_for(target)
-		if not guardian.is_empty():
-			hit_target = guardian
-			damage = max(1, int(ceil(float(damage) * 0.8)))
-			_log_event("%s osłania %s Żelazną Kurtyną." % [_unit_name_log_text(guardian), _unit_name_log_text(target)])
+	# Żelazna Kurtyna: wszystkie ataki/skille poza DoT (DoT idzie przez _apply_damage_to_unit).
+	var guardian := _get_guardian_for(target)
+	if not guardian.is_empty():
+		hit_target = guardian
+		damage = max(1, int(ceil(float(damage) * 0.75)))
+		_log_event("%s osłania %s Żelazną Kurtyną." % [_unit_name_log_text(guardian), _unit_name_log_text(target)])
 	if play_animation:
 		var projectile_kind: String = projectile_kind_override if projectile_kind_override != "" else _get_attack_projectile_kind(attacker)
 		board.play_attack_animation(int(attacker.id), int(hit_target.id), projectile_kind)
@@ -2781,6 +2784,8 @@ func _calculate_tick_damage(unit: Dictionary, effect_damage: int) -> int:
 
 func _cleanup_destroyed_unit(target: Dictionary) -> void:
 	if int(target.get("count", 0)) > 0:
+		return
+	if _find_unit_by_id(int(target.get("id", -1))).is_empty():
 		return
 	_log_event("%s zostaje rozbity." % _unit_name_log_text(target))
 	units.erase(target)
@@ -3003,7 +3008,7 @@ func _execute_dancing_blade(caster: Dictionary) -> void:
 	var play_animation := true
 	for target in targets:
 		var total_damage := _calculate_damage(caster, target, 0.5)
-		var result := _apply_attack_damage(caster, target, total_damage, true, play_animation)
+		var result := _apply_attack_damage(caster, target, total_damage, play_animation)
 		play_animation = false
 		var hit_target: Dictionary = result.get("target", target)
 		var casualties := int(result.get("casualties", 0))
@@ -3046,7 +3051,7 @@ func _execute_knee_shot(caster: Dictionary, target: Dictionary) -> void:
 
 func _execute_poison_dagger(caster: Dictionary, target: Dictionary) -> void:
 	var total_damage := _calculate_damage(caster, target, 0.7)
-	var result := _apply_attack_damage(caster, target, total_damage, true)
+	var result := _apply_attack_damage(caster, target, total_damage)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	if int(result.get("damage", 0)) > 0:
@@ -3117,6 +3122,7 @@ func _execute_hook_throw(caster: Dictionary, target: Dictionary) -> void:
 		board.animate_unit_pull_path(int(target.id), pull_path)
 		await board.animation_finished
 	is_animating = false
+	_apply_terrain_effects_to_unit(target)
 	_sync_board()
 	_log_event("%s przyciąga %s Rzutem Hakiem." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
 
@@ -3133,11 +3139,13 @@ func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
 	board.play_shield_push_animation(int(caster.id), int(target.id))
 	await get_tree().create_timer(0.12).timeout
 	var total_damage := _calculate_damage(caster, target)
-	var result := _apply_attack_damage(caster, target, total_damage, true, false)
+	var result := _apply_attack_damage(caster, target, total_damage, false)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	var pushed := false
-	if int(result.get("damage", 0)) > 0 and int(hit_target.id) == int(target.id):
+	# Odepchnięcie/ogłuszenie tylko gdy atak trafił chroniony cel (nie opiekuna z Żelaznej Kurtyny).
+	var can_displace: bool = int(result.get("damage", 0)) > 0 and int(hit_target.id) == int(target.id)
+	if can_displace:
 		var destination: Vector2i = _get_push_destination(caster, target)
 		if destination != Vector2i(-1, -1):
 			pushed = true
@@ -3147,7 +3155,9 @@ func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
 			_sync_board()
 			board.animate_unit_knockback_path(int(target.id), push_path)
 			await board.animation_finished
-	if int(result.get("damage", 0)) > 0 and not pushed and int(hit_target.get("count", 0)) > 0:
+			_apply_terrain_effects_to_unit(target)
+			_sync_board()
+	if can_displace and not pushed and int(hit_target.get("count", 0)) > 0:
 		_apply_or_refresh_effect(hit_target, {
 			"id": "ogluszenie",
 			"name": "Ogluszenie",
@@ -3159,7 +3169,12 @@ func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
 	is_animating = false
 	var suffix := " Atak zostaje zablokowany."
 	if int(result.get("damage", 0)) > 0:
-		suffix = " Cel zostaje odepchnięty." if pushed else " Cel wpada na przeszkodę i zostaje ogłuszony."
+		if int(hit_target.id) != int(target.id):
+			suffix = " Żelazna Kurtyna chroni przed odepchnięciem."
+		elif pushed:
+			suffix = " Cel zostaje odepchnięty."
+		else:
+			suffix = " Cel wpada na przeszkodę i zostaje ogłuszony."
 	_log_event(
 		"%s odpycha %s Odepchnięciem Tarczą, zadając %s obrażeń i powodując %s strat.%s" % [
 			_unit_name_log_text(caster),
@@ -3174,7 +3189,7 @@ func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
 
 func _execute_hammer_strike(caster: Dictionary, target: Dictionary) -> void:
 	var total_damage := _calculate_damage(caster, target)
-	var result := _apply_attack_damage(caster, target, total_damage, true)
+	var result := _apply_attack_damage(caster, target, total_damage)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	var stun_suffix := ""
@@ -3212,7 +3227,7 @@ func _execute_fireball(caster: Dictionary, center: Vector2i) -> void:
 			continue
 		var multiplier := 1.0 if cell == center else 0.5
 		var total_damage := _calculate_damage(caster, target, multiplier)
-		var result := _apply_attack_damage(caster, target, total_damage, false, false)
+		var result := _apply_attack_damage(caster, target, total_damage, false)
 		var hit_target: Dictionary = result.get("target", target)
 		var casualties: int = int(result.get("casualties", 0))
 		hit_names.append(
@@ -3255,7 +3270,7 @@ func _execute_arrow_rain(caster: Dictionary, center: Vector2i) -> void:
 			continue
 		var multiplier := 0.5 if cell == center else 0.35
 		var total_damage := _calculate_damage(caster, target, multiplier)
-		var result := _apply_attack_damage(caster, target, total_damage, false, false)
+		var result := _apply_attack_damage(caster, target, total_damage, false)
 		var hit_target: Dictionary = result.get("target", target)
 		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
 		_cleanup_destroyed_unit(hit_target)
@@ -3515,7 +3530,7 @@ func _execute_utwardzenie(caster: Dictionary, skill: Dictionary) -> void:
 func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dictionary = {}) -> void:
 	var total_damage := _calculate_damage(caster, target)
 	var projectile_kind: String = str(skill.get("projectile_kind", ""))
-	var result := _apply_attack_damage(caster, target, total_damage, false, true, projectile_kind)
+	var result := _apply_attack_damage(caster, target, total_damage, true, projectile_kind)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	_log_event(
@@ -3531,7 +3546,7 @@ func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dict
 
 func _execute_shattering_strike(caster: Dictionary, target: Dictionary, skill: Dictionary = {}) -> void:
 	var total_damage := _calculate_damage(caster, target, 1.5)
-	var result := _apply_attack_damage(caster, target, total_damage, true)
+	var result := _apply_attack_damage(caster, target, total_damage)
 	var hit_target: Dictionary = result.get("target", target)
 	var hit_target_id: int = int(hit_target.get("id", -1))
 	var casualties := int(result.get("casualties", 0))
@@ -3594,7 +3609,7 @@ func _execute_piercing_shot(caster: Dictionary, target: Dictionary, skill: Dicti
 			continue
 		var total_damage := _calculate_damage(caster, hit_unit)
 		var play_animation: bool = cell_index == 0
-		var result := _apply_attack_damage(caster, hit_unit, total_damage, false, play_animation, projectile_kind)
+		var result := _apply_attack_damage(caster, hit_unit, total_damage, play_animation, projectile_kind)
 		var hit_target: Dictionary = result.get("target", hit_unit)
 		var casualties := int(result.get("casualties", 0))
 		if cell_index == 0:
@@ -3619,7 +3634,7 @@ func _execute_piercing_shot(caster: Dictionary, target: Dictionary, skill: Dicti
 
 func _execute_zaklete_ciecie(caster: Dictionary, target: Dictionary) -> void:
 	var total_damage := _calculate_damage(caster, target, 0.5)
-	var result := _apply_attack_damage(caster, target, total_damage, false, true)
+	var result := _apply_attack_damage(caster, target, total_damage)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	var curse_suffix := ""
@@ -3643,7 +3658,7 @@ func _execute_zaklete_ciecie(caster: Dictionary, target: Dictionary) -> void:
 
 func _execute_rozszarpanie(caster: Dictionary, target: Dictionary) -> void:
 	var total_damage := _calculate_damage(caster, target, 0.5)
-	var result := _apply_attack_damage(caster, target, total_damage, false, true)
+	var result := _apply_attack_damage(caster, target, total_damage)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	var bleed_suffix := ""
@@ -3869,7 +3884,7 @@ func _trigger_detonator(active_unit: Dictionary, cell: Vector2i, detonator_index
 		if target.is_empty():
 			continue
 		var total_damage: int = _calculate_damage(active_unit, target, 1.5)
-		var result := _apply_attack_damage(active_unit, target, total_damage, false, false)
+		var result := _apply_attack_damage(active_unit, target, total_damage, false)
 		var hit_target: Dictionary = result.get("target", target)
 		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
 		if int(hit_target.get("count", 0)) <= 0:
@@ -4508,6 +4523,7 @@ func _try_push_unit_away(source: Dictionary, target: Dictionary) -> bool:
 	target["grid_x"] = destination.x
 	target["grid_y"] = destination.y
 	board.snap_unit_to_cell(int(target.id), destination)
+	_apply_terrain_effects_to_unit(target)
 	return true
 
 
@@ -4529,6 +4545,7 @@ func _try_trigger_agility(moved_unit: Dictionary) -> void:
 		unit.skill_cooldowns["zwinnosc"] = 4
 		board.snap_unit_to_cell(int(unit.id), destination)
 		_log_event("%s odskakuje dzięki Zwinności." % _unit_name_log_text(unit))
+		_apply_terrain_effects_to_unit(unit)
 
 
 func _get_push_destination(source: Dictionary, target: Dictionary) -> Vector2i:
@@ -4539,7 +4556,8 @@ func _get_push_destination(source: Dictionary, target: Dictionary) -> Vector2i:
 	var pushed_cell: Vector2i = _cube_to_oddr(pushed_cube)
 	if pushed_cell.x < 0 or pushed_cell.x >= GRID_COLUMNS or pushed_cell.y < 0 or pushed_cell.y >= GRID_ROWS:
 		return Vector2i(-1, -1)
-	if _is_cell_obstacle(pushed_cell):
+	# Passable terrain (krzak/woda/dziura) — wpadasz; tylko blocks_movement daje stun.
+	if not _is_cell_passable(pushed_cell):
 		return Vector2i(-1, -1)
 	var occupant: Dictionary = _find_unit_at_cell(pushed_cell)
 	if not occupant.is_empty():
@@ -4558,7 +4576,7 @@ func _get_pull_destination(source: Dictionary, target: Dictionary) -> Vector2i:
 	var destination: Vector2i = pull_line[pull_line.size() - 2]
 	if destination.x < 0 or destination.x >= GRID_COLUMNS or destination.y < 0 or destination.y >= GRID_ROWS:
 		return Vector2i(-1, -1)
-	if _is_cell_obstacle(destination):
+	if not _is_cell_passable(destination):
 		return Vector2i(-1, -1)
 	if not _find_unit_at_cell(destination).is_empty():
 		return Vector2i(-1, -1)
@@ -5370,6 +5388,26 @@ func _validate_setup() -> void:
 	_try_apply_poison_master(poison_master_attacker, poison_master_target)
 	assert(_has_effect(poison_master_target, "zatrucie"), "Mistrz Trucizn musi nakladac Zatrucie zwyklym atakiem.")
 	assert(_is_poison_immune(poison_master_attacker), "Mistrz Trucizn musi dawac odpornosc na trucizny.")
+	# Żelazna Kurtyna: opiekun w zasięgu 3 przejmuje atak; DoT idzie poza _apply_attack_damage.
+	var curtain_units_backup: Array = units.duplicate(true)
+	var curtain_guardian: Dictionary = {"id": 910, "name": "Opiekun", "grid_x": 3, "grid_y": 3, "count": 5, "base_hp": 10, "hp": 10, "current_total_hp": 50, "active_effects": []}
+	var curtain_ward: Dictionary = {
+		"id": 911,
+		"name": "Chroniony",
+		"grid_x": 5,
+		"grid_y": 3,
+		"count": 5,
+		"base_hp": 10,
+		"hp": 10,
+		"current_total_hp": 50,
+		"active_effects": [{"id": "zelazna_kurtyna", "guarded_by_id": 910, "remaining_turns": 2}]
+	}
+	units = [curtain_guardian, curtain_ward]
+	assert(int(_get_guardian_for(curtain_ward).get("id", -1)) == 910, "Zelazna Kurtyna musi znajdowac opiekuna w zasiegu 3.")
+	curtain_ward["grid_x"] = 8
+	assert(_get_guardian_for(curtain_ward).is_empty(), "Zelazna Kurtyna nie chroni poza zasiegiem 3.")
+	assert(max(1, int(ceil(100.0 * 0.75))) == 75, "Oslona z Zelaznej Kurtyny pomniejsza obrazenia o 25%.")
+	units = curtain_units_backup
 	assert(skill_library.has("zadza_krwi"), "Brak skilla zadza_krwi w bibliotece.")
 	assert(str(skill_library["zadza_krwi"].get("effect_type", "")) == "zadza_krwi", "Zadza krwi musi miec efekt zadza_krwi.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}, "skill_ids": []}, "pulapka_na_niedzwiedzie"), "Jednostka nie moze uzywac umiejetnosci spoza skill_ids.")
@@ -5650,6 +5688,45 @@ func _validate_setup() -> void:
 	assert(not pierce_behind.is_empty() and int(pierce_behind.id) == 1103, "Przebijajacy strzal musi trafiac jednostke na drugim hexie linii.")
 	var pierce_preview: Array[Vector2i] = _get_piercing_shot_preview_cells({"grid_x": 0, "grid_y": 0}, {"grid_x": 2, "grid_y": 0})
 	assert(pierce_preview.size() == 3 and pierce_preview[2] == Vector2i(4, 0), "Podglad Przebijajacego Strzalu musi pokazywac 3 hexy w linii.")
+	# Odepchniecie w passable teren: krzak/woda/dziura zamiast stuna; kamienie nadal blokuja.
+	units = []
+	obstacles = [
+		{"grid_x": 7, "grid_y": 4, "type": "krzok"},
+		{"grid_x": 8, "grid_y": 4, "type": "woda"},
+		{"grid_x": 9, "grid_y": 4, "type": "hole"},
+		{"grid_x": 7, "grid_y": 5, "type": "kamienie"},
+	]
+	assert(_get_push_destination({"grid_x": 5, "grid_y": 4}, {"grid_x": 6, "grid_y": 4}) == Vector2i(7, 4), "Odepchniecie musi pozwalac wpadac w krzak.")
+	assert(_get_push_destination({"grid_x": 6, "grid_y": 4}, {"grid_x": 7, "grid_y": 4}) == Vector2i(8, 4), "Odepchniecie musi pozwalac wpadac w wode.")
+	assert(_get_push_destination({"grid_x": 7, "grid_y": 4}, {"grid_x": 8, "grid_y": 4}) == Vector2i(9, 4), "Odepchniecie musi pozwalac wpadac w dziure.")
+	assert(_get_push_destination({"grid_x": 5, "grid_y": 5}, {"grid_x": 6, "grid_y": 5}) == Vector2i(-1, -1), "Odepchniecie w kamienie musi byc zablokowane.")
+	var push_bush_victim := {
+		"id": 1204,
+		"name": "Cel",
+		"side": "enemy",
+		"grid_x": 7,
+		"grid_y": 4,
+		"count": 1,
+		"active_effects": [],
+		"is_hidden": false
+	}
+	_apply_terrain_entry_effect(push_bush_victim)
+	assert(bool(push_bush_victim.get("is_hidden", false)) and _has_effect(push_bush_victim, "krzok"), "Odepchniety w krzak musi sie ukryc.")
+	var push_hole_victim := {
+		"id": 1205,
+		"name": "Cel",
+		"side": "enemy",
+		"grid_x": 9,
+		"grid_y": 4,
+		"count": 1,
+		"current_total_hp": 10,
+		"current_hp": 10,
+		"active_effects": [],
+		"is_hidden": false
+	}
+	units = [push_hole_victim]
+	_apply_terrain_entry_effect(push_hole_victim)
+	assert(_find_unit_by_id(1205).is_empty(), "Odepchniety w dziure musi zginac.")
 	units = previous_units
 	obstacles = previous_obstacles
 	event_log = previous_event_log
