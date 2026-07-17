@@ -36,6 +36,10 @@ func setup(side: String, faction_options: Array[String], initial_faction: String
 	_faction_options = faction_options
 	_ensure_portraits_for_factions()
 	_set_faction(initial_faction)
+	if _title_label != null:
+		_title_label.text = "ARMIA GRACZA" if _side == "player" else "ARMIA KOMPUTER"
+	if _subtitle_label != null:
+		_subtitle_label.text = "(wybierasz ty)" if _side == "player" else "(przeciwnik sterowany przez komputer)"
 
 
 func get_side() -> String:
@@ -59,7 +63,7 @@ func randomize_faction() -> void:
 
 func _build_ui() -> void:
 	_title_label = Label.new()
-	_title_label.text = "ARMIA GRACZA" if _side == "player" else "ARMIA KOMPUTERA"
+	_title_label.text = "ARMIA GRACZA" if _side == "player" else "ARMIA KOMPUTER"
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.add_theme_font_size_override("font_size", 28)
 	_title_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))

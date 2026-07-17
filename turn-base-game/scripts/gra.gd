@@ -1252,8 +1252,6 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 			_try_execute_charge_move(active_unit, cell)
 		else:
 			var skill_used: bool = await _try_use_skill(active_unit, pending_skill_id, cell)
-			if not skill_used:
-				_show_screen_message("Cel poza zasięgiem umiejętności!", 1.8)
 		_update_highlighted_cells(active_unit)
 		_update_action_buttons()
 		return
@@ -1286,7 +1284,6 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 			_show_obstacle_details(cell)
 		return
 	if path_cost > remaining_move:
-		_show_screen_message("Za daleko! Pozostały ruch: %s" % remaining_move, 1.8)
 		return
 
 	var move_path: Array[Vector2i] = _get_executable_move_path(path)
@@ -1350,8 +1347,6 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 		return
 	if _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
 		_perform_basic_attack(active_unit, target, false)
-	else:
-		_show_screen_message("Cel poza zasięgiem ataku!", 1.8)
 
 
 func _on_cell_left_released(cell: Vector2i) -> void:
@@ -5338,11 +5333,11 @@ func _build_screen_message_label() -> void:
 	screen_message_label = Label.new()
 	screen_message_label.visible = false
 	screen_message_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	screen_message_label.set_anchors_preset(Control.PRESET_CENTER)
+	screen_message_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	screen_message_label.offset_left = -400
 	screen_message_label.offset_right = 400
-	screen_message_label.offset_top = -30
-	screen_message_label.offset_bottom = 30
+	screen_message_label.offset_top = 110
+	screen_message_label.offset_bottom = 170
 	screen_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	screen_message_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	screen_message_label.add_theme_font_size_override("font_size", 34)
@@ -5357,7 +5352,7 @@ func _show_hover_warning(text: String, cell: Vector2i) -> void:
 		return
 	last_hover_warning_text = text
 	last_hover_warning_cell = cell
-	_show_screen_message(text, 1.5)
+	_show_screen_message(text, 0.8)
 
 
 func _clear_hover_warning() -> void:
