@@ -179,6 +179,18 @@ theme_override_font_sizes/font_size = 24
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="DamageTooltip" type="PanelContainer" parent="HUD/Overlay"]
+visible = false
+z_index = 100
+layout_mode = 0
+mouse_filter = 2
+
+[node name="Label" type="Label" parent="HUD/Overlay/DamageTooltip"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 20
+text = "Obrażenia: 0"
+
 [node name="TopBar" type="NinePatchRect" parent="HUD/Overlay" unique_id=1348661909]
 oversampling_with_scale = 1
 texture_filter = 1
