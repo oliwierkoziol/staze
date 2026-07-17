@@ -1445,10 +1445,13 @@ func _ai_choose_plan(unit: Dictionary) -> Dictionary:
 		unit.grid_x = destination.x
 		unit.grid_y = destination.y
 		var plans: Array[Dictionary] = _ai_generate_action_plans(unit, path)
+		var approach_score: int = _ai_score_approach(unit, destination)
+		for plan in plans:
+			plan["score"] = int(plan.get("score", 0)) + approach_score
 		plans.append({
 			"kind": "move" if not path.is_empty() else "pass",
 			"path": path,
-			"score": _ai_score_position(unit, destination) + _ai_score_approach(unit, destination),
+			"score": _ai_score_position(unit, destination) + approach_score,
 		})
 		for plan in plans:
 			plan["score"] = int(plan.get("score", 0)) - _get_path_hazard_penalty(unit, path)
@@ -1571,7 +1574,10 @@ func _ai_score_skill(caster: Dictionary, target: Dictionary, target_cell: Vector
 		"iron_curtain":
 			if _has_effect(target, "zelazna_kurtyna"):
 				return 0
-			return _ai_expected_threat(target, Vector2i(int(target.grid_x), int(target.grid_y))) + int(_ai_unit_value(target) / 8.0) - cooldown_cost
+			var protected_threat: int = _ai_expected_threat(target, Vector2i(int(target.grid_x), int(target.grid_y)))
+			if protected_threat == 0:
+				return 0
+			return protected_threat + int(_ai_unit_value(target) / 8.0) - cooldown_cost
 		"taunt_burst":
 			var affected := 0
 			for other in units:
@@ -1710,7 +1716,16 @@ func _ai_score_position(unit: Dictionary, cell: Vector2i) -> int:
 		score -= 500
 	if _terrain_hides_unit(cell):
 		score += 80 if int(unit.get("attack_range", 1)) > 1 else 35
-	score -= _ai_expected_threat(unit, cell)
+	var threat: int = _ai_expected_threat(unit, cell)
+	if str(unit.get("balance_role", "")) == "obronca":
+		threat = int(ceil(float(threat) / 3.0))
+		var ally_distance: int = 1000
+		for ally in units:
+			if int(ally.id) != int(unit.id) and ally.side == unit.side:
+				ally_distance = min(ally_distance, _hex_distance(cell, Vector2i(int(ally.grid_x), int(ally.grid_y))))
+		if ally_distance < 1000:
+			score -= max(0, ally_distance - 1) * 8
+	score -= threat
 	return score
 
 
@@ -1722,7 +1737,8 @@ func _ai_score_approach(unit: Dictionary, cell: Vector2i) -> int:
 	if best_distance == 1000:
 		return 0
 	var preferred: int = max(1, int(unit.get("attack_range", 1)))
-	return -abs(best_distance - preferred) * 12
+	var approach_weight: int = 24 if str(unit.get("balance_role", "")) == "obronca" else 12
+	return -abs(best_distance - preferred) * approach_weight
 
 
 func _ai_expected_threat(unit: Dictionary, cell: Vector2i) -> int:
@@ -5856,6 +5872,31 @@ func _validate_setup() -> void:
 	obstacles = []
 	terrain_effects = []
 	assert(int(_find_nearest_player_unit(melee_ai).id) == int(open_target.id), "Melee AI powinno rozkladac cele zamiast pchac sie w ten sam tlok.")
+	var tank_ai: Dictionary = melee_ai.duplicate(true)
+	tank_ai["id"] = 1009
+	tank_ai["balance_role"] = "obronca"
+	tank_ai["grid_x"] = 10
+	tank_ai["skill_ids"] = ["zelazna_kurtyna"]
+	tank_ai["skill_cooldowns"] = {}
+	var tank_ally: Dictionary = melee_ai.duplicate(true)
+	tank_ally["id"] = 1010
+	tank_ally["grid_x"] = 11
+	tank_ally["current_total_hp"] = 270
+	var tank_target: Dictionary = open_target.duplicate(true)
+	tank_target["id"] = 1011
+	tank_target["grid_x"] = 4
+	tank_target["grid_y"] = 5
+	tank_target["move_range"] = 4
+	tank_target["attack_range"] = 1
+	tank_target["atk"] = 5
+	tank_target["dmg_min"] = 8
+	tank_target["dmg_max"] = 8
+	tank_target["count"] = 2
+	units = [tank_ai, tank_ally, tank_target]
+	assert(_ai_score_skill(tank_ai, tank_ally, Vector2i(tank_ally.grid_x, tank_ally.grid_y), skill_library["zelazna_kurtyna"]) == 0, "AI nie powinno oslaniac bezpiecznego sojusznika Zelazna Kurtyna.")
+	var tank_plan: Dictionary = _ai_choose_plan(tank_ai)
+	assert(not tank_plan.get("path", []).is_empty(), "Obronca AI powinien ruszyc na front zamiast pozostac z tylu.")
+	assert(_hex_distance(tank_plan.path.back(), Vector2i(tank_target.grid_x, tank_target.grid_y)) < _hex_distance(Vector2i(tank_ai.grid_x, tank_ai.grid_y), Vector2i(tank_target.grid_x, tank_target.grid_y)), "Obronca AI musi skracac dystans do frontu.")
 	var water_start := Vector2i(4, 4)
 	var first_water := Vector2i(5, 4)
 	var second_water := Vector2i(6, 4)
