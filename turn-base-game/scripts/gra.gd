@@ -947,7 +947,7 @@ func _prepare_unit(unit: Dictionary) -> Dictionary:
 			if not unit.has("skill_ids"):
 				unit["skill_ids"] = type_skill_ids.duplicate()
 
-	for stat_name in ["hp", "dmg", "def", "speed", "move_range", "attack_range", "action_points", "count"]:
+	for stat_name in ["hp", "atk", "dmg_min", "dmg_max", "def", "speed", "move_range", "attack_range", "action_points", "count"]:
 		if not unit.has(stat_name):
 			unit[stat_name] = 0
 		unit["base_%s" % stat_name] = int(unit.get(stat_name, 0))
@@ -995,7 +995,8 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 	var max_hp: int = int(unit_data.get("max_hp", unit_data.get("hp", 0)))
 	unit_stats_display.set_values({
 		"hp": "%s / %s" % [current_hp, max_hp],
-		"dmg": str(unit_data.get("dmg", 0)),
+		"atk": str(unit_data.get("atk", 0)),
+		"dmg": "%s-%s" % [unit_data.get("dmg_min", 0), unit_data.get("dmg_max", 0)],
 		"def": str(unit_data.get("def", 0)),
 		"speed": str(unit_data.get("speed", 0)),
 		"count": str(unit_data.get("count", 0)),
@@ -1078,12 +1079,14 @@ func _debug_reload_snapshot(stage: String, source_units: Array) -> void:
 			continue
 		var skill_ids: Array = unit_data.get("skill_ids", [])
 		lines.append(
-			"[RELOAD %s] id=%s name=%s hp=%s dmg=%s def=%s spd=%s move=%s range=%s count=%s skills=%s" % [
+			"[RELOAD %s] id=%s name=%s hp=%s atk=%s dmg=%s-%s def=%s spd=%s move=%s range=%s count=%s skills=%s" % [
 				stage,
 				str(unit_data.get("id", -1)),
 				str(unit_data.get("name", "?")),
 				str(unit_data.get("hp", unit_data.get("base_hp", 0))),
-				str(unit_data.get("dmg", unit_data.get("base_dmg", 0))),
+				str(unit_data.get("atk", unit_data.get("base_atk", 0))),
+				str(unit_data.get("dmg_min", unit_data.get("base_dmg_min", 0))),
+				str(unit_data.get("dmg_max", unit_data.get("base_dmg_max", 0))),
 				str(unit_data.get("def", unit_data.get("base_def", 0))),
 				str(unit_data.get("speed", unit_data.get("base_speed", 0))),
 				str(unit_data.get("move_range", unit_data.get("base_move_range", 0))),
@@ -1576,7 +1579,7 @@ func _ai_score_skill(caster: Dictionary, target: Dictionary, target_cell: Vector
 					affected += 1
 			return affected * 100 - int(_ai_expected_threat(caster, target_cell) / 2.0) - cooldown_cost
 		"eagle_eye":
-			return 0 if _has_effect(caster, "sokole_oko") else 100 + int(float(int(caster.get("dmg", 0)) * int(caster.get("count", 1))) / 3.0) - cooldown_cost
+			return 0 if _has_effect(caster, "sokole_oko") else 100 + int(float(_srednie_obrazenia_jednostki(caster) * int(caster.get("count", 1))) / 3.0) - cooldown_cost
 		"self_buff":
 			if _has_effect(caster, str(skill.get("id", ""))):
 				return 0
@@ -1596,14 +1599,15 @@ func _ai_score_skill(caster: Dictionary, target: Dictionary, target_cell: Vector
 func _ai_score_damage(attacker: Dictionary, target: Dictionary, multiplier: float) -> int:
 	if target.is_empty():
 		return 0
-	var damage: int = _calculate_damage(attacker, target, multiplier)
+	var damage: int = _calculate_expected_damage(attacker, target, multiplier)
 	if _has_effect(target, "bariera_energetyczna"):
 		damage = 0
 	else:
 		damage = _adjust_incoming_damage(target, damage)
 	var current_hp: int = int(target.get("current_total_hp", int(target.get("hp", 1)) * int(target.get("count", 1))))
 	var base_hp: int = max(1, int(target.get("base_hp", target.get("hp", 1))))
-	var casualties: int = min(int(target.get("count", 1)), int(ceil(float(min(damage, current_hp)) / float(base_hp))))
+	var hp_after: int = maxi(0, current_hp - damage)
+	var casualties: int = ceili(float(current_hp) / float(base_hp)) - ceili(float(hp_after) / float(base_hp))
 	return min(damage, current_hp) * 4 + casualties * 90 + (600 if damage >= current_hp else 0) + int(_ai_unit_value(target) / 10.0)
 
 
@@ -1637,7 +1641,7 @@ func _ai_score_area_control(caster: Dictionary, center: Vector2i, effect_type: S
 func _ai_score_control(target: Dictionary, turns: int) -> int:
 	if target.is_empty():
 		return 0
-	return (int(target.get("move_range", 0)) * 14 + int(target.get("dmg", 0)) * 5 + int(target.get("speed", 0)) * 3) * turns
+	return (int(target.get("move_range", 0)) * 14 + _srednie_obrazenia_jednostki(target) * 5 + int(target.get("speed", 0)) * 3) * turns
 
 
 func _ai_score_stat_changes(unit: Dictionary, changes: Array, turns: int) -> int:
@@ -1645,9 +1649,9 @@ func _ai_score_stat_changes(unit: Dictionary, changes: Array, turns: int) -> int
 	for change in changes:
 		var stat_name: String = str(change.get("stat", ""))
 		var value: int = int(change.get("value", 0))
-		var base: int = int(unit.get("base_%s" % stat_name, unit.get(stat_name, 0)))
+		var base: int = _srednie_obrazenia_jednostki(unit) if stat_name == "dmg" else int(unit.get("base_%s" % stat_name, unit.get(stat_name, 0)))
 		var delta: int = int(ceil(float(base) * float(value) / 100.0)) if str(change.get("mode", "flat")) == "percent" else value
-		var weight: int = {"dmg": 18, "def": 10, "attack_range": 35, "move_range": 22, "speed": 4}.get(stat_name, 2)
+		var weight: int = {"dmg": 18, "atk": 12, "def": 10, "attack_range": 35, "move_range": 22, "speed": 4}.get(stat_name, 2)
 		score += delta * weight * max(1, turns)
 	return score
 
@@ -1731,18 +1735,18 @@ func _ai_expected_threat(unit: Dictionary, cell: Vector2i) -> int:
 			continue
 		var distance: int = _hex_distance(Vector2i(int(attacker.grid_x), int(attacker.grid_y)), cell)
 		if distance <= int(attacker.get("attack_range", 1)) + int(attacker.get("move_range", 0)):
-			threat += _calculate_damage(attacker, unit)
+			threat += _calculate_expected_damage(attacker, unit)
 	unit.grid_x = original.x
 	unit.grid_y = original.y
 	return threat * 3
 
 
 func _ai_unit_value(unit: Dictionary) -> int:
-	return int(unit.get("current_total_hp", int(unit.get("hp", 1)) * int(unit.get("count", 1)))) + int(unit.get("dmg", 0)) * int(unit.get("count", 1)) + int(unit.get("attack_range", 1)) * 20
+	return int(unit.get("current_total_hp", int(unit.get("hp", 1)) * int(unit.get("count", 1)))) + _srednie_obrazenia_jednostki(unit) * int(unit.get("count", 1)) + int(unit.get("attack_range", 1)) * 20
 
 
 func _ai_will_kill(attacker: Dictionary, target: Dictionary, multiplier: float) -> bool:
-	var damage: int = _adjust_incoming_damage(target, _calculate_damage(attacker, target, multiplier))
+	var damage: int = _adjust_incoming_damage(target, _calculate_expected_damage(attacker, target, multiplier))
 	return damage >= int(target.get("current_total_hp", int(target.get("hp", 1)) * int(target.get("count", 1))))
 
 
@@ -2206,7 +2210,7 @@ func _update_damage_tooltip(cell: Vector2i) -> void:
 	var multiplier: float = _get_selected_attack_damage_multiplier()
 	if multiplier <= 0.0:
 		return
-	damage_tooltip_label.text = "Obrażenia: %d" % _calculate_attack_preview_damage(attacker, target, multiplier)
+	damage_tooltip_label.text = "Obrażenia: %s" % _format_damage_range(_calculate_attack_preview_damage(attacker, target, multiplier))
 	damage_tooltip.visible = true
 
 
@@ -2219,7 +2223,7 @@ func _update_piercing_shot_damage_tooltip(attacker: Dictionary, skill: Dictionar
 		var target: Dictionary = _find_unit_at_cell(hit_cell)
 		if target.is_empty():
 			continue
-		lines.append("%s: %d" % [str(target.get("name", "Jednostka")), _calculate_attack_preview_damage(attacker, target, 1.0)])
+		lines.append("%s: %s" % [str(target.get("name", "Jednostka")), _format_damage_range(_calculate_attack_preview_damage(attacker, target, 1.0))])
 	if not lines.is_empty():
 		damage_tooltip_label.text = "Obrażenia przebijające:\n%s" % "\n".join(lines)
 		damage_tooltip.visible = true
@@ -2234,7 +2238,7 @@ func _update_area_damage_tooltip(attacker: Dictionary, skill: Dictionary, center
 		if target.is_empty() or target.side == attacker.side:
 			continue
 		var multiplier: float = _get_area_damage_multiplier(str(skill.get("effect_type", "")), hit_cell == center)
-		lines.append("%s: %d" % [str(target.get("name", "Przeciwnik")), _calculate_attack_preview_damage(attacker, target, multiplier)])
+		lines.append("%s: %s" % [str(target.get("name", "Przeciwnik")), _format_damage_range(_calculate_attack_preview_damage(attacker, target, multiplier))])
 	if not lines.is_empty():
 		damage_tooltip_label.text = "Obrażenia obszarowe:\n%s" % "\n".join(lines)
 		damage_tooltip.visible = true
@@ -2260,17 +2264,21 @@ func _can_show_damage_tooltip_in_range(attacker: Dictionary, target: Dictionary,
 	return _can_target_enemy_with_skill(attacker, target, skill)
 
 
-func _calculate_attack_preview_damage(attacker: Dictionary, target: Dictionary, multiplier: float) -> int:
-	var damage: int = _calculate_damage(attacker, target, multiplier)
+func _calculate_attack_preview_damage(attacker: Dictionary, target: Dictionary, multiplier: float) -> Vector2i:
+	var damage: Vector2i = MatematykaWalkiScript.oblicz_zakres_obrazen(attacker, target, multiplier)
 	var hit_target: Dictionary = target
 	var guardian: Dictionary = _get_guardian_for(target)
 	if not guardian.is_empty():
 		hit_target = guardian
-		damage = max(1, int(ceil(float(damage) * 0.75)))
+		damage = Vector2i(maxi(1, int(ceil(float(damage.x) * 0.75))), maxi(1, int(ceil(float(damage.y) * 0.75))))
 	for effect in hit_target.get("active_effects", []):
 		if bool(effect.get("block_next_attack", false)):
-			return 0
-	return _adjust_incoming_damage(hit_target, damage)
+			return Vector2i.ZERO
+	return Vector2i(_adjust_incoming_damage(hit_target, damage.x), _adjust_incoming_damage(hit_target, damage.y))
+
+
+func _format_damage_range(damage: Vector2i) -> String:
+	return str(damage.x) if damage.x == damage.y else "%d-%d" % [damage.x, damage.y]
 
 
 func _get_selected_attack_damage_multiplier() -> float:
@@ -2862,10 +2870,16 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 
 
 func _calculate_damage(attacker: Dictionary, target: Dictionary, damage_multiplier := 1.0) -> int:
-	var odleglosc: int = 1
-	if attacker.has("grid_x") and attacker.has("grid_y") and target.has("grid_x") and target.has("grid_y"):
-		odleglosc = _hex_distance(Vector2i(int(attacker.grid_x), int(attacker.grid_y)), Vector2i(int(target.grid_x), int(target.grid_y)))
-	return MatematykaWalkiScript.oblicz_obrazenia(attacker, target, damage_multiplier, odleglosc)
+	return MatematykaWalkiScript.oblicz_obrazenia(attacker, target, damage_multiplier)
+
+
+func _calculate_expected_damage(attacker: Dictionary, target: Dictionary, damage_multiplier: float = 1.0) -> int:
+	var damage: Vector2i = MatematykaWalkiScript.oblicz_zakres_obrazen(attacker, target, damage_multiplier)
+	return int(round((damage.x + damage.y) / 2.0))
+
+
+func _srednie_obrazenia_jednostki(unit: Dictionary) -> int:
+	return int(round((int(unit.get("dmg_min", 1)) + int(unit.get("dmg_max", 1))) / 2.0))
 
 
 func _get_incoming_damage_multiplier(unit: Dictionary) -> float:
@@ -3237,7 +3251,7 @@ func _execute_poison_dagger(caster: Dictionary, target: Dictionary) -> void:
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	if int(result.get("damage", 0)) > 0:
-		_apply_poison_effect(hit_target, "toksyna", "Toksyna", 3, max(1, int(ceil(float(caster.dmg) * 0.5))), true)
+		_apply_poison_effect(hit_target, "toksyna", "Toksyna", 3, maxi(1, int(ceil(float(_srednie_obrazenia_jednostki(caster)) * 0.5))), true)
 	_log_event(
 		"%s zatruwa %s Sztyletem, zadając %s obrażeń i powodując %s strat." % [
 			_unit_name_log_text(caster),
@@ -3529,13 +3543,13 @@ func _execute_magic_projection(caster: Dictionary, anchor: Vector2i) -> void:
 func _execute_poison_cloud(caster: Dictionary, center: Vector2i) -> void:
 	var cells: Array[Vector2i] = _get_area_cells(center)
 	for cell in cells:
-		_add_terrain_effect(cell, "poison_cloud", 2, int(caster.id), max(1, int(ceil(float(caster.dmg) * 0.25))))
+		_add_terrain_effect(cell, "poison_cloud", 2, int(caster.id), maxi(1, int(ceil(float(_srednie_obrazenia_jednostki(caster)) * 0.25))))
 	_apply_terrain_effects_in_cells(cells)
 	_log_event("%s tworzy Chmurę Toksyczną." % _unit_name_log_text(caster))
 
 
 func _execute_bear_trap(caster: Dictionary, cell: Vector2i) -> void:
-	_add_terrain_effect(cell, "bear_trap", 99, int(caster.id), max(1, int(ceil(float(caster.dmg) * 0.25))))
+	_add_terrain_effect(cell, "bear_trap", 99, int(caster.id), maxi(1, int(ceil(float(_srednie_obrazenia_jednostki(caster)) * 0.25))))
 	var trap: Dictionary = _get_terrain_effect_at(cell, "bear_trap")
 	trap["caster_side"] = str(caster.side)
 	trap["visible_until_ms"] = Time.get_ticks_msec() + 5000
@@ -3544,7 +3558,7 @@ func _execute_bear_trap(caster: Dictionary, cell: Vector2i) -> void:
 
 
 func _execute_goblin_trap(caster: Dictionary, cell: Vector2i) -> void:
-	_add_terrain_effect(cell, "goblin_trap", 99, int(caster.id), max(1, int(ceil(float(caster.dmg) * 0.25))))
+	_add_terrain_effect(cell, "goblin_trap", 99, int(caster.id), maxi(1, int(ceil(float(_srednie_obrazenia_jednostki(caster)) * 0.25))))
 	var trap: Dictionary = _get_terrain_effect_at(cell, "goblin_trap")
 	trap["caster_side"] = str(caster.side)
 	trap["visible_until_ms"] = Time.get_ticks_msec() + 5000
@@ -3659,7 +3673,8 @@ func _execute_self_buff(caster: Dictionary, skill: Dictionary) -> void:
 
 
 func _execute_zadza_krwi(caster: Dictionary, skill: Dictionary) -> void:
-	caster["base_dmg"] = int(caster.get("base_dmg", caster.get("dmg", 0))) + 2
+	caster["base_dmg_min"] = int(caster.get("base_dmg_min", caster.get("dmg_min", 1))) + 2
+	caster["base_dmg_max"] = int(caster.get("base_dmg_max", caster.get("dmg_max", 1))) + 2
 	caster["base_def"] = int(caster.get("base_def", caster.get("def", 0))) - 2
 	var stack_amount: int = 1
 	for effect in caster.get("active_effects", []):
@@ -4178,7 +4193,7 @@ func _try_apply_poison_master(attacker: Dictionary, target: Dictionary) -> void:
 		return
 	if not _has_effect(attacker, "mistrz_trucizn"):
 		return
-	_apply_poison_effect(target, "zatrucie", "Zatrucie", 1, max(1, int(ceil(float(attacker.dmg) * 0.25))))
+	_apply_poison_effect(target, "zatrucie", "Zatrucie", 1, maxi(1, int(ceil(float(_srednie_obrazenia_jednostki(attacker)) * 0.25))))
 
 
 func _apply_terrain_effects_in_cells(cells: Array[Vector2i]) -> void:
@@ -4373,7 +4388,8 @@ func _event_magic_bloom() -> void:
 		if not map_event_cells.has(Vector2i(int(target.grid_x), int(target.grid_y))):
 			continue
 		var healing: int = int(target.get("base_hp", 1))
-		target["current_total_hp"] = mini(int(target.get("max_total_hp", healing)), int(target.get("current_total_hp", 0)) + healing)
+		var healing_limit: int = int(target.get("count", 0)) * healing
+		target["current_total_hp"] = mini(healing_limit, int(target.get("current_total_hp", 0)) + healing)
 		_refresh_unit_health_state(target)
 		_log_event("%s odzyskuje %s HP dzięki Magicznemu Rozkwitowi." % [_unit_name_log_text(target), healing])
 	_log_event(_color_log_text("WYDARZENIE NA MAPIE: Magiczny Rozkwit leczy jednostki na oznaczonych polach.", LOG_COLOR_YELLOW))
@@ -4600,7 +4616,9 @@ func _advance_unit_effects(unit: Dictionary) -> void:
 
 func _recalculate_unit_stats(unit: Dictionary) -> void:
 	unit["hp"] = int(unit.get("base_hp", unit.get("hp", 0)))
-	unit["dmg"] = int(unit.get("base_dmg", unit.get("dmg", 0)))
+	unit["atk"] = int(unit.get("base_atk", unit.get("atk", 0)))
+	unit["dmg_min"] = int(unit.get("base_dmg_min", unit.get("dmg_min", 1)))
+	unit["dmg_max"] = int(unit.get("base_dmg_max", unit.get("dmg_max", 1)))
 	unit["def"] = int(unit.get("base_def", unit.get("def", 0)))
 	unit["speed"] = int(unit.get("base_speed", unit.get("speed", 0)))
 	unit["move_range"] = int(unit.get("base_move_range", unit.get("move_range", 0)))
@@ -4618,7 +4636,9 @@ func _recalculate_unit_stats(unit: Dictionary) -> void:
 			debuff_names.append(str(effect.get("name", "")))
 
 
-	unit["dmg"] = max(1, int(unit.get("dmg", 1)))
+	unit["atk"] = maxi(0, int(unit.get("atk", 0)))
+	unit["dmg_min"] = maxi(1, int(unit.get("dmg_min", 1)))
+	unit["dmg_max"] = maxi(int(unit.dmg_min), int(unit.get("dmg_max", unit.dmg_min)))
 	unit["speed"] = max(0, int(unit.get("speed", 0)))
 	unit["move_range"] = max(0, int(unit.get("move_range", 0)))
 	unit["attack_range"] = max(1, int(unit.get("attack_range", 1)))
@@ -4633,6 +4653,14 @@ func _refresh_unit_health_state(unit: Dictionary) -> void:
 
 func _apply_stat_change(unit: Dictionary, change: Dictionary) -> void:
 	var stat_name := str(change.get("stat", ""))
+	if stat_name == "dmg":
+		var minimum_change: Dictionary = change.duplicate()
+		minimum_change["stat"] = "dmg_min"
+		_apply_stat_change(unit, minimum_change)
+		var maximum_change: Dictionary = change.duplicate()
+		maximum_change["stat"] = "dmg_max"
+		_apply_stat_change(unit, maximum_change)
+		return
 	if stat_name == "" or not unit.has(stat_name):
 		return
 
@@ -5484,7 +5512,8 @@ func _validate_setup() -> void:
 		assert(unit.grid_y >= 0 and unit.grid_y < GRID_ROWS)
 		var type_data: Dictionary = UnitTypeLibraryScript.lookup(str(unit.get("type_id", "")))
 		if not type_data.is_empty():
-			assert(int(type_data.dmg) >= 1)
+			assert(int(type_data.atk) >= 0)
+			assert(int(type_data.dmg_min) >= 1 and int(type_data.dmg_max) >= int(type_data.dmg_min))
 			assert(int(type_data.speed) >= 1)
 			assert(int(type_data.action_points) >= 1)
 			for skill_id in type_data.get("skill_ids", []):
@@ -5523,7 +5552,7 @@ func _validate_setup() -> void:
 	pending_skill_id = "pnacza"
 	assert(_get_selected_attack_damage_multiplier() == 0.0, "Tooltip nie moze pokazywac obrazen dla umiejetnosci bez obrazen.")
 	pending_skill_id = tooltip_previous_skill_id
-	assert(_calculate_attack_preview_damage({"dmg": 10}, {"def": 0, "active_effects": [{"block_next_attack": true}]}, 1.0) == 0, "Tooltip musi uwzgledniac blokade obrazen.")
+	assert(_calculate_attack_preview_damage({"atk": 0, "dmg_min": 10, "dmg_max": 10, "count": 1}, {"def": 0, "active_effects": [{"block_next_attack": true}]}, 1.0) == Vector2i.ZERO, "Tooltip musi uwzgledniac blokade obrazen.")
 	assert(is_equal_approx(_get_area_damage_multiplier("fireball", true), 1.0) and is_equal_approx(_get_area_damage_multiplier("fireball", false), 0.5), "Kula Ognia musi miec poprawny podglad obrazen obszarowych.")
 	assert(is_equal_approx(_get_area_damage_multiplier("arrow_rain", false), 0.35), "Podglad Deszczu Strzal musi zgadzac sie z wykonaniem.")
 	for terrain_id in terrain_types.keys():
@@ -5545,15 +5574,17 @@ func _validate_setup() -> void:
 		assert(event_pool.size() == 4, "Kazdy scenariusz musi miec cztery eventy: %s" % scenario_id)
 		for event_id in event_pool:
 			assert(MAP_EVENT_DATA.has(event_id), "Brak danych eventu: %s" % event_id)
-	assert(_calculate_damage({"dmg": 7, "count": 1}, {"def": 4, "count": 10}) == 10, "Liczebnosc obroncy nie moze wplywac na redukcje DEF.")
-	assert(_calculate_damage({"dmg": 12, "count": 4}, {"def": 1, "count": 5}) == 37, "Berserker x4 vs elf mag x5 powinien zadac 37 obrazen.")
-	assert(_calculate_damage({"dmg": 1, "count": 10}, {"def": 6, "count": 10}) == 3, "Minimalne obrazenia musza skalowac sie lagodnie z liczebnoscia.")
-	assert(_calculate_damage({"dmg": 10, "count": 1}, {"def": -4, "count": 1}) > _calculate_damage({"dmg": 10, "count": 1}, {"def": 0, "count": 1}), "Ujemna DEF powinna zwiekszac otrzymywane obrazenia.")
+	assert(is_equal_approx(MatematykaWalkiScript.mnoznik_ataku_obrony(20, 14), 1.3), "Przewaga 6 ATK musi dawac +30% obrazen.")
+	assert(is_equal_approx(MatematykaWalkiScript.mnoznik_ataku_obrony(14, 20), 0.85), "Przewaga 6 DEF musi zmniejszac obrazenia o 15%.")
+	assert(is_equal_approx(MatematykaWalkiScript.mnoznik_ataku_obrony(100, 0), 4.0), "Bonus ATK musi zatrzymac sie na 400% obrazen.")
+	assert(is_equal_approx(MatematykaWalkiScript.mnoznik_ataku_obrony(0, 100), 0.3), "Redukcja DEF nie moze zejsc ponizej 30% obrazen.")
+	assert(_calculate_damage({"atk": 20, "dmg_min": 10, "dmg_max": 10, "count": 1}, {"def": 14}) == 13)
+	assert(_calculate_damage({"atk": 0, "dmg_min": 4, "dmg_max": 4, "count": 5}, {"def": 0}) == 20, "Obrazenia musza skalowac sie liniowo z liczebnoscia.")
 	for faction_id in UnitTypeLibraryScript.get_faction_ids():
 		for type_data in UnitTypeLibraryScript.get_faction_units(faction_id):
 			assert(int(type_data.action_points) == 1, "Jednostki prototypu powinny miec 1 AP: %s" % str(type_data.id))
 			assert(int(type_data.speed) <= 10 and int(type_data.move_range) <= 6 and int(type_data.attack_range) <= 5, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
-			assert(int(type_data.hp) <= 32 and int(type_data.dmg) <= 12 and int(type_data.def) <= 12 and int(type_data.count) <= 14, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
+			assert(int(type_data.hp) <= 40 and int(type_data.atk) <= 15 and int(type_data.dmg_max) <= 22 and int(type_data.def) <= 14 and int(type_data.count) <= 14, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna"), "Umiejetnosci bierne nie moga byc uzywane recznie.")
 	assert(skill_library.has("tanczacy_ostrze"), "Brak skilla tanczacy_ostrze w bibliotece.")
 	assert(str(skill_library["tanczacy_ostrze"].get("effect_type", "")) == "dancing_blade", "Tanczacy Ostrze musi miec efekt dancing_blade.")
@@ -5601,7 +5632,8 @@ func _validate_setup() -> void:
 	assert(int(skill_library["mistrz_trucizn"].get("effect", {}).get("remaining_turns", 0)) == 5, "Mistrz Trucizn musi trwac 5 tur.")
 	var poison_master_attacker: Dictionary = {
 		"id": 902,
-		"dmg": 8,
+		"dmg_min": 7,
+		"dmg_max": 9,
 		"active_effects": [{"id": "mistrz_trucizn", "remaining_turns": 5}]
 	}
 	var poison_master_target: Dictionary = {"id": 903, "count": 5, "active_effects": []}
@@ -5654,8 +5686,12 @@ func _validate_setup() -> void:
 		"grid_y": 4,
 		"hp": 10,
 		"base_hp": 10,
-		"dmg": 1,
-		"base_dmg": 1,
+		"atk": 1,
+		"base_atk": 1,
+		"dmg_min": 1,
+		"base_dmg_min": 1,
+		"dmg_max": 1,
+		"base_dmg_max": 1,
 		"def": 0,
 		"base_def": 0,
 		"speed": 1,
@@ -5721,7 +5757,9 @@ func _validate_setup() -> void:
 	ai_target["hp"] = 10
 	ai_target["base_hp"] = 10
 	ai_target["count"] = 10
-	ai_archer["dmg"] = 6
+	ai_archer["atk"] = 8
+	ai_archer["dmg_min"] = 5
+	ai_archer["dmg_max"] = 7
 	ai_archer["count"] = 4
 	units = [ai_archer, ai_target, weak_target]
 	ai_plan = _ai_choose_plan(ai_archer)

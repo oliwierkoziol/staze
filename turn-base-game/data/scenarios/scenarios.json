@@ -16,8 +16,8 @@
 	  "enemy_units": [
 		{"type_id": "elf_archer", "count": 7},
 		{"type_id": "elf_swordsman", "count": 5},
-		{"type_id": "elf_mage", "count": 4},
-		{"type_id": "elf_arcanotechnic", "count": 5}
+		{"type_id": "elf_mage", "count": 7},
+		{"type_id": "elf_arcanotechnic", "count": 9}
 	  ]
 	},
 	{
@@ -34,10 +34,10 @@
 		{"type_id": "dwarf_digger", "count": 5}
 	  ],
 	  "enemy_units": [
-		{"type_id": "goblin_thief", "count": 5},
-		{"type_id": "goblin_warrior", "count": 6},
-		{"type_id": "goblin_shaman", "count": 4},
-		{"type_id": "goblin_trapper", "count": 5}
+		{"type_id": "goblin_thief", "count": 14},
+		{"type_id": "goblin_warrior", "count": 11},
+		{"type_id": "goblin_shaman", "count": 11},
+		{"type_id": "goblin_trapper", "count": 11}
 	  ]
 	},
 	{
@@ -68,10 +68,10 @@
 	  "enemy_faction": "dwarves",
 	  "background": "res://assets/backgrounds/scenarios/elves_vs_dwarves_pass.png",
 	  "player_units": [
-		{"type_id": "elf_archer", "count": 6},
-		{"type_id": "elf_swordsman", "count": 5},
-		{"type_id": "elf_mage", "count": 4},
-		{"type_id": "elf_arcanotechnic", "count": 5}
+		{"type_id": "elf_archer", "count": 8},
+		{"type_id": "elf_swordsman", "count": 6},
+		{"type_id": "elf_mage", "count": 8},
+		{"type_id": "elf_arcanotechnic", "count": 11}
 	  ],
 	  "enemy_units": [
 		{"type_id": "dwarf_warrior", "count": 5},
@@ -88,16 +88,16 @@
 	  "enemy_faction": "humans",
 	  "background": "res://assets/backgrounds/scenarios/humans_vs_goblins_desert.png",
 	  "player_units": [
-		{"type_id": "goblin_thief", "count": 6},
-		{"type_id": "goblin_warrior", "count": 5},
-		{"type_id": "goblin_shaman", "count": 4},
-		{"type_id": "goblin_trapper", "count": 5}
+		{"type_id": "goblin_thief", "count": 10},
+		{"type_id": "goblin_warrior", "count": 8},
+		{"type_id": "goblin_shaman", "count": 8},
+		{"type_id": "goblin_trapper", "count": 8}
 	  ],
 	  "enemy_units": [
-		{"type_id": "human_knights", "count": 5},
+		{"type_id": "human_knights", "count": 4},
 		{"type_id": "human_cavalry", "count": 4},
 		{"type_id": "human_archers", "count": 7},
-		{"type_id": "human_mages", "count": 4}
+		{"type_id": "human_mages", "count": 6}
 	  ]
 	}
   ]

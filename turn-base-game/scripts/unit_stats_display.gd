@@ -6,6 +6,7 @@ const ROW_V_PADDING := 10
 
 const ICONS := {
 	"hp": preload("res://assets/ui/health.png"),
+	"atk": preload("res://assets/ui/damage.png"),
 	"dmg": preload("res://assets/ui/damage.png"),
 	"def": preload("res://assets/ui/defence.png"),
 	"speed": preload("res://assets/ui/speed.png"),
@@ -26,7 +27,8 @@ func _ready() -> void:
 func _build_rows() -> void:
 	var rows: Array[Dictionary] = [
 		{"id": "hp", "label": "HP"},
-		{"id": "dmg", "label": "DMG (pojedynczy atak)"},
+		{"id": "atk", "label": "ATK"},
+		{"id": "dmg", "label": "DMG jednostki"},
 		{"id": "def", "label": "DEF"},
 		{"id": "speed", "label": "Szybkosc"},
 		{"id": "count", "label": "Liczebnosc"},
