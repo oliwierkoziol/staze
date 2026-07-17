@@ -11,7 +11,7 @@
 	"berserk": {
 	  "id": "berserk",
 	  "name": "Berserk",
-	  "description": "Przez 2 tury zadaje o 30% wiecej obrazen, ale ma o 15% mniej obrony.",
+	  "description": "Przez 2 tury zadaje o 50% wiecej obrazen, ale ma o 25% mniej obrony.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/berserk.png",
 	  "color": "#DB5959"
