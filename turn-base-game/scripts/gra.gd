@@ -5522,6 +5522,8 @@ func _validate_setup() -> void:
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
 	assert(UnitTypeLibraryScript.get_skill_icon_path("tarcza", 1) == "res://assets/ui/ability_icons/ability_tarcza_2.png")
 	assert(UnitTypeLibraryScript.get_skill_icon_path("odepchniecie_tarcza", 0) == "res://assets/ui/ability_icons/ability_odpchniecietarcza_1.png")
+	assert(UnitTypeLibraryScript.get_general_skill_icon_path("grad_strzal") == "res://assets/ui/general_ability_icons/general_ability_gradstrzal.png")
+	assert(UnitTypeLibraryScript.get_general_skill_icon_path("zelazna_dyscyplina") == "res://assets/ui/general_ability_icons/general_ability_zelaznadyscyplina.png")
 	var test_line: Array[Vector2i] = _get_hex_line(Vector2i(0, 0), Vector2i(3, 0))
 	assert(test_line.size() == 4 and test_line.front() == Vector2i(0, 0) and test_line.back() == Vector2i(3, 0), "Linia heksow musi zawierac oba konce.")
 	for obstacle in obstacles:
@@ -6649,6 +6651,7 @@ func _refresh_general_ability_buttons() -> void:
 	var buttons: Array[Button] = [general_ability_button_1, general_ability_button_2]
 	for index in buttons.size():
 		var button: Button = buttons[index]
+		var icon_rect: TextureRect = button.get_node("AbilityContent/AbilityIcon")
 		var name_label: Label = button.get_node("AbilityContent/AbilityText/AbilityName")
 		var desc_label: Label = button.get_node("AbilityContent/AbilityText/AbilityDesc")
 		var cd_label: Label = button.get_node("AbilityContent/AbilityText/AbilityCooldown")
@@ -6663,6 +6666,11 @@ func _refresh_general_ability_buttons() -> void:
 		var can_use := not setup_mode and not is_animating and _is_player_turn() and not general_skill_used
 		button.disabled = not can_use
 		button.modulate = Color(0.75, 0.9, 1.0, 1.0) if pending_general_skill_id == skill_id else (Color(0.45, 0.45, 0.45, 0.75) if general_skill_used else Color.WHITE)
+		var icon_path: String = UnitTypeLibraryScript.get_general_skill_icon_path(skill_id)
+		if icon_path != "":
+			var icon_texture: Resource = load(icon_path)
+			if icon_texture is Texture2D:
+				icon_rect.texture = icon_texture
 		name_label.text = str(skill.get("name", skill_id)).to_upper()
 		desc_label.text = str(skill.get("description", ""))
 		cd_label.text = ""

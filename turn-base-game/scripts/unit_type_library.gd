@@ -4,6 +4,7 @@ const UNIT_TYPES_PATH := "res://data/unit_types.json"
 const GENERAL_SKILLS_PATH := "res://data/general_skills.json"
 const STATUS_EFFECTS_PATH := "res://data/status_effects.json"
 const ABILITY_ICONS_DIR := "res://assets/ui/ability_icons/"
+const GENERAL_ABILITY_ICONS_DIR := "res://assets/ui/general_ability_icons/"
 
 const SKILL_ICON_BASE_OVERRIDES := {
 	"strzal_w_kolano": "strzalawkolano",
@@ -302,6 +303,13 @@ static func get_skill_icon_path(skill_id: String, slot_index: int) -> String:
 		var path := "%sability_%s_%d.png" % [ABILITY_ICONS_DIR, base, slot_number]
 		if ResourceLoader.exists(path):
 			return path
+	return ""
+
+
+static func get_general_skill_icon_path(skill_id: String) -> String:
+	var path := "%sgeneral_ability_%s.png" % [GENERAL_ABILITY_ICONS_DIR, skill_id.replace("_", "")]
+	if ResourceLoader.exists(path):
+		return path
 	return ""
 
 
