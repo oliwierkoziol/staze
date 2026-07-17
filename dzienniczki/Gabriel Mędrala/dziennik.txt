@@ -91,3 +91,15 @@ Dzień 12 (16.07.2026)
 - dodanie guzika resetującego poziom
 - dodanie wody reagującej na obiekty fizyczne
 - dodanie projektu do githuba
+
+Dzień 13 (17.07.2026)
+- dostosowanie skryptów wiatraka i taśmy, aby działały we wszystkie strony
+- stworznie oddzielnego gui dla przybornika do stawiania maszyn
+- umożliwienie faktycznego stawiania maszyn
+- umożliwienie rotacji maszyn
+- umożliwienie deselekcji maszyn (jeżeli ktoś się rozmyślił)
+- umożliwienie pauzowania fizyki
+- stworzenie systemu zapisującego dodane maszyny na planszę 
+- umożliwienie wczytywania z zapisu
+- naprawienie pięści, aby została wyrzucana w kierunku, w którym się patrzy, a nie wyłącznie w prawo
+- aktualizacja projektu na githubie
