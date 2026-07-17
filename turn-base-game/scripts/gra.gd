@@ -664,6 +664,7 @@ func _on_start_battle_pressed() -> void:
 	board.clear_falling_rock_cells()
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
+	_clear_move_cost_label()
 	_log_event(_color_log_text("Bitwa rozpoczęta.", LOG_COLOR_YELLOW))
 	_rebuild_turn_queue()
 	_start_next_activation()
@@ -1211,6 +1212,7 @@ func _show_move_cost_label(cost: int, remaining: int) -> void:
 	if move_cost_label == null:
 		return
 	move_cost_label.text = "Koszt ruchu: %s (pozostanie: %s)" % [cost, remaining]
+	move_cost_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
 	move_cost_label.visible = true
 
 
@@ -1220,6 +1222,7 @@ func _clear_move_cost_label() -> void:
 		return
 	move_cost_label.text = ""
 	move_cost_label.visible = false
+	move_cost_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
 
 
 func _stop_unit_on_terrain(unit: Dictionary) -> void:
@@ -1287,6 +1290,7 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 			_show_obstacle_details(cell)
 		return
 	if path_cost > remaining_move:
+		_clear_move_cost_label()
 		return
 
 	var move_path: Array[Vector2i] = _get_executable_move_path(path)
@@ -1405,6 +1409,7 @@ func _end_current_activation() -> void:
 	board.set_selected_unit(-1)
 	board.set_highlighted_cells([], [])
 	board.set_hovered_move_path([])
+	_clear_move_cost_label()
 	_update_action_buttons()
 	if setup_mode:
 		return
@@ -2169,9 +2174,12 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 	if path.is_empty() or path_cost > remaining:
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
-		_clear_move_cost_label()
 		if cell.x != -1:
-			_show_hover_warning("Za daleko! Pozostały ruch: %s" % remaining, cell)
+			_show_move_cost_label(0, remaining)
+			move_cost_label.text = "Za daleko! Pozostały ruch: %s" % remaining
+			move_cost_label.add_theme_color_override("font_color", Color(0.95, 0.18, 0.18, 1.0))
+		else:
+			_clear_move_cost_label()
 		return
 
 	board.set_hovered_move_path(path)
@@ -6333,6 +6341,7 @@ func _start_unit_activation(unit: Dictionary) -> void:
 	unit.remaining_move = int(unit.move_range)
 	unit.action_points = int(unit.get("base_action_points", unit.get("action_points", 1)))
 	pending_skill_id = ""
+	_clear_move_cost_label()
 	var skips_turn: bool = _process_turn_start(unit)
 	if _is_manual_side(str(unit.side)):
 		_refresh_general_ability_buttons()
