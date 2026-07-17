@@ -194,6 +194,7 @@ var current_battle_background_path: String = DEFAULT_BATTLE_BACKGROUND_PATH
 var castle_stage := 0
 var free_setup_mode := false
 var help_popup: PanelContainer
+var help_blocker: Control
 var help_popup_content: VBoxContainer
 var help_popup_scroll: ScrollContainer
 var help_popup_page_label: Label
@@ -295,6 +296,9 @@ func _input(event: InputEvent) -> void:
 			return
 		if setup_mode:
 			if not tutorial_acknowledged or is_animating:
+				return
+			if help_popup != null and help_popup.visible:
+				get_viewport().set_input_as_handled()
 				return
 			_on_start_battle_pressed()
 		else:
@@ -627,11 +631,19 @@ func _enter_setup_mode() -> void:
 	_update_action_buttons()
 	_sync_board()
 	if help_popup != null and hud.visible and not _should_skip_tutorial():
-		help_popup.visible = true
+		_set_help_popup_visible(true)
 
 
 func _on_start_battle_pressed() -> void:
 	if not setup_mode:
+		return
+	if help_popup != null and help_popup.visible:
+		return
+	if not _has_units_on_side("player"):
+		_show_screen_message("Twoja armia jest pusta!", 2.5)
+		return
+	if not _has_units_on_side("enemy"):
+		_show_screen_message("Armia wroga jest pusta!", 2.5)
 		return
 	setup_mode = false
 	_update_setup_hint_visibility()
@@ -654,6 +666,8 @@ func _on_start_battle_pressed() -> void:
 
 
 func _on_save_setup_pressed() -> void:
+	if help_popup != null and help_popup.visible:
+		return
 	save_setup_dialog.current_file = "zapis_armii.json"
 	save_setup_dialog.popup_centered(Vector2i(900, 600))
 
@@ -664,7 +678,7 @@ func _on_save_setup_file_selected(path: String) -> void:
 	if file == null:
 		_log_event(_color_log_text("Nie udało się zapisać ustawienia armii.", LOG_COLOR_DAMAGE), false)
 		return
-	file.store_string(JSON.stringify(_make_save_data(), "\t"))
+	file.store_string(JSON.stringify(_make_save_data(), "	"))
 	_log_event(_color_log_text("Zapisano stan gry.", LOG_COLOR_YELLOW), false)
 
 
@@ -780,6 +794,8 @@ func _typed_int_array(value: Variant) -> Array[int]:
 
 
 func _on_reset_battle_pressed() -> void:
+	if help_popup != null and help_popup.visible:
+		return
 	setup_mode = true
 	help_mode_tutorial = true
 	tutorial_page = 0
@@ -808,6 +824,8 @@ func _on_reset_battle_pressed() -> void:
 
 
 func _on_reload_json_pressed() -> void:
+	if help_popup != null and help_popup.visible:
+		return
 	UnitTypeLibraryScript.reload()
 	var scenario_reloaded: bool = _reload_selected_factions()
 	_validate_setup()
@@ -1205,6 +1223,8 @@ func _stop_unit_on_terrain(unit: Dictionary) -> void:
 
 
 func _on_cell_clicked(cell: Vector2i) -> void:
+	if help_popup != null and help_popup.visible:
+		return
 	if setup_mode:
 		_handle_setup_cell_pressed(cell)
 		return
@@ -1226,8 +1246,10 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		var pending_skill: Dictionary = skill_library.get(pending_skill_id, {})
 		if str(pending_skill.get("effect_type", "")) == "charge":
 			_try_execute_charge_move(active_unit, cell)
-			return
-		await _try_use_skill(active_unit, pending_skill_id, cell)
+		else:
+			var skill_used: bool = await _try_use_skill(active_unit, pending_skill_id, cell)
+			if not skill_used:
+				_show_screen_message("Cel poza zasięgiem umiejętności!", 1.8)
 		_update_highlighted_cells(active_unit)
 		_update_action_buttons()
 		return
@@ -1260,6 +1282,7 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 			_show_obstacle_details(cell)
 		return
 	if path_cost > remaining_move:
+		_show_screen_message("Za daleko! Pozostały ruch: %s" % remaining_move, 1.8)
 		return
 
 	var move_path: Array[Vector2i] = _get_executable_move_path(path)
@@ -1286,6 +1309,8 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 
 
 func _on_cell_double_clicked(cell: Vector2i) -> void:
+	if help_popup != null and help_popup.visible:
+		return
 	var unit: Dictionary = _find_unit_at_cell(cell)
 	if not unit.is_empty():
 		unit_details_popup.show_unit(unit, skill_library, _load_unit_portrait(unit))
@@ -1302,6 +1327,8 @@ func _on_cell_double_clicked(cell: Vector2i) -> void:
 
 
 func _on_cell_right_clicked(cell: Vector2i) -> void:
+	if help_popup != null and help_popup.visible:
+		return
 	if setup_mode or is_animating or not _is_manual_turn():
 		return
 	var active_unit := _get_active_unit()
@@ -1319,12 +1346,15 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 		return
 	if _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
 		_perform_basic_attack(active_unit, target, false)
+	else:
+		_show_screen_message("Cel poza zasięgiem ataku!", 1.8)
 
 
 func _on_cell_left_released(cell: Vector2i) -> void:
 	if not setup_mode or setup_drag_unit_id == -1:
 		return
-
+	if help_popup != null and help_popup.visible:
+		return
 	var dragged_unit: Dictionary = _find_unit_by_id(setup_drag_unit_id)
 	setup_drag_unit_id = -1
 	if dragged_unit.is_empty():
@@ -2008,6 +2038,14 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 
 
 func _on_board_cell_hovered(cell: Vector2i) -> void:
+	if help_popup != null and help_popup.visible:
+		board.set_hovered_move_path([])
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		board.set_hovered_area_skill(cell, [])
+		board.set_hovered_detonator_preview([])
+		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
+		_clear_move_cost_label()
+		return
 	if pending_general_skill_id != "":
 		var general_skill: Dictionary = general_skills.get(pending_general_skill_id, {})
 		if str(general_skill.get("effect_type", "")) == "area":
@@ -2798,52 +2836,53 @@ func _cleanup_destroyed_unit(target: Dictionary) -> void:
 	_check_victory()
 
 
-func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> void:
+func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> bool:
 	var skill: Dictionary = skill_library.get(skill_id, {})
 	if skill.is_empty():
-		return
+		return false
 	if not _can_use_skill(unit, skill_id):
-		return
+		return false
 
 	if str(skill.get("target_type", "")) == "self":
 		if cell != Vector2i(unit.grid_x, unit.grid_y):
-			return
+			return false
 		await _execute_skill(unit, unit, skill, cell)
-		return
+		return true
 
 	if str(skill.get("target_type", "")) == "cell":
 		if _hex_distance(Vector2i(unit.grid_x, unit.grid_y), cell) > int(skill.get("range", 0)):
-			return
+			return false
 		if _is_attack_blocked(unit, cell) or _blocks_cell_skill_target(cell):
-			return
+			return false
 		if str(skill.get("effect_type", "")) == "bear_trap" and (not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, "bear_trap").is_empty()):
-			return
+			return false
 		if str(skill.get("effect_type", "")) == "goblin_trap" and (not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, "goblin_trap").is_empty()):
-			return
+			return false
 		if str(skill.get("effect_type", "")) == "magic_projection" and not _can_place_magic_projection_at(unit, cell):
-			return
+			return false
 		if str(skill.get("effect_type", "")) == "summon_statue" and not _can_place_summoned_statue_at(cell):
-			return
+			return false
 		await _execute_skill(unit, {}, skill, cell)
-		return
+		return true
 
 	var target := _find_unit_at_cell(cell)
 	if target.is_empty():
-		return
+		return false
 	var target_type := str(skill.get("target_type", ""))
 	if target_type == "enemy_unit" and target.side == unit.side:
-		return
+		return false
 	if target_type == "enemy_unit" and not _can_see_target(unit, target):
-		return
+		return false
 	if target_type == "ally_unit" and (target.side != unit.side or target.id == unit.id):
-		return
+		return false
 	if _hex_distance(Vector2i(unit.grid_x, unit.grid_y), cell) > int(skill.get("range", 0)):
-		return
+		return false
 	if _is_attack_blocked(unit, cell):
-		return
+		return false
 	if str(skill.get("effect_type", "")) == "hook_throw" and not _can_hook_throw_target(unit, target, skill):
-		return
+		return false
 	await _execute_skill(unit, target, skill, cell)
+	return true
 
 
 func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, target_cell: Vector2i) -> void:
@@ -4830,7 +4869,6 @@ func _get_neighbors(cell: Vector2i) -> Array[Vector2i]:
 
 func _build_help_popup() -> void:
 	help_popup = PanelContainer.new()
-	help_popup.visible = false
 	help_popup.mouse_filter = Control.MOUSE_FILTER_STOP
 	help_popup.custom_minimum_size = Vector2(640, 520)
 	help_popup.set_anchors_preset(Control.PRESET_CENTER)
@@ -4839,6 +4877,14 @@ func _build_help_popup() -> void:
 	help_popup.offset_right = 320
 	help_popup.offset_bottom = 260
 	hud.add_child(help_popup)
+
+	help_blocker = Control.new()
+	help_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	help_blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hud.add_child(help_blocker)
+	hud.move_child(help_blocker, hud.get_child_count() - 2)
+
+	_set_help_popup_visible(false)
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 20)
@@ -4951,6 +4997,13 @@ func _make_help_section(title: String, lines: Array[String], expanded := true) -
 		body.visible = not body.visible
 	)
 	return section
+
+
+func _set_help_popup_visible(value: bool) -> void:
+	if help_popup != null:
+		help_popup.visible = value
+	if help_blocker != null:
+		help_blocker.visible = value
 
 
 func _help_rebuild_content() -> void:
@@ -5079,14 +5132,12 @@ func _on_help_action_pressed() -> void:
 	if help_mode_tutorial:
 		_on_tutorial_ok_pressed()
 		return
-	if help_popup != null:
-		help_popup.visible = false
+	_set_help_popup_visible(false)
 
 
 func _on_tutorial_ok_pressed() -> void:
 	tutorial_acknowledged = true
-	if help_popup != null:
-		help_popup.visible = false
+	_set_help_popup_visible(false)
 	_update_setup_hint_visibility()
 
 
@@ -5242,7 +5293,7 @@ func _toggle_help_popup() -> void:
 	if help_popup == null or hud == null or not hud.visible:
 		return
 	var will_show := not help_popup.visible
-	help_popup.visible = will_show
+	_set_help_popup_visible(will_show)
 	if will_show:
 		help_mode_tutorial = false
 		tutorial_page = 0
@@ -5751,6 +5802,8 @@ func _update_action_buttons() -> void:
 
 func _on_end_turn_button_pressed() -> void:
 	if setup_mode:
+		if help_popup != null and help_popup.visible:
+			return
 		_on_start_battle_pressed()
 		return
 	if setup_mode or is_animating or not _is_manual_turn():
@@ -5871,6 +5924,8 @@ func _update_top_bar_width(card_count: int) -> void:
 
 
 func _on_turn_queue_pressed(unit_id: int) -> void:
+	if help_popup != null and help_popup.visible:
+		return
 	if is_animating:
 		return
 
@@ -5887,6 +5942,8 @@ func _on_turn_queue_pressed(unit_id: int) -> void:
 
 
 func _on_turn_queue_gui_input(event: InputEvent, unit_id: int) -> void:
+	if help_popup != null and help_popup.visible:
+		return
 	if not event is InputEventMouseButton:
 		return
 	var mouse_event: InputEventMouseButton = event
@@ -6235,6 +6292,8 @@ func _get_visible_turn_queue() -> Array[int]:
 
 
 func _on_skill_button_pressed(index: int) -> void:
+	if help_popup != null and help_popup.visible:
+		return
 	if not _is_manual_turn() or is_animating:
 		return
 
@@ -6259,10 +6318,14 @@ func _on_skill_button_pressed(index: int) -> void:
 
 
 func _on_general_ability_1_pressed() -> void:
+	if help_popup != null and help_popup.visible:
+		return
 	_use_general_skill_by_index(0)
 
 
 func _on_general_ability_2_pressed() -> void:
+	if help_popup != null and help_popup.visible:
+		return
 	_use_general_skill_by_index(1)
 
 
