@@ -155,6 +155,8 @@ const OBSTACLE_WINTER_DESCRIPTIONS: Dictionary = {
 @onready var event_log_label: RichTextLabel = $HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll/EventLog
 @onready var end_turn_button: Button = $HUD/Overlay/RightPanel/RightMargin/RightContent/EndTurnButton
 @onready var move_cost_label: Label = $HUD/Overlay/MoveCostLabel
+@onready var damage_tooltip: PanelContainer = $HUD/Overlay/DamageTooltip
+@onready var damage_tooltip_label: Label = $HUD/Overlay/DamageTooltip/Label
 
 var units: Array = []
 var obstacles: Array[Dictionary] = []
@@ -2040,6 +2042,7 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 
 
 func _on_board_cell_hovered(cell: Vector2i) -> void:
+	_update_damage_tooltip(cell)
 	if help_popup != null and help_popup.visible:
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
@@ -2176,6 +2179,116 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 	board.set_hovered_attack_cell(Vector2i(-1, -1))
 	_show_move_cost_label(path_cost, remaining - path_cost)
 	_clear_hover_warning()
+
+
+func _process(_delta: float) -> void:
+	if damage_tooltip.visible:
+		damage_tooltip.position = get_viewport().get_mouse_position() + Vector2(18, 18)
+
+
+func _update_damage_tooltip(cell: Vector2i) -> void:
+	damage_tooltip.visible = false
+	if setup_mode or pending_general_skill_id != "":
+		return
+	var attacker: Dictionary = _get_active_unit()
+	var selected_skill: Dictionary = skill_library.get(pending_skill_id, {})
+	if str(selected_skill.get("effect_type", "")) == "piercing_shot":
+		_update_piercing_shot_damage_tooltip(attacker, selected_skill, cell)
+		return
+	if _is_area_damage_skill(selected_skill):
+		_update_area_damage_tooltip(attacker, selected_skill, cell)
+		return
+	var target: Dictionary = _find_unit_at_cell(cell)
+	if attacker.is_empty() or target.is_empty() or target.side == attacker.side:
+		return
+	if not _can_show_damage_tooltip_in_range(attacker, target, cell):
+		return
+	var multiplier: float = _get_selected_attack_damage_multiplier()
+	if multiplier <= 0.0:
+		return
+	damage_tooltip_label.text = "Obrażenia: %d" % _calculate_attack_preview_damage(attacker, target, multiplier)
+	damage_tooltip.visible = true
+
+
+func _update_piercing_shot_damage_tooltip(attacker: Dictionary, skill: Dictionary, cell: Vector2i) -> void:
+	var first_target: Dictionary = _find_unit_at_cell(cell)
+	if attacker.is_empty() or not _can_target_enemy_with_skill(attacker, first_target, skill):
+		return
+	var lines: Array[String] = []
+	for hit_cell in _get_piercing_shot_preview_cells(attacker, first_target):
+		var target: Dictionary = _find_unit_at_cell(hit_cell)
+		if target.is_empty():
+			continue
+		lines.append("%s: %d" % [str(target.get("name", "Jednostka")), _calculate_attack_preview_damage(attacker, target, 1.0)])
+	if not lines.is_empty():
+		damage_tooltip_label.text = "Obrażenia przebijające:\n%s" % "\n".join(lines)
+		damage_tooltip.visible = true
+
+
+func _update_area_damage_tooltip(attacker: Dictionary, skill: Dictionary, center: Vector2i) -> void:
+	if attacker.is_empty() or not _can_target_cell_with_skill(attacker, center, skill):
+		return
+	var lines: Array[String] = []
+	for hit_cell in _get_area_cells(center):
+		var target: Dictionary = _find_unit_at_cell(hit_cell)
+		if target.is_empty() or target.side == attacker.side:
+			continue
+		var multiplier: float = _get_area_damage_multiplier(str(skill.get("effect_type", "")), hit_cell == center)
+		lines.append("%s: %d" % [str(target.get("name", "Przeciwnik")), _calculate_attack_preview_damage(attacker, target, multiplier)])
+	if not lines.is_empty():
+		damage_tooltip_label.text = "Obrażenia obszarowe:\n%s" % "\n".join(lines)
+		damage_tooltip.visible = true
+
+
+func _get_area_damage_multiplier(effect_type: String, is_center: bool) -> float:
+	if effect_type == "arrow_rain":
+		return 0.5 if is_center else 0.35
+	return 1.0 if is_center else 0.5
+
+
+func _can_show_damage_tooltip_in_range(attacker: Dictionary, target: Dictionary, cell: Vector2i) -> bool:
+	if pending_skill_id == "":
+		return _is_in_attack_range(attacker, cell)
+	var skill: Dictionary = skill_library.get(pending_skill_id, {})
+	var effect_type: String = str(skill.get("effect_type", ""))
+	if effect_type == "charge":
+		return _can_charge_attack_target(attacker, target, skill)
+	if effect_type == "dancing_blade":
+		return _hex_distance(Vector2i(attacker.grid_x, attacker.grid_y), cell) == 1
+	if str(skill.get("target_type", "")) == "cell":
+		return _can_target_cell_with_skill(attacker, cell, skill)
+	return _can_target_enemy_with_skill(attacker, target, skill)
+
+
+func _calculate_attack_preview_damage(attacker: Dictionary, target: Dictionary, multiplier: float) -> int:
+	var damage: int = _calculate_damage(attacker, target, multiplier)
+	var hit_target: Dictionary = target
+	var guardian: Dictionary = _get_guardian_for(target)
+	if not guardian.is_empty():
+		hit_target = guardian
+		damage = max(1, int(ceil(float(damage) * 0.75)))
+	for effect in hit_target.get("active_effects", []):
+		if bool(effect.get("block_next_attack", false)):
+			return 0
+	return _adjust_incoming_damage(hit_target, damage)
+
+
+func _get_selected_attack_damage_multiplier() -> float:
+	if pending_skill_id == "":
+		return 1.0
+	var effect_type: String = str(skill_library.get(pending_skill_id, {}).get("effect_type", ""))
+	match effect_type:
+		"knee_shot", "poison_dagger":
+			return 0.7
+		"dancing_blade", "zaklete_ciecie", "rozszarpanie":
+			return 0.5
+		"charge", "shattering_strike":
+			return 1.5
+		"shield_push", "hammer_strike", "focused_strike", "piercing_shot", "fireball", "dynamite_throw":
+			return 1.0
+		"arrow_rain":
+			return 0.5
+	return 0.0
 
 
 func _handle_enemy_unit_skill_hover(active_unit: Dictionary, skill: Dictionary, cell: Vector2i) -> void:
@@ -2639,6 +2752,7 @@ func _commit_charge_skill(caster: Dictionary, skill: Dictionary) -> void:
 	caster.skill_cooldowns[str(skill.get("id", ""))] = int(skill.get("cooldown", 0))
 	if int(caster.get("id", -1)) == active_unit_id:
 		pending_skill_id = ""
+		damage_tooltip.visible = false
 	_log_event("%s używa umiejętności %s." % [_unit_name_log_text(caster), str(skill.get("name", skill.get("id", "")))])
 
 
@@ -2917,6 +3031,7 @@ func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, t
 	caster.action_points = max(0, int(caster.action_points) - int(skill.get("ap_cost", 0)))
 	caster.skill_cooldowns[skill.get("id", "")] = int(skill.get("cooldown", 0))
 	pending_skill_id = ""
+	damage_tooltip.visible = false
 	if str(skill.get("target_type", "")) != "self":
 		_reveal_if_in_bush(caster)
 
@@ -3292,7 +3407,7 @@ func _execute_fireball(caster: Dictionary, center: Vector2i) -> void:
 		var target := _find_unit_at_cell(cell)
 		if target.is_empty() or target.side == caster.side:
 			continue
-		var multiplier := 1.0 if cell == center else 0.5
+		var multiplier: float = _get_area_damage_multiplier("fireball", cell == center)
 		var total_damage := _calculate_damage(caster, target, multiplier)
 		var result := _apply_attack_damage(caster, target, total_damage, false)
 		var hit_target: Dictionary = result.get("target", target)
@@ -3316,7 +3431,7 @@ func _execute_dynamite_throw(caster: Dictionary, center: Vector2i) -> void:
 		var target := _find_unit_at_cell(cell)
 		if target.is_empty() or target.side == caster.side:
 			continue
-		var multiplier := 1.0 if cell == center else 0.5
+		var multiplier: float = _get_area_damage_multiplier("dynamite_throw", cell == center)
 		var total_damage := _calculate_damage(caster, target, multiplier)
 		var result := _apply_attack_damage(caster, target, total_damage)
 		var hit_target: Dictionary = result.get("target", target)
@@ -3335,7 +3450,7 @@ func _execute_arrow_rain(caster: Dictionary, center: Vector2i) -> void:
 		var target := _find_unit_at_cell(cell)
 		if target.is_empty() or target.side == caster.side:
 			continue
-		var multiplier := 0.5 if cell == center else 0.35
+		var multiplier: float = _get_area_damage_multiplier("arrow_rain", cell == center)
 		var total_damage := _calculate_damage(caster, target, multiplier)
 		var result := _apply_attack_damage(caster, target, total_damage, false)
 		var hit_target: Dictionary = result.get("target", target)
@@ -5402,6 +5517,15 @@ func _validate_setup() -> void:
 
 	assert(_calculate_tick_damage({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
 	assert(_adjust_incoming_damage({"active_effects": [{"incoming_damage_percent": 50}]}, 4) == 6, "Klątwa powinna zwiekszac otrzymywane obrazenia o 50%.")
+	var tooltip_previous_skill_id: String = pending_skill_id
+	pending_skill_id = "strzal_w_kolano"
+	assert(is_equal_approx(_get_selected_attack_damage_multiplier(), 0.7), "Tooltip musi uwzgledniac mnoznik wybranej umiejetnosci.")
+	pending_skill_id = "pnacza"
+	assert(_get_selected_attack_damage_multiplier() == 0.0, "Tooltip nie moze pokazywac obrazen dla umiejetnosci bez obrazen.")
+	pending_skill_id = tooltip_previous_skill_id
+	assert(_calculate_attack_preview_damage({"dmg": 10}, {"def": 0, "active_effects": [{"block_next_attack": true}]}, 1.0) == 0, "Tooltip musi uwzgledniac blokade obrazen.")
+	assert(is_equal_approx(_get_area_damage_multiplier("fireball", true), 1.0) and is_equal_approx(_get_area_damage_multiplier("fireball", false), 0.5), "Kula Ognia musi miec poprawny podglad obrazen obszarowych.")
+	assert(is_equal_approx(_get_area_damage_multiplier("arrow_rain", false), 0.35), "Podglad Deszczu Strzal musi zgadzac sie z wykonaniem.")
 	for terrain_id in terrain_types.keys():
 		var raw_entry: Variant = terrain_types[terrain_id].get("entry_effect", null)
 		if raw_entry == null:
