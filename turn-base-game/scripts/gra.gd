@@ -38,17 +38,17 @@ const MAP_EVENT_DATA: Dictionary = {
 	"pekniecie_chodnika": {"name": "Pekniecie Chodnika", "icon": preload("res://assets/ui/water.png"), "description": "Tworzy 3 pola wody. Wejscie zuzywa caly pozostaly ruch jednostki."},
 	"zawal_kopalni": {"name": "Zawal Kopalni", "icon": preload("res://assets/mapTiles/rock2.png"), "description": "Tworzy kamienie na 2 polach. Jednostka na oznaczonym polu otrzymuje 1 obrazenie za kazdego zywego czlonka oddzialu; kamienie powstaja, jesli pole zostanie zwolnione."},
 	"rozprzestrzeniajacy_sie_pozar": {"name": "Rozprzestrzeniajacy sie Pozar", "icon": preload("res://assets/ui/fire.png"), "description": "Tworzy ogien na 5-8 polach na 2 rundy. Ploniecie zadaje 2 obrazenia za kazda zywa jednostke w oddziale przez 3 tury."},
-	"gesty_dym": {"name": "Gesty Dym", "icon": preload("res://assets/ui/reveal.png"), "description": "Zmniejsza zasieg ataku wszystkich jednostek o 1 przez 1 ture."},
+	"gesty_dym": {"name": "Gesty Dym", "icon": preload("res://assets/ui/reveal.png"), "description": "Okrywa przechodnie pola Mgla na 1 runde. Wrogie jednostki sa widoczne tylko z sasiednich pol."},
 	"przerwanie_grobli": {"name": "Przerwanie Grobli", "icon": preload("res://assets/ui/water.png"), "description": "Tworzy 3 pola wody. Wejscie zuzywa caly pozostaly ruch jednostki."},
 	"plonace_zabudowania": {"name": "Plonace Zabudowania", "icon": preload("res://assets/ui/fire.png"), "description": "Oznacza 3 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
-	"wichura_lodowa": {"name": "Wichura Lodowa", "icon": preload("res://assets/ui/frost.png"), "description": "Zmniejsza Szybkosc i zasieg ruchu wszystkich jednostek o 2 przez 1 ture."},
+	"wichura_lodowa": {"name": "Wichura Lodowa", "icon": preload("res://assets/ui/frost.png"), "description": "Zmniejsza zasieg ruchu wszystkich jednostek o 2 przez 1 ture."},
 	"sniezna_zamiec": {"name": "Sniezna Zamiec", "icon": preload("res://assets/ui/frost.png"), "description": "Zmniejsza zasieg ataku wszystkich jednostek o 1 przez 1 ture."},
 	"oblodzenie": {"name": "Oblodzenie", "icon": preload("res://assets/ui/frost.png"), "description": "Tworzy lod na 5-8 polach na 2 rundy. Lodowe Podloze zmniejsza Szybkosc i zasieg ruchu o 2 przez 1 ture."},
 	"lawina": {"name": "Lawina", "icon": preload("res://assets/mapTiles/rock3.png"), "description": "Oznacza 4 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
-	"burza_piaskowa": {"name": "Burza Piaskowa", "icon": preload("res://assets/ui/reveal.png"), "description": "Zmniejsza zasieg ataku wszystkich jednostek o 1 przez 1 ture."},
+	"burza_piaskowa": {"name": "Burza Piaskowa", "icon": preload("res://assets/ui/reveal.png"), "description": "Okrywa przechodnie pola piaskiem na 1 runde. Wrogie jednostki sa widoczne tylko z sasiednich pol."},
 	"zapadlisko": {"name": "Zapadlisko", "icon": preload("res://assets/ui/exhaust.png"), "description": "Tworzy 3 pola ruchomych piaskow. Wejscie zuzywa caly pozostaly ruch jednostki."},
 	"palacy_skwar": {"name": "Palacy Skwar", "icon": preload("res://assets/ui/fire.png"), "description": "Oznacza 3 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
-	"pustynny_podmuch": {"name": "Pustynny Podmuch", "icon": preload("res://assets/ui/speed.png"), "description": "Zmniejsza Szybkosc i zasieg ruchu wszystkich jednostek o 2 przez 1 ture."},
+	"pustynny_podmuch": {"name": "Pustynny Podmuch", "icon": preload("res://assets/ui/speed.png"), "description": "Zmniejsza zasieg ruchu wszystkich jednostek o 2 przez 1 ture."},
 }
 const DEFAULT_GENERAL_PORTRAIT: Texture2D = preload("res://assets/ui/general1.png")
 const GENERAL_PORTRAITS: Dictionary = {
@@ -2426,12 +2426,7 @@ func _get_cell_skill_preview_cells(skill: Dictionary, center: Vector2i, caster: 
 	if str(skill.get("effect_type", "")) == "magic_projection":
 		return _get_magic_projection_cells(center, str(caster.get("side", "")))
 	if str(skill.get("effect_type", "")) == "ice_ground":
-		var cells: Array[Vector2i] = []
-		for neighbor in _get_neighbors(center).slice(0, 3):
-			cells.append(neighbor)
-		if cells.is_empty():
-			cells.append(center)
-		return cells
+		return _get_ice_ground_cells(center)
 	if str(skill.get("effect_type", "")) == "poison_cloud":
 		return _get_area_cells(center)
 	return [center]
@@ -3475,11 +3470,7 @@ func _execute_arrow_rain(caster: Dictionary, center: Vector2i) -> void:
 
 
 func _execute_ice_ground(caster: Dictionary, center: Vector2i) -> void:
-	var cells: Array[Vector2i] = []
-	for cell in _get_neighbors(center).slice(0, 3):
-		cells.append(cell)
-	if cells.is_empty():
-		cells.append(center)
+	var cells: Array[Vector2i] = _get_ice_ground_cells(center)
 	is_animating = true
 	board.play_ice_ground_animation(int(caster.id), cells)
 	await get_tree().create_timer(0.36).timeout
@@ -3488,6 +3479,21 @@ func _execute_ice_ground(caster: Dictionary, center: Vector2i) -> void:
 	_apply_terrain_effects_in_cells(cells)
 	is_animating = false
 	_log_event("%s zamraża podłoże." % _unit_name_log_text(caster))
+
+
+func _get_ice_ground_cells(center: Vector2i) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	var frontier: Array[Vector2i] = [center]
+	while not frontier.is_empty() and cells.size() < 8:
+		var current: Vector2i = frontier.pop_front()
+		for neighbor in _get_neighbors(current):
+			if neighbor == center or cells.has(neighbor):
+				continue
+			cells.append(neighbor)
+			frontier.append(neighbor)
+			if cells.size() == 8:
+				return cells
+	return cells
 
 
 func _get_magic_projection_cells(middle: Vector2i, side: String) -> Array[Vector2i]:
@@ -3967,22 +3973,18 @@ func _apply_terrain_entry_effect(unit: Dictionary) -> void:
 	var cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
 	var effect: Dictionary = _get_terrain_entry_effect(cell)
 	_apply_elf_statue_buff(unit)
-	if effect.is_empty():
-		_remove_hiding_effects(unit)
-		return
 	var terrain_name: String = str(effect.get("name", "teren"))
 	if bool(effect.get("instant_death", false)):
 		_trigger_hole_death(unit, terrain_name)
 		return
-	if _terrain_hides_unit(cell):
-		_apply_or_refresh_effect(unit, effect)
-		unit["is_hidden"] = true
-		_log_event("%s wchodzi w %s i znika z pola widzenia." % [_unit_name_log_text(unit), terrain_name])
-	else:
-		unit["is_hidden"] = false
+	_refresh_terrain_bound_effects(unit)
+	if bool(unit.get("is_hidden", false)):
+		var hiding_name: String = str(_get_hiding_effect_at_cell(cell).get("name", "ukrycie"))
+		_log_event("%s wchodzi w %s i znika z pola widzenia." % [_unit_name_log_text(unit), hiding_name])
+	elif not effect.is_empty():
 		_log_event("%s wchodzi w %s i traci resztę ruchu." % [_unit_name_log_text(unit), terrain_name])
-		if _is_winter_scenario() and _is_water_cell(cell):
-			_try_ice_break_death(unit, cell)
+	if _is_winter_scenario() and _is_water_cell(cell):
+		_try_ice_break_death(unit, cell)
 
 
 func _trigger_hole_death(unit: Dictionary, terrain_name: String) -> void:
@@ -4010,16 +4012,19 @@ func _apply_elf_statue_buff(unit: Dictionary) -> void:
 
 func _refresh_terrain_bound_effects(unit: Dictionary) -> void:
 	var cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
-	if _terrain_hides_unit(cell):
-		var terrain_effect: Dictionary = _get_terrain_entry_effect(cell)
-		if not terrain_effect.is_empty():
-			_apply_or_refresh_effect(unit, terrain_effect)
-			unit["is_hidden"] = true
-		return
+	var hiding_effect: Dictionary = _get_hiding_effect_at_cell(cell)
+	var hiding_id: String = str(hiding_effect.get("id", ""))
+	var kept_effects: Array = []
 	for effect in unit.get("active_effects", []):
-		if bool(effect.get("terrain_bound", false)) and bool(effect.get("hides_unit", false)):
-			_remove_hiding_effects(unit)
-			return
+		if bool(effect.get("terrain_bound", false)) and bool(effect.get("hides_unit", false)) and str(effect.get("id", "")) != hiding_id:
+			continue
+		kept_effects.append(effect)
+	unit["active_effects"] = kept_effects
+	unit["is_hidden"] = not hiding_effect.is_empty()
+	if not hiding_effect.is_empty():
+		_apply_or_refresh_effect(unit, hiding_effect)
+	else:
+		_recalculate_unit_stats(unit)
 
 
 func _get_terrain_type_at(cell: Vector2i) -> String:
@@ -4152,7 +4157,8 @@ func _remove_hiding_effects(unit: Dictionary) -> void:
 
 
 func _reveal_if_in_bush(unit: Dictionary) -> void:
-	if not _terrain_hides_unit(Vector2i(int(unit.grid_x), int(unit.grid_y))):
+	var cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
+	if not _terrain_hides_unit(cell) or _has_map_concealment_at(cell):
 		return
 	if _has_effect(unit, "wykrycie"):
 		return
@@ -4209,6 +4215,8 @@ func _advance_terrain_effects() -> void:
 		if int(effect["remaining_turns"]) > 0:
 			kept_effects.append(effect)
 	terrain_effects = kept_effects
+	for unit in units:
+		_refresh_terrain_bound_effects(unit)
 	_advance_temporary_obstacles()
 
 
@@ -4252,13 +4260,13 @@ func _try_trigger_map_event() -> void:
 		"rozprzestrzeniajacy_sie_pozar":
 			_event_spreading_fire()
 		"gesty_dym":
-			_event_global_range("Gesty Dym")
+			_event_board_concealment("mgla")
 		"przerwanie_grobli":
 			_event_random_obstacles("woda", "water", 3, "Przerwanie Grobli zalewa trzy pola.")
 		"plonace_zabudowania":
 			_event_damage_on_marked_cells("Plonace Zabudowania")
 		"wichura_lodowa":
-			_event_global_slow("wichura_lodowa", "Wichura Lodowa")
+			_event_global_move_penalty("wichura_lodowa", "Wichura Lodowa")
 		"sniezna_zamiec":
 			_event_global_range("Sniezna Zamiec")
 		"oblodzenie":
@@ -4266,13 +4274,13 @@ func _try_trigger_map_event() -> void:
 		"lawina":
 			_event_damage_on_marked_cells("Lawina")
 		"burza_piaskowa":
-			_event_global_range("Burza Piaskowa")
+			_event_board_concealment("burza_piaskowa")
 		"zapadlisko":
 			_event_random_obstacles("ruchome_piaski", "quicksand", 3, "Zapadlisko tworzy trzy pola ruchomych piaskow.")
 		"palacy_skwar":
 			_event_damage_on_marked_cells("Palacy Skwar")
 		"pustynny_podmuch":
-			_event_global_slow("pustynny_podmuch", "Pustynny Podmuch")
+			_event_global_move_penalty("pustynny_podmuch", "Pustynny Podmuch")
 		_:
 			return
 	map_event_cells.clear()
@@ -4352,19 +4360,27 @@ func _event_spreading_fire() -> void:
 	_log_event(_color_log_text("WYDARZENIE NA MAPIE: Pożar rozprzestrzenia się na trzy pola.", LOG_COLOR_YELLOW))
 
 
-func _event_global_slow(event_id: String, event_name: String) -> void:
+func _event_global_move_penalty(event_id: String, event_name: String) -> void:
 	for unit in units:
 		_apply_or_refresh_effect(unit, {
 			"id": event_id,
 			"name": event_name,
 			"category": "debuff",
 			"remaining_turns": 1,
-			"stat_changes": [
-				{"stat": "speed", "mode": "flat", "value": -2},
-				{"stat": "move_range", "mode": "flat", "value": -2}
-			]
+			"stat_changes": [{"stat": "move_range", "mode": "flat", "value": -2}]
 		})
 	_log_event(_color_log_text("WYDARZENIE NA MAPIE: %s spowalnia wszystkie jednostki." % event_name, LOG_COLOR_YELLOW))
+
+
+func _event_board_concealment(effect_id: String) -> void:
+	for column in range(GRID_COLUMNS):
+		for row in range(GRID_ROWS):
+			var cell := Vector2i(column, row)
+			if _is_cell_passable(cell):
+				_add_terrain_effect(cell, effect_id, 1)
+	for unit in units:
+		_refresh_terrain_bound_effects(unit)
+	_log_event(_color_log_text("WYDARZENIE NA MAPIE: %s ukrywa jednostki na 1 runde." % _map_event_name(), LOG_COLOR_YELLOW))
 
 
 func _event_forest_awakening() -> void:
@@ -4969,8 +4985,20 @@ func _get_terrain_entry_effect(cell: Vector2i) -> Dictionary:
 
 
 func _terrain_hides_unit(cell: Vector2i) -> bool:
-	var effect: Dictionary = _get_terrain_entry_effect(cell)
+	var effect: Dictionary = _get_hiding_effect_at_cell(cell)
 	return bool(effect.get("hides_unit", false))
+
+
+func _get_hiding_effect_at_cell(cell: Vector2i) -> Dictionary:
+	for effect_id in ["mgla", "burza_piaskowa"]:
+		if not _get_terrain_effect_at(cell, effect_id).is_empty():
+			return UnitTypeLibrary.build_active_effect(effect_id)
+	var effect: Dictionary = _get_terrain_entry_effect(cell)
+	return effect if bool(effect.get("hides_unit", false)) else {}
+
+
+func _has_map_concealment_at(cell: Vector2i) -> bool:
+	return not _get_terrain_effect_at(cell, "mgla").is_empty() or not _get_terrain_effect_at(cell, "burza_piaskowa").is_empty()
 
 
 func _terrain_skips_turn(cell: Vector2i) -> bool:
@@ -4979,13 +5007,15 @@ func _terrain_skips_turn(cell: Vector2i) -> bool:
 
 
 func _can_see_target(observer: Dictionary, target: Dictionary) -> bool:
+	var observer_cell := Vector2i(observer.grid_x, observer.grid_y)
+	var target_cell := Vector2i(target.grid_x, target.grid_y)
+	if _has_map_concealment_at(target_cell):
+		return _hex_distance(observer_cell, target_cell) == 1
 	if bool(target.get("is_revealed", false)) or _has_effect(target, "wykrycie"):
 		return true
 	if not bool(target.get("is_hidden", false)):
 		return true
-	var observer_cell := Vector2i(observer.grid_x, observer.grid_y)
-	var target_cell := Vector2i(target.grid_x, target.grid_y)
-	return _terrain_hides_unit(observer_cell) and _terrain_hides_unit(target_cell) and _hex_distance(observer_cell, target_cell) == 1
+	return _hex_distance(observer_cell, target_cell) == 1
 
 
 func _get_blocked_cells(excluded_unit_id: int) -> Dictionary:
@@ -5569,6 +5599,7 @@ func _validate_setup() -> void:
 		for general_skill_id in faction_general_skills:
 			assert(general_skills.has(general_skill_id), "Brak umiejetnosci generala: %s" % general_skill_id)
 	assert(_is_map_event_warning_round(2, 3) and not _is_map_event_warning_round(1, 3), "Pola eventu maja byc widoczne tylko runde przed jego aktywacja.")
+	assert(bool(UnitTypeLibrary.build_active_effect("mgla").get("hides_unit", false)), "Mgla musi korzystac z ukrycia jednostek.")
 	for scenario_id in MAP_EVENT_POOLS:
 		var event_pool: Array = MAP_EVENT_POOLS[scenario_id]
 		assert(event_pool.size() == 4, "Kazdy scenariusz musi miec cztery eventy: %s" % scenario_id)
@@ -5610,6 +5641,8 @@ func _validate_setup() -> void:
 	assert(int(skill_library["magiczna_projekcja"].get("cooldown", 0)) == 6, "Magiczna Projekcja musi miec cooldown 6 tur.")
 	assert(_get_magic_projection_cells(Vector2i(4, 4), "player").size() == 3, "Magiczna Projekcja gracza musi tworzyc 3 hexy.")
 	assert(_get_magic_projection_cells(Vector2i(10, 4), "enemy").size() == 3, "Magiczna Projekcja wroga musi tworzyc 3 hexy.")
+	assert(_get_ice_ground_cells(Vector2i(7, 5)).size() == 8, "Lodowe Podloze musi zamrazac 8 hexow.")
+	assert(not _get_ice_ground_cells(Vector2i(7, 5)).has(Vector2i(7, 5)), "Lodowe Podloze nie zamraza wskazanego srodka.")
 	assert(skill_library.has("sztandar"), "Brak skilla sztandar w bibliotece.")
 	assert(str(skill_library["sztandar"].get("effect_type", "")) == "sztandar", "Sztandar musi miec efekt sztandar.")
 	assert(str(skill_library["sztandar"].get("target_type", "")) == "ally_unit", "Sztandar musi celowac w sojusznika.")
@@ -5709,11 +5742,21 @@ func _validate_setup() -> void:
 	terrain_effects = [{"id": "poison_cloud", "grid_x": 5, "grid_y": 4, "remaining_turns": 2, "tick_damage": 1}]
 	_apply_terrain_effects_to_unit(bush_unit)
 	assert(_has_effect(bush_unit, "zatrucie"), "Toksyczna chmura musi dzialac na jednostke stojaca w krzaku.")
-	assert(not _can_see_target({"grid_x": 0, "grid_y": 0}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Ukryty cel w krzaku nie moze byc widoczny z normalnego pola.")
-	assert(_can_see_target({"grid_x": 5, "grid_y": 4}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Jednostki w sasiadujacych krzakach musza sie widziec.")
-	assert(not _can_see_target({"grid_x": 5, "grid_y": 3}, {"grid_x": 5, "grid_y": 5, "is_hidden": true}), "Krzak widzi ukryty cel tylko z sasiedniego krzaka.")
+	var hidden_enemy := {"side": "enemy", "grid_x": 5, "grid_y": 5, "is_hidden": true, "active_effects": []}
+	assert(not _can_see_target({"side": "player", "grid_x": 0, "grid_y": 0}, hidden_enemy), "Ukryty cel w krzaku nie moze byc widoczny z daleka.")
+	assert(_can_see_target({"side": "player", "grid_x": 6, "grid_y": 5}, hidden_enemy), "Gracz obok krzaka musi widziec ukrytego wroga.")
+	assert(not _has_effect(hidden_enemy, "wykrycie"), "Samo sasiedztwo nie moze nakladac Wykrycia.")
+	assert(_can_see_target({"side": "enemy", "grid_x": 6, "grid_y": 5}, {"side": "player", "grid_x": 5, "grid_y": 5, "is_hidden": true}), "Wróg obok krzaka musi widziec ukrytego gracza.")
+	assert(not _can_see_target({"grid_x": 5, "grid_y": 3}, hidden_enemy), "Tylko sasiednia jednostka moze widziec ukryty cel.")
 	assert(_can_see_target({"grid_x": 0, "grid_y": 0}, {"grid_x": 5, "grid_y": 5, "is_hidden": true, "is_revealed": true}), "Wykrycie musi pokazywac jednostke ukryta w krzaku.")
+	terrain_effects = [{"id": "mgla", "grid_x": 5, "grid_y": 5, "remaining_turns": 1}]
+	hidden_enemy["is_revealed"] = true
+	assert(not _can_see_target({"grid_x": 0, "grid_y": 0}, hidden_enemy), "Mgla musi ukrywac wykryty cel przed odleglym wrogiem.")
+	assert(_can_see_target({"grid_x": 6, "grid_y": 5}, hidden_enemy), "Sasiedni wrog musi widziec cel we mgle.")
+	_reveal_if_in_bush(hidden_enemy)
+	assert(not _has_effect(hidden_enemy, "wykrycie"), "Atak ani obrazenia we mgle nie moga nakladac Wykrycia.")
 	bush_unit["active_effects"] = [{"id": "wykrycie", "name": "Wykrycie", "category": "debuff", "remaining_turns": 1, "stat_changes": []}]
+	terrain_effects = [{"id": "poison_cloud", "grid_x": 5, "grid_y": 4, "remaining_turns": 2, "tick_damage": 1}]
 	_reveal_if_in_bush(bush_unit)
 	assert(int(bush_unit.active_effects[0].remaining_turns) == 1, "Wykrycie nie moze odnawiac czasu, dopoki trwa.")
 	var ai_archer := {

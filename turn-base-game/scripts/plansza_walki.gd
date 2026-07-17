@@ -901,6 +901,10 @@ func draw_terrain_effects() -> void:
 			continue
 		var color := Color(0.35, 0.80, 1.0, 0.28)
 		match str(effect.get("id", "")):
+			"mgla":
+				color = Color(0.42, 0.44, 0.46, 0.62)
+			"burza_piaskowa":
+				color = Color(0.78, 0.62, 0.22, 0.58)
 			"fire":
 				color = Color(1.0, 0.30, 0.05, 0.34)
 			"ice":
@@ -1108,7 +1112,7 @@ func draw_units() -> void:
 	for unit in units:
 		var unit_id := int(unit.id)
 		var hidden := bool(unit.get("is_hidden", false))
-		var revealed := bool(unit.get("is_revealed", false))
+		var revealed := bool(unit.get("is_revealed", false)) and not _unit_is_under_map_concealment(unit)
 		if hidden and not revealed and not _should_draw_hidden_unit(unit):
 			continue
 		var alpha := REVEALED_HIDDEN_UNIT_ALPHA if hidden and revealed else HIDDEN_UNIT_ALPHA if hidden else 1.0
@@ -1160,30 +1164,31 @@ func draw_units() -> void:
 
 
 func _should_draw_hidden_unit(unit: Dictionary) -> bool:
-	if bool(unit.get("is_revealed", false)):
+	if bool(unit.get("is_revealed", false)) and not _unit_is_under_map_concealment(unit):
 		return true
 	if unit.side == "player":
 		return true
 	for other in units:
 		if other.side != "player":
 			continue
-		if _units_share_adjacent_bushes(other, unit):
+		if _units_are_adjacent(other, unit):
 			return true
 	return false
 
 
-func _units_share_adjacent_bushes(observer: Dictionary, target: Dictionary) -> bool:
+func _unit_is_under_map_concealment(unit: Dictionary) -> bool:
+	for effect in terrain_effects:
+		if str(effect.get("id", "")) not in ["mgla", "burza_piaskowa"]:
+			continue
+		if int(effect.get("grid_x", -1)) == int(unit.grid_x) and int(effect.get("grid_y", -1)) == int(unit.grid_y):
+			return true
+	return false
+
+
+func _units_are_adjacent(observer: Dictionary, target: Dictionary) -> bool:
 	var observer_cell := Vector2i(observer.grid_x, observer.grid_y)
 	var target_cell := Vector2i(target.grid_x, target.grid_y)
-	return _is_bush_cell(observer_cell) and _is_bush_cell(target_cell) and _hex_distance(observer_cell, target_cell) == 1
-
-
-func _is_bush_cell(cell: Vector2i) -> bool:
-	var bush_types: Array[String] = ["krzok", "zimowy_krzak", "holy_tree", "cart"]
-	for obstacle in obstacles:
-		if int(obstacle.grid_x) == cell.x and int(obstacle.grid_y) == cell.y and bush_types.has(str(obstacle.get("type", ""))):
-			return true
-	return false
+	return _hex_distance(observer_cell, target_cell) == 1
 
 
 func draw_projectiles() -> void:

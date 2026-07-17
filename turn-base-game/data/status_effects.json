@@ -135,6 +135,28 @@
 	  "hides_unit": true,
 	  "stat_changes": []
 	},
+	"mgla": {
+	  "id": "mgla",
+	  "name": "Mgla",
+	  "description": "Jednostka jest ukryta przez mgle. Widzi ja tylko wrog na sasiednim polu; atak i obrazenia nie nakladaja Wykrycia.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/invisibility.png",
+	  "color": "#777C82",
+	  "terrain_bound": true,
+	  "hides_unit": true,
+	  "stat_changes": []
+	},
+	"burza_piaskowa": {
+	  "id": "burza_piaskowa",
+	  "name": "Burza Piaskowa",
+	  "description": "Jednostka jest ukryta przez piasek. Widzi ja tylko wrog na sasiednim polu; atak i obrazenia nie nakladaja Wykrycia.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/invisibility.png",
+	  "color": "#C69E38",
+	  "terrain_bound": true,
+	  "hides_unit": true,
+	  "stat_changes": []
+	},
 	"lodowe_podloze": {
 	  "id": "lodowe_podloze",
 	  "name": "Lodowe Podloze",
