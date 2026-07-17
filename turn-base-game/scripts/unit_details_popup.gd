@@ -141,7 +141,8 @@ func _fill_stats_tab(scroll: ScrollContainer, unit: Dictionary) -> void:
 	content.add_child(_section("DOKŁADNE STATYSTYKI"))
 	_add_row(content, "Punkty życia oddziału", "%d / %d" % [int(unit.get("current_total_hp", 0)), int(unit.get("max_total_hp", 0))])
 	_add_row(content, "Punkty życia jednostki", "%d / %d" % [int(unit.get("current_hp", unit.get("hp", 0))), int(unit.get("max_hp", unit.get("hp", 0)))])
-	_add_row(content, "Obrażenia", str(unit.get("dmg", 0)))
+	_add_row(content, "Atak", str(unit.get("atk", 0)))
+	_add_row(content, "Obrażenia jednostki", "%s-%s" % [unit.get("dmg_min", 0), unit.get("dmg_max", 0)])
 	_add_row(content, "Obrona", str(unit.get("def", 0)))
 	_add_row(content, "Szybkość", str(unit.get("speed", 0)))
 	_add_row(content, "Zasięg ruchu", str(unit.get("move_range", 0)))
@@ -163,7 +164,7 @@ func _fill_skills_tab(scroll: ScrollContainer, unit: Dictionary, skills: Diction
 	var content: VBoxContainer = scroll.get_child(0).get_child(0)
 	_clear(content)
 	content.add_child(_section("ATAK PODSTAWOWY"))
-	content.add_child(_rich_description("Zadaje %d obrażeń jednemu celowi w zasięgu %d hexów. Zużywa 1 punkt akcji." % [int(unit.get("dmg", 0)), int(unit.get("attack_range", 1))]))
+	content.add_child(_rich_description("Oddział zadaje obrażenia zależne od liczebności, zakresu %s-%s oraz różnicy ATK-DEF celu. Zasięg: %d hexów. Zużywa 1 punkt akcji." % [unit.get("dmg_min", 0), unit.get("dmg_max", 0), int(unit.get("attack_range", 1))]))
 	for skill_id in unit.get("skill_ids", []):
 		var skill: Dictionary = skills.get(str(skill_id), {})
 		if skill.is_empty():

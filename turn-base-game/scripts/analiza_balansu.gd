@@ -11,12 +11,14 @@ const ROLE_BALANSOWE: Array[String] = ["obronca", "wojownik", "uderzeniowa", "dy
 
 
 func _initialize() -> void:
+	seed(12345)
 	_uruchom_smoke_test()
 	var jednostki: Array[Dictionary] = _wczytaj_jednostki()
 	if jednostki.is_empty():
 		push_error("Brak jednostek do analizy.")
 		quit(1)
 		return
+	_sprawdz_tempo_walki(jednostki)
 
 	var maksymalna_liczebnosc: int = DOMYSLNA_MAKSYMALNA_LICZEBNOSC
 	var argument: int = _pobierz_argument_maksymalnej_liczebnosci()
@@ -39,8 +41,8 @@ func _initialize() -> void:
 		return
 	raport.store_string("\ufeff")
 	raport.store_csv_line(PackedStringArray([
-		"frakcja_a", "id_a", "nazwa_a", "rola_a", "liczebnosc_a", "hp_a", "dmg_a", "def_a", "speed_a",
-		"frakcja_b", "id_b", "nazwa_b", "rola_b", "liczebnosc_b", "hp_b", "dmg_b", "def_b", "speed_b",
+		"frakcja_a", "id_a", "nazwa_a", "rola_a", "liczebnosc_a", "hp_a", "atk_a", "dmg_min_a", "dmg_max_a", "def_a", "speed_a",
+		"frakcja_b", "id_b", "nazwa_b", "rola_b", "liczebnosc_b", "hp_b", "atk_b", "dmg_min_b", "dmg_max_b", "def_b", "speed_b",
 		"pierwszy_atakujacy", "zwyciezca", "rundy", "ataki", "pozostala_liczebnosc",
 		"pozostale_hp", "pozostale_hp_proc", "przewaga_a_hp_proc"
 	]))
@@ -128,6 +130,24 @@ func _przygotuj_oddzial(szablon: Dictionary, liczebnosc: int) -> Dictionary:
 	return oddzial
 
 
+func _sprawdz_tempo_walki(jednostki: Array[Dictionary]) -> void:
+	var suma_atakow: int = 0
+	var liczba_par: int = 0
+	for atakujacy in jednostki:
+		for cel in jednostki:
+			if str(atakujacy.id) == str(cel.id):
+				continue
+			var zakres: Vector2i = MatematykaWalkiScript.oblicz_zakres_obrazen(atakujacy, cel)
+			var hp_oddzialu: int = int(cel.hp) * int(cel.count)
+			assert(zakres.y < hp_oddzialu, "Zwykly atak nie moze zabic pelnego oddzialu: %s -> %s" % [atakujacy.id, cel.id])
+			var srednie_obrazenia: int = maxi(1, int(round((zakres.x + zakres.y) / 2.0)))
+			suma_atakow += ceili(float(hp_oddzialu) / float(srednie_obrazenia))
+			liczba_par += 1
+	var srednia_atakow: float = float(suma_atakow) / float(maxi(1, liczba_par))
+	assert(srednia_atakow >= 3.5 and srednia_atakow <= 4.5, "Srednie tempo walki musi wynosic 3,5-4,5 ataku, jest %.2f." % srednia_atakow)
+	print("Tempo walki: %.2f ataku, one-shoty zwyklym atakiem: 0/%d" % [srednia_atakow, liczba_par])
+
+
 func _symuluj(szablon_a: Dictionary, liczebnosc_a: int, szablon_b: Dictionary, liczebnosc_b: int) -> Dictionary:
 	var oddzial_a: Dictionary = _przygotuj_oddzial(szablon_a, liczebnosc_a)
 	var oddzial_b: Dictionary = _przygotuj_oddzial(szablon_b, liczebnosc_b)
@@ -172,8 +192,8 @@ func _atakuj(atakujacy: Dictionary, cel: Dictionary) -> void:
 
 func _zapisz_walke(raport: FileAccess, a: Dictionary, liczebnosc_a: int, b: Dictionary, liczebnosc_b: int, wynik: Dictionary) -> void:
 	raport.store_csv_line(PackedStringArray([
-		str(a.faction_id), str(a.id), str(a.name), str(a.balance_role), str(liczebnosc_a), str(a.hp), str(a.dmg), str(a.def), str(a.speed),
-		str(b.faction_id), str(b.id), str(b.name), str(b.balance_role), str(liczebnosc_b), str(b.hp), str(b.dmg), str(b.def), str(b.speed),
+		str(a.faction_id), str(a.id), str(a.name), str(a.balance_role), str(liczebnosc_a), str(a.hp), str(a.atk), str(a.dmg_min), str(a.dmg_max), str(a.def), str(a.speed),
+		str(b.faction_id), str(b.id), str(b.name), str(b.balance_role), str(liczebnosc_b), str(b.hp), str(b.atk), str(b.dmg_min), str(b.dmg_max), str(b.def), str(b.speed),
 		str(wynik.pierwszy), str(wynik.zwyciezca), str(wynik.rundy), str(wynik.ataki),
 		str(wynik.pozostala_liczebnosc), str(wynik.pozostale_hp), "%.2f" % float(wynik.pozostale_hp_proc),
 		"%.2f" % float(wynik.przewaga_a_hp_proc)
@@ -312,10 +332,11 @@ func _uruchom_smoke_test() -> void:
 	MatematykaWalkiScript.odswiez_stan_hp(pelny_oddzial)
 	assert(int(pelny_oddzial.current_hp) == 22)
 	assert(_zakres_domeny("dystansowa", "wojownik") == Vector2(-1.0, -1.0))
-	assert(MatematykaWalkiScript.oblicz_obrazenia({"dmg": 7, "count": 1}, {"def": 4}) == 10)
-	assert(MatematykaWalkiScript.oblicz_obrazenia({"dmg": 12, "count": 4}, {"def": 1}) == 37)
+	assert(is_equal_approx(MatematykaWalkiScript.mnoznik_ataku_obrony(20, 14), 1.3))
+	assert(is_equal_approx(MatematykaWalkiScript.mnoznik_ataku_obrony(14, 20), 0.85))
+	assert(MatematykaWalkiScript.oblicz_obrazenia({"atk": 0, "dmg_min": 4, "dmg_max": 4, "count": 5}, {"def": 0}) == 20)
 	var wynik: Dictionary = _symuluj(
-		{"id": "a", "hp": 10, "dmg": 10, "def": 0, "speed": 2}, 1,
-		{"id": "b", "hp": 5, "dmg": 1, "def": 0, "speed": 1}, 1
+		{"id": "a", "hp": 10, "atk": 5, "dmg_min": 10, "dmg_max": 10, "def": 0, "speed": 2}, 1,
+		{"id": "b", "hp": 5, "atk": 0, "dmg_min": 1, "dmg_max": 1, "def": 0, "speed": 1}, 1
 	)
 	assert(bool(wynik.wygral_a) and int(wynik.ataki) == 1, "Szybszy oddzial musi zakonczyc walke pierwszym smiertelnym atakiem.")

@@ -16,6 +16,7 @@ const PROFILE_SKLADU: Array[Dictionary] = [
 ]
 const WARIANTY_LICZEBNOSCI: Array[int] = [-1, 0, 1]
 const GLEBOKOSCI_FORMACJI: Array[int] = [1, 2, 3]
+const BAZOWA_SKALA_ARMII := 20.0
 const MIN_WR := 43.0
 const MAX_WR := 57.0
 const RAPORT_1V1 := "res://raporty/balans_1v1_odleglosc.csv"
@@ -27,6 +28,7 @@ const RAPORT_SCENARIUSZY := "res://raporty/balans_scenariuszy.csv"
 
 
 func _initialize() -> void:
+	seed(12345)
 	_smoke_test()
 	var frakcje: Array[Dictionary] = []
 	for frakcja in UnitTypeLibraryScript.get_factions():
@@ -75,7 +77,7 @@ func _sklad_scenariusza(frakcje: Array[Dictionary], id_frakcji: String, wpisy: A
 				if str(unit.id) == str(wpis.type_id):
 					var kopia: Dictionary = unit.duplicate(true)
 					kopia.count = int(wpis.count)
-					for statystyka in ["hp", "dmg", "def"]:
+					for statystyka in ["hp", "atk", "dmg_min", "dmg_max", "def"]:
 						if wpis.has(statystyka):
 							kopia[statystyka] = int(wpis[statystyka])
 					wynik.units.append(kopia)
@@ -160,7 +162,7 @@ func _zapisz_frakcje(frakcje: Array[Dictionary]) -> void:
 	var raport: FileAccess = FileAccess.open(RAPORT_FRAKCJI, FileAccess.WRITE)
 	var wyniki: Array[Dictionary] = []
 	raport.store_string("\ufeff")
-	raport.store_csv_line(PackedStringArray(["frakcja_a", "frakcja_b", "liczebnosc_armii_a", "liczebnosc_armii_b", "sklad_a", "sklad_b", "odleglosc", "glebokosc_formacji", "zwyciezca", "rundy", "oddzialy_a", "oddzialy_b", "hp_a_proc", "hp_b_proc"]))
+	raport.store_csv_line(PackedStringArray(["frakcja_a", "frakcja_b", "skala_armii_a", "skala_armii_b", "sklad_a", "sklad_b", "odleglosc", "glebokosc_formacji", "zwyciezca", "rundy", "oddzialy_a", "oddzialy_b", "hp_a_proc", "hp_b_proc"]))
 	for frakcja_a in frakcje:
 		for frakcja_b in frakcje:
 			if str(frakcja_a.id) == str(frakcja_b.id):
@@ -229,22 +231,10 @@ func _sklad_armii(frakcja: Dictionary, liczebnosc: int, profil: Dictionary) -> D
 	var suma_wag: int = 0
 	for waga in wagi:
 		suma_wag += int(waga)
-	var przydzialy: Array[int] = []
-	var przydzielono: int = 0
-	for indeks in range(frakcja.units.size()):
-		var przydzial: int = int(floor(float(liczebnosc * int(wagi[indeks])) / suma_wag))
-		przydzialy.append(przydzial)
-		przydzielono += przydzial
-	var indeks: int = 0
-	while przydzielono < liczebnosc:
-		przydzialy[indeks % przydzialy.size()] += 1
-		przydzielono += 1
-		indeks += 1
 	for unit_index in range(frakcja.units.size()):
-		if przydzialy[unit_index] <= 0:
-			continue
 		var unit: Dictionary = frakcja.units[unit_index].duplicate(true)
-		unit.count = przydzialy[unit_index]
+		var udzial_profilu: float = float(int(wagi[unit_index]) * frakcja.units.size()) / float(suma_wag)
+		unit.count = maxi(1, int(round(float(unit.count) * float(liczebnosc) / BAZOWA_SKALA_ARMII * udzial_profilu)))
 		wynik.units.append(unit)
 	return wynik
 
@@ -259,7 +249,7 @@ func _nazwa_profilu(sklad: Dictionary, profil: Dictionary) -> String:
 func _zapisz_wplyw_liczebnosci(frakcje: Array[Dictionary]) -> void:
 	var raport: FileAccess = FileAccess.open(RAPORT_WPLYWU_LICZEBNOSCI, FileAccess.WRITE)
 	raport.store_string("\ufeff")
-	raport.store_csv_line(PackedStringArray(["frakcja", "liczebnosc_mniejsza", "liczebnosc_wieksza", "roznica", "walki", "szacowany_wr_wiekszej_armii_proc"]))
+	raport.store_csv_line(PackedStringArray(["frakcja", "skala_mniejszej_armii", "skala_wiekszej_armii", "roznica_skali", "walki", "szacowany_wr_wiekszej_armii_proc"]))
 	for frakcja in frakcje:
 		for mniejsza in [15, 20, 50, 75]:
 			for roznica in ROZNICE_LICZEBNOSCI:
@@ -346,7 +336,7 @@ func _tura(atakujacy: Dictionary, cel: Dictionary, min_pozycja: int, max_pozycja
 		atakujacy.position = clampi(int(atakujacy.position) + ruch * signi(int(cel.position) - int(atakujacy.position)), min_pozycja, max_pozycja)
 		dystans = absi(int(cel.position) - int(atakujacy.position))
 	if dystans <= zasieg:
-		cel.current_total_hp = maxi(0, int(cel.current_total_hp) - MatematykaWalkiScript.oblicz_obrazenia(atakujacy, cel, 1.0, dystans))
+		cel.current_total_hp = maxi(0, int(cel.current_total_hp) - MatematykaWalkiScript.oblicz_obrazenia(atakujacy, cel))
 		MatematykaWalkiScript.odswiez_stan_hp(cel)
 		if zasieg > 1 and int(cel.count) > 0 and dystans < zasieg:
 			var odskok: int = mini(int(atakujacy.get("move_range", 0)), zasieg - dystans)
@@ -396,8 +386,6 @@ func _hp_proc(unit: Dictionary) -> float:
 
 
 func _smoke_test() -> void:
-	var dystansowy: Dictionary = {"id": "d", "hp": 10, "dmg": 5, "def": 0, "speed": 5, "count": 1, "move_range": 2, "attack_range": 4, "balance_role": "dystansowa"}
-	var wrecz: Dictionary = {"id": "w", "hp": 10, "dmg": 5, "def": 0, "speed": 4, "count": 1, "move_range": 2, "attack_range": 1, "balance_role": "wojownik"}
-	assert(is_equal_approx(MatematykaWalkiScript.mnoznik_dystansu(dystansowy, 1), 0.8))
-	assert(is_equal_approx(MatematykaWalkiScript.mnoznik_dystansu(dystansowy, 4), 1.4))
+	var dystansowy: Dictionary = {"id": "d", "hp": 10, "atk": 5, "dmg_min": 5, "dmg_max": 5, "def": 0, "speed": 5, "count": 1, "move_range": 2, "attack_range": 4, "balance_role": "dystansowa"}
+	var wrecz: Dictionary = {"id": "w", "hp": 10, "atk": 5, "dmg_min": 5, "dmg_max": 5, "def": 0, "speed": 4, "count": 1, "move_range": 2, "attack_range": 1, "balance_role": "wojownik"}
 	assert(int(_walka_1v1(dystansowy, wrecz, 7).rundy) >= int(_walka_1v1(dystansowy, wrecz, 1).rundy))

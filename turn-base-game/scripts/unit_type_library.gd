@@ -107,7 +107,6 @@ static func _load() -> void:
 			if typeof(raw_unit) != TYPE_DICTIONARY:
 				continue
 			var unit_data: Dictionary = _normalize_unit_type(raw_unit)
-			unit_data["faction_damage_multiplier"] = float(faction.get("damage_multiplier", 1.0))
 			normalized_units.append(unit_data)
 			_unit_lookup[unit_data.id] = unit_data
 		faction["units"] = normalized_units
@@ -116,7 +115,12 @@ static func _load() -> void:
 
 static func _normalize_unit_type(raw_unit: Dictionary) -> Dictionary:
 	var unit: Dictionary = raw_unit.duplicate(true)
-	for key in ["hp", "dmg", "def", "speed", "action_points", "count", "move_range", "attack_range"]:
+	var stare_obrazenia: int = int(unit.get("dmg", 1))
+	unit["atk"] = int(unit.get("atk", 0))
+	unit["dmg_min"] = int(unit.get("dmg_min", stare_obrazenia))
+	unit["dmg_max"] = maxi(int(unit.dmg_min), int(unit.get("dmg_max", stare_obrazenia)))
+	unit.erase("dmg")
+	for key in ["hp", "def", "speed", "action_points", "count", "move_range", "attack_range"]:
 		unit[key] = int(unit.get(key, 0))
 	for key in ["id", "name", "short_name", "role", "balance_role", "resistance", "portrait"]:
 		unit[key] = str(unit.get(key, ""))
@@ -327,7 +331,7 @@ static func build_instance(type_id: String, instance_id: int, side: String, grid
 	unit["side"] = side
 	unit["grid_x"] = grid_x
 	unit["grid_y"] = grid_y
-	for key in ["base_hp", "base_dmg", "base_def", "base_speed", "base_move_range", "base_attack_range"]:
+	for key in ["base_hp", "base_atk", "base_dmg_min", "base_dmg_max", "base_def", "base_speed", "base_move_range", "base_attack_range"]:
 		var stat_name: String = key.replace("base_", "")
 		unit[key] = int(unit.get(stat_name, 0))
 	unit["current_ap"] = int(unit.get("action_points", 1))
