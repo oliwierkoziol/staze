@@ -3,7 +3,7 @@
 	"prowokacja": {
 	  "id": "prowokacja",
 	  "name": "Prowokacja",
-	  "description": "Pobliscy wrogowie musza atakowac prowokujaca jednostke i zadaja o 25% mniej obrazen.",
+	  "description": "Pobliscy wrogowie musza atakowac prowokujaca jednostke i zadaja o 20% mniej obrazen.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 0,
@@ -123,7 +123,7 @@
 	"lodowe_podloze": {
 	  "id": "lodowe_podloze",
 	  "name": "Lodowe Podloze",
-	  "description": "Zamraza 3 sasiednie hexy na 2 tury. Lodowe Podloze zmniejsza Szybkosc o 2 i zasieg ruchu o 2 na 1 ture.",
+	  "description": "Zamraza 8 hexow wokol wskazanego pola na 2 tury. Lodowe Podloze zmniejsza Szybkosc o 2 i zasieg ruchu o 2 na 1 ture.",
 	  "ap_cost": 1,
 	  "cooldown": 6,
 	  "range": 10,
@@ -308,7 +308,7 @@
 	"tarcza": {
 	  "id": "tarcza",
 	  "name": "Tarcza",
-	  "description": "Jednostka broni sie tarzca. Otrzymuje w tej turze +100% obrony.",
+	  "description": "Jednostka broni sie tarcza. Otrzymuje +25% obrony na 2 tury.",
 	  "ap_cost": 1,
 	  "cooldown": 2,
 	  "range": 0,
@@ -352,7 +352,7 @@
 	"medytacja": {
 	  "id": "medytacja",
 	  "name": "Medytacja",
-	  "description": "Naklada Medytacja na 2 tury, dajaca +25% DMG i +1 zasieg ruchu.",
+	  "description": "Naklada Medytacja na 2 tury, dajaca +25% DMG.",
 	  "ap_cost": 1,
 	  "cooldown": 3,
 	  "range": 0,

@@ -15,10 +15,10 @@
 		{"type_id": "orc_shieldman", "count": 12}
 	  ],
 	  "enemy_units": [
-		{"type_id": "human_knights", "count": 8, "grid_x": 11, "grid_y": 6},
-		{"type_id": "human_knights", "count": 8, "grid_x": 11, "grid_y": 4},
-		{"type_id": "human_archers", "count": 8, "grid_x": 14, "grid_y": 9},
-		{"type_id": "human_archers", "count": 8, "grid_x": 13, "grid_y": 2}
+		{"type_id": "human_knights", "count": 9, "grid_x": 11, "grid_y": 6},
+		{"type_id": "human_knights", "count": 9, "grid_x": 11, "grid_y": 4},
+		{"type_id": "human_archers", "count": 9, "grid_x": 14, "grid_y": 9},
+		{"type_id": "human_archers", "count": 9, "grid_x": 13, "grid_y": 2}
 	  ],
 	  "obstacles": []
 	},
@@ -27,9 +27,9 @@
 	  "background": "res://assets/backgrounds/scenarios/zamek_etap_2_przedmiescia.png",
 	  "enemy_units": [
 		{"type_id": "human_cavalry", "count": 5, "grid_x": 12, "grid_y": 2},
-		{"type_id": "human_knights", "count": 8, "grid_x": 13, "grid_y": 4},
-		{"type_id": "human_archers", "count": 8, "grid_x": 12, "grid_y": 6},
-		{"type_id": "human_mages", "count": 5, "grid_x": 13, "grid_y": 8}
+		{"type_id": "human_knights", "count": 9, "grid_x": 13, "grid_y": 4},
+		{"type_id": "human_archers", "count": 9, "grid_x": 12, "grid_y": 6},
+		{"type_id": "human_mages", "count": 6, "grid_x": 13, "grid_y": 8}
 	  ],
 	  "obstacles": []
 	},
@@ -37,9 +37,9 @@
 	  "name": "Centrum",
 	  "background": "res://assets/backgrounds/scenarios/zamek_etap_3_centrum.png",
 	  "enemy_units": [
-		{"type_id": "human_knights", "count": 10, "grid_x": 12, "grid_y": 3},
-		{"type_id": "human_knights", "count": 10, "grid_x": 12, "grid_y": 7},
-		{"type_id": "human_knights", "count": 10, "grid_x": 12, "grid_y": 6},
+		{"type_id": "human_knights", "count": 4, "grid_x": 12, "grid_y": 3},
+		{"type_id": "human_archers", "count": 5, "grid_x": 13, "grid_y": 7},
+		{"type_id": "human_mages", "count": 4, "grid_x": 12, "grid_y": 6},
 		{"type_id": "human_king", "count": 1, "grid_x": 14, "grid_y": 5}
 	  ],
 	  "obstacles": []

@@ -11,7 +11,7 @@
 	"berserk": {
 	  "id": "berserk",
 	  "name": "Berserk",
-	  "description": "Przez 2 tury zadaje o 30% wiecej obrazen, ale ma o 15% mniej obrony.",
+	  "description": "Przez 2 tury zadaje o 50% wiecej obrazen, ale ma o 25% mniej obrony.",
 	  "category": "buff",
 	  "icon": "res://assets/ui/berserk.png",
 	  "color": "#DB5959"
@@ -131,6 +131,28 @@
 	  "category": "buff",
 	  "icon": "res://assets/ui/invisibility.png",
 	  "color": "#57C757",
+	  "terrain_bound": true,
+	  "hides_unit": true,
+	  "stat_changes": []
+	},
+	"mgla": {
+	  "id": "mgla",
+	  "name": "Mgla",
+	  "description": "Jednostka jest ukryta przez mgle. Widzi ja tylko wrog na sasiednim polu; atak i obrazenia nie nakladaja Wykrycia.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/invisibility.png",
+	  "color": "#777C82",
+	  "terrain_bound": true,
+	  "hides_unit": true,
+	  "stat_changes": []
+	},
+	"burza_piaskowa": {
+	  "id": "burza_piaskowa",
+	  "name": "Burza Piaskowa",
+	  "description": "Jednostka jest ukryta przez piasek. Widzi ja tylko wrog na sasiednim polu; atak i obrazenia nie nakladaja Wykrycia.",
+	  "category": "buff",
+	  "icon": "res://assets/ui/invisibility.png",
+	  "color": "#C69E38",
 	  "terrain_bound": true,
 	  "hides_unit": true,
 	  "stat_changes": []
