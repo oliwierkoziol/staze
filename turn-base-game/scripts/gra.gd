@@ -210,6 +210,8 @@ var displayed_path_cost := -1
 var selected_obstacle_cell := Vector2i(-1, -1)
 var screen_message_label: Label
 var screen_message_tween: Tween
+var last_hover_warning_cell := Vector2i(-2, -2)
+var last_hover_warning_text := ""
 var stage_transition_overlay: ColorRect
 var stage_transition_title: Label
 var stage_transition_progress: Label
@@ -2045,6 +2047,7 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		board.set_hovered_detonator_preview([])
 		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
 		_clear_move_cost_label()
+		_clear_hover_warning()
 		return
 	if pending_general_skill_id != "":
 		var general_skill: Dictionary = general_skills.get(pending_general_skill_id, {})
@@ -2115,24 +2118,29 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
 		_clear_move_cost_label()
+		if cell.x != -1:
+			_show_hover_warning("Cel poza zasięgiem umiejętności!", cell)
 		return
 
 	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)):
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		_clear_move_cost_label()
+		_clear_hover_warning()
 		return
 
 	if selected_unit_id != active_unit.id:
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		_clear_move_cost_label()
+		_clear_hover_warning()
 		return
 
 	if cell.x == -1:
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		_clear_move_cost_label()
+		_clear_hover_warning()
 		return
 
 	var hovered_unit: Dictionary = _find_unit_at_cell(cell)
@@ -2141,12 +2149,15 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 			board.set_hovered_move_path([])
 			board.set_hovered_attack_cell(cell)
 			_clear_move_cost_label()
+			_clear_hover_warning()
 			return
 		if charge_skill.is_empty() and _is_in_attack_range(active_unit, cell):
 			board.set_hovered_move_path([])
 			board.set_hovered_attack_cell(cell)
 			_clear_move_cost_label()
+			_clear_hover_warning()
 			return
+		_show_hover_warning("Cel poza zasięgiem ataku!", cell)
 
 	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell, charge_skill)
 	var path_cost: int = _get_path_cost(path)
@@ -2157,11 +2168,14 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		_clear_move_cost_label()
+		if cell.x != -1:
+			_show_hover_warning("Za daleko! Pozostały ruch: %s" % remaining, cell)
 		return
 
 	board.set_hovered_move_path(path)
 	board.set_hovered_attack_cell(Vector2i(-1, -1))
 	_show_move_cost_label(path_cost, remaining - path_cost)
+	_clear_hover_warning()
 
 
 func _handle_enemy_unit_skill_hover(active_unit: Dictionary, skill: Dictionary, cell: Vector2i) -> void:
@@ -2174,11 +2188,13 @@ func _handle_enemy_unit_skill_hover(active_unit: Dictionary, skill: Dictionary, 
 	var hovered_unit: Dictionary = _find_unit_at_cell(cell)
 	if hovered_unit.is_empty() or not _can_target_enemy_with_skill(active_unit, hovered_unit, skill):
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		_show_hover_warning("Cel poza zasięgiem umiejętności!", cell)
 		return
 	if str(skill.get("effect_type", "")) == "piercing_shot":
 		board.set_hovered_area_skill(cell, _get_piercing_shot_preview_cells(active_unit, hovered_unit))
 		return
 	board.set_hovered_attack_cell(cell)
+	_clear_hover_warning()
 
 
 func _handle_ally_unit_skill_hover(active_unit: Dictionary, skill: Dictionary, cell: Vector2i) -> void:
@@ -2191,8 +2207,10 @@ func _handle_ally_unit_skill_hover(active_unit: Dictionary, skill: Dictionary, c
 	var hovered_unit: Dictionary = _find_unit_at_cell(cell)
 	if hovered_unit.is_empty() or not _can_target_ally_with_skill(active_unit, hovered_unit, skill):
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		_show_hover_warning("Cel poza zasięgiem umiejętności!", cell)
 		return
 	board.set_hovered_attack_cell(cell)
+	_clear_hover_warning()
 
 
 func _get_dancing_blade_preview_cells(caster: Dictionary) -> Array[Vector2i]:
@@ -2209,8 +2227,10 @@ func _handle_dancing_blade_hover(active_unit: Dictionary, cell: Vector2i) -> voi
 	var caster_cell := Vector2i(active_unit.grid_x, active_unit.grid_y)
 	if cell != caster_cell:
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		_show_hover_warning("Cel poza zasięgiem umiejętności!", cell)
 		return
 	board.set_hovered_area_skill(caster_cell, _get_dancing_blade_preview_cells(active_unit))
+	_clear_hover_warning()
 
 
 func _handle_self_skill_hover(active_unit: Dictionary, cell: Vector2i) -> void:
@@ -2222,8 +2242,10 @@ func _handle_self_skill_hover(active_unit: Dictionary, cell: Vector2i) -> void:
 		return
 	if cell != Vector2i(active_unit.grid_x, active_unit.grid_y):
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		_show_hover_warning("Cel poza zasięgiem umiejętności!", cell)
 		return
 	board.set_hovered_attack_cell(cell)
+	_clear_hover_warning()
 
 
 func _handle_hook_throw_hover(active_unit: Dictionary, skill: Dictionary, cell: Vector2i) -> void:
@@ -2237,9 +2259,11 @@ func _handle_hook_throw_hover(active_unit: Dictionary, skill: Dictionary, cell: 
 	if hovered_unit.is_empty() or not _can_hook_throw_target(active_unit, hovered_unit, skill):
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
+		_show_hover_warning("Cel poza zasięgiem umiejętności!", cell)
 		return
 	board.set_hovered_attack_cell(cell)
 	board.set_hovered_pull_destination_cell(_get_pull_destination(active_unit, hovered_unit))
+	_clear_hover_warning()
 
 
 func _is_area_damage_skill(skill: Dictionary) -> bool:
@@ -2256,8 +2280,10 @@ func _handle_area_skill_hover(active_unit: Dictionary, skill: Dictionary, cell: 
 	var valid_cells: Array[Vector2i] = _get_skill_target_cells(active_unit, str(skill.get("id", "")))
 	if not valid_cells.has(cell):
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		_show_hover_warning("Cel poza zasięgiem umiejętności!", cell)
 		return
 	board.set_hovered_area_skill(cell, _get_area_cells(cell))
+	_clear_hover_warning()
 
 
 func _handle_cell_skill_hover(active_unit: Dictionary, skill: Dictionary, cell: Vector2i) -> void:
@@ -2269,8 +2295,10 @@ func _handle_cell_skill_hover(active_unit: Dictionary, skill: Dictionary, cell: 
 		return
 	if not _can_target_cell_with_skill(active_unit, cell, skill):
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		_show_hover_warning("Cel poza zasięgiem umiejętności!", cell)
 		return
 	board.set_hovered_area_skill(cell, _get_cell_skill_preview_cells(skill, cell, active_unit))
+	_clear_hover_warning()
 
 
 func _get_cell_skill_preview_cells(skill: Dictionary, center: Vector2i, caster: Dictionary = {}) -> Array[Vector2i]:
@@ -5195,14 +5223,31 @@ func _build_screen_message_label() -> void:
 	screen_message_label = Label.new()
 	screen_message_label.visible = false
 	screen_message_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	screen_message_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	screen_message_label.offset_top = 90
+	screen_message_label.set_anchors_preset(Control.PRESET_CENTER)
+	screen_message_label.offset_left = -400
+	screen_message_label.offset_right = 400
+	screen_message_label.offset_top = -30
+	screen_message_label.offset_bottom = 30
 	screen_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	screen_message_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	screen_message_label.add_theme_font_size_override("font_size", 34)
 	screen_message_label.add_theme_color_override("font_color", Color(0.95, 0.18, 0.18, 1.0))
 	screen_message_label.add_theme_color_override("font_outline_color", Color(0.08, 0.02, 0.02, 1.0))
 	screen_message_label.add_theme_constant_override("outline_size", 6)
 	hud.add_child(screen_message_label)
+
+
+func _show_hover_warning(text: String, cell: Vector2i) -> void:
+	if last_hover_warning_text == text and last_hover_warning_cell == cell:
+		return
+	last_hover_warning_text = text
+	last_hover_warning_cell = cell
+	_show_screen_message(text, 1.5)
+
+
+func _clear_hover_warning() -> void:
+	last_hover_warning_text = ""
+	last_hover_warning_cell = Vector2i(-2, -2)
 
 
 func _build_stage_transition_overlay() -> void:
