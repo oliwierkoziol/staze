@@ -53,6 +53,9 @@ const BibliotekaZdarzenMapyScript = preload("res://scripts/biblioteka_zdarzen_ma
 const PlanerAIScript = preload("res://scripts/planer_ai.gd")
 const MechanikaUmiejetnosciScript = preload("res://scripts/mechanika_umiejetnosci.gd")
 const TrescPomocyScript = preload("res://scripts/tresc_pomocy.gd")
+const BattleSyncScript = preload("res://scripts/multiplayer/battle_sync.gd")
+
+enum GameMode { VS_AI, VS_PLAYER_ONLINE }
 
 var OBSTACLE_PORTRAITS: Dictionary = {
 	"woda": preload("res://assets/mapTiles/water.png"),
@@ -194,6 +197,12 @@ var stage_transition_title: Label
 var stage_transition_progress: Label
 var detonator_activated := false
 var unit_details_popup: PopupPanel
+var game_mode := GameMode.VS_AI
+var pvp_obstacle_seed := -1
+var pvp_scenario_id := ""
+var battle_sync: Node
+var _online_state_apply_lock := false
+var _online_action_visual: Dictionary = {}
 
 
 func _ready() -> void:
@@ -205,6 +214,9 @@ func _ready() -> void:
 	_build_stage_transition_overlay()
 	unit_details_popup = UnitDetailsPopupScript.new()
 	add_child(unit_details_popup)
+	_setup_battle_sync()
+	if not MultiplayerManager.peer_disconnected.is_connected(_on_online_peer_disconnected):
+		MultiplayerManager.peer_disconnected.connect(_on_online_peer_disconnected)
 	_load_terrain_types()
 	_unit_type_library_warn()
 	_show_team_setup()
@@ -291,6 +303,10 @@ func _unit_type_library_warn() -> void:
 
 
 func _show_team_setup() -> void:
+	MultiplayerManager.disconnect_session()
+	game_mode = GameMode.VS_AI
+	pvp_obstacle_seed = -1
+	pvp_scenario_id = ""
 	var existing_setup: Control = get_node_or_null("TeamSetup")
 	if existing_setup != null:
 		existing_setup.free()
@@ -299,6 +315,9 @@ func _show_team_setup() -> void:
 	setup.setup_finished.connect(_on_team_setup_finished)
 	setup.setup_loaded.connect(_on_team_setup_loaded)
 	setup.custom_setup_finished.connect(_on_custom_setup_finished)
+	setup.online_host_requested.connect(_on_online_host_requested)
+	setup.online_join_requested.connect(_on_online_join_requested)
+	setup.online_start_match_requested.connect(_on_online_start_match_requested)
 	add_child(setup)
 	if hud != null:
 		hud.visible = false
@@ -390,12 +409,22 @@ func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: 
 
 
 func _roll_orc_general_variant() -> void:
+	if game_mode == GameMode.VS_PLAYER_ONLINE and MultiplayerManager.is_host():
+		orc_general_is_kishak = current_player_faction == "orcs" and randi_range(1, 10) == 1
+		MultiplayerManager.orc_general_is_kishak = orc_general_is_kishak
+		return
+	if game_mode == GameMode.VS_PLAYER_ONLINE:
+		orc_general_is_kishak = MultiplayerManager.orc_general_is_kishak
+		return
 	orc_general_is_kishak = current_player_faction == "orcs" and randi_range(1, 10) == 1
 
 
 func _load_general_skills() -> void:
 	general_skills = UnitTypeLibraryScript.get_general_skills()
-	general_skill_ids = UnitTypeLibraryScript.get_faction_general_skill_ids(current_player_faction)
+	var faction: String = current_player_faction
+	if game_mode == GameMode.VS_PLAYER_ONLINE and MultiplayerManager.local_side == "enemy":
+		faction = current_enemy_faction
+	general_skill_ids = UnitTypeLibraryScript.get_faction_general_skill_ids(faction)
 	general_skill_used = false
 	pending_general_skill_id = ""
 
@@ -558,7 +587,11 @@ func _enter_setup_mode() -> void:
 	tutorial_acknowledged = _should_skip_tutorial()
 	_update_setup_hint_visibility()
 	units = unit_configs.map(func(unit: Dictionary) -> Dictionary: return _prepare_unit(unit.duplicate(true)))
+	if pvp_obstacle_seed >= 0:
+		seed(pvp_obstacle_seed)
 	obstacles = _generate_obstacles()
+	if pvp_obstacle_seed >= 0:
+		randomize()
 	terrain_effects = []
 	selected_unit_id = -1
 	setup_drag_unit_id = -1
@@ -594,6 +627,16 @@ func _on_start_battle_pressed() -> void:
 		return
 	if help_popup != null and help_popup.visible:
 		return
+	if _is_online_pvp() and MultiplayerManager.is_client():
+		return
+	_begin_battle()
+	if _is_online_pvp() and MultiplayerManager.is_host() and battle_sync != null:
+		battle_sync.broadcast_begin_battle()
+
+
+func _begin_battle() -> void:
+	if not setup_mode:
+		return
 	if not _has_units_on_side("player"):
 		_show_screen_message("Twoja armia jest pusta!", 2.5)
 		return
@@ -601,6 +644,8 @@ func _on_start_battle_pressed() -> void:
 		_show_screen_message("Armia wroga jest pusta!", 2.5)
 		return
 	setup_mode = false
+	if _is_online_pvp():
+		MultiplayerManager.match_started = true
 	_update_setup_hint_visibility()
 	selected_unit_id = -1
 	selected_obstacle_cell = Vector2i(-1, -1)
@@ -619,6 +664,9 @@ func _on_start_battle_pressed() -> void:
 	_log_event(_color_log_text("Bitwa rozpoczęta.", LOG_COLOR_YELLOW))
 	_rebuild_turn_queue()
 	_start_next_activation()
+	if not _is_online_pvp() or not MultiplayerManager.is_host():
+		return
+	_sync_online_state_after_action()
 
 
 func _on_save_setup_pressed() -> void:
@@ -1098,8 +1146,10 @@ func _build_skill_cards(unit_data: Dictionary) -> Array:
 func _can_interact_with_unit_skills(unit_data: Dictionary) -> bool:
 	if setup_mode or is_animating or not _is_manual_turn():
 		return false
+	if not _can_control_unit(unit_data):
+		return false
 	var active_unit := _get_active_unit()
-	return not active_unit.is_empty() and _is_manual_side(str(active_unit.side)) and selected_unit_id == active_unit.id and unit_data.id == active_unit.id
+	return not active_unit.is_empty() and selected_unit_id == active_unit.id and unit_data.id == active_unit.id
 
 
 func _clear_unit_details() -> void:
@@ -1200,15 +1250,22 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 
 	if is_animating or not _is_manual_turn():
 		return
+	if _should_send_intent_to_host():
+		_send_online_cell_intent(cell)
+		return
 	if pending_general_skill_id != "":
 		await _try_execute_general_skill(cell)
+		if _is_online_pvp() and MultiplayerManager.is_host():
+			_sync_online_state_after_action()
 		return
 
 	var active_unit := _get_active_unit()
-	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)):
+	if active_unit.is_empty() or not _can_control_unit(active_unit):
 		return
 
 	if _try_activate_detonator(active_unit, cell):
+		if _is_online_pvp() and MultiplayerManager.is_host():
+			_sync_online_state_after_action()
 		return
 
 	if pending_skill_id != "":
@@ -1219,60 +1276,31 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 			await _try_use_skill(active_unit, pending_skill_id, cell)
 		_update_highlighted_cells(active_unit)
 		_update_action_buttons()
+		if _is_online_pvp() and MultiplayerManager.is_host():
+			_sync_online_state_after_action()
 		return
 
 	var clicked_unit := _find_unit_at_cell(cell)
 	if not clicked_unit.is_empty():
+		if not _can_interact_with_unit(clicked_unit):
+			return
 		if clicked_unit.id == selected_unit_id:
 			_clear_selected_unit()
 			return
 		selected_unit_id = clicked_unit.id
 		selected_obstacle_cell = Vector2i(-1, -1)
 		_show_unit_details(clicked_unit)
+		board.set_selected_unit(selected_unit_id)
 		return
 
 	if selected_unit_id != active_unit.id:
 		selected_unit_id = active_unit.id
 		_show_unit_details(active_unit)
-		# Nie wykonuj ruchu, dopóki użytkownik nie ma zaznaczonej jednostki.
-		# Pierwszy klik tylko zaznacza, kolejny dopiero rusza.
 		return
 
-	var remaining_move: int = _get_remaining_move(active_unit)
-	if remaining_move <= 0:
-		return
-
-	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell, {}, remaining_move)
-	var path_cost: int = _get_path_cost(path)
-	if path.is_empty():
-		if _is_cell_obstacle(cell):
-			_show_obstacle_details(cell)
-		return
-	if path_cost > remaining_move:
-		_clear_move_cost_label()
-		return
-
-	var move_path: Array[Vector2i] = _get_executable_move_path(path)
-	var move_cost: int = _get_path_cost(move_path)
-	is_animating = true
-	var destination: Vector2i = move_path[move_path.size() - 1]
-	active_unit.grid_x = destination.x
-	active_unit.grid_y = destination.y
-	active_unit.remaining_move = max(0, remaining_move - move_cost)
-	pending_skill_id = ""
-	_sync_board()
-	_show_move_cost_label(move_cost, active_unit.remaining_move)
-	board.animate_unit_path(active_unit.id, move_path)
-	await board.animation_finished
-	_clear_move_cost_label()
-	_log_event("%s porusza się." % _unit_name_log_text(active_unit))
-	_apply_terrain_effects_to_unit(active_unit)
-	if _find_unit_by_id(int(active_unit.id)).is_empty():
-		_end_current_activation()
-		return
-	_stop_unit_on_terrain(active_unit)
-	_try_trigger_agility(active_unit)
-	_sync_board()
+	await _execute_move_to_cell(active_unit, cell)
+	if _is_online_pvp() and MultiplayerManager.is_host():
+		_sync_online_state_after_action()
 
 
 func _on_cell_double_clicked(cell: Vector2i) -> void:
@@ -1299,20 +1327,33 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 	if setup_mode or is_animating or not _is_manual_turn():
 		return
 	var active_unit := _get_active_unit()
-	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)) or selected_unit_id != active_unit.id:
+	if active_unit.is_empty() or not _can_control_unit(active_unit) or selected_unit_id != active_unit.id:
 		return
 	var target := _find_unit_at_cell(cell)
 	if target.is_empty() or target.side == active_unit.side:
 		return
 	if not _can_see_target(active_unit, target):
 		return
+	if _should_send_intent_to_host():
+		var charge_skill: Dictionary = _get_active_charge_skill(active_unit)
+		if not charge_skill.is_empty():
+			if _can_unit_attack(active_unit) and _can_charge_attack_target(active_unit, target, charge_skill):
+				battle_sync.send_skill(active_unit.id, str(charge_skill.get("id", "")), cell)
+			return
+		if _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
+			battle_sync.send_basic_attack(active_unit.id, int(target.id))
+		return
 	var charge_skill: Dictionary = _get_active_charge_skill(active_unit)
 	if not charge_skill.is_empty():
 		if _can_unit_attack(active_unit) and _can_charge_attack_target(active_unit, target, charge_skill):
 			await _perform_charge_attack(active_unit, target, charge_skill, false)
+			if _is_online_pvp() and MultiplayerManager.is_host():
+				_sync_online_state_after_action()
 		return
 	if _can_unit_attack(active_unit) and _is_in_attack_range(active_unit, cell):
 		_perform_basic_attack(active_unit, target, false)
+		if _is_online_pvp() and MultiplayerManager.is_host():
+			_sync_online_state_after_action()
 
 
 func _on_cell_left_released(cell: Vector2i) -> void:
@@ -1327,18 +1368,34 @@ func _on_cell_left_released(cell: Vector2i) -> void:
 	if cell.x == -1 or not _can_place_setup_unit(dragged_unit, cell):
 		board.set_hovered_move_path([])
 		return
+	if _is_online_pvp() and MultiplayerManager.is_client():
+		if _can_control_unit(dragged_unit) and _can_place_setup_unit(dragged_unit, cell):
+			battle_sync.send_setup_move(int(dragged_unit.id), cell)
+			_apply_local_setup_move(dragged_unit, cell)
+		return
+	if not _can_control_unit(dragged_unit):
+		return
 
 	dragged_unit["grid_x"] = cell.x
 	dragged_unit["grid_y"] = cell.y
 	board.snap_unit_to_cell(int(dragged_unit.id), cell)
 	_show_unit_details(dragged_unit)
 	_sync_board()
+	if _is_online_pvp() and MultiplayerManager.is_host():
+		_sync_online_state_after_action()
 
 
 func _handle_setup_cell_pressed(cell: Vector2i) -> void:
+	if MultiplayerManager.is_client() and MultiplayerManager.is_online() and setup_mode:
+		_handle_online_setup_cell_pressed(cell)
+		return
 	var clicked_unit: Dictionary = _find_unit_at_cell(cell)
 	if not clicked_unit.is_empty():
+		if not _can_control_unit(clicked_unit):
+			return
 		setup_drag_unit_id = int(clicked_unit.id)
+		selected_unit_id = int(clicked_unit.id)
+		board.set_selected_unit(selected_unit_id)
 		_show_unit_details(clicked_unit)
 		return
 
@@ -1346,7 +1403,7 @@ func _handle_setup_cell_pressed(cell: Vector2i) -> void:
 		return
 
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
-	if selected_unit.is_empty() or not _can_place_setup_unit(selected_unit, cell):
+	if selected_unit.is_empty() or not _can_control_unit(selected_unit) or not _can_place_setup_unit(selected_unit, cell):
 		return
 
 	selected_unit["grid_x"] = cell.x
@@ -1354,6 +1411,39 @@ func _handle_setup_cell_pressed(cell: Vector2i) -> void:
 	board.snap_unit_to_cell(int(selected_unit.id), cell)
 	_show_unit_details(selected_unit)
 	_sync_board()
+	if _is_online_pvp() and MultiplayerManager.is_host():
+		_sync_online_state_after_action()
+
+
+func _apply_local_setup_move(unit: Dictionary, cell: Vector2i) -> void:
+	unit["grid_x"] = cell.x
+	unit["grid_y"] = cell.y
+	board.snap_unit_to_cell(int(unit.id), cell)
+	_show_unit_details(unit)
+	_update_highlighted_cells(unit)
+
+
+func _handle_online_setup_cell_pressed(cell: Vector2i) -> void:
+	var clicked_unit: Dictionary = _find_unit_at_cell(cell)
+	if not clicked_unit.is_empty():
+		if not _can_control_unit(clicked_unit):
+			return
+		setup_drag_unit_id = int(clicked_unit.id)
+		selected_unit_id = int(clicked_unit.id)
+		board.set_selected_unit(selected_unit_id)
+		_show_unit_details(clicked_unit)
+		_update_highlighted_cells(clicked_unit)
+		return
+	if selected_unit_id == -1:
+		return
+	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
+	if selected_unit.is_empty() or not _can_control_unit(selected_unit):
+		return
+	if not _can_place_setup_unit(selected_unit, cell):
+		return
+	if battle_sync != null:
+		battle_sync.send_setup_move(int(selected_unit.id), cell)
+	_apply_local_setup_move(selected_unit, cell)
 
 
 func _end_current_activation() -> void:
@@ -1373,9 +1463,13 @@ func _end_current_activation() -> void:
 	if setup_mode:
 		return
 	_start_next_activation()
+	if _is_online_pvp() and MultiplayerManager.is_host():
+		_sync_online_state_after_action()
 
 
 func _enemy_take_turn() -> void:
+	if game_mode == GameMode.VS_PLAYER_ONLINE:
+		return
 	var enemy_unit := _get_active_unit()
 	if enemy_unit.is_empty() or enemy_unit.side != "enemy":
 		return
@@ -1950,7 +2044,8 @@ func _sync_board() -> void:
 	board.set_terrain_effects(terrain_effects)
 	board.set_map_event_warning_cells(map_event_cells if BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(round_number, next_map_event_round) else [])
 	if board.has_method("set_viewer_side"):
-		board.set_viewer_side("player")
+		var view_side := MultiplayerManager.local_side if _is_online_pvp() else "player"
+		board.set_viewer_side(view_side)
 	_update_selection_visibility()
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
 	if selected_unit.is_empty():
@@ -2727,6 +2822,7 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 				return
 			_stop_unit_on_terrain(attacker)
 			_try_trigger_agility(attacker)
+			_queue_online_unit_path_visual(int(attacker.id), move_path)
 		else:
 			_sync_board()
 			board.snap_unit_to_cell(attacker.id, destination)
@@ -2806,6 +2902,7 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 	_stop_unit_on_terrain(unit)
 	_try_trigger_agility(unit)
 	_sync_board()
+	_queue_online_unit_path_visual(int(unit.id), move_path)
 
 
 func _calculate_damage(attacker: Dictionary, target: Dictionary, damage_multiplier := 1.0) -> int:
@@ -3164,6 +3261,7 @@ func _execute_hook_throw(caster: Dictionary, target: Dictionary) -> void:
 	else:
 		board.animate_unit_pull_path(int(target.id), pull_path)
 		await board.animation_finished
+		_queue_online_unit_pull_visual(int(target.id), pull_path)
 	is_animating = false
 	_apply_terrain_effects_to_unit(target)
 	_sync_board()
@@ -3200,6 +3298,7 @@ func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
 			await board.animation_finished
 			_apply_terrain_effects_to_unit(target)
 			_sync_board()
+			_queue_online_unit_knockback_visual(int(target.id), push_path)
 	if can_displace and not pushed and int(hit_target.get("count", 0)) > 0:
 		_apply_or_refresh_effect(hit_target, {
 			"id": "ogluszenie",
@@ -5100,7 +5199,8 @@ func _build_victory_overlay() -> void:
 func _show_victory_overlay(winner_side: String) -> void:
 	if victory_overlay == null:
 		return
-	var winner_name := "GRACZ" if winner_side == "player" else "PRZECIWNIK"
+	var local_won := winner_side == MultiplayerManager.local_side if _is_online_pvp() else winner_side == "player"
+	var winner_name := "TWOJA ARMIA" if local_won else "PRZECIWNIK"
 	victory_title_label.text = "ZWYCIĘSTWO: %s" % winner_name
 	victory_overlay.visible = true
 
@@ -5246,6 +5346,7 @@ func _validate_static_setup() -> void:
 	assert(GRID_COLUMNS == 15 and GRID_ROWS == 10, "Scenariusz Zamek wymaga planszy 15x10.")
 	assert(_get_castle_stages().size() == 3, "Scenariusz Zamek musi miec trzy etapy.")
 	assert(PlanerAIScript.PROFILE.keys().all(func(key: Variant) -> bool: return ["latwy", "sredni", "trudny"].has(str(key))) and PlanerAIScript.PROFILE.size() == 3, "AI musi miec dokladnie trzy profile trudnosci.")
+	assert(BattleSyncScript != null and MultiplayerManager != null, "Warstwa multiplayer musi byc dostepna.")
 	var reload_existing: Dictionary = _prepare_unit({"type_id": "human_knights", "count": 3})
 	reload_existing["current_total_hp"] = int(reload_existing.base_hp) * 2 + 5
 	var reload_target: Dictionary = _prepare_unit({"type_id": "human_knights", "count": 3})
@@ -5823,7 +5924,10 @@ func _on_end_turn_button_pressed() -> void:
 	if setup_mode or is_animating or not _is_manual_turn():
 		return
 	var active_unit: Dictionary = _get_active_unit()
-	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)):
+	if active_unit.is_empty() or not _can_control_unit(active_unit):
+		return
+	if _should_send_intent_to_host():
+		battle_sync.send_end_turn()
 		return
 	_end_current_activation()
 
@@ -6126,8 +6230,12 @@ func _start_unit_activation(unit: Dictionary) -> void:
 	selected_unit_id = unit.id if _is_manual_side(str(unit.side)) else -1
 	board.set_selected_unit(selected_unit_id)
 	_sync_board()
-	if unit.side == "enemy" and not _is_manual_side(str(unit.side)):
-		_enemy_take_turn()
+	if not _is_manual_side(str(unit.side)):
+		if game_mode == GameMode.VS_PLAYER_ONLINE:
+			_sync_online_state_after_action()
+			return
+		if unit.side == "enemy":
+			_enemy_take_turn()
 
 
 func _get_active_unit() -> Dictionary:
@@ -6143,7 +6251,13 @@ func _is_manual_turn() -> bool:
 
 
 func _is_manual_side(side: String) -> bool:
+	if game_mode == GameMode.VS_PLAYER_ONLINE:
+		return _is_local_player_side(side)
 	return side == "player" or (side == "enemy" and current_player_faction == "testowa" and current_enemy_faction == "testowa")
+
+
+func _is_local_player_side(side: String) -> bool:
+	return side == MultiplayerManager.local_side
 
 
 func _log_turn_separator() -> void:
@@ -6204,6 +6318,8 @@ func _check_victory() -> bool:
 	_clear_unit_details()
 	_update_action_buttons()
 	_refresh_turn_queue()
+	if _is_online_pvp() and MultiplayerManager.is_host():
+		battle_sync.broadcast_battle_ended(winner_side)
 	_show_victory_overlay(winner_side)
 	return true
 
@@ -6313,6 +6429,8 @@ func _on_skill_button_pressed(index: int) -> void:
 		return
 
 	var unit := _get_active_unit()
+	if unit.is_empty() or not _can_control_unit(unit):
+		return
 	var skill := _get_skill_at(unit, index)
 	if skill.is_empty():
 		return
@@ -6345,7 +6463,7 @@ func _on_general_ability_2_pressed() -> void:
 
 
 func _use_general_skill_by_index(index: int) -> void:
-	if setup_mode or is_animating or not _is_player_turn():
+	if setup_mode or is_animating or not _is_manual_turn():
 		return
 	if index < 0 or index >= general_skill_ids.size():
 		return
@@ -6354,6 +6472,14 @@ func _use_general_skill_by_index(index: int) -> void:
 	if skill.is_empty():
 		return
 	if general_skill_used:
+		return
+	if _should_send_intent_to_host():
+		if str(skill.get("effect_type", "")) == "army_buff":
+			battle_sync.send_general_skill(skill_id, Vector2i(-1, -1))
+		else:
+			pending_general_skill_id = "" if pending_general_skill_id == skill_id else skill_id
+			_update_highlighted_cells(_get_active_unit())
+			_refresh_general_ability_buttons()
 		return
 	if str(skill.get("effect_type", "")) != "army_buff":
 		pending_general_skill_id = "" if pending_general_skill_id == skill_id else skill_id
@@ -6364,10 +6490,12 @@ func _use_general_skill_by_index(index: int) -> void:
 	if effect.is_empty():
 		return
 	for unit in units:
-		if unit.side != "player":
+		if unit.side != _get_local_control_side():
 			continue
 		_apply_or_refresh_effect(unit, effect.duplicate(true))
 	_finish_general_skill(skill_id, skill)
+	if _is_online_pvp() and MultiplayerManager.is_host():
+		_sync_online_state_after_action()
 
 
 func _try_execute_general_skill(cell: Vector2i) -> void:
@@ -6375,11 +6503,13 @@ func _try_execute_general_skill(cell: Vector2i) -> void:
 	var skill: Dictionary = general_skills.get(skill_id, {})
 	var target_type: String = str(skill.get("effect_type", ""))
 	var target: Dictionary = _find_unit_at_cell(cell)
-	if target_type == "ally" and (target.is_empty() or target.side != "player"):
+	var ally_side := _get_local_control_side()
+	var enemy_side := "enemy" if ally_side == "player" else "player"
+	if target_type == "ally" and (target.is_empty() or target.side != ally_side):
 		return
 	if bool(skill.get("active_only", false)) and int(target.get("id", -1)) != active_unit_id:
 		return
-	if target_type == "enemy" and (target.is_empty() or target.side != "enemy"):
+	if target_type == "enemy" and (target.is_empty() or target.side != enemy_side):
 		return
 	if target_type == "area":
 		await _execute_general_area_skill(skill_id, skill, cell)
@@ -6405,9 +6535,10 @@ func _execute_general_area_skill(skill_id: String, skill: Dictionary, center: Ve
 		await get_tree().create_timer(0.42).timeout
 		is_animating = false
 	var hits := 0
+	var enemy_side := "enemy" if _get_local_control_side() == "player" else "player"
 	for area_cell in cells:
 		var target: Dictionary = _find_unit_at_cell(area_cell)
-		if target.is_empty() or target.side != "enemy":
+		if target.is_empty() or target.side != enemy_side:
 			continue
 		hits += 1
 		var damage: int = int(skill.get("damage_per_unit", 0)) * int(target.get("count", 0))
@@ -6469,7 +6600,7 @@ func _refresh_general_ability_buttons() -> void:
 			continue
 		var skill_id: String = general_skill_ids[index]
 		var skill: Dictionary = general_skills.get(skill_id, {})
-		var can_use := not setup_mode and not is_animating and _is_player_turn() and not general_skill_used
+		var can_use := not setup_mode and not is_animating and _is_manual_turn() and not general_skill_used
 		button.disabled = not can_use
 		button.modulate = Color(0.75, 0.9, 1.0, 1.0) if pending_general_skill_id == skill_id else (Color(0.45, 0.45, 0.45, 0.75) if general_skill_used else Color.WHITE)
 		var icon_path: String = UnitTypeLibraryScript.get_general_skill_icon_path(skill_id)
@@ -6480,3 +6611,636 @@ func _refresh_general_ability_buttons() -> void:
 		name_label.text = str(skill.get("name", skill_id)).to_upper()
 		desc_label.text = str(skill.get("description", ""))
 		cd_label.text = ""
+
+
+func _setup_battle_sync() -> void:
+	if battle_sync != null and is_instance_valid(battle_sync):
+		return
+	battle_sync = BattleSyncScript.new()
+	battle_sync.name = "BattleSync"
+	add_child(battle_sync)
+	battle_sync.set_multiplayer_authority(1)
+	battle_sync.setup(self)
+
+
+func _is_online_pvp() -> bool:
+	return game_mode == GameMode.VS_PLAYER_ONLINE and MultiplayerManager.is_online()
+
+
+func _should_send_intent_to_host() -> bool:
+	return _is_online_pvp() and MultiplayerManager.is_client() and _is_manual_turn()
+
+
+func _get_local_control_side() -> String:
+	if game_mode == GameMode.VS_PLAYER_ONLINE:
+		return MultiplayerManager.local_side
+	return "player"
+
+
+func _can_control_unit(unit: Dictionary) -> bool:
+	if unit.is_empty():
+		return false
+	if not _is_online_pvp():
+		return true
+	return _is_local_player_side(str(unit.get("side", "")))
+
+
+func _can_interact_with_unit(unit: Dictionary) -> bool:
+	if not _can_control_unit(unit):
+		return false
+	if setup_mode:
+		return true
+	return _is_manual_turn() and int(unit.get("id", -1)) == active_unit_id
+
+
+func _sync_online_state_after_action() -> void:
+	if battle_sync == null or not _is_online_pvp() or not MultiplayerManager.is_host() or _online_state_apply_lock:
+		return
+	battle_sync.broadcast_state()
+	_online_action_visual = {}
+
+
+func _execute_move_to_cell(active_unit: Dictionary, cell: Vector2i) -> void:
+	var remaining_move: int = _get_remaining_move(active_unit)
+	if remaining_move <= 0:
+		return
+	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell, {}, remaining_move)
+	var path_cost: int = _get_path_cost(path)
+	if path.is_empty():
+		if _is_cell_obstacle(cell):
+			_show_obstacle_details(cell)
+		return
+	if path_cost > remaining_move:
+		_clear_move_cost_label()
+		return
+	var move_path: Array[Vector2i] = _get_executable_move_path(path)
+	var move_cost: int = _get_path_cost(move_path)
+	is_animating = true
+	var destination: Vector2i = move_path[move_path.size() - 1]
+	active_unit.grid_x = destination.x
+	active_unit.grid_y = destination.y
+	active_unit.remaining_move = max(0, remaining_move - move_cost)
+	pending_skill_id = ""
+	_sync_board()
+	_show_move_cost_label(move_cost, active_unit.remaining_move)
+	board.animate_unit_path(active_unit.id, move_path)
+	await board.animation_finished
+	_clear_move_cost_label()
+	_log_event("%s porusza się." % _unit_name_log_text(active_unit))
+	_apply_terrain_effects_to_unit(active_unit)
+	if _find_unit_by_id(int(active_unit.id)).is_empty():
+		_end_current_activation()
+		return
+	_stop_unit_on_terrain(active_unit)
+	_try_trigger_agility(active_unit)
+	_sync_board()
+	_queue_online_unit_path_visual(int(active_unit.id), move_path)
+
+
+func _send_online_cell_intent(cell: Vector2i) -> void:
+	var active_unit := _get_active_unit()
+	if active_unit.is_empty() or battle_sync == null or not _can_control_unit(active_unit):
+		return
+	if pending_general_skill_id != "":
+		battle_sync.send_general_skill(pending_general_skill_id, cell)
+		return
+	if pending_skill_id != "":
+		battle_sync.send_skill(active_unit.id, pending_skill_id, cell)
+		return
+	var clicked_unit := _find_unit_at_cell(cell)
+	if not clicked_unit.is_empty():
+		if not _can_interact_with_unit(clicked_unit):
+			return
+		if clicked_unit.id == selected_unit_id:
+			_clear_selected_unit()
+		else:
+			selected_unit_id = clicked_unit.id
+			selected_obstacle_cell = Vector2i(-1, -1)
+			_show_unit_details(clicked_unit)
+			board.set_selected_unit(selected_unit_id)
+		return
+	if selected_unit_id != active_unit.id:
+		selected_unit_id = active_unit.id
+		board.set_selected_unit(selected_unit_id)
+		_show_unit_details(active_unit)
+		_update_highlighted_cells(active_unit)
+		return
+	battle_sync.send_move(active_unit.id, cell)
+
+
+func _remote_controls_side(side: String) -> bool:
+	if not _is_online_pvp():
+		return false
+	if MultiplayerManager.is_host():
+		return side == "enemy"
+	return side == "player"
+
+
+func host_handle_setup_move_request(unit_id: int, q: int, r: int) -> void:
+	if not MultiplayerManager.is_host() or not setup_mode:
+		return
+	var unit := _find_unit_by_id(unit_id)
+	if unit.is_empty() or not _remote_controls_side(str(unit.side)):
+		return
+	var cell := Vector2i(q, r)
+	if not _can_place_setup_unit(unit, cell):
+		return
+	unit["grid_x"] = cell.x
+	unit["grid_y"] = cell.y
+	board.snap_unit_to_cell(unit_id, cell)
+	_sync_board()
+	_sync_online_state_after_action()
+
+
+func host_handle_move_request(unit_id: int, q: int, r: int) -> void:
+	if not MultiplayerManager.is_host() or is_animating or battle_sync == null:
+		return
+	var active_unit := _get_active_unit()
+	if active_unit.is_empty() or int(active_unit.id) != unit_id:
+		return
+	if not _remote_controls_side(str(active_unit.side)):
+		return
+	await _execute_move_to_cell(active_unit, Vector2i(q, r))
+	_sync_online_state_after_action()
+
+
+func host_handle_attack_request(unit_id: int, target_id: int) -> void:
+	if not MultiplayerManager.is_host() or is_animating:
+		return
+	var active_unit := _get_active_unit()
+	if active_unit.is_empty() or int(active_unit.id) != unit_id:
+		return
+	if not _remote_controls_side(str(active_unit.side)):
+		return
+	var target := _find_unit_by_id(target_id)
+	if target.is_empty():
+		return
+	_perform_basic_attack(active_unit, target, false)
+	_sync_online_state_after_action()
+
+
+func host_handle_skill_request(unit_id: int, skill_id: String, cell: Vector2i) -> void:
+	if not MultiplayerManager.is_host() or is_animating:
+		return
+	var active_unit := _get_active_unit()
+	if active_unit.is_empty() or int(active_unit.id) != unit_id:
+		return
+	if not _remote_controls_side(str(active_unit.side)):
+		return
+	var skill: Dictionary = skill_library.get(skill_id, {})
+	if str(skill.get("effect_type", "")) == "charge":
+		var target := _find_unit_at_cell(cell)
+		if not target.is_empty():
+			await _perform_charge_attack(active_unit, target, skill, false)
+	else:
+		await _try_use_skill(active_unit, skill_id, cell)
+	_update_highlighted_cells(active_unit)
+	_update_action_buttons()
+	_sync_online_state_after_action()
+
+
+func host_handle_general_skill_request(skill_id: String, cell: Vector2i) -> void:
+	if not MultiplayerManager.is_host() or is_animating:
+		return
+	var active_unit := _get_active_unit()
+	if active_unit.is_empty() or not _remote_controls_side(str(active_unit.side)):
+		return
+	var skill: Dictionary = general_skills.get(skill_id, {})
+	if skill.is_empty():
+		return
+	if str(skill.get("effect_type", "")) == "army_buff":
+		var effect: Dictionary = skill.get("effect", {})
+		if effect.is_empty():
+			return
+		var buff_side := str(active_unit.side)
+		for unit in units:
+			if unit.side != buff_side:
+				continue
+			_apply_or_refresh_effect(unit, effect.duplicate(true))
+		_finish_general_skill(skill_id, skill)
+		_sync_online_state_after_action()
+		return
+	pending_general_skill_id = skill_id
+	await _try_execute_general_skill(cell)
+	pending_general_skill_id = ""
+	_sync_online_state_after_action()
+
+
+func host_handle_end_turn_request() -> void:
+	if not MultiplayerManager.is_host() or is_animating:
+		return
+	var active_unit := _get_active_unit()
+	if active_unit.is_empty() or not _remote_controls_side(str(active_unit.side)):
+		return
+	_end_current_activation()
+
+
+func host_start_online_match() -> void:
+	if not MultiplayerManager.is_host():
+		return
+	MultiplayerManager.prepare_match_seed()
+	pvp_obstacle_seed = MultiplayerManager.obstacle_seed
+	var scenario := _find_scenario_by_id(pvp_scenario_id)
+	if scenario.is_empty():
+		_show_screen_message("Nie znaleziono scenariusza online.", 3.0)
+		return
+	_prepare_online_battle(scenario)
+	var config := _build_online_match_config()
+	if battle_sync == null:
+		_setup_battle_sync()
+	battle_sync.broadcast_match_config(config)
+	_sync_online_state_after_action()
+
+
+func apply_online_match_config(config: Dictionary) -> void:
+	if MultiplayerManager.is_host():
+		return
+	pvp_scenario_id = str(config.get("scenario_id", pvp_scenario_id))
+	pvp_obstacle_seed = int(config.get("obstacle_seed", 0))
+	MultiplayerManager.obstacle_seed = pvp_obstacle_seed
+	orc_general_is_kishak = bool(config.get("orc_general_is_kishak", false))
+	MultiplayerManager.orc_general_is_kishak = orc_general_is_kishak
+	MultiplayerManager.local_side = "enemy"
+	game_mode = GameMode.VS_PLAYER_ONLINE
+	var scenario := _find_scenario_by_id(pvp_scenario_id)
+	if scenario.is_empty():
+		_show_screen_message("Nie znaleziono scenariusza online.", 3.0)
+		return
+	_prepare_online_battle_shell(scenario)
+
+
+func _prepare_online_battle(scenario: Dictionary) -> void:
+	_prepare_online_battle_shell(scenario)
+	var unit_configs_local: Array[Dictionary] = []
+	var next_id := 1
+	next_id = _append_online_scenario_units(unit_configs_local, scenario.get("player_units", []), "player", next_id)
+	_append_online_scenario_units(unit_configs_local, scenario.get("enemy_units", []), "enemy", next_id)
+	_build_test_battle_config(unit_configs_local)
+	_roll_orc_general_variant()
+	units = unit_configs.map(func(unit: Dictionary) -> Dictionary: return _prepare_unit(unit.duplicate(true)))
+	if pvp_obstacle_seed >= 0:
+		seed(pvp_obstacle_seed)
+	obstacles = _generate_obstacles()
+	if pvp_obstacle_seed >= 0:
+		randomize()
+	terrain_effects = []
+	selected_unit_id = -1
+	setup_drag_unit_id = -1
+	active_unit_id = -1
+	current_turn = ""
+	pending_skill_id = ""
+	is_animating = false
+	round_number = 1
+	next_map_event_id = ""
+	map_event_cells.clear()
+	detonator_activated = false
+	board.set_detonator_warning_cells([])
+	board.clear_falling_rock_cells()
+	_schedule_next_map_event(0)
+	general_skill_used = false
+	pending_general_skill_id = ""
+	event_log.clear()
+	event_log_label.text = ""
+	board.set_units(units)
+	board.reset_unit_positions(units)
+	board.set_obstacles(obstacles)
+	board.set_terrain_effects(terrain_effects)
+	_refresh_general_display()
+	_refresh_general_ability_buttons()
+	_clear_unit_details()
+	_update_action_buttons()
+	setup_mode = true
+	_update_setup_hint_visibility()
+	_log_event(_color_log_text("Tryb ustawiania: ustaw swoje jednostki. Host klika START.", LOG_COLOR_YELLOW), false)
+
+
+func _prepare_online_battle_shell(scenario: Dictionary) -> void:
+	if victory_overlay != null:
+		victory_overlay.visible = false
+	current_player_faction = str(scenario.get("player_faction", ""))
+	current_enemy_faction = str(scenario.get("enemy_faction", ""))
+	castle_stage = 1 if str(scenario.get("background", "")).get_file().get_basename() == "zamek_etap_1_mury" else 0
+	free_setup_mode = false
+	tutorial_acknowledged = true
+	_set_battle_background(str(scenario.get("background", "")))
+	skill_library = UnitTypeLibraryScript.get_skill_library()
+	_load_general_skills()
+	var setup: Control = get_node_or_null("TeamSetup")
+	if setup != null:
+		setup.queue_free()
+	if hud != null:
+		hud.visible = true
+	if board != null:
+		board.visible = true
+	_ensure_battle_connections()
+	units = []
+	obstacles = []
+	terrain_effects = []
+	selected_unit_id = -1
+	setup_drag_unit_id = -1
+	active_unit_id = -1
+	current_turn = ""
+	pending_skill_id = ""
+	is_animating = false
+	round_number = 1
+	next_map_event_id = ""
+	map_event_cells.clear()
+	detonator_activated = false
+	board.set_detonator_warning_cells([])
+	board.clear_falling_rock_cells()
+	general_skill_used = false
+	pending_general_skill_id = ""
+	event_log.clear()
+	event_log_label.text = ""
+	board.set_units(units)
+	board.set_obstacles(obstacles)
+	board.set_terrain_effects(terrain_effects)
+	_refresh_general_display()
+	_refresh_general_ability_buttons()
+	_clear_unit_details()
+	_update_action_buttons()
+	setup_mode = true
+	_update_setup_hint_visibility()
+
+
+func _ensure_battle_connections() -> void:
+	_build_setup_controls()
+	_connect_signal_once(board.cell_clicked, _on_cell_clicked)
+	_connect_signal_once(board.cell_double_clicked, _on_cell_double_clicked)
+	_connect_signal_once(board.cell_left_released, _on_cell_left_released)
+	_connect_signal_once(board.cell_right_clicked, _on_cell_right_clicked)
+	_connect_signal_once(board.cell_hovered, _on_board_cell_hovered)
+	_connect_signal_once(board.animation_finished, _on_board_animation_finished)
+	_connect_signal_once(unit_abilities_panel.skill_pressed, _on_skill_button_pressed)
+	_connect_signal_once(end_turn_button.pressed, _on_end_turn_button_pressed)
+	_connect_signal_once(general_ability_button_1.pressed, _on_general_ability_1_pressed)
+	_connect_signal_once(general_ability_button_2.pressed, _on_general_ability_2_pressed)
+	if battle_sync == null:
+		_setup_battle_sync()
+
+
+func _append_online_scenario_units(unit_configs_local: Array[Dictionary], raw_units: Variant, side: String, next_id: int) -> int:
+	if typeof(raw_units) != TYPE_ARRAY:
+		return next_id
+	for raw_unit in raw_units:
+		if typeof(raw_unit) != TYPE_DICTIONARY:
+			continue
+		var unit_data: Dictionary = raw_unit
+		var config := {
+			"id": next_id,
+			"type_id": str(unit_data.get("type_id", "")),
+			"side": side,
+			"count": int(unit_data.get("count", 1)),
+		}
+		if unit_data.has("grid_x") and unit_data.has("grid_y"):
+			config["grid_x"] = int(unit_data.grid_x)
+			config["grid_y"] = int(unit_data.grid_y)
+		unit_configs_local.append(config)
+		next_id += 1
+	return next_id
+
+
+func _find_scenario_by_id(scenario_id: String) -> Dictionary:
+	var scenarios_file := FileAccess.open(SCENARIOS_PATH, FileAccess.READ)
+	if scenarios_file != null:
+		var scenarios_data: Variant = JSON.parse_string(scenarios_file.get_as_text())
+		if typeof(scenarios_data) == TYPE_DICTIONARY:
+			for scenario in (scenarios_data as Dictionary).get("scenarios", []):
+				if typeof(scenario) == TYPE_DICTIONARY and str(scenario.get("id", "")) == scenario_id:
+					return (scenario as Dictionary).duplicate(true)
+	var castle_file := FileAccess.open(CASTLE_SCENARIO_PATH, FileAccess.READ)
+	if castle_file != null:
+		var parsed: Variant = JSON.parse_string(castle_file.get_as_text())
+		if typeof(parsed) == TYPE_DICTIONARY and str(parsed.get("id", "")) == scenario_id:
+			var castle: Dictionary = parsed
+			var stages: Array = castle.get("stages", [])
+			if not stages.is_empty() and typeof(stages[0]) == TYPE_DICTIONARY:
+				castle.merge(stages[0], true)
+			return castle
+	return {}
+
+
+func capture_online_state() -> Dictionary:
+	var map_event_payload: Array[Dictionary] = []
+	for cell in map_event_cells:
+		map_event_payload.append({"grid_x": cell.x, "grid_y": cell.y})
+	return {
+		"units": units.duplicate(true),
+		"obstacles": obstacles.duplicate(true),
+		"terrain_effects": terrain_effects.duplicate(true),
+		"turn_queue": turn_queue.duplicate(),
+		"turn_queue_index": turn_queue_index,
+		"active_unit_id": active_unit_id,
+		"current_turn": current_turn,
+		"round_number": round_number,
+		"selected_unit_id": selected_unit_id,
+		"event_log": event_log.duplicate(),
+		"general_skill_used": general_skill_used,
+		"pending_skill_id": pending_skill_id,
+		"pending_general_skill_id": pending_general_skill_id,
+		"next_map_event_round": next_map_event_round,
+		"next_map_event_id": next_map_event_id,
+		"map_event_cells": map_event_payload,
+		"detonator_activated": detonator_activated,
+		"setup_mode": setup_mode,
+		"is_animating": is_animating,
+		"current_player_faction": current_player_faction,
+		"current_enemy_faction": current_enemy_faction,
+		"castle_stage": castle_stage,
+		"orc_general_is_kishak": orc_general_is_kishak,
+		"action_visual": _online_action_visual.duplicate(true),
+	}
+
+
+func _path_payload(path: Array[Vector2i]) -> Array:
+	var result: Array = []
+	for cell in path:
+		result.append({"x": cell.x, "y": cell.y})
+	return result
+
+
+func _path_from_payload(payload: Variant) -> Array[Vector2i]:
+	var path: Array[Vector2i] = []
+	if typeof(payload) != TYPE_ARRAY:
+		return path
+	for item in payload:
+		if typeof(item) == TYPE_DICTIONARY:
+			path.append(Vector2i(int(item.get("x", 0)), int(item.get("y", 0))))
+	return path
+
+
+func _queue_online_unit_path_visual(unit_id: int, path: Array[Vector2i]) -> void:
+	if path.is_empty() or not _is_online_pvp() or not MultiplayerManager.is_host():
+		return
+	_online_action_visual = {"kind": "unit_path", "unit_id": unit_id, "path": _path_payload(path)}
+
+
+func _queue_online_unit_pull_visual(unit_id: int, path: Array[Vector2i]) -> void:
+	if path.is_empty() or not _is_online_pvp() or not MultiplayerManager.is_host():
+		return
+	_online_action_visual = {"kind": "unit_pull", "unit_id": unit_id, "path": _path_payload(path)}
+
+
+func _queue_online_unit_knockback_visual(unit_id: int, path: Array[Vector2i]) -> void:
+	if path.is_empty() or not _is_online_pvp() or not MultiplayerManager.is_host():
+		return
+	_online_action_visual = {"kind": "unit_knockback", "unit_id": unit_id, "path": _path_payload(path)}
+
+
+func _play_remote_action_visual(visual: Dictionary) -> void:
+	var kind := str(visual.get("kind", ""))
+	var unit_id := int(visual.get("unit_id", -1))
+	var path := _path_from_payload(visual.get("path", []))
+	if unit_id == -1:
+		return
+	is_animating = true
+	match kind:
+		"unit_path":
+			if path.is_empty():
+				is_animating = false
+				return
+			board.animate_unit_path(unit_id, path)
+		"unit_pull":
+			board.animate_unit_pull_path(unit_id, path)
+		"unit_knockback":
+			if path.is_empty():
+				is_animating = false
+				return
+			board.animate_unit_knockback_path(unit_id, path)
+		_:
+			is_animating = false
+			return
+	await board.animation_finished
+	is_animating = false
+
+
+func apply_remote_state(state: Dictionary) -> void:
+	if MultiplayerManager.is_host() or state.is_empty():
+		return
+	_process_remote_state_async(state)
+
+
+func _process_remote_state_async(state: Dictionary) -> void:
+	_online_state_apply_lock = true
+	var visual: Dictionary = state.get("action_visual", {})
+	if typeof(visual) == TYPE_DICTIONARY and not visual.is_empty() and not bool(state.get("setup_mode", false)):
+		await _play_remote_action_visual(visual)
+	_apply_remote_state_body(state)
+	_online_state_apply_lock = false
+
+
+func _apply_remote_state_body(state: Dictionary) -> void:
+	var was_setup := setup_mode
+	units = _typed_dictionary_array(state.get("units", units))
+	obstacles = _typed_dictionary_array(state.get("obstacles", obstacles))
+	terrain_effects = _typed_dictionary_array(state.get("terrain_effects", terrain_effects))
+	turn_queue = []
+	for raw_id in state.get("turn_queue", []):
+		turn_queue.append(int(raw_id))
+	turn_queue_index = int(state.get("turn_queue_index", turn_queue_index))
+	active_unit_id = int(state.get("active_unit_id", active_unit_id))
+	current_turn = str(state.get("current_turn", current_turn))
+	round_number = int(state.get("round_number", round_number))
+	selected_unit_id = int(state.get("selected_unit_id", selected_unit_id))
+	event_log = []
+	for line in state.get("event_log", []):
+		event_log.append(str(line))
+	general_skill_used = bool(state.get("general_skill_used", general_skill_used))
+	pending_skill_id = str(state.get("pending_skill_id", pending_skill_id))
+	pending_general_skill_id = str(state.get("pending_general_skill_id", pending_general_skill_id))
+	next_map_event_round = int(state.get("next_map_event_round", next_map_event_round))
+	next_map_event_id = str(state.get("next_map_event_id", next_map_event_id))
+	map_event_cells = []
+	for raw_cell in state.get("map_event_cells", []):
+		if typeof(raw_cell) == TYPE_DICTIONARY:
+			map_event_cells.append(Vector2i(int(raw_cell.get("grid_x", -1)), int(raw_cell.get("grid_y", -1))))
+	detonator_activated = bool(state.get("detonator_activated", detonator_activated))
+	setup_mode = bool(state.get("setup_mode", setup_mode))
+	is_animating = false
+	current_player_faction = str(state.get("current_player_faction", current_player_faction))
+	current_enemy_faction = str(state.get("current_enemy_faction", current_enemy_faction))
+	castle_stage = int(state.get("castle_stage", castle_stage))
+	orc_general_is_kishak = bool(state.get("orc_general_is_kishak", orc_general_is_kishak))
+	if not setup_mode:
+		MultiplayerManager.match_started = true
+	event_log_label.text = "\n".join(event_log)
+	if _is_manual_turn() and active_unit_id != -1:
+		selected_unit_id = active_unit_id
+	elif selected_unit_id != -1:
+		var selected_unit := _find_unit_by_id(selected_unit_id)
+		if not _can_control_unit(selected_unit):
+			selected_unit_id = -1
+	if was_setup and not setup_mode:
+		_update_setup_hint_visibility()
+	var active_unit := _get_active_unit()
+	board.reset_unit_positions(units)
+	board.set_selected_unit(selected_unit_id)
+	_sync_board()
+	_refresh_turn_queue()
+	_refresh_general_display()
+	_refresh_general_ability_buttons()
+	_update_action_buttons()
+	if not active_unit.is_empty() and _is_manual_turn():
+		_update_highlighted_cells(active_unit)
+	else:
+		board.set_highlighted_cells([], [])
+		board.set_hovered_move_path([])
+
+
+func _build_online_match_config() -> Dictionary:
+	return {
+		"scenario_id": pvp_scenario_id,
+		"obstacle_seed": pvp_obstacle_seed,
+		"orc_general_is_kishak": orc_general_is_kishak,
+		"host_side": MultiplayerManager.local_side,
+	}
+
+
+func apply_online_battle_ended(winner_side: String, reason: String = "") -> void:
+	if reason == "forfeit":
+		_show_screen_message("Przeciwnik opuscil gre.", 3.0)
+	_show_victory_overlay(winner_side)
+
+
+func _on_online_host_requested(scenario: Dictionary, use_webrtc: bool, port: int) -> void:
+	game_mode = GameMode.VS_PLAYER_ONLINE
+	pvp_scenario_id = str(scenario.get("id", ""))
+	MultiplayerManager.set_lobby_scenario(pvp_scenario_id, str(scenario.get("name", "")))
+	if use_webrtc:
+		MultiplayerManager.create_host_webrtc()
+	else:
+		MultiplayerManager.create_host_enet(port)
+
+
+func _on_online_join_requested(address: String, port: int, room_code: String, use_webrtc: bool) -> void:
+	game_mode = GameMode.VS_PLAYER_ONLINE
+	if use_webrtc:
+		if room_code.strip_edges().is_empty():
+			MultiplayerManager.connection_failed.emit("Podaj kod pokoju WebRTC.")
+			return
+		MultiplayerManager.join_webrtc(room_code.strip_edges())
+	else:
+		var err := MultiplayerManager.join_host_enet(address.strip_edges(), port)
+		if err != OK:
+			return
+
+
+func _on_online_start_match_requested() -> void:
+	call_deferred("host_start_online_match")
+
+
+func _on_online_peer_disconnected(_peer_id: int) -> void:
+	if not MultiplayerManager.is_online():
+		return
+	if not MultiplayerManager.match_started:
+		return
+	if MultiplayerManager.is_host():
+		if battle_sync != null:
+			battle_sync.broadcast_forfeit(MultiplayerManager.local_side)
+		_show_victory_overlay(MultiplayerManager.local_side)
+	else:
+		var winner := "player" if MultiplayerManager.local_side == "enemy" else "enemy"
+		_show_victory_overlay(winner)
+		_show_screen_message("Polaczenie z hostem zostalo utracone.", 3.0)
+	MultiplayerManager.disconnect_session()
+	game_mode = GameMode.VS_AI

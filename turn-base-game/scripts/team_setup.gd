@@ -3,6 +3,11 @@ extends Control
 signal setup_finished(player_faction: String, enemy_faction: String, ai_difficulty: String)
 signal setup_loaded(save_data: Dictionary)
 signal custom_setup_finished(unit_configs: Array[Dictionary], player_faction: String, enemy_faction: String, background_path: String, ai_difficulty: String)
+signal online_host_requested(scenario: Dictionary, use_webrtc: bool, port: int)
+signal online_join_requested(address: String, port: int, room_code: String, use_webrtc: bool)
+signal online_start_match_requested()
+
+const DEFAULT_ONLINE_PORT := 7777
 
 const UnitSelectPanelScene: PackedScene = preload("res://scenes/unit_select_panel.tscn")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
@@ -25,6 +30,10 @@ var _web_file_input: Variant
 var _web_file_reader: Variant
 var _web_file_change_callback: Variant
 var _web_file_load_callback: Variant
+var _online_status_label: Label
+var _online_start_button: Button
+var _online_create_button: Button
+var _guest_connected := false
 
 
 func _ready() -> void:
@@ -32,6 +41,16 @@ func _ready() -> void:
 	var scenarios: Array[Dictionary] = _get_scenarios()
 	if not scenarios.is_empty():
 		_debug_background_path = str(scenarios[0].get("background", ""))
+	if not MultiplayerManager.peer_connected.is_connected(_on_online_peer_connected):
+		MultiplayerManager.peer_connected.connect(_on_online_peer_connected)
+	if not MultiplayerManager.peer_disconnected.is_connected(_on_online_peer_disconnected):
+		MultiplayerManager.peer_disconnected.connect(_on_online_peer_disconnected)
+	if not MultiplayerManager.room_ready.is_connected(_on_online_room_ready):
+		MultiplayerManager.room_ready.connect(_on_online_room_ready)
+	if not MultiplayerManager.host_ready.is_connected(_on_online_host_ready):
+		MultiplayerManager.host_ready.connect(_on_online_host_ready)
+	if not MultiplayerManager.connection_failed.is_connected(_on_online_connection_failed):
+		MultiplayerManager.connection_failed.connect(_on_online_connection_failed)
 	_show_mode_menu()
 
 
@@ -99,6 +118,7 @@ func _show_mode_menu() -> void:
 	column.add_child(cards)
 
 	cards.add_child(_make_mode_card("GOTOWE SCENARIUSZE", "Wybor przygotowanej bitwy.", _show_scenarios_placeholder))
+	cards.add_child(_make_mode_card("GRAJ ONLINE", "PvP przez siec: host lub gosc.", _show_online_mode_menu))
 	cards.add_child(_make_mode_card("SANDBOX", "Armie i liczebnosc oddzialow.", _show_sandbox_faction_select))
 	cards.add_child(_make_mode_card("DEBUG", "Dowolne jednostki testowe.", _show_debug_count_config))
 
@@ -153,6 +173,266 @@ func _show_scenarios_placeholder() -> void:
 	var back_button := _make_action_button("WROC", Vector2(180, 52))
 	back_button.pressed.connect(_show_mode_menu)
 	column.add_child(back_button)
+
+
+func _show_online_mode_menu() -> void:
+	_clear()
+	_build_background()
+	var main := _make_main_container(80, 80)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 24)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main.add_child(column)
+
+	var title := Label.new()
+	title.text = "GRAJ ONLINE"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 40)
+	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
+	column.add_child(title)
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 24)
+	column.add_child(row)
+	row.add_child(_make_mode_card("UTWORZ GRE", "Wybierz scenariusz i czekaj na goscia.", _show_online_host_scenarios))
+	row.add_child(_make_mode_card("DOLACZ", "Polacz sie z hostem przez IP lub kod.", _show_online_join_menu))
+
+	var back_button := _make_action_button("WROC", Vector2(180, 52))
+	back_button.pressed.connect(_show_mode_menu)
+	column.add_child(back_button)
+
+
+func _show_online_host_scenarios() -> void:
+	_clear()
+	_build_background()
+	var main := _make_main_container(52, 52)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 20)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main.add_child(column)
+
+	var title := Label.new()
+	title.text = "WYBIERZ SCENARIUSZ PvP"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 34)
+	column.add_child(title)
+
+	var scenarios_row := HBoxContainer.new()
+	scenarios_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	scenarios_row.add_theme_constant_override("separation", 18)
+	column.add_child(scenarios_row)
+
+	for scenario in _get_scenarios():
+		if str(scenario.get("id", "")) == "zamek":
+			continue
+		scenarios_row.add_child(_make_online_scenario_card(scenario))
+
+	var back_button := _make_action_button("WROC", Vector2(180, 52))
+	back_button.pressed.connect(_show_online_mode_menu)
+	column.add_child(back_button)
+
+
+func _make_online_scenario_card(scenario: Dictionary) -> Button:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(290, 250)
+	button.pressed.connect(_show_online_host_lobby.bind(scenario))
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.offset_left = 14
+	box.offset_top = 14
+	box.offset_right = -14
+	box.offset_bottom = -14
+	button.add_child(box)
+	var name_label := Label.new()
+	name_label.text = str(scenario.get("name", "")).to_upper()
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(name_label)
+	var desc_label := Label.new()
+	desc_label.text = str(scenario.get("description", ""))
+	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(desc_label)
+	return button
+
+
+func _show_online_host_lobby(scenario: Dictionary) -> void:
+	_clear()
+	_build_background()
+	_guest_connected = false
+	var main := _make_main_container(60, 60)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 16)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	main.add_child(column)
+
+	var title := Label.new()
+	title.text = str(scenario.get("name", "Scenariusz")).to_upper()
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 34)
+	column.add_child(title)
+
+	var transport_row := HBoxContainer.new()
+	transport_row.add_theme_constant_override("separation", 12)
+	column.add_child(transport_row)
+	var use_webrtc := CheckBox.new()
+	use_webrtc.text = "WebRTC (kod pokoju / web)"
+	transport_row.add_child(use_webrtc)
+
+	var port_row := HBoxContainer.new()
+	port_row.add_theme_constant_override("separation", 8)
+	column.add_child(port_row)
+	var port_label := Label.new()
+	port_label.text = "Port ENet:"
+	port_row.add_child(port_label)
+	var port_input := SpinBox.new()
+	port_input.min_value = 1024
+	port_input.max_value = 65535
+	port_input.value = DEFAULT_ONLINE_PORT
+	port_input.custom_minimum_size = Vector2(120, 0)
+	port_row.add_child(port_input)
+
+	_online_status_label = Label.new()
+	_online_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_online_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_online_status_label.custom_minimum_size = Vector2(700, 0)
+	column.add_child(_online_status_label)
+
+	_online_create_button = _make_action_button("UTWORZ POKOJ", Vector2(260, 52))
+	_online_create_button.pressed.connect(func() -> void:
+		_update_online_status("Tworzenie pokoju...")
+		_online_create_button.disabled = true
+		online_host_requested.emit(scenario, use_webrtc.button_pressed, int(port_input.value))
+	)
+	column.add_child(_online_create_button)
+
+	_online_start_button = _make_action_button("GOTOWE DO USTAWIEN", Vector2(260, 52))
+	_online_start_button.disabled = true
+	_online_start_button.pressed.connect(func() -> void: online_start_match_requested.emit())
+	column.add_child(_online_start_button)
+
+	var back_button := _make_action_button("WROC", Vector2(180, 52))
+	back_button.pressed.connect(_show_online_host_scenarios)
+	column.add_child(back_button)
+
+
+func _show_online_join_menu() -> void:
+	_clear()
+	_build_background()
+	var main := _make_main_container(60, 60)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 16)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	main.add_child(column)
+
+	var title := Label.new()
+	title.text = "DOLACZ DO GRY"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 34)
+	column.add_child(title)
+
+	var use_webrtc := CheckBox.new()
+	use_webrtc.text = "WebRTC (kod pokoju)"
+	column.add_child(use_webrtc)
+
+	var address_input := LineEdit.new()
+	address_input.placeholder_text = "Adres IP hosta (ENet)"
+	address_input.text = "127.0.0.1"
+	address_input.custom_minimum_size = Vector2(420, 42)
+	column.add_child(address_input)
+
+	var port_input := SpinBox.new()
+	port_input.min_value = 1024
+	port_input.max_value = 65535
+	port_input.value = DEFAULT_ONLINE_PORT
+	column.add_child(port_input)
+
+	var room_input := LineEdit.new()
+	room_input.placeholder_text = "Kod pokoju (WebRTC)"
+	room_input.custom_minimum_size = Vector2(420, 42)
+	column.add_child(room_input)
+
+	_online_status_label = Label.new()
+	_online_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_online_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_online_status_label.custom_minimum_size = Vector2(700, 0)
+	column.add_child(_online_status_label)
+
+	var join_button := _make_action_button("POLACZ", Vector2(260, 52))
+	join_button.pressed.connect(func() -> void:
+		if use_webrtc.button_pressed:
+			if room_input.text.strip_edges().is_empty():
+				_update_online_status("Podaj kod pokoju WebRTC.")
+				return
+		else:
+			if address_input.text.strip_edges().is_empty():
+				_update_online_status("Podaj adres IP hosta (np. 127.0.0.1).")
+				return
+		online_join_requested.emit(
+			address_input.text.strip_edges(),
+			int(port_input.value),
+			room_input.text.strip_edges(),
+			use_webrtc.button_pressed
+		)
+		_update_online_status("Laczenie...")
+	)
+	column.add_child(join_button)
+
+	var back_button := _make_action_button("WROC", Vector2(180, 52))
+	back_button.pressed.connect(_show_online_mode_menu)
+	column.add_child(back_button)
+
+
+func _update_online_status(text: String) -> void:
+	if _online_status_label != null:
+		_online_status_label.text = text
+
+
+func _on_online_host_ready(port: int) -> void:
+	var address_hint := "127.0.0.1"
+	for address in IP.get_local_addresses():
+		if address.contains("."):
+			address_hint = address
+			break
+	_update_online_status("Pokoj gotowy.\nPolaczenie ENet: %s:%d\nCzekam na goscia..." % [address_hint, port])
+
+
+func _on_online_room_ready(code: String) -> void:
+	_update_online_status("Pokoj gotowy.\nKod WebRTC: %s\nCzekam na goscia..." % code)
+
+
+func _on_online_peer_connected(_peer_id: int) -> void:
+	if MultiplayerManager.match_started:
+		return
+	if MultiplayerManager.is_host():
+		_guest_connected = true
+		_update_online_status("Gosc dolaczyl. Ustawcie jednostki, potem host klika START.")
+		if _online_start_button != null:
+			_online_start_button.disabled = false
+	else:
+		_update_online_status("Polaczono z hostem. Ustaw swoje jednostki i czekaj na START.")
+
+
+func _on_online_peer_disconnected(_peer_id: int) -> void:
+	if MultiplayerManager.match_started or not MultiplayerManager.is_online():
+		return
+	if MultiplayerManager.is_host():
+		_guest_connected = false
+		_update_online_status("Gosc opuscil lobby. Czekam na polaczenie...")
+		if _online_start_button != null:
+			_online_start_button.disabled = true
+	else:
+		_update_online_status("Polaczenie z hostem zostalo utracone.")
+
+
+func _on_online_connection_failed(reason: String) -> void:
+	_update_online_status("Blad polaczenia: %s" % reason)
+	if _online_create_button != null and is_instance_valid(_online_create_button):
+		_online_create_button.disabled = false
 
 
 func _make_scenario_card(scenario: Dictionary) -> Button:
