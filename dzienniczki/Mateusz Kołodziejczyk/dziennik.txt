@@ -11,3 +11,4 @@
 15.07.2026 - Zaprojektowanie drzewa kultury i drzewa technologicznego, a następnie implementacja ich w kodzie. Lekkie poprawki i dodanie konta administratora w celu szybszego i łatwiejszego testowania gry.
 16.07.2026 - Dodanie funkcjonalności do budynków które były nie spożytkowane, czyli laboratorium, biblioteka, świątynia, warsztat. Ujednolicenie stylu dla wszystkich menu.
 17.07.2026 - Poprawa błędów kryttycznych, i mniejszych błędów związanych z ui jak np. niespójna terminologia, ciasny zakres kamery, przyciski nachodzące na siebie, niewyśweietlające się emoji.
+20.07.2026 - Dodanie możliwości zapisu gry. Zmiana cen rekrutacji jednostek do armii. Zmiana bonusów procentowych w drzewku kultury na stałe liczby. Dodanie paska przewijania w drzewkach i naprawa błędów w drzewku technologicznym. Poprawa wyglądu alertów informacyjnych.
