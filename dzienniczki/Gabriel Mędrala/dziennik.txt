@@ -103,3 +103,18 @@ Dzień 13 (17.07.2026)
 - umożliwienie wczytywania z zapisu
 - naprawienie pięści, aby została wyrzucana w kierunku, w którym się patrzy, a nie wyłącznie w prawo
 - aktualizacja projektu na githubie
+
+Dzień 14 (20.07.2026)
+- Dodanie historii poprzednich wygenerowanych audio do narzędzia, które robiłem parę dni temu
+- dodanie możliwości generowanie muzyki oraz zmieniania między modelami (do text to speech oraz do muzyki)
+- testowania różnych modeli do generowania muzyki (z różnymi rezultatami)
+- dodanie ekranu ładowania po przesłaniu generowania (przedtem ciężko było powiedzieć, czy strona działa, czy się nie ścieła)
+- dodanie filtrowania historii zarówno przez rodzaj modelu (TTS/muzyka) oraz przez konkretny model
+- aktualizacja projektu na git hubie
+- zapoznanie się z innymi rodzajami nodów w godocie (w tym przypadku characterBody2D)
+- stworzenie środowiska pod testowanie tego noda
+- stworzenie mechanik pozwalających na poruszanie się w stylu prostej platformówki 
+- dodanie "czasu kojota", czyli momentu, w którym gracz może skoczyć nie znajdując się na podłodze (pozwala na łatwiejsze skakanie przy rogach platform)
+- dodanie paska, który zmienia owy czas kojota
+- dodanie możliwości wyższego skoku przez trzymanie strzałki w górę oraz wolniejszego opadania (większa kontrola dla gracza)
+- przesłanie projektu na githuba oraz naprawienie błedu z wielkością okna przy testowaniu w przeglądarce
