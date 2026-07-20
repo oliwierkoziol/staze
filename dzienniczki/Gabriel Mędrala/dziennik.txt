@@ -110,7 +110,9 @@ Dzień 14 (20.07.2026)
 - testowania różnych modeli do generowania muzyki (z różnymi rezultatami)
 - dodanie ekranu ładowania po przesłaniu generowania (przedtem ciężko było powiedzieć, czy strona działa, czy się nie ścieła)
 - dodanie filtrowania historii zarówno przez rodzaj modelu (TTS/muzyka) oraz przez konkretny model
-- aktualizacja projektu na git hubie
+- aktualizacja na git hubie
+link do narzędzia: https://github.com/Crunczyslaw/GenApp
+
 - zapoznanie się z innymi rodzajami nodów w godocie (w tym przypadku characterBody2D)
 - stworzenie środowiska pod testowanie tego noda
 - stworzenie mechanik pozwalających na poruszanie się w stylu prostej platformówki 
