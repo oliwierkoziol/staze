@@ -9,3 +9,6 @@
 13.07.2026 - Naprawa spirali głodu, usunięcie martwych callbacków i nieużywanego kodu, zmiana działania esc, naprawa drobnych błędów i exploitów. Generowanie assetów.
 14.07.2026 - Generowanie assetów i ich modyfikacja.
 15.07.2026 - Stworzenie designu drzewka technologicznego oraz kulturowego, naprawa błędów w ui oraz usprawnienie przyznawania punktów kultury.
+16.07.2026 - Stworzenie dodatkowej funkcjonalności budynków kulturowych, generowanie potrzebnych do nich grafik, poprawa błędów
+17.07.2026 - Szukanie błędów w grze i ich poprawa, rebalans początku gry
+20.07.2026 - Szukanie błędów w grze i ich poprawa, rebalans gry
