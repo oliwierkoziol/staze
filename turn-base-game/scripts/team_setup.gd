@@ -1,8 +1,8 @@
 extends Control
 
-signal setup_finished(player_faction: String, enemy_faction: String)
+signal setup_finished(player_faction: String, enemy_faction: String, ai_difficulty: String)
 signal setup_loaded(save_data: Dictionary)
-signal custom_setup_finished(unit_configs: Array[Dictionary], player_faction: String, enemy_faction: String, background_path: String)
+signal custom_setup_finished(unit_configs: Array[Dictionary], player_faction: String, enemy_faction: String, background_path: String, ai_difficulty: String)
 
 const UnitSelectPanelScene: PackedScene = preload("res://scenes/unit_select_panel.tscn")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
@@ -20,9 +20,15 @@ var _rows: Array[Dictionary] = []
 var _sandbox_player_faction: String = ""
 var _sandbox_enemy_faction: String = ""
 var _debug_background_path := ""
+var _ai_difficulty := "sredni"
+var _web_file_input: Variant
+var _web_file_reader: Variant
+var _web_file_change_callback: Variant
+var _web_file_load_callback: Variant
 
 
 func _ready() -> void:
+	assert(not _parse_save_text('{"units": []}').is_empty() and _parse_save_text("[]").is_empty(), "Parser zapisu musi przyjmowac tylko obiekt JSON.")
 	var scenarios: Array[Dictionary] = _get_scenarios()
 	if not scenarios.is_empty():
 		_debug_background_path = str(scenarios[0].get("background", ""))
@@ -71,6 +77,20 @@ func _show_mode_menu() -> void:
 	title.add_theme_font_size_override("font_size", 42)
 	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
 	column.add_child(title)
+
+	var difficulty_select := OptionButton.new()
+	difficulty_select.custom_minimum_size = Vector2(340, 44)
+	for difficulty in [
+		{"id": "latwy", "label": "LATWY — NIEDOSWIADCZONY DOWODCA"},
+		{"id": "sredni", "label": "SREDNI — DOWODCA POLOWY"},
+		{"id": "trudny", "label": "TRUDNY — TAKTYK"},
+	]:
+		difficulty_select.add_item(str(difficulty.label))
+		difficulty_select.set_item_metadata(difficulty_select.item_count - 1, str(difficulty.id))
+		if str(difficulty.id) == _ai_difficulty:
+			difficulty_select.select(difficulty_select.item_count - 1)
+	difficulty_select.item_selected.connect(func(index: int) -> void: _ai_difficulty = str(difficulty_select.get_item_metadata(index)))
+	column.add_child(difficulty_select)
 
 	var cards := HBoxContainer.new()
 	cards.add_theme_constant_override("separation", 24)
@@ -187,7 +207,8 @@ func _start_scenario(scenario: Dictionary) -> void:
 		unit_configs,
 		str(scenario.get("player_faction", "")),
 		str(scenario.get("enemy_faction", "")),
-		str(scenario.get("background", ""))
+		str(scenario.get("background", "")),
+		_ai_difficulty
 	)
 
 
@@ -417,7 +438,7 @@ func _emit_custom_setup(player_faction: String, enemy_faction: String, backgroun
 		next_id += 1
 	if player_count == 0 or enemy_count == 0:
 		return
-	custom_setup_finished.emit(unit_configs, player_faction, enemy_faction, background_path)
+	custom_setup_finished.emit(unit_configs, player_faction, enemy_faction, background_path, _ai_difficulty)
 
 
 func _build_background() -> void:
@@ -572,22 +593,56 @@ func _on_randomize_requested(side: String) -> void:
 
 
 func _on_start_pressed() -> void:
-	setup_finished.emit(_player_panel.get_selected_faction(), _enemy_panel.get_selected_faction())
+	setup_finished.emit(_player_panel.get_selected_faction(), _enemy_panel.get_selected_faction(), _ai_difficulty)
 
 
 func _on_load_pressed() -> void:
+	if OS.has_feature("web"):
+		_open_web_load_dialog()
+		return
 	_load_dialog.popup_centered(Vector2i(900, 600))
 
 
 func _on_load_file_selected(path: String) -> void:
-	var file := FileAccess.open(path, FileAccess.READ)
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if typeof(parsed) != TYPE_DICTIONARY:
+	_emit_loaded_save(file.get_as_text())
+
+
+func _open_web_load_dialog() -> void:
+	var document: Variant = JavaScriptBridge.get_interface("document")
+	_web_file_input = document.createElement("input")
+	_web_file_input.type = "file"
+	_web_file_input.accept = ".json,application/json"
+	_web_file_change_callback = JavaScriptBridge.create_callback(_on_web_file_selected)
+	_web_file_input.addEventListener("change", _web_file_change_callback)
+	_web_file_input.click()
+
+
+func _on_web_file_selected(args: Array) -> void:
+	var files: Variant = args[0].target.files
+	if int(files.length) == 0:
 		return
-	var data: Dictionary = parsed
-	setup_loaded.emit(data)
+	_web_file_reader = JavaScriptBridge.create_object("FileReader")
+	_web_file_load_callback = JavaScriptBridge.create_callback(_on_web_file_loaded)
+	_web_file_reader.onload = _web_file_load_callback
+	_web_file_reader.readAsText(files[0])
+
+
+func _on_web_file_loaded(args: Array) -> void:
+	_emit_loaded_save(str(args[0].target.result))
+
+
+func _emit_loaded_save(text: String) -> void:
+	var data: Dictionary = _parse_save_text(text)
+	if not data.is_empty():
+		setup_loaded.emit(data)
+
+
+static func _parse_save_text(text: String) -> Dictionary:
+	var parsed: Variant = JSON.parse_string(text)
+	return parsed if typeof(parsed) == TYPE_DICTIONARY else {}
 
 
 func _clear() -> void:

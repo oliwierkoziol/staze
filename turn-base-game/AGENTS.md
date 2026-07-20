@@ -8,7 +8,7 @@
 
 ## Zakres tego brancha
 Prototyp systemu walki turowej na heksagonalnej planszy:
-- 15×11 heksów, side-view camera.
+- 15×10 heksów, side-view camera.
 - Jednostki należą do strony `player` lub `enemy`.
 - Lewy panel: statystyki i akcje wybranej jednostki.
 - Prawy panel: generał + log bitwy.

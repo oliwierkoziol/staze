@@ -19,6 +19,11 @@ const PIERCING_SHOT_HEX_COUNT := 3
 const PLONIECIE_TICK_DAMAGE := 2
 const PLONIECIE_TURNS := 3
 const MAX_VISIBLE_QUEUE_CARDS := 8
+const AI_PROFILES: Dictionary = {
+	"latwy": {"threat_weight": 0.35, "hazard_weight": 0.6, "casualty_weight": 45, "kill_bonus": 150, "target_value_weight": 0.02, "formation_weight": 0.25, "coordination_weight": 0.0, "decision_noise": 0.18},
+	"sredni": {"threat_weight": 0.7, "hazard_weight": 0.9, "casualty_weight": 75, "kill_bonus": 400, "target_value_weight": 0.06, "formation_weight": 0.65, "coordination_weight": 0.4, "decision_noise": 0.05},
+	"trudny": {"threat_weight": 1.0, "hazard_weight": 1.0, "casualty_weight": 90, "kill_bonus": 600, "target_value_weight": 0.1, "formation_weight": 1.0, "coordination_weight": 1.0, "decision_noise": 0.0},
+}
 const MAX_EVENT_OBSTACLES: Dictionary = {"woda": 6, "kamienie": 4, "krzok": 6, "ruchome_piaski": 6, "holy_tree": 5, "cart": 3, "elf_statue": 6, "hole": 4, "detonator": 2}
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
 const MAP_EVENT_POOLS: Dictionary = {
@@ -192,6 +197,7 @@ var reload_json_button: Button
 var save_setup_dialog: FileDialog
 var current_player_faction := ""
 var current_enemy_faction := ""
+var ai_difficulty := "sredni"
 var current_battle_background_path: String = DEFAULT_BATTLE_BACKGROUND_PATH
 var castle_stage := 0
 var free_setup_mode := false
@@ -250,7 +256,7 @@ func _load_terrain_types() -> void:
 			continue
 		var terrain: Dictionary = raw.duplicate(true)
 		terrain["id"] = str(terrain_id)
-		terrain["movement_cost"] = int(terrain.get("movement_cost", 1))
+		terrain["movement_cost"] = max(1, int(terrain.get("movement_cost", 1)))
 		terrain["blocks_movement"] = bool(terrain.get("blocks_movement", false))
 		terrain["blocks_line_of_sight"] = bool(terrain.get("blocks_line_of_sight", false))
 		terrain_types[str(terrain_id)] = terrain
@@ -331,11 +337,12 @@ func _show_team_setup() -> void:
 		board.visible = false
 
 
-func _on_team_setup_finished(player_faction: String, enemy_faction: String) -> void:
+func _on_team_setup_finished(player_faction: String, enemy_faction: String, selected_ai_difficulty: String) -> void:
 	if victory_overlay != null:
 		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
+	ai_difficulty = selected_ai_difficulty if AI_PROFILES.has(selected_ai_difficulty) else "sredni"
 	castle_stage = 0
 	free_setup_mode = false
 	_set_battle_background(DEFAULT_BATTLE_BACKGROUND_PATH)
@@ -358,6 +365,9 @@ func _on_team_setup_loaded(save_data: Dictionary) -> void:
 		victory_overlay.visible = false
 	current_player_faction = str(save_data.get("player_faction", ""))
 	current_enemy_faction = str(save_data.get("enemy_faction", ""))
+	ai_difficulty = str(save_data.get("ai_difficulty", "sredni"))
+	if not AI_PROFILES.has(ai_difficulty):
+		ai_difficulty = "sredni"
 	castle_stage = int(save_data.get("castle_stage", 0))
 	orc_general_is_kishak = bool(save_data.get("orc_general_is_kishak", false))
 	free_setup_mode = bool(save_data.get("free_setup_mode", false))
@@ -375,11 +385,12 @@ func _on_team_setup_loaded(save_data: Dictionary) -> void:
 	_apply_save_data(save_data)
 
 
-func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: String, enemy_faction: String, background_path: String) -> void:
+func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: String, enemy_faction: String, background_path: String, selected_ai_difficulty: String) -> void:
 	if victory_overlay != null:
 		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
+	ai_difficulty = selected_ai_difficulty if AI_PROFILES.has(selected_ai_difficulty) else "sredni"
 	castle_stage = 1 if background_path.get_file().get_basename() == "zamek_etap_1_mury" else 0
 	free_setup_mode = player_faction == "testowa" and enemy_faction == "testowa"
 	_set_battle_background(background_path if background_path != "" else DEFAULT_BATTLE_BACKGROUND_PATH)
@@ -673,6 +684,14 @@ func _on_start_battle_pressed() -> void:
 func _on_save_setup_pressed() -> void:
 	if help_popup != null and help_popup.visible:
 		return
+	if OS.has_feature("web"):
+		JavaScriptBridge.download_buffer(
+			JSON.stringify(_make_save_data(), "\t").to_utf8_buffer(),
+			"zapis_armii.json",
+			"application/json"
+		)
+		_log_event(_color_log_text("Pobrano zapis stanu gry.", LOG_COLOR_YELLOW), false)
+		return
 	save_setup_dialog.current_file = "zapis_armii.json"
 	save_setup_dialog.popup_centered(Vector2i(900, 600))
 
@@ -691,6 +710,7 @@ func _make_save_data() -> Dictionary:
 	return {
 		"player_faction": current_player_faction,
 		"enemy_faction": current_enemy_faction,
+		"ai_difficulty": ai_difficulty,
 		"background_path": current_battle_background_path,
 		"castle_stage": castle_stage,
 		"free_setup_mode": free_setup_mode,
@@ -1283,7 +1303,7 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	if remaining_move <= 0:
 		return
 
-	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell)
+	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell, {}, remaining_move)
 	var path_cost: int = _get_path_cost(path)
 	if path.is_empty():
 		if _is_cell_obstacle(cell):
@@ -1430,9 +1450,10 @@ func _ai_choose_plan(unit: Dictionary) -> Dictionary:
 	var origin := Vector2i(int(unit.grid_x), int(unit.grid_y))
 	var destinations: Array[Dictionary] = [{"cell": origin, "path": []}]
 	if not _is_immobilized(unit):
-		for cell in _get_reachable_cells(unit, _get_remaining_move(unit)):
-			var path: Array[Vector2i] = _get_executable_move_path(_find_path(unit, origin, cell))
-			if path.is_empty() or _get_path_cost(path) > _get_remaining_move(unit):
+		var mapa_tras: Dictionary = _zbuduj_mape_tras(unit, origin, _get_remaining_move(unit))
+		for cell in _osiagalne_z_mapy_tras(mapa_tras, origin):
+			var path: Array[Vector2i] = _odtworz_trase(mapa_tras, origin, cell)
+			if path.is_empty():
 				continue
 			destinations.append({"cell": path[path.size() - 1], "path": path})
 
@@ -1454,7 +1475,8 @@ func _ai_choose_plan(unit: Dictionary) -> Dictionary:
 			"score": _ai_score_position(unit, destination) + approach_score,
 		})
 		for plan in plans:
-			plan["score"] = int(plan.get("score", 0)) - _get_path_hazard_penalty(unit, path)
+			plan["score"] = int(plan.get("score", 0)) - _ai_hazard_penalty(unit, path)
+			plan["score"] = _ai_apply_decision_noise(unit, plan)
 			if _ai_is_better_plan(plan, best_plan):
 				best_plan = plan
 	unit.grid_x = origin.x
@@ -1477,7 +1499,6 @@ func _ai_generate_action_plans(unit: Dictionary, path: Array[Vector2i]) -> Array
 					"path": path,
 					"score": _ai_score_damage(unit, target, 1.0) + _ai_score_position(unit, unit_cell),
 				})
-
 	for raw_skill_id in unit.get("skill_ids", []):
 		var skill_id: String = str(raw_skill_id)
 		if not _can_use_skill(unit, skill_id):
@@ -1614,7 +1635,14 @@ func _ai_score_damage(attacker: Dictionary, target: Dictionary, multiplier: floa
 	var base_hp: int = max(1, int(target.get("base_hp", target.get("hp", 1))))
 	var hp_after: int = maxi(0, current_hp - damage)
 	var casualties: int = ceili(float(current_hp) / float(base_hp)) - ceili(float(hp_after) / float(base_hp))
-	return min(damage, current_hp) * 4 + casualties * 90 + (600 if damage >= current_hp else 0) + int(_ai_unit_value(target) / 10.0)
+	var profile: Dictionary = _ai_profile()
+	var score: int = min(damage, current_hp) * 4
+	score += casualties * int(profile.get("casualty_weight", 75))
+	if damage >= current_hp:
+		score += int(profile.get("kill_bonus", 400))
+	score += int(round(float(_ai_unit_value(target)) * float(profile.get("target_value_weight", 0.06))))
+	score += int(round(float(_ai_score_coordination(attacker, target)) * float(profile.get("coordination_weight", 0.4))))
+	return score
 
 
 func _ai_score_area_damage(caster: Dictionary, center: Vector2i, center_multiplier: float, neighbor_multiplier: float) -> int:
@@ -1711,7 +1739,7 @@ func _ai_score_forced_destination(target: Dictionary, cell: Vector2i) -> int:
 
 
 func _ai_score_position(unit: Dictionary, cell: Vector2i) -> int:
-	var score: int = -_get_path_hazard_penalty(unit, [cell])
+	var score: int = -_ai_hazard_penalty(unit, [cell])
 	if map_event_cells.has(cell) and _is_map_event_warning_round(round_number, next_map_event_round):
 		score -= 500
 	if _terrain_hides_unit(cell):
@@ -1725,8 +1753,68 @@ func _ai_score_position(unit: Dictionary, cell: Vector2i) -> int:
 				ally_distance = min(ally_distance, _hex_distance(cell, Vector2i(int(ally.grid_x), int(ally.grid_y))))
 		if ally_distance < 1000:
 			score -= max(0, ally_distance - 1) * 8
-	score -= threat
+	score += int(round(float(_ai_score_formation(unit, cell)) * float(_ai_profile().get("formation_weight", 0.65))))
+	score -= int(round(float(threat) * float(_ai_profile().get("threat_weight", 0.5))))
 	return score
+
+
+func _ai_profile() -> Dictionary:
+	return AI_PROFILES.get(ai_difficulty, AI_PROFILES["sredni"])
+
+
+func _ai_hazard_penalty(unit: Dictionary, path: Array[Vector2i]) -> int:
+	return int(round(float(_get_path_hazard_penalty(unit, path)) * float(_ai_profile().get("hazard_weight", 1.0))))
+
+
+func _ai_apply_decision_noise(unit: Dictionary, plan: Dictionary) -> int:
+	var score: int = int(plan.get("score", 0))
+	var noise: float = float(_ai_profile().get("decision_noise", 0.0))
+	if noise <= 0.0:
+		return score
+	var key: String = "%d:%d:%s:%s:%s:%s:%s" % [round_number, int(unit.id), plan.get("kind", ""), plan.get("skill_id", ""), plan.get("target_id", -1), plan.get("target_cell", Vector2i(-1, -1)), plan.get("path", [])]
+	var direction: float = float(posmod(hash(key), 201) - 100) / 100.0
+	return score + int(round(direction * maxf(30.0, absf(float(score)) * noise)))
+
+
+func _ai_score_coordination(attacker: Dictionary, target: Dictionary) -> int:
+	var score := 0
+	var current_hp: int = int(target.get("current_total_hp", int(target.get("hp", 1)) * int(target.get("count", 1))))
+	var max_hp: int = max(1, int(target.get("max_total_hp", current_hp)))
+	score += int(round((1.0 - float(current_hp) / float(max_hp)) * 120.0))
+	for ally in units:
+		if int(ally.id) == int(attacker.id) or ally.side != attacker.side or not _can_see_target(ally, target):
+			continue
+		var distance: int = _hex_distance(Vector2i(int(ally.grid_x), int(ally.grid_y)), Vector2i(int(target.grid_x), int(target.grid_y)))
+		if distance <= int(ally.get("attack_range", 1)) + int(ally.get("move_range", 0)):
+			score += 35
+	if str(target.get("balance_role", "")) == "wsparcie_kontrola":
+		score += 45
+	return score
+
+
+func _ai_score_formation(unit: Dictionary, cell: Vector2i) -> int:
+	# ponytail: O(n²) jest celowo proste dla kilku oddzialow; indeks przestrzenny dopiero przy duzych armiach.
+	var role: String = str(unit.get("balance_role", ""))
+	var nearest_ally := 1000
+	var nearest_enemy := 1000
+	var allies_in_front := 0
+	for other in units:
+		if int(other.id) == int(unit.id):
+			continue
+		var other_cell := Vector2i(int(other.grid_x), int(other.grid_y))
+		if other.side == unit.side:
+			nearest_ally = min(nearest_ally, _hex_distance(cell, other_cell))
+		else:
+			var distance: int = _hex_distance(cell, other_cell)
+			nearest_enemy = min(nearest_enemy, distance)
+			for ally in units:
+				if ally.side == unit.side and int(ally.id) != int(unit.id) and _hex_distance(Vector2i(int(ally.grid_x), int(ally.grid_y)), other_cell) < distance:
+					allies_in_front += 1
+	if role == "wsparcie_kontrola" and nearest_ally < 1000:
+		return -abs(nearest_ally - 2) * 18
+	if role == "dystansowa":
+		return allies_in_front * 18 - max(0, int(unit.get("attack_range", 1)) - nearest_enemy) * 20
+	return 0
 
 
 func _ai_score_approach(unit: Dictionary, cell: Vector2i) -> int:
@@ -1780,6 +1868,7 @@ func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
 	var path: Array[Vector2i] = []
 	for cell in plan.get("path", []):
 		path.append(cell)
+	path = _get_executable_move_path(path)
 	if not path.is_empty() and not _is_immobilized(unit):
 		var destination: Vector2i = path[path.size() - 1]
 		var path_cost: int = _get_path_cost(path)
@@ -1909,16 +1998,17 @@ func _find_best_enemy_path(enemy_unit: Dictionary, target: Dictionary) -> Array[
 	var target_cell := Vector2i(target.grid_x, target.grid_y)
 	if _can_see_target(enemy_unit, target) and _can_unit_attack(enemy_unit) and _is_in_attack_range(enemy_unit, target_cell):
 		return []
-	var reachable_cells: Array[Vector2i] = _get_reachable_cells(enemy_unit, _get_remaining_move(enemy_unit))
+	var mapa_tras: Dictionary = _zbuduj_mape_tras(enemy_unit, origin, _get_remaining_move(enemy_unit))
+	var reachable_cells: Array[Vector2i] = _osiagalne_z_mapy_tras(mapa_tras, origin)
 	var best_path: Array[Vector2i] = []
 	var preferred_distance: int = 1 if not _can_see_target(enemy_unit, target) else min(int(enemy_unit.get("attack_range", 1)), _hex_distance(origin, target_cell))
 	var best_score: int = abs(_hex_distance(origin, target_cell) - preferred_distance) * 10
 	for cell in reachable_cells:
-		var candidate_path: Array[Vector2i] = _find_path(enemy_unit, origin, cell)
+		var candidate_path: Array[Vector2i] = _odtworz_trase(mapa_tras, origin, cell)
 		if candidate_path.is_empty():
 			continue
 		var candidate_distance: int = _hex_distance(cell, target_cell)
-		var candidate_score: int = abs(candidate_distance - preferred_distance) * 10 + _get_path_hazard_penalty(enemy_unit, candidate_path)
+		var candidate_score: int = abs(candidate_distance - preferred_distance) * 10 + _ai_hazard_penalty(enemy_unit, candidate_path)
 		if int(enemy_unit.get("attack_range", 1)) <= 1:
 			candidate_score += _count_adjacent_units_for_side(cell, str(enemy_unit.side), int(enemy_unit.id)) * 4
 		if _can_unit_attack(enemy_unit) and not _is_attack_blocked({"grid_x": cell.x, "grid_y": cell.y}, target_cell) and candidate_distance <= int(enemy_unit.get("attack_range", 1)):
@@ -1936,6 +2026,8 @@ func _get_path_hazard_penalty(unit: Dictionary, path: Array[Vector2i]) -> int:
 			penalty += 1000
 		if _is_hostile_terrain_effect_for_unit(unit, cell):
 			penalty += 200
+		if _terrain_is_deadly(cell):
+			penalty += 1000000
 		if _terrain_skips_turn(cell):
 			penalty += 100
 	return penalty
@@ -1947,7 +2039,7 @@ func _is_hostile_terrain_effect_for_unit(unit: Dictionary, cell: Vector2i) -> bo
 			continue
 		if str(effect.get("caster_side", "")) == str(unit.side):
 			continue
-		if ["fire", "ice", "poison_cloud", "bear_trap", "goblin_trap"].has(str(effect.get("id", ""))):
+		if ["fire", "ice", "poison_cloud"].has(str(effect.get("id", ""))):
 			return true
 	return false
 
@@ -2182,11 +2274,11 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 			return
 		_show_hover_warning("Cel poza zasięgiem ataku!", cell)
 
-	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell, charge_skill)
-	var path_cost: int = _get_path_cost(path)
 	var remaining: int = _get_remaining_move(active_unit)
 	if not charge_skill.is_empty():
 		remaining += _get_charge_stat_bonus(charge_skill, "move_range")
+	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell, charge_skill, remaining)
+	var path_cost: int = _get_path_cost(path)
 	if path.is_empty() or path_cost > remaining:
 		board.set_hovered_move_path([])
 		board.set_hovered_attack_cell(Vector2i(-1, -1))
@@ -2567,32 +2659,7 @@ func _is_forward_cell_for_unit(unit: Dictionary, cell: Vector2i, charge_skill: D
 
 func _get_reachable_cells(unit: Dictionary, max_distance: int, charge_skill: Dictionary = {}) -> Array[Vector2i]:
 	var origin: Vector2i = Vector2i(unit.grid_x, unit.grid_y)
-	var blocked: Dictionary = _get_blocked_cells(unit.id)
-	var costs: Dictionary = {origin: 0}
-	var frontier: Array[Vector2i] = [origin]
-	var reachable: Array[Vector2i] = []
-
-	while not frontier.is_empty():
-		var current: Vector2i = frontier.pop_front()
-		var current_cost: int = costs[current]
-		for neighbor in _get_neighbors(current):
-			if not _is_forward_step(unit, current, neighbor, charge_skill):
-				continue
-			if blocked.has(neighbor):
-				continue
-			var step_cost: int = _get_movement_cost(neighbor)
-			var next_cost: int = current_cost + step_cost
-			if next_cost > max_distance:
-				continue
-			if costs.has(neighbor) and costs[neighbor] <= next_cost:
-				continue
-			costs[neighbor] = next_cost
-			frontier.append(neighbor)
-			if not reachable.has(neighbor):
-				reachable.append(neighbor)
-		reachable.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return costs[a] < costs[b])
-
-	return reachable
+	return _osiagalne_z_mapy_tras(_zbuduj_mape_tras(unit, origin, max_distance, charge_skill), origin)
 
 
 func _get_setup_placeable_cells(unit: Dictionary) -> Array[Vector2i]:
@@ -2733,7 +2800,8 @@ func _find_charge_approach_path(unit: Dictionary, target: Dictionary, skill: Dic
 	var origin := Vector2i(unit.grid_x, unit.grid_y)
 	if destination == origin:
 		return []
-	return _get_executable_move_path(_find_path(unit, origin, destination, skill))
+	var move_budget: int = _get_remaining_move(unit) + _get_charge_stat_bonus(skill, "move_range")
+	return _get_executable_move_path(_find_path(unit, origin, destination, skill, move_budget))
 
 
 func _can_charge_attack_target(unit: Dictionary, target: Dictionary, skill: Dictionary) -> bool:
@@ -2851,7 +2919,7 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 	if max_distance <= 0:
 		return
 
-	var path := _find_path(unit, Vector2i(unit.grid_x, unit.grid_y), cell, skill)
+	var path := _find_path(unit, Vector2i(unit.grid_x, unit.grid_y), cell, skill, max_distance)
 	var path_cost: int = _get_path_cost(path)
 	if path.is_empty():
 		if _is_cell_obstacle(cell):
@@ -4718,47 +4786,122 @@ func _apply_stat_change(unit: Dictionary, change: Dictionary) -> void:
 	unit[stat_name] = next_value
 
 
-func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i, charge_skill: Dictionary = {}) -> Array[Vector2i]:
+func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i, charge_skill: Dictionary = {}, max_distance: int = -1) -> Array[Vector2i]:
 	if start == goal:
 		return []
-
-	var blocked: Dictionary = _get_blocked_cells(unit.id)
-	if blocked.has(goal):
+	if not _pole_na_planszy(start) or not _pole_na_planszy(goal):
 		return []
+	var mapa: Dictionary = _zbuduj_mape_tras(unit, start, max_distance, charge_skill)
+	return _odtworz_trase(mapa, start, goal)
 
-	var came_from: Dictionary = {start: start}
-	var costs: Dictionary = {start: 0}
-	var frontier: Array[Vector2i] = [start]
+
+func _zbuduj_mape_tras(unit: Dictionary, start: Vector2i, max_distance: int, charge_skill: Dictionary = {}) -> Dictionary:
+	if not _pole_na_planszy(start):
+		return {"came_from": {}, "risk_by_state": {}, "priority_by_state": {}, "best_state_by_cell": {}}
+	var limit: int = max_distance if max_distance >= 0 else _maksymalny_koszt_prostej_trasy()
+	var blocked: Dictionary = _get_blocked_cells(int(unit.get("id", -1)))
+	var start_state := Vector3i(start.x, start.y, 0)
+	var frontier: Array[Vector3i] = [start_state]
+	var came_from: Dictionary = {start_state: start_state}
+	var risk_by_state: Dictionary = {start_state: 0}
+	var priority_by_state: Dictionary = {start_state: 0}
+	var best_state_by_cell: Dictionary = {start: start_state}
 
 	while not frontier.is_empty():
-		var current: Vector2i = frontier.pop_front()
-		var current_cost: int = costs[current]
-		if current == goal:
-			break
-
+		frontier.sort_custom(func(a: Vector3i, b: Vector3i) -> bool:
+			var priority_a: int = int(priority_by_state[a])
+			var priority_b: int = int(priority_by_state[b])
+			if priority_a != priority_b:
+				return priority_a < priority_b
+			if a.z != b.z:
+				return a.z < b.z
+			return a.y < b.y if a.y != b.y else a.x < b.x
+		)
+		var current_state: Vector3i = frontier.pop_front()
+		var current := Vector2i(current_state.x, current_state.y)
+		if current != start and _pole_konczy_planowany_ruch(unit, current):
+			continue
 		for neighbor in _get_neighbors(current):
 			if not _is_forward_step(unit, current, neighbor, charge_skill):
 				continue
 			if blocked.has(neighbor):
 				continue
 			var step_cost: int = _get_movement_cost(neighbor)
-			var next_cost: int = current_cost + step_cost
-			if costs.has(neighbor) and costs[neighbor] <= next_cost:
+			var next_cost: int = current_state.z + step_cost
+			if next_cost > limit:
 				continue
-			costs[neighbor] = next_cost
-			came_from[neighbor] = current
-			frontier.append(neighbor)
-		frontier.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return costs[a] < costs[b])
+			var next_risk: int = int(risk_by_state[current_state]) + _get_path_hazard_penalty(unit, [neighbor])
+			var next_state := Vector3i(neighbor.x, neighbor.y, next_cost)
+			if _stan_trasy_zdominowany(neighbor, next_cost, next_risk, risk_by_state):
+				continue
+			var next_priority: int = next_cost + next_risk
+			if priority_by_state.has(next_state) and int(priority_by_state[next_state]) <= next_priority:
+				continue
+			came_from[next_state] = current_state
+			risk_by_state[next_state] = next_risk
+			priority_by_state[next_state] = next_priority
+			frontier.append(next_state)
+			var previous_state: Vector3i = best_state_by_cell.get(neighbor, Vector3i(-1, -1, -1))
+			if previous_state.z < 0 or next_priority < int(priority_by_state[previous_state]) or (next_priority == int(priority_by_state[previous_state]) and next_cost < previous_state.z):
+				best_state_by_cell[neighbor] = next_state
+	return {
+		"came_from": came_from,
+		"risk_by_state": risk_by_state,
+		"priority_by_state": priority_by_state,
+		"best_state_by_cell": best_state_by_cell,
+	}
 
-	if not came_from.has(goal):
+
+func _stan_trasy_zdominowany(cell: Vector2i, movement_cost: int, risk: int, risk_by_state: Dictionary) -> bool:
+	for cheaper_cost in range(movement_cost + 1):
+		var state := Vector3i(cell.x, cell.y, cheaper_cost)
+		if risk_by_state.has(state) and int(risk_by_state[state]) <= risk:
+			return true
+	return false
+
+
+func _odtworz_trase(mapa: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
+	var best_states: Dictionary = mapa.get("best_state_by_cell", {})
+	if not best_states.has(goal):
 		return []
-
 	var path: Array[Vector2i] = []
-	var step: Vector2i = goal
-	while step != start:
-		path.push_front(step)
-		step = came_from[step]
+	var came_from: Dictionary = mapa.get("came_from", {})
+	var state: Vector3i = best_states[goal]
+	while Vector2i(state.x, state.y) != start:
+		path.push_front(Vector2i(state.x, state.y))
+		state = came_from[state]
 	return path
+
+
+func _osiagalne_z_mapy_tras(mapa: Dictionary, start: Vector2i) -> Array[Vector2i]:
+	var best_states: Dictionary = mapa.get("best_state_by_cell", {})
+	var result: Array[Vector2i] = []
+	for raw_cell in best_states.keys():
+		var cell: Vector2i = raw_cell
+		if cell != start:
+			result.append(cell)
+	result.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		var state_a: Vector3i = best_states[a]
+		var state_b: Vector3i = best_states[b]
+		if state_a.z != state_b.z:
+			return state_a.z < state_b.z
+		if a.y != b.y:
+			return a.y < b.y
+		return a.x < b.x
+	)
+	return result
+
+
+func _maksymalny_koszt_prostej_trasy() -> int:
+	var max_step_cost := 1
+	for terrain in terrain_types.values():
+		if not bool(terrain.get("blocks_movement", false)):
+			max_step_cost = max(max_step_cost, int(terrain.get("movement_cost", 1)))
+	return (GRID_COLUMNS * GRID_ROWS - 1) * max_step_cost
+
+
+func _pole_na_planszy(cell: Vector2i) -> bool:
+	return cell.x >= 0 and cell.x < GRID_COLUMNS and cell.y >= 0 and cell.y < GRID_ROWS
 
 
 func _try_push_unit_away(source: Dictionary, target: Dictionary) -> bool:
@@ -4953,7 +5096,7 @@ func _get_movement_cost(cell: Vector2i) -> int:
 	var terrain: Dictionary = _get_terrain_at(cell)
 	if terrain.is_empty():
 		return 1
-	return int(terrain.get("movement_cost", 1))
+	return max(1, int(terrain.get("movement_cost", 1)))
 
 
 func _get_path_cost(path: Array[Vector2i]) -> int:
@@ -4967,9 +5110,17 @@ func _get_executable_move_path(path: Array[Vector2i]) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for cell in path:
 		result.append(cell)
-		if _terrain_skips_turn(cell) or _has_trap_at(cell):
+		if _pole_konczy_ruch(cell):
 			break
 	return result
+
+
+func _pole_konczy_ruch(cell: Vector2i) -> bool:
+	return _terrain_skips_turn(cell) or _terrain_is_deadly(cell) or _has_trap_at(cell)
+
+
+func _pole_konczy_planowany_ruch(unit: Dictionary, cell: Vector2i) -> bool:
+	return _terrain_skips_turn(cell) or _terrain_is_deadly(cell) or _is_known_trap_for_unit(unit, cell)
 
 
 func _has_trap_at(cell: Vector2i) -> bool:
@@ -5023,6 +5174,10 @@ func _has_map_concealment_at(cell: Vector2i) -> bool:
 func _terrain_skips_turn(cell: Vector2i) -> bool:
 	var effect: Dictionary = _get_terrain_entry_effect(cell)
 	return bool(effect.get("skip_turn", false))
+
+
+func _terrain_is_deadly(cell: Vector2i) -> bool:
+	return bool(_get_terrain_entry_effect(cell).get("instant_death", false))
 
 
 func _can_see_target(observer: Dictionary, target: Dictionary) -> bool:
@@ -5551,6 +5706,7 @@ func _disable_hud_mouse(node: Node) -> void:
 func _validate_setup() -> void:
 	assert(GRID_COLUMNS == 15 and GRID_ROWS == 10, "Scenariusz Zamek wymaga planszy 15x10.")
 	assert(_get_castle_stages().size() == 3, "Scenariusz Zamek musi miec trzy etapy.")
+	assert(AI_PROFILES.keys().all(func(key: Variant) -> bool: return ["latwy", "sredni", "trudny"].has(str(key))) and AI_PROFILES.size() == 3, "AI musi miec dokladnie trzy profile trudnosci.")
 	var reload_existing: Dictionary = _prepare_unit({"type_id": "human_knights", "count": 3})
 	reload_existing["current_hp"] = 5
 	var reload_target: Dictionary = _prepare_unit({"type_id": "human_knights", "count": 3})
@@ -5722,6 +5878,7 @@ func _validate_setup() -> void:
 	var previous_terrain_effects: Array[Dictionary] = terrain_effects.duplicate(true)
 	var previous_event_log: Array[String] = event_log.duplicate()
 	var previous_active_turn_has_log: bool = active_turn_has_log
+	var previous_ai_difficulty: String = ai_difficulty
 	obstacles = [
 		{"grid_x": 4, "grid_y": 4, "type": "kamienie"},
 		{"grid_x": 5, "grid_y": 3, "type": "krzok"},
@@ -5805,6 +5962,15 @@ func _validate_setup() -> void:
 	units = [ai_archer, ai_target]
 	obstacles = []
 	terrain_effects = []
+	ai_archer["skill_ids"] = ["strzal_w_kolano"]
+	ai_archer["skill_cooldowns"] = {}
+	ai_difficulty = "latwy"
+	var easy_plans: Array[Dictionary] = _ai_generate_action_plans(ai_archer, [])
+	assert(easy_plans.any(func(plan: Dictionary) -> bool: return str(plan.get("kind", "")) == "skill"), "Latwy AI musi znac umiejetnosci, ale moze je ocenic niedokladnie.")
+	ai_difficulty = "trudny"
+	var hard_plans: Array[Dictionary] = _ai_generate_action_plans(ai_archer, [])
+	assert(hard_plans.any(func(plan: Dictionary) -> bool: return str(plan.get("kind", "")) == "skill"), "Trudny AI musi oceniac umiejetnosci jednostki.")
+	ai_archer["skill_ids"] = []
 	assert(_find_best_enemy_path(ai_archer, ai_target).is_empty(), "Dystansowy wróg nie powinien podchodzic, gdy ma czysty strzal.")
 	var ai_origin := Vector2i(int(ai_archer.grid_x), int(ai_archer.grid_y))
 	var ai_plan: Dictionary = _ai_choose_plan(ai_archer)
@@ -5835,6 +6001,11 @@ func _validate_setup() -> void:
 	ai_target["is_hidden"] = false
 	assert(_get_path_hazard_penalty(ai_archer, [Vector2i(6, 5)]) == 0, "Pusta sciezka AI nie powinna miec kary.")
 	terrain_effects = [{"id": "fire", "grid_x": 6, "grid_y": 5, "remaining_turns": 1, "caster_side": "player"}]
+	ai_difficulty = "latwy"
+	assert(_ai_hazard_penalty(ai_archer, [Vector2i(6, 5)]) == 120, "Latwy AI powinien czasem podejmowac ryzyko terenu, ale nie moze go ignorowac.")
+	ai_difficulty = "sredni"
+	assert(_ai_hazard_penalty(ai_archer, [Vector2i(6, 5)]) == 180, "Sredni AI musi moc podjac kontrolowane ryzyko terenu.")
+	ai_difficulty = "trudny"
 	assert(_get_path_hazard_penalty(ai_archer, [Vector2i(6, 5)]) >= 200, "AI musi traktowac wrogie efekty terenu jako zagrozenie.")
 	terrain_effects = [{"id": "bear_trap", "grid_x": 3, "grid_y": 4, "remaining_turns": 99, "caster_side": "enemy"}]
 	assert(_has_trap_near_cell_for_side(Vector2i(3, 5), "enemy"), "AI nie powinno dublowac pulapek przy tym samym celu.")
@@ -5915,7 +6086,8 @@ func _validate_setup() -> void:
 	bush_unit.grid_x = water_start.x
 	bush_unit.grid_y = water_start.y
 	var water_path: Array[Vector2i] = _find_path(bush_unit, water_start, second_water)
-	assert(water_path.size() == 2 and water_path[0] == first_water and water_path[1] == second_water, "Pathfinding moze prowadzic przez kolejne pola wody.")
+	assert(water_path.is_empty(), "Pathfinding nie moze prowadzic za pole wody konczace ruch.")
+	water_path = _find_path(bush_unit, water_start, first_water)
 	var executable_water_path: Array[Vector2i] = _get_executable_move_path(water_path)
 	assert(executable_water_path.size() == 1 and executable_water_path[0] == first_water, "Ruch musi zatrzymac sie na pierwszym polu wody.")
 	bush_unit.grid_x = first_water.x
@@ -6080,6 +6252,7 @@ func _validate_setup() -> void:
 	obstacles = previous_obstacles
 	event_log = previous_event_log
 	active_turn_has_log = previous_active_turn_has_log
+	ai_difficulty = previous_ai_difficulty
 	event_log_label.text = "\n".join(event_log)
 
 

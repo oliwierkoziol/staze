@@ -179,13 +179,13 @@ theme_override_font_sizes/font_size = 24
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="DamageTooltip" type="PanelContainer" parent="HUD/Overlay"]
+[node name="DamageTooltip" type="PanelContainer" parent="HUD/Overlay" unique_id=842970808]
 visible = false
 z_index = 100
 layout_mode = 0
 mouse_filter = 2
 
-[node name="Label" type="Label" parent="HUD/Overlay/DamageTooltip"]
+[node name="Label" type="Label" parent="HUD/Overlay/DamageTooltip" unique_id=176987005]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
 theme_override_font_sizes/font_size = 20
