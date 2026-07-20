@@ -13,7 +13,7 @@
 		"atk": 7,
 		"dmg_min": 4,
 		"dmg_max": 5,
-		"def": 10,
+		"def": 8,
 		"speed": 4,
 		"action_points": 1,
 		"count": 5,
