@@ -1,0 +1,3 @@
+Poprawiliśmy działanie sztucznej inteligencji i wyszukiwania ścieżek oraz zwiększyliśmy siłę goblinów.
+Naprawiliśmy działanie wody, wprowadziliśmy drobne poprawki interfejsu i uporządkowaliśmy kod umiejętności, zdarzeń mapy, animacji.
+Dodaliśmy również testy najważniejszych mechanik, dzięki czemu dalsze rozwijanie projektu będzie łatwiejsze i bezpieczniejsze.

@@ -1,0 +1,3 @@
+Dodaliśmy ikony umiejętności generałów, podgląd obrażeń oraz komunikaty dla ruchu, ataków i umiejętności.
+Poprawiliśmy sztuczną inteligencję, balans rozgrywki, opisy statusów oraz działanie samouczka.
+Na koniec dopracowaliśmy najważniejsze elementy projektu i przygotowaliśmy jego aktualny eksport.

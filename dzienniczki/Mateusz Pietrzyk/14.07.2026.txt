@@ -1,0 +1,3 @@
+Przenieśliśmy konfigurację scenariuszy do plików JSON i dodaliśmy wieloetapową walkę o zamek.
+Rozbudowaliśmy umiejętności elfów i orków oraz poprawiliśmy obrażenia, efekty statusów i generowanie przeszkód.
+Pozwoliło nam to uporządkować dane i usprawnić dalszy rozwój scenariuszy.

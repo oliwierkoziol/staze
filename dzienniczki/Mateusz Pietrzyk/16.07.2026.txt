@@ -1,0 +1,3 @@
+Dodaliśmy pełny zestaw ikon umiejętności oraz poprawiliśmy ich działanie i wygląd.
+Rozbudowaliśmy analizę balansu, zmieniliśmy statystyki frakcji i dodaliśmy nowe elementy terenu.
+Dzięki tym zmianom interfejs stał się czytelniejszy, a rozgrywka bardziej wyrównana.

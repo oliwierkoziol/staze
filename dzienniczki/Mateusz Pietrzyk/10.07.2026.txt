@@ -1,0 +1,3 @@
+Dodaliśmy system zapisywania ustawień bitwy, nowe scenariusze oraz portrety generałów. 
+Przebudowaliśmy samouczek, poprawiliśmy wygląd planszy i wprowadziliśmy nowe umiejętności jednostek. 
+Dzięki temu rozpoczęcie rozgrywki stało się prostsze i bardziej przejrzyste.

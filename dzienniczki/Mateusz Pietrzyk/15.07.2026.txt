@@ -1,0 +1,3 @@
+Poprawiliśmy działanie sztucznej inteligencji oraz umiejętności Szarża.
+Dodaliśmy narzędzia do analizy balansu, zbalansowaliśmy frakcje i uzupełniliśmy zestawy umiejętności.
+Skupiliśmy się również na usuwaniu błędów wpływających na przebieg walki.

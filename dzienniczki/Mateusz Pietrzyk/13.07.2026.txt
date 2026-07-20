@@ -1,0 +1,3 @@
+Dodaliśmy nowe wydarzenia podczas bitwy oraz tereny pustynne, zimowe i leśne.
+Rozbudowaliśmy umiejętności jednostek, a także poprawiliśmy działanie buffów i debuffów.
+Zmiany te zwiększyły różnorodność map i dostępnych możliwości taktycznych.
