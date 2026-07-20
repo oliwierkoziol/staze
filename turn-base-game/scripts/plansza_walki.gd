@@ -53,13 +53,9 @@ var CART_TEXTURE: Texture2D = load("res://assets/cart.png")
 var DETONATOR_TEXTURE: Texture2D = load("res://assets/detonator.png")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const GEORGIA_FONT: Font = preload("res://theme/georgia.ttf")
-const PROJECTILE_PATH_ARROWS := "res://assets/arrows_projectile.png"
-const PROJECTILE_PATH_SPELL := "res://assets/spell_projectile.png"
-const PROJECTILE_PATH_FIREBALL := "res://assets/spell_fireball.png"
-const PROJECTILE_PATH_DYNAMITE := "res://assets/dynamite.png"
-const PROJECTILE_PATH_THROWING_AXE := "res://assets/throwing_axe.png"
 const SHIELD_TEXTURE: Texture2D = preload("res://assets/ui/energy_shield.png")
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
+const ZasobyAnimacjiWalkiScript = preload("res://scripts/zasoby_animacji_walki.gd")
 var TRAP_TEXTURE: Texture2D = load("res://assets/trap-removebg-preview.png")
 var MAGIC_PROJECTION_TEXTURE: Texture2D = load("res://assets/magic_projection.png")
 
@@ -83,7 +79,6 @@ var active_tweens: Dictionary = {}
 var unit_attack_offsets: Dictionary = {}
 var unit_shield_flash_alpha: Dictionary = {}
 var unit_damage_tint_alpha: Dictionary = {}
-var projectile_textures: Dictionary = {}
 var active_projectiles: Array[Dictionary] = []
 var active_falling_arrows: Array[Dictionary] = []
 var arrow_rain_overlay_cells: Array[Vector2i] = []
@@ -392,7 +387,7 @@ func animate_unit_knockback_path(unit_id: int, path: Array) -> void:
 
 
 func play_arrow_rain_animation(caster_id: int, cells: Array) -> void:
-	var texture: Texture2D = _get_projectile_texture("arrows")
+	var texture: Texture2D = ZasobyAnimacjiWalkiScript.pobierz_pocisk("arrows")
 	if texture == null or cells.is_empty():
 		return
 
@@ -442,7 +437,7 @@ func play_ice_ground_animation(caster_id: int, cells: Array) -> void:
 
 
 func play_fireball_animation(caster_id: int, center: Vector2i, cells: Array) -> void:
-	var texture: Texture2D = _get_projectile_texture("fireball")
+	var texture: Texture2D = ZasobyAnimacjiWalkiScript.pobierz_pocisk("fireball")
 	if texture == null:
 		return
 
@@ -624,19 +619,7 @@ func _set_unit_damage_tint_alpha(alpha: float, unit_id: int) -> void:
 
 
 func _spawn_projectile(start_position: Vector2, target_position: Vector2, projectile_kind: String) -> void:
-	var texture: Texture2D = _get_projectile_texture(projectile_kind)
-	if texture == null:
-		return
-	var travel_direction: Vector2 = target_position - start_position
-	var projectile: Dictionary = {
-		"position": start_position,
-		"texture": texture,
-		"rotation": travel_direction.angle()
-	}
-	active_projectiles.append(projectile)
-	var tween: Tween = create_tween()
-	tween.tween_method(_set_projectile_position.bind(projectile), start_position, target_position, 0.14)
-	tween.finished.connect(_on_projectile_tween_finished.bind(projectile))
+	ZasobyAnimacjiWalkiScript.uruchom_pocisk(self, start_position, target_position, projectile_kind)
 
 
 func _set_projectile_position(position: Vector2, projectile: Dictionary) -> void:
@@ -677,30 +660,6 @@ func _set_fireball_overlay_alpha(alpha: float) -> void:
 func _set_ice_ground_overlay_alpha(alpha: float) -> void:
 	ice_ground_overlay_alpha = alpha
 	queue_redraw()
-
-
-func _get_projectile_texture(projectile_kind: String) -> Texture2D:
-	if projectile_textures.has(projectile_kind):
-		return projectile_textures[projectile_kind]
-	var path: String = ""
-	match projectile_kind:
-		"spell":
-			path = PROJECTILE_PATH_SPELL
-		"fireball":
-			path = PROJECTILE_PATH_FIREBALL
-		"arrows":
-			path = PROJECTILE_PATH_ARROWS
-		"dynamite":
-			path = PROJECTILE_PATH_DYNAMITE
-		"throwing_axe":
-			path = PROJECTILE_PATH_THROWING_AXE
-		_:
-			return null
-	var resource: Resource = load(path)
-	var texture: Texture2D = resource as Texture2D
-	if texture != null:
-		projectile_textures[projectile_kind] = texture
-	return texture
 
 
 func _unhandled_input(event: InputEvent) -> void:

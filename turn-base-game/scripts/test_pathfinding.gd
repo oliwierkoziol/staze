@@ -32,7 +32,8 @@ func _uruchom() -> void:
 	await process_frame
 	gra._load_skill_library()
 	gra._load_general_skills()
-	gra._validate_setup()
+	gra._validate_static_setup()
+	gra._validate_runtime_setup()
 	print("PASS: Walidacja konfiguracji bitwy")
 	_test_geometrii()
 	_test_podstawowych_tras()

@@ -51,6 +51,8 @@ const ObstacleGeneratorScript = preload("res://scripts/obstacle_generator.gd")
 const UnitDetailsPopupScript = preload("res://scripts/unit_details_popup.gd")
 const BibliotekaZdarzenMapyScript = preload("res://scripts/biblioteka_zdarzen_mapy.gd")
 const PlanerAIScript = preload("res://scripts/planer_ai.gd")
+const MechanikaUmiejetnosciScript = preload("res://scripts/mechanika_umiejetnosci.gd")
+const TrescPomocyScript = preload("res://scripts/tresc_pomocy.gd")
 
 var OBSTACLE_PORTRAITS: Dictionary = {
 	"woda": preload("res://assets/mapTiles/water.png"),
@@ -791,7 +793,6 @@ func _on_reload_json_pressed() -> void:
 		return
 	UnitTypeLibraryScript.reload()
 	var scenario_reloaded: bool = _reload_selected_factions()
-	_validate_setup()
 	if setup_mode or scenario_reloaded:
 		_enter_setup_mode()
 		return
@@ -1086,7 +1087,7 @@ func _build_skill_cards(unit_data: Dictionary) -> Array:
 			"description": str(skill.get("description", "")),
 			"cooldown": int(skill.get("cooldown", 0)),
 			"remaining_cooldown": int(cooldowns.get(skill_id, 0)),
-			"can_use": can_act and _can_use_skill(unit_data, skill_id),
+			"can_use": can_act and MechanikaUmiejetnosciScript.czy_mozna_uzyc(unit_data, skill_id, skill_library),
 			"selected": pending_skill_id == skill_id,
 			"tooltip": _build_skill_tooltip(unit_data, index),
 			"icon": UnitTypeLibraryScript.get_skill_icon_path(skill_id, index),
@@ -1385,41 +1386,7 @@ func _enemy_take_turn() -> void:
 
 
 func _ai_choose_plan(unit: Dictionary) -> Dictionary:
-	var origin := Vector2i(int(unit.grid_x), int(unit.grid_y))
-	var destinations: Array[Dictionary] = [{"cell": origin, "path": []}]
-	if not _is_immobilized(unit):
-		var mapa_tras: Dictionary = _zbuduj_mape_tras(unit, origin, _get_remaining_move(unit))
-		for cell in _osiagalne_z_mapy_tras(mapa_tras, origin):
-			var path: Array[Vector2i] = _odtworz_trase(mapa_tras, origin, cell)
-			if path.is_empty():
-				continue
-			destinations.append({"cell": path[path.size() - 1], "path": path})
-
-	var best_plan: Dictionary = {"kind": "pass", "score": -1000000, "path": []}
-	for destination_data in destinations:
-		var destination: Vector2i = destination_data.cell
-		var path: Array[Vector2i] = []
-		for step in destination_data.get("path", []):
-			path.append(step)
-		unit.grid_x = destination.x
-		unit.grid_y = destination.y
-		var plans: Array[Dictionary] = _ai_generate_action_plans(unit, path)
-		var approach_score: int = _ai_score_approach(unit, destination)
-		for plan in plans:
-			plan["score"] = int(plan.get("score", 0)) + approach_score
-		plans.append({
-			"kind": "move" if not path.is_empty() else "pass",
-			"path": path,
-			"score": _ai_score_position(unit, destination) + approach_score,
-		})
-		for plan in plans:
-			plan["score"] = int(plan.get("score", 0)) - _ai_hazard_penalty(unit, path)
-			plan["score"] = PlanerAIScript.zastosuj_szum(unit, plan, round_number, ai_difficulty)
-			if PlanerAIScript.czy_lepszy_plan(plan, best_plan):
-				best_plan = plan
-	unit.grid_x = origin.x
-	unit.grid_y = origin.y
-	return best_plan
+	return PlanerAIScript.wybierz_plan(self, unit)
 
 
 func _ai_generate_action_plans(unit: Dictionary, path: Array[Vector2i]) -> Array[Dictionary]:
@@ -1439,7 +1406,7 @@ func _ai_generate_action_plans(unit: Dictionary, path: Array[Vector2i]) -> Array
 				})
 	for raw_skill_id in unit.get("skill_ids", []):
 		var skill_id: String = str(raw_skill_id)
-		if not _can_use_skill(unit, skill_id):
+		if not MechanikaUmiejetnosciScript.czy_mozna_uzyc(unit, skill_id, skill_library):
 			continue
 		var skill: Dictionary = skill_library.get(skill_id, {})
 		var target_type: String = str(skill.get("target_type", ""))
@@ -1529,7 +1496,7 @@ func _ai_score_skill(caster: Dictionary, target: Dictionary, target_cell: Vector
 		"summon_statue":
 			return _ai_score_statue(caster, target_cell) - cooldown_cost
 		"sztandar":
-			return _get_total_skill_cooldown(target) * 45 - cooldown_cost
+			return MechanikaUmiejetnosciScript.pobierz_sume_cooldownow(target) * 45 - cooldown_cost
 		"iron_curtain":
 			if _has_effect(target, "zelazna_kurtyna"):
 				return 0
@@ -1806,7 +1773,7 @@ func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
 		_perform_basic_attack(unit, target, false)
 	elif kind == "charge" and not target.is_empty():
 		var charge_skill: Dictionary = skill_library.get(str(plan.get("skill_id", "")), {})
-		if _can_use_skill(unit, str(plan.get("skill_id", ""))) and _can_charge_attack_target(unit, target, charge_skill):
+		if MechanikaUmiejetnosciScript.czy_mozna_uzyc(unit, str(plan.get("skill_id", "")), skill_library) and _can_charge_attack_target(unit, target, charge_skill):
 			await _perform_charge_attack(unit, target, charge_skill, false, true)
 	elif kind == "skill":
 		var skill_id: String = str(plan.get("skill_id", ""))
@@ -1820,7 +1787,7 @@ func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
 			legal = _can_target_ally_with_skill(unit, target, skill)
 		elif target_type == "cell":
 			legal = _can_target_cell_with_skill(unit, target_cell, skill)
-		if legal and _can_use_skill(unit, skill_id):
+		if legal and MechanikaUmiejetnosciScript.czy_mozna_uzyc(unit, skill_id, skill_library):
 			await _execute_skill(unit, target, skill, target_cell)
 	if active_unit_id != int(unit.id):
 		return
@@ -2044,7 +2011,7 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 				if ((target_type == "ally" and candidate.side == "player") or (target_type == "enemy" and candidate.side == "enemy")) and (not active_only or candidate.id == active_unit_id):
 					attack_cells.append(Vector2i(candidate.grid_x, candidate.grid_y))
 	elif not charge_skill.is_empty():
-		move_budget += _get_charge_stat_bonus(charge_skill, "move_range")
+		move_budget += MechanikaUmiejetnosciScript.pobierz_bonus_szarzy(charge_skill, "move_range")
 		move_cells = _get_reachable_cells(unit, move_budget, charge_skill)
 		if _can_unit_attack(unit):
 			attack_cells = _get_attackable_cells(unit, charge_skill)
@@ -2186,7 +2153,7 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 
 	var remaining: int = _get_remaining_move(active_unit)
 	if not charge_skill.is_empty():
-		remaining += _get_charge_stat_bonus(charge_skill, "move_range")
+		remaining += MechanikaUmiejetnosciScript.pobierz_bonus_szarzy(charge_skill, "move_range")
 	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell, charge_skill, remaining)
 	var path_cost: int = _get_path_cost(path)
 	if path.is_empty() or path_cost > remaining:
@@ -2258,17 +2225,11 @@ func _update_area_damage_tooltip(attacker: Dictionary, skill: Dictionary, center
 		var target: Dictionary = _find_unit_at_cell(hit_cell)
 		if target.is_empty() or target.side == attacker.side:
 			continue
-		var multiplier: float = _get_area_damage_multiplier(str(skill.get("effect_type", "")), hit_cell == center)
+		var multiplier: float = MechanikaUmiejetnosciScript.pobierz_mnoznik_obszaru(str(skill.get("effect_type", "")), hit_cell == center)
 		lines.append("%s: %s" % [str(target.get("name", "Przeciwnik")), _format_damage_range(_calculate_attack_preview_damage(attacker, target, multiplier))])
 	if not lines.is_empty():
 		damage_tooltip_label.text = "Obrażenia obszarowe:\n%s" % "\n".join(lines)
 		damage_tooltip.visible = true
-
-
-func _get_area_damage_multiplier(effect_type: String, is_center: bool) -> float:
-	if effect_type == "arrow_rain":
-		return 0.5 if is_center else 0.35
-	return 1.0 if is_center else 0.5
 
 
 func _can_show_damage_tooltip_in_range(attacker: Dictionary, target: Dictionary, cell: Vector2i) -> bool:
@@ -2507,20 +2468,6 @@ func _get_active_charge_skill(unit: Dictionary) -> Dictionary:
 	return skill
 
 
-func _get_charge_stat_bonus(skill: Dictionary, stat_name: String) -> int:
-	for change in skill.get("effect", {}).get("stat_changes", []):
-		if str(change.get("stat", "")) == stat_name and str(change.get("mode", "")) == "flat":
-			return int(change.get("value", 0))
-	return 0
-
-
-func _get_charge_damage_multiplier(skill: Dictionary) -> float:
-	for change in skill.get("effect", {}).get("stat_changes", []):
-		if str(change.get("stat", "")) == "dmg" and str(change.get("mode", "")) == "percent":
-			return 1.0 + float(change.get("value", 0)) / 100.0
-	return 1.0
-
-
 func _requires_forward_only(unit: Dictionary, charge_skill: Dictionary = {}) -> bool:
 	if not charge_skill.is_empty():
 		return true
@@ -2656,7 +2603,7 @@ func _get_skill_target_cells(unit: Dictionary, skill_id: String) -> Array[Vector
 func _is_in_attack_range(unit: Dictionary, cell: Vector2i, charge_skill: Dictionary = {}) -> bool:
 	if not _is_forward_cell_for_unit(unit, cell, charge_skill):
 		return false
-	var attack_range: int = int(unit.get("attack_range", 1)) + _get_charge_stat_bonus(charge_skill, "attack_range")
+	var attack_range: int = int(unit.get("attack_range", 1)) + MechanikaUmiejetnosciScript.pobierz_bonus_szarzy(charge_skill, "attack_range")
 	if _hex_distance(Vector2i(int(unit.get("grid_x", 0)), int(unit.get("grid_y", 0))), cell) > attack_range:
 		return false
 	return not _is_attack_blocked(unit, cell)
@@ -2676,7 +2623,7 @@ func _is_attack_blocked_from(from_cell: Vector2i, target_cell: Vector2i) -> bool
 func _can_attack_from_cell_for_charge(unit: Dictionary, from_cell: Vector2i, target_cell: Vector2i, skill: Dictionary) -> bool:
 	if not _is_forward_cell_from(from_cell, target_cell, unit):
 		return false
-	var attack_range: int = int(unit.get("attack_range", 1)) + _get_charge_stat_bonus(skill, "attack_range")
+	var attack_range: int = int(unit.get("attack_range", 1)) + MechanikaUmiejetnosciScript.pobierz_bonus_szarzy(skill, "attack_range")
 	if _hex_distance(from_cell, target_cell) > attack_range:
 		return false
 	return not _is_attack_blocked_from(from_cell, target_cell)
@@ -2685,7 +2632,7 @@ func _can_attack_from_cell_for_charge(unit: Dictionary, from_cell: Vector2i, tar
 func _find_charge_approach_destination(unit: Dictionary, target: Dictionary, skill: Dictionary) -> Vector2i:
 	var origin := Vector2i(unit.grid_x, unit.grid_y)
 	var target_cell := Vector2i(target.grid_x, target.grid_y)
-	var move_budget: int = _get_remaining_move(unit) + _get_charge_stat_bonus(skill, "move_range")
+	var move_budget: int = _get_remaining_move(unit) + MechanikaUmiejetnosciScript.pobierz_bonus_szarzy(skill, "move_range")
 	var best_cell := Vector2i(-1, -1)
 	var best_score: int = 1000000
 	var candidates: Array[Vector2i] = [origin]
@@ -2710,7 +2657,7 @@ func _find_charge_approach_path(unit: Dictionary, target: Dictionary, skill: Dic
 	var origin := Vector2i(unit.grid_x, unit.grid_y)
 	if destination == origin:
 		return []
-	var move_budget: int = _get_remaining_move(unit) + _get_charge_stat_bonus(skill, "move_range")
+	var move_budget: int = _get_remaining_move(unit) + MechanikaUmiejetnosciScript.pobierz_bonus_szarzy(skill, "move_range")
 	return _get_executable_move_path(_find_path(unit, origin, destination, skill, move_budget))
 
 
@@ -2793,7 +2740,7 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 
 	_commit_charge_skill(attacker, skill)
 	_reveal_if_in_bush(attacker)
-	var total_damage: int = _calculate_damage(attacker, target, _get_charge_damage_multiplier(skill))
+	var total_damage: int = _calculate_damage(attacker, target, MechanikaUmiejetnosciScript.pobierz_mnoznik_szarzy(skill))
 	var result: Dictionary = _apply_attack_damage(attacker, target, total_damage)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties: int = int(result.get("casualties", 0))
@@ -2825,7 +2772,7 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 		await _perform_charge_attack(unit, clicked_unit, skill, false)
 		return
 
-	var max_distance: int = _get_remaining_move(unit) + _get_charge_stat_bonus(skill, "move_range")
+	var max_distance: int = _get_remaining_move(unit) + MechanikaUmiejetnosciScript.pobierz_bonus_szarzy(skill, "move_range")
 	if max_distance <= 0:
 		return
 
@@ -2964,10 +2911,6 @@ func _consume_energy_barrier(unit: Dictionary) -> bool:
 	return false
 
 
-func _calculate_tick_damage(unit: Dictionary, effect_damage: int) -> int:
-	return max(1, effect_damage * int(unit.get("count", 1)))
-
-
 func _cleanup_destroyed_unit(target: Dictionary) -> void:
 	if int(target.get("count", 0)) > 0:
 		return
@@ -2988,7 +2931,7 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> bool:
 	var skill: Dictionary = skill_library.get(skill_id, {})
 	if skill.is_empty():
 		return false
-	if not _can_use_skill(unit, skill_id):
+	if not MechanikaUmiejetnosciScript.czy_mozna_uzyc(unit, skill_id, skill_library):
 		return false
 
 	if str(skill.get("target_type", "")) == "self":
@@ -3034,76 +2977,7 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> bool:
 
 
 func _execute_skill(caster: Dictionary, target: Dictionary, skill: Dictionary, target_cell: Vector2i) -> void:
-	caster.action_points = max(0, int(caster.action_points) - int(skill.get("ap_cost", 0)))
-	caster.skill_cooldowns[skill.get("id", "")] = int(skill.get("cooldown", 0))
-	pending_skill_id = ""
-	damage_tooltip.visible = false
-	if str(skill.get("target_type", "")) != "self":
-		_reveal_if_in_bush(caster)
-
-	match String(skill.get("effect_type", "")):
-		"taunt_burst":
-			_execute_taunt_burst(caster)
-		"sztandar":
-			_execute_sztandar(caster, target)
-		"dancing_blade":
-			_execute_dancing_blade(caster)
-		"knee_shot":
-			_execute_knee_shot(caster, target)
-		"poison_dagger":
-			_execute_poison_dagger(caster, target)
-		"eagle_eye":
-			_execute_eagle_eye(caster)
-		"pnacza":
-			_execute_pnacza(caster, target)
-		"curse_throw":
-			_execute_curse_throw(caster, target)
-		"shield_push":
-			await _execute_shield_push(caster, target)
-		"hammer_strike":
-			_execute_hammer_strike(caster, target)
-		"hook_throw":
-			await _execute_hook_throw(caster, target)
-		"fireball":
-			await _execute_fireball(caster, target_cell)
-		"dynamite_throw":
-			_execute_dynamite_throw(caster, target_cell)
-		"arrow_rain":
-			await _execute_arrow_rain(caster, target_cell)
-		"ice_ground":
-			await _execute_ice_ground(caster, target_cell)
-		"poison_cloud":
-			_execute_poison_cloud(caster, target_cell)
-		"bear_trap":
-			_execute_bear_trap(caster, target_cell)
-		"summon_statue":
-			_execute_summon_statue(caster, target_cell)
-		"goblin_trap":
-			_execute_goblin_trap(caster, target_cell)
-		"energy_barrier":
-			_execute_energy_barrier(caster)
-		"iron_curtain":
-			_execute_iron_curtain(caster, target)
-		"self_buff":
-			_execute_self_buff(caster, skill)
-		"zadza_krwi":
-			_execute_zadza_krwi(caster, skill)
-		"utwardzenie":
-			_execute_utwardzenie(caster, skill)
-		"focused_strike":
-			_execute_focused_strike(caster, target, skill)
-		"shattering_strike":
-			_execute_shattering_strike(caster, target, skill)
-		"piercing_shot":
-			_execute_piercing_shot(caster, target, skill)
-		"zaklete_ciecie":
-			_execute_zaklete_ciecie(caster, target)
-		"rozszarpanie":
-			_execute_rozszarpanie(caster, target)
-		"magic_projection":
-			_execute_magic_projection(caster, target_cell)
-
-	_sync_board()
+	await MechanikaUmiejetnosciScript.wykonaj(self, caster, target, skill, target_cell)
 
 
 func _execute_sztandar(caster: Dictionary, target: Dictionary) -> void:
@@ -3133,13 +3007,6 @@ func _execute_sztandar(caster: Dictionary, target: Dictionary) -> void:
 			", ".join(refreshed_names)
 		]
 	)
-
-
-func _get_total_skill_cooldown(unit: Dictionary) -> int:
-	var total: int = 0
-	for skill_id in unit.get("skill_ids", []):
-		total += int(unit.get("skill_cooldowns", {}).get(str(skill_id), 0))
-	return total
 
 
 func _execute_taunt_burst(caster: Dictionary) -> void:
@@ -3401,7 +3268,7 @@ func _execute_fireball(caster: Dictionary, center: Vector2i) -> void:
 		var target := _find_unit_at_cell(cell)
 		if target.is_empty() or target.side == caster.side:
 			continue
-		var multiplier: float = _get_area_damage_multiplier("fireball", cell == center)
+		var multiplier: float = MechanikaUmiejetnosciScript.pobierz_mnoznik_obszaru("fireball", cell == center)
 		var total_damage := _calculate_damage(caster, target, multiplier)
 		var result := _apply_attack_damage(caster, target, total_damage, false)
 		var hit_target: Dictionary = result.get("target", target)
@@ -3425,7 +3292,7 @@ func _execute_dynamite_throw(caster: Dictionary, center: Vector2i) -> void:
 		var target := _find_unit_at_cell(cell)
 		if target.is_empty() or target.side == caster.side:
 			continue
-		var multiplier: float = _get_area_damage_multiplier("dynamite_throw", cell == center)
+		var multiplier: float = MechanikaUmiejetnosciScript.pobierz_mnoznik_obszaru("dynamite_throw", cell == center)
 		var total_damage := _calculate_damage(caster, target, multiplier)
 		var result := _apply_attack_damage(caster, target, total_damage)
 		var hit_target: Dictionary = result.get("target", target)
@@ -3444,7 +3311,7 @@ func _execute_arrow_rain(caster: Dictionary, center: Vector2i) -> void:
 		var target := _find_unit_at_cell(cell)
 		if target.is_empty() or target.side == caster.side:
 			continue
-		var multiplier: float = _get_area_damage_multiplier("arrow_rain", cell == center)
+		var multiplier: float = MechanikaUmiejetnosciScript.pobierz_mnoznik_obszaru("arrow_rain", cell == center)
 		var total_damage := _calculate_damage(caster, target, multiplier)
 		var result := _apply_attack_damage(caster, target, total_damage, false)
 		var hit_target: Dictionary = result.get("target", target)
@@ -3610,7 +3477,7 @@ func _execute_summon_statue(caster: Dictionary, cell: Vector2i) -> void:
 
 
 func _trigger_goblin_trap(unit: Dictionary, trap: Dictionary) -> void:
-	var damage: int = _calculate_tick_damage(unit, int(trap.get("tick_damage", 1)))
+	var damage: int = MechanikaUmiejetnosciScript.oblicz_obrazenia_okresowe(unit, int(trap.get("tick_damage", 1)))
 	var casualties := _apply_damage_to_unit(unit, damage)
 	_apply_or_refresh_effect(unit, {
 		"id": "immobilize",
@@ -3930,7 +3797,7 @@ func _apply_terrain_effects_to_unit(unit: Dictionary, apply_entry_effect := true
 
 
 func _trigger_bear_trap(unit: Dictionary, trap: Dictionary) -> void:
-	var damage: int = _calculate_tick_damage(unit, int(trap.get("tick_damage", 1)))
+	var damage: int = MechanikaUmiejetnosciScript.oblicz_obrazenia_okresowe(unit, int(trap.get("tick_damage", 1)))
 	var casualties := _apply_damage_to_unit(unit, damage)
 	_apply_or_refresh_effect(unit, {
 		"id": "immobilize",
@@ -4203,59 +4070,7 @@ func _advance_temporary_obstacles() -> void:
 
 
 func _try_trigger_map_event() -> void:
-	if next_map_event_round == 0 or round_number < next_map_event_round:
-		return
-	if next_map_event_id == "brak_eventu":
-		_log_event(_color_log_text("Runda mija bez wydarzenia na mapie.", LOG_COLOR_YELLOW), false)
-		_schedule_next_map_event(round_number)
-		_sync_board()
-		return
-	match next_map_event_id:
-		"gniew_korzeni":
-			_event_forest_roots()
-		"przebudzenie_gaju":
-			_event_forest_awakening()
-		"lesne_opary":
-			_event_global_range("Lesne Opary")
-		"magiczny_rozkwit":
-			_event_magic_bloom()
-		"spadajacy_rumosz":
-			_event_falling_rubble()
-		"wybuch_gazu":
-			_event_random_terrain("poison_cloud", 3, 2)
-		"pekniecie_chodnika":
-			_event_random_obstacles("woda", "water", 3, "Pekniecie Chodnika zalewa trzy pola.")
-		"zawal_kopalni":
-			_event_random_obstacles("kamienie", "rock1", 2, "Zawal Kopalni blokuje dwa pola.")
-		"rozprzestrzeniajacy_sie_pozar":
-			_event_spreading_fire()
-		"gesty_dym":
-			_event_board_concealment("mgla")
-		"przerwanie_grobli":
-			_event_random_obstacles("woda", "water", 3, "Przerwanie Grobli zalewa trzy pola.")
-		"plonace_zabudowania":
-			_event_damage_on_marked_cells("Plonace Zabudowania")
-		"wichura_lodowa":
-			_event_global_move_penalty("wichura_lodowa", "Wichura Lodowa")
-		"sniezna_zamiec":
-			_event_global_range("Sniezna Zamiec")
-		"oblodzenie":
-			_event_random_terrain("ice", 3, 2)
-		"lawina":
-			_event_damage_on_marked_cells("Lawina")
-		"burza_piaskowa":
-			_event_board_concealment("burza_piaskowa")
-		"zapadlisko":
-			_event_random_obstacles("ruchome_piaski", "quicksand", 3, "Zapadlisko tworzy trzy pola ruchomych piaskow.")
-		"palacy_skwar":
-			_event_damage_on_marked_cells("Palacy Skwar")
-		"pustynny_podmuch":
-			_event_global_move_penalty("pustynny_podmuch", "Pustynny Podmuch")
-		_:
-			return
-	map_event_cells.clear()
-	_schedule_next_map_event(round_number)
-	_sync_board()
+	BibliotekaZdarzenMapyScript.wykonaj(self)
 
 
 func _schedule_next_map_event(after_round: int) -> void:
@@ -4387,7 +4202,7 @@ func _event_random_obstacles(type_id: String, variant: String, count: int, messa
 		if type_id == "kamienie":
 			var target: Dictionary = _find_unit_at_cell(cell)
 			if not target.is_empty():
-				var damage: int = _calculate_tick_damage(target, 1)
+				var damage: int = MechanikaUmiejetnosciScript.oblicz_obrazenia_okresowe(target, 1)
 				_apply_damage_to_unit(target, damage)
 				_cleanup_destroyed_unit(target)
 				if not _find_unit_at_cell(cell).is_empty():
@@ -4409,7 +4224,7 @@ func _damage_units_on_event_cells(event_name: String) -> void:
 	for target in units.duplicate():
 		if not map_event_cells.has(Vector2i(int(target.grid_x), int(target.grid_y))):
 			continue
-		var damage: int = _calculate_tick_damage(target, 1)
+		var damage: int = MechanikaUmiejetnosciScript.oblicz_obrazenia_okresowe(target, 1)
 		_apply_damage_to_unit(target, damage)
 		_log_event("%s otrzymuje %s obrażeń wskutek wydarzenia %s." % [_unit_name_log_text(target), _color_log_text(str(damage), LOG_COLOR_DAMAGE), event_name])
 		_cleanup_destroyed_unit(target)
@@ -4440,19 +4255,6 @@ func _prepare_map_event_warning() -> void:
 		return
 	map_event_cells = _random_map_event_cells(cell_count)
 	_log_event(_color_log_text("OSTRZEŻENIE: %s uderzy w oznaczone pola w rundzie %d." % [_map_event_name(), next_map_event_round], LOG_COLOR_YELLOW), false)
-
-
-func _can_use_skill(unit: Dictionary, skill_id: String) -> bool:
-	var skill: Dictionary = skill_library.get(skill_id, {})
-	if skill.is_empty():
-		return false
-	if not _has_skill_id(unit, skill_id):
-		return false
-	if str(skill.get("target_type", "")) == "passive":
-		return false
-	if int(unit.get("action_points", 0)) < int(skill.get("ap_cost", 0)):
-		return false
-	return int(unit.get("skill_cooldowns", {}).get(skill_id, 0)) == 0
 
 
 func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void:
@@ -4520,7 +4322,7 @@ func _process_turn_start(unit: Dictionary) -> bool:
 				unit["is_hidden"] = false
 		if tick_damage <= 0:
 			continue
-		var total_damage := _calculate_tick_damage(unit, tick_damage)
+		var total_damage := MechanikaUmiejetnosciScript.oblicz_obrazenia_okresowe(unit, tick_damage)
 		if _consume_energy_barrier(unit):
 			_log_event("Bariera Energetyczna chroni %s przed obrażeniami od efektu %s." % [_unit_name_log_text(unit), str(effect.get("name", "efekt"))])
 			continue
@@ -5225,113 +5027,7 @@ func _set_help_popup_visible(value: bool) -> void:
 
 
 func _help_rebuild_content() -> void:
-	if help_popup_content == null:
-		return
-	for child in help_popup_content.get_children():
-		child.queue_free()
-
-	if help_mode_tutorial:
-		_build_tutorial_pages()
-	else:
-		_build_controls_reference()
-
-
-func _build_tutorial_pages() -> void:
-	var page_0: Array[String] = [
-		"Witaj w prototypie turowego systemu walki!",
-		"",
-		"Twoim celem jest pokonanie wszystkich wrogich jednostek na heksagonalnej planszy.",
-		"Przed bitwą wybierasz frakcję i rozstawiasz swoje jednostki.",
-		"Po kliknięciu START rozpoczyna się walka oparta na inicjatywie.",
-	]
-	var page_1: Array[String] = [
-		"Rozstaw swoje jednostki w trzech skrajnych kolumnach po swojej stronie planszy.",
-		"",
-		"Wybierz jednostkę LPM, a następnie kliknij podświetlone pole, aby się przemieścić.",
-		"PPM wykonuje podstawowy atak w zasięgu aktywnej jednostki.",
-		"Każda jednostka ma ograniczone Punkty Akcji (PA) i Zasięg Ruchu na turę.",
-	]
-	var page_2: Array[String] = [
-		"Karta aktywnej jednostki wyświetla się w lewym panelu — znajdziesz tam statystyki, buffy i debuffy.",
-		"",
-		"Dolny panel pokazuje umiejętności specjalne jednostki.",
-		"Prawy panel to generał, jego umiejętności oraz log bitwy.",
-		"Górna belka to kolejka inicjatywy — kolejność aktywacji jednostek.",
-	]
-	var page_3: Array[String] = [
-		"Teren ma znaczenie:",
-		"• Woda — wejście zużywa cały pozostały ruch i pomija turę.",
-		"• Kamienie — blokują ruch i linię strzału.",
-		"• Krzaki — jednostka w krzaku jest niewidzialna dla wrogów poza sąsiednim krzakiem.",
-		"",
-		"Statusy i odporności jednostek wpływają na obrażenia oraz zachowanie w walce.",
-	]
-	var page_4: Array[String] = [
-		"Generał może raz na bitwę użyć jednej z dwóch globalnych umiejętności.",
-		"",
-		"Kliknij ZAKOŃCZ TURĘ, gdy skończysz działać aktywną jednostką.",
-		"Bitwę wygrywa strona, która jako pierwsza zniszczy wszystkie wrogie jednostki.",
-		"",
-		"Naciśnij Tab w dowolnym momencie, aby otworzyć pełną pomoc.",
-	]
-	var pages: Array = [page_0, page_1, page_2, page_3, page_4]
-
-	var page_index := clampi(tutorial_page, 0, pages.size() - 1)
-	var raw_page: Array = pages[page_index]
-	var page_lines: Array[String] = []
-	page_lines.assign(raw_page)
-
-	for line in page_lines:
-		var label := Label.new()
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		label.text = line
-		label.add_theme_font_size_override("font_size", 15)
-		help_popup_content.add_child(label)
-
-	help_popup_page_label.text = "STRONA %d / %d" % [page_index + 1, pages.size()]
-	help_popup_prev_button.disabled = page_index == 0
-	help_popup_next_button.disabled = page_index == pages.size() - 1
-	help_popup_action_button.text = "ROZPOCZNIJ" if page_index == pages.size() - 1 else "POMIŃ"
-
-
-func _build_controls_reference() -> void:
-	var controls_section := _make_help_section("STEROWANIE", [
-		"LPM — wybierz jednostkę, wskaż pole ruchu lub cel umiejętności.",
-		"PPM — wykonaj podstawowy atak aktywną jednostką.",
-		"Tab — pokaż lub ukryj tę pomoc.",
-		"START — rozpocznij bitwę po rozstawieniu jednostek.",
-		"RESET — wróć do ekranu wyboru frakcji.",
-		"ZAKOŃCZ TURĘ — kończy turę aktywnej jednostki i przekazuje inicjatywę dalej.",
-		"Umiejętności generała — dwa przyciski w prawym panelu, używalne raz na bitwę.",
-	])
-	help_popup_content.add_child(controls_section)
-
-	var gameplay_section := _make_help_section("ROZGRYWKA", [
-		"Przygotowanie — wybierz frakcję gracza i przeciwnika, rozstaw jednostki w trzech skrajnych kolumnach.",
-		"Kolejka inicjatywy — górna belka pokazuje kolejność aktywacji w rundzie.",
-		"Tura jednostki — każda jednostka ma Punkty Akcji (PA) i Zasięg Ruchu.",
-		"Ruch — kliknij podświetlone pole; koszt zależy od terenu.",
-		"Atak — PPM lub umiejętność; obrażenia uwzględniają DEF celu i aktywne statusy.",
-		"Umiejętności — do 3 aktywnych umiejętności z cooldownem w turach.",
-		"Statusy — buffy/debuffy widoczne w lewym panelu; niektóre jednostki mają odporności.",
-		"Teren — woda pomija turę, kamienie blokują ruch i linię strzału, krzaki ukrywają jednostkę.",
-		"Generał — globalne umiejętności wpływające na przebieg bitwy.",
-		"Zwycięstwo — zniszcz wszystkie wrogie jednostki.",
-	])
-	help_popup_content.add_child(gameplay_section)
-
-	var panels_section := _make_help_section("PANELE INTERFEJSU", [
-		"Lewy panel — portret, nazwa, statystyki oraz aktywne buffy i debuffy wybranej jednostki.",
-		"Prawy panel — generał, jego umiejętności, log bitwy i przycisk zakończenia tury.",
-		"Dolny panel — karty umiejętności aktualnie aktywnej jednostki.",
-		"Górna belka — kolejka inicjatywy z portretami jednostek.",
-	])
-	help_popup_content.add_child(panels_section)
-
-	help_popup_page_label.text = "POMOC"
-	help_popup_prev_button.disabled = true
-	help_popup_next_button.disabled = true
-	help_popup_action_button.text = "ZAMKNIJ"
+	TrescPomocyScript.odbuduj(self)
 
 
 func _on_help_prev_pressed() -> void:
@@ -5546,11 +5242,6 @@ func _disable_hud_mouse(node: Node) -> void:
 		_disable_hud_mouse(child)
 
 
-func _validate_setup() -> void:
-	_validate_static_setup()
-	_validate_runtime_setup()
-
-
 func _validate_static_setup() -> void:
 	assert(GRID_COLUMNS == 15 and GRID_ROWS == 10, "Scenariusz Zamek wymaga planszy 15x10.")
 	assert(_get_castle_stages().size() == 3, "Scenariusz Zamek musi miec trzy etapy.")
@@ -5599,7 +5290,7 @@ func _validate_static_setup() -> void:
 		var prepared: Dictionary = _prepare_unit(unit.duplicate(true))
 		assert(int(prepared.get("base_action_points", 0)) == int(prepared.get("action_points", 0)), "AP z JSON musi byc startowym AP jednostki.")
 
-	assert(_calculate_tick_damage({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
+	assert(MechanikaUmiejetnosciScript.oblicz_obrazenia_okresowe({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
 	assert(_adjust_incoming_damage({"active_effects": [{"incoming_damage_percent": 50}]}, 4) == 6, "Klątwa powinna zwiekszac otrzymywane obrazenia o 50%.")
 	var tooltip_previous_skill_id: String = pending_skill_id
 	pending_skill_id = "strzal_w_kolano"
@@ -5608,8 +5299,8 @@ func _validate_static_setup() -> void:
 	assert(_get_selected_attack_damage_multiplier() == 0.0, "Tooltip nie moze pokazywac obrazen dla umiejetnosci bez obrazen.")
 	pending_skill_id = tooltip_previous_skill_id
 	assert(_calculate_attack_preview_damage({"atk": 0, "dmg_min": 10, "dmg_max": 10, "count": 1}, {"def": 0, "active_effects": [{"block_next_attack": true}]}, 1.0) == Vector2i.ZERO, "Tooltip musi uwzgledniac blokade obrazen.")
-	assert(is_equal_approx(_get_area_damage_multiplier("fireball", true), 1.0) and is_equal_approx(_get_area_damage_multiplier("fireball", false), 0.5), "Kula Ognia musi miec poprawny podglad obrazen obszarowych.")
-	assert(is_equal_approx(_get_area_damage_multiplier("arrow_rain", false), 0.35), "Podglad Deszczu Strzal musi zgadzac sie z wykonaniem.")
+	assert(is_equal_approx(MechanikaUmiejetnosciScript.pobierz_mnoznik_obszaru("fireball", true), 1.0) and is_equal_approx(MechanikaUmiejetnosciScript.pobierz_mnoznik_obszaru("fireball", false), 0.5), "Kula Ognia musi miec poprawny podglad obrazen obszarowych.")
+	assert(is_equal_approx(MechanikaUmiejetnosciScript.pobierz_mnoznik_obszaru("arrow_rain", false), 0.35), "Podglad Deszczu Strzal musi zgadzac sie z wykonaniem.")
 	for terrain_id in terrain_types.keys():
 		var raw_entry: Variant = terrain_types[terrain_id].get("entry_effect", null)
 		if raw_entry == null:
@@ -5641,7 +5332,7 @@ func _validate_static_setup() -> void:
 			assert(int(type_data.action_points) == 1, "Jednostki prototypu powinny miec 1 AP: %s" % str(type_data.id))
 			assert(int(type_data.speed) <= 10 and int(type_data.move_range) <= 6 and int(type_data.attack_range) <= 5, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
 			assert(int(type_data.hp) <= 40 and int(type_data.atk) <= 15 and int(type_data.dmg_max) <= 22 and int(type_data.def) <= 14 and int(type_data.count) <= 14, "Jednostka poza zakresem raw statystyk: %s" % str(type_data.id))
-	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna"), "Umiejetnosci bierne nie moga byc uzywane recznie.")
+	assert(not MechanikaUmiejetnosciScript.czy_mozna_uzyc({"action_points": 1, "skill_cooldowns": {}}, "bariera_energetyczna", skill_library), "Umiejetnosci bierne nie moga byc uzywane recznie.")
 	assert(skill_library.has("tanczacy_ostrze"), "Brak skilla tanczacy_ostrze w bibliotece.")
 	assert(str(skill_library["tanczacy_ostrze"].get("effect_type", "")) == "dancing_blade", "Tanczacy Ostrze musi miec efekt dancing_blade.")
 	assert(skill_library.has("przyzwij_pomnik"), "Brak skilla przyzwij_pomnik w bibliotece.")
@@ -5721,7 +5412,7 @@ func _validate_static_setup() -> void:
 	units = curtain_units_backup
 	assert(skill_library.has("zadza_krwi"), "Brak skilla zadza_krwi w bibliotece.")
 	assert(str(skill_library["zadza_krwi"].get("effect_type", "")) == "zadza_krwi", "Zadza krwi musi miec efekt zadza_krwi.")
-	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}, "skill_ids": []}, "pulapka_na_niedzwiedzie"), "Jednostka nie moze uzywac umiejetnosci spoza skill_ids.")
+	assert(not MechanikaUmiejetnosciScript.czy_mozna_uzyc({"action_points": 1, "skill_cooldowns": {}, "skill_ids": []}, "pulapka_na_niedzwiedzie", skill_library), "Jednostka nie moze uzywac umiejetnosci spoza skill_ids.")
 
 
 func _validate_runtime_setup() -> void:
@@ -5970,7 +5661,7 @@ func _validate_runtime_setup() -> void:
 	active_unit_id = int(charge_unit.id)
 	pending_skill_id = "szarza"
 	var charge_skill: Dictionary = skill_library.get("szarza", {})
-	var charge_move_budget: int = _get_remaining_move(charge_unit) + _get_charge_stat_bonus(charge_skill, "move_range")
+	var charge_move_budget: int = _get_remaining_move(charge_unit) + MechanikaUmiejetnosciScript.pobierz_bonus_szarzy(charge_skill, "move_range")
 	for cell in _get_reachable_cells(charge_unit, charge_move_budget, charge_skill):
 		assert(cell.y == charge_unit.grid_y, "Szarza gracza moze ruszac tylko bezposrednio przed siebie.")
 		assert(cell.x > charge_unit.grid_x, "Szarza gracza moze ruszac tylko w prawo.")
@@ -6629,7 +6320,7 @@ func _on_skill_button_pressed(index: int) -> void:
 	var skill_id := str(skill.get("id", ""))
 	if pending_skill_id == skill_id:
 		pending_skill_id = ""
-	elif not _can_use_skill(unit, skill_id):
+	elif not MechanikaUmiejetnosciScript.czy_mozna_uzyc(unit, skill_id, skill_library):
 		return
 	else:
 		pending_skill_id = skill_id

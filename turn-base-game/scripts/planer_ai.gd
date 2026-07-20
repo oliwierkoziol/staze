@@ -35,3 +35,40 @@ static func czy_lepszy_plan(candidate: Dictionary, current: Dictionary) -> bool:
 	var candidate_key: String = "%s:%s:%s:%s" % [candidate.get("kind", ""), candidate.get("skill_id", ""), candidate.get("target_id", -1), candidate.get("target_cell", Vector2i(-1, -1))]
 	var current_key: String = "%s:%s:%s:%s" % [current.get("kind", ""), current.get("skill_id", ""), current.get("target_id", -1), current.get("target_cell", Vector2i(-1, -1))]
 	return candidate_key < current_key
+
+
+static func wybierz_plan(battle: Node, unit: Dictionary) -> Dictionary:
+	var origin := Vector2i(int(unit.grid_x), int(unit.grid_y))
+	var destinations: Array[Dictionary] = [{"cell": origin, "path": []}]
+	if not battle._is_immobilized(unit):
+		var mapa_tras: Dictionary = battle._zbuduj_mape_tras(unit, origin, battle._get_remaining_move(unit))
+		for cell in battle._osiagalne_z_mapy_tras(mapa_tras, origin):
+			var path: Array[Vector2i] = battle._odtworz_trase(mapa_tras, origin, cell)
+			if not path.is_empty():
+				destinations.append({"cell": path.back(), "path": path})
+
+	var best_plan: Dictionary = {"kind": "pass", "score": -1000000, "path": []}
+	for destination_data in destinations:
+		var destination: Vector2i = destination_data.cell
+		var path: Array[Vector2i] = []
+		for step in destination_data.get("path", []):
+			path.append(step)
+		unit.grid_x = destination.x
+		unit.grid_y = destination.y
+		var plans: Array[Dictionary] = battle._ai_generate_action_plans(unit, path)
+		var approach_score: int = battle._ai_score_approach(unit, destination)
+		for plan in plans:
+			plan["score"] = int(plan.get("score", 0)) + approach_score
+		plans.append({
+			"kind": "move" if not path.is_empty() else "pass",
+			"path": path,
+			"score": battle._ai_score_position(unit, destination) + approach_score,
+		})
+		for plan in plans:
+			plan["score"] = int(plan.get("score", 0)) - battle._ai_hazard_penalty(unit, path)
+			plan["score"] = zastosuj_szum(unit, plan, battle.round_number, battle.ai_difficulty)
+			if czy_lepszy_plan(plan, best_plan):
+				best_plan = plan
+	unit.grid_x = origin.x
+	unit.grid_y = origin.y
+	return best_plan

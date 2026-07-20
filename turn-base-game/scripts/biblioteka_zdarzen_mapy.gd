@@ -92,3 +92,38 @@ static func pobierz_liczbe_pol_ostrzezenia(event_id: String) -> int:
 
 static func czy_runda_ostrzezenia(current_round: int, event_round: int) -> bool:
 	return event_round >= 2 and current_round == event_round - 1
+
+
+static func wykonaj(battle: Node) -> void:
+	if battle.next_map_event_round == 0 or battle.round_number < battle.next_map_event_round:
+		return
+	if battle.next_map_event_id == "brak_eventu":
+		battle._log_event(battle._color_log_text("Runda mija bez wydarzenia na mapie.", battle.LOG_COLOR_YELLOW), false)
+		battle._schedule_next_map_event(battle.round_number)
+		battle._sync_board()
+		return
+	match battle.next_map_event_id:
+		"gniew_korzeni": battle._event_forest_roots()
+		"przebudzenie_gaju": battle._event_forest_awakening()
+		"lesne_opary": battle._event_global_range("Lesne Opary")
+		"magiczny_rozkwit": battle._event_magic_bloom()
+		"spadajacy_rumosz": battle._event_falling_rubble()
+		"wybuch_gazu": battle._event_random_terrain("poison_cloud", 3, 2)
+		"pekniecie_chodnika": battle._event_random_obstacles("woda", "water", 3, "Pekniecie Chodnika zalewa trzy pola.")
+		"zawal_kopalni": battle._event_random_obstacles("kamienie", "rock1", 2, "Zawal Kopalni blokuje dwa pola.")
+		"rozprzestrzeniajacy_sie_pozar": battle._event_spreading_fire()
+		"gesty_dym": battle._event_board_concealment("mgla")
+		"przerwanie_grobli": battle._event_random_obstacles("woda", "water", 3, "Przerwanie Grobli zalewa trzy pola.")
+		"plonace_zabudowania": battle._event_damage_on_marked_cells("Plonace Zabudowania")
+		"wichura_lodowa": battle._event_global_move_penalty("wichura_lodowa", "Wichura Lodowa")
+		"sniezna_zamiec": battle._event_global_range("Sniezna Zamiec")
+		"oblodzenie": battle._event_random_terrain("ice", 3, 2)
+		"lawina": battle._event_damage_on_marked_cells("Lawina")
+		"burza_piaskowa": battle._event_board_concealment("burza_piaskowa")
+		"zapadlisko": battle._event_random_obstacles("ruchome_piaski", "quicksand", 3, "Zapadlisko tworzy trzy pola ruchomych piaskow.")
+		"palacy_skwar": battle._event_damage_on_marked_cells("Palacy Skwar")
+		"pustynny_podmuch": battle._event_global_move_penalty("pustynny_podmuch", "Pustynny Podmuch")
+		_: return
+	battle.map_event_cells.clear()
+	battle._schedule_next_map_event(battle.round_number)
+	battle._sync_board()
