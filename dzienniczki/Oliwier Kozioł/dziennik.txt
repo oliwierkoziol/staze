@@ -31,41 +31,49 @@
 - Rozbudowano system buffów/debuffów
 - Dodano nowe umiejętności charakterystyczne dla klas, np. pułapka, dynamit
 - Zmieniono pasek kolejności ruchu
-
-10 lipca
 - Rework okna buffów
 - Naprawiono mechanikę krzaków
+
+10 lipca
 - Zrobiony tutorial
-- Dodano efekt pnączy
+- Dodano zdjęcia generałów
+- Rozpoczęto dodawanie umiejętności
 
 13 lipca
-- Dodano system eventów (burza śnieżna/
-- Rozpoczęto dodawanie umiejętności
-- Dodano nowy pustynny scenariusz	
+- Dodano system eventów
+- Dodano nowy pustynny scenariusz
 - Wygenerowane nowe assety do map
+- Dodano efekt pnączy 
+- Dodano efekt strzałek przy jednostkach, oznaczające czy jednostke ma buffa/debuffa
+- Dalsza praca nad buffami
+- Kolejne umiejętności
 
 14 lipca
-- Dodano efekt strzałek przy jednostkach, oznaczające buffy/debuffy
 - Dodano resztę umiejętności
-- Dodano scenariusz "Zamek" 
-- Dodano rodzaj buffów/debuffów które się stackują
-15 lipca
-- Dodawanie ikonek umiejętności
-- Poprawa działania szarży/odepchnięcia tarczą
-- Dodano nowe hexy (dziura, detonator)
-
-16 lipca
-- Skończono robienie ikonek umiejętności
+- Dodano scenariusz „Zamek”
+- Dodano stackujące się buffy/debuffy
+- Dodano nowe hexy
 - Zmiana formuły obliczenia obrażeń
 - Dodano efekt przy posągu elfów
 
-17 lipca
-- Wygenerowano i dodano ikonki umiejętności generałów
+15 lipca
+
+- Koniec dodawania umiejetnosci
+- Dodano hexy (dziury)
+- Dodawanie ikonek umiejętności
+- Poprawa działania szarży
+
+16 lipca
+- Skończono ikonki umiejętności
 - Poprawiono umiejętności generałów
+- Ujednolicanie opisy umiejętności
+
+17 lipca
+- Wygenerowano i dodano ikonki umiejętności generałów 
 - Rebalans walki
-- Ujednolicono opisy umiejetnosci
+- Dalsze eventy 
 
 20 lipca
 - Naprawa działania ataków dystansowych
-- Dalszy balans
-- Naprawa wielu pomniejszych błędów
+- Dalszy balans 
+- Naprawa wielu pomniejszych błędów 
