@@ -2691,7 +2691,7 @@ func _is_attack_blocked_from(from_cell: Vector2i, target_cell: Vector2i) -> bool
 	for cell in _get_hex_line(from_cell, target_cell):
 		if cell == from_cell or cell == target_cell:
 			continue
-		if _is_cell_obstacle(cell):
+		if _cell_blocks_line_of_sight(cell):
 			return true
 	return false
 
@@ -3811,7 +3811,7 @@ func _get_piercing_shot_cells(caster: Dictionary, target: Dictionary) -> Array[V
 		var cell: Vector2i = _cube_to_oddr(current_cube)
 		if cell.x < 0 or cell.x >= GRID_COLUMNS or cell.y < 0 or cell.y >= GRID_ROWS:
 			break
-		if _is_cell_obstacle(cell):
+		if _cell_blocks_line_of_sight(cell):
 			break
 		cells.append(cell)
 	return cells
@@ -5055,24 +5055,24 @@ func _is_cell_obstacle(cell: Vector2i) -> bool:
 
 
 func _blocks_cell_skill_target(cell: Vector2i) -> bool:
-	if not _is_cell_obstacle(cell):
+	var terrain: Dictionary = _get_terrain_at(cell)
+	if terrain.is_empty():
 		return false
-	var terrain_id: String = str(_get_terrain_at(cell).get("id", ""))
-	var passable_types: Array[String] = ["krzok", "zimowy_krzak", "holy_tree", "cart", "detonator", "hole"]
-	return not passable_types.has(terrain_id)
+	if not bool(terrain.get("blocks_movement", false)):
+		return false
+	var targetable_blocking_types: Array[String] = ["detonator"]
+	return not targetable_blocking_types.has(str(terrain.get("id", "")))
+
+
+func _cell_blocks_line_of_sight(cell: Vector2i) -> bool:
+	var terrain: Dictionary = _get_terrain_at(cell)
+	if terrain.is_empty():
+		return false
+	return bool(terrain.get("blocks_line_of_sight", false))
 
 
 func _is_attack_blocked(attacker: Dictionary, target_cell: Vector2i) -> bool:
-	var origin: Vector2i = Vector2i(attacker.grid_x, attacker.grid_y)
-	if origin == target_cell:
-		return false
-	var line_cells: Array[Vector2i] = _get_hex_line(origin, target_cell)
-	for cell in line_cells:
-		if cell == origin or cell == target_cell:
-			continue
-		if _is_cell_obstacle(cell):
-			return true
-	return false
+	return _is_attack_blocked_from(Vector2i(attacker.grid_x, attacker.grid_y), target_cell)
 
 
 func _get_hex_line(start: Vector2i, end: Vector2i) -> Array[Vector2i]:
@@ -5906,6 +5906,8 @@ func _validate_setup() -> void:
 		{"grid_x": first_water.x, "grid_y": first_water.y, "type": "woda"},
 		{"grid_x": second_water.x, "grid_y": second_water.y, "type": "woda"}
 	]
+	assert(not _is_attack_blocked_from(water_start, Vector2i(7, 4)), "Strzal zasiegowy musi przechodzic przez wode.")
+	assert(not _blocks_cell_skill_target(first_water), "Rzut dynamitem musi moc celowac w wode.")
 	units = [bush_unit]
 	for neighbor in _get_neighbors(second_water):
 		if neighbor != first_water and neighbor != water_start:
