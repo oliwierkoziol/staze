@@ -116,5 +116,8 @@ Dzień 14 (20.07.2026)
 - stworzenie mechanik pozwalających na poruszanie się w stylu prostej platformówki 
 - dodanie "czasu kojota", czyli momentu, w którym gracz może skoczyć nie znajdując się na podłodze (pozwala na łatwiejsze skakanie przy rogach platform)
 - dodanie paska, który zmienia owy czas kojota
+- uniemożliwienie graczowi wyjście poza okno gry
 - dodanie możliwości wyższego skoku przez trzymanie strzałki w górę oraz wolniejszego opadania (większa kontrola dla gracza)
 - przesłanie projektu na githuba oraz naprawienie błedu z wielkością okna przy testowaniu w przeglądarce
+link do githuba: https://github.com/Crunczyslaw/PlatformTest
+link do testu mini projektu: https://crunczyslaw.github.io/PlatformTest/
