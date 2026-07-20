@@ -19,42 +19,7 @@ const PIERCING_SHOT_HEX_COUNT := 3
 const PLONIECIE_TICK_DAMAGE := 2
 const PLONIECIE_TURNS := 3
 const MAX_VISIBLE_QUEUE_CARDS := 8
-const AI_PROFILES: Dictionary = {
-	"latwy": {"threat_weight": 0.35, "hazard_weight": 0.6, "casualty_weight": 45, "kill_bonus": 150, "target_value_weight": 0.02, "formation_weight": 0.25, "coordination_weight": 0.0, "decision_noise": 0.18},
-	"sredni": {"threat_weight": 0.7, "hazard_weight": 0.9, "casualty_weight": 75, "kill_bonus": 400, "target_value_weight": 0.06, "formation_weight": 0.65, "coordination_weight": 0.4, "decision_noise": 0.05},
-	"trudny": {"threat_weight": 1.0, "hazard_weight": 1.0, "casualty_weight": 90, "kill_bonus": 600, "target_value_weight": 0.1, "formation_weight": 1.0, "coordination_weight": 1.0, "decision_noise": 0.0},
-}
-const MAX_EVENT_OBSTACLES: Dictionary = {"woda": 6, "kamienie": 4, "krzok": 6, "ruchome_piaski": 6, "holy_tree": 5, "cart": 3, "elf_statue": 6, "hole": 4, "detonator": 2}
 const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
-const MAP_EVENT_POOLS: Dictionary = {
-	"orcs_vs_elves_forest": ["gniew_korzeni", "przebudzenie_gaju", "lesne_opary", "magiczny_rozkwit"],
-	"dwarves_vs_goblins_mine": ["spadajacy_rumosz", "wybuch_gazu", "pekniecie_chodnika", "zawal_kopalni"],
-	"humans_vs_orcs_village": ["rozprzestrzeniajacy_sie_pozar", "gesty_dym", "przerwanie_grobli", "plonace_zabudowania"],
-	"elves_vs_dwarves_pass": ["wichura_lodowa", "sniezna_zamiec", "oblodzenie", "lawina"],
-	"humans_vs_goblins_desert": ["burza_piaskowa", "zapadlisko", "palacy_skwar", "pustynny_podmuch"],
-}
-const MAP_EVENT_DATA: Dictionary = {
-	"gniew_korzeni": {"name": "Gniew Korzeni", "icon": preload("res://assets/ui/root.png"), "description": "Oznacza 3 pola. Jednostki stojace na nich otrzymuja zasieg ruchu 0 przez 1 ture."},
-	"przebudzenie_gaju": {"name": "Przebudzenie Gaju", "icon": preload("res://assets/mapTiles/bush.png"), "description": "Tworzy 3 nowe krzaki na oznaczonych polach."},
-	"lesne_opary": {"name": "Lesne Opary", "icon": preload("res://assets/ui/reveal.png"), "description": "Zmniejsza zasieg ataku wszystkich jednostek o 1 przez 1 ture."},
-	"magiczny_rozkwit": {"name": "Magiczny Rozkwit", "icon": preload("res://assets/ui/aura.png"), "description": "Oznacza 3 pola. Kazdy stojacy na nich oddzial odzyskuje HP rowne bazowemu HP jednej jednostki, nie przekraczajac maksimum."},
-	"spadajacy_rumosz": {"name": "Spadajacy Rumosz", "icon": preload("res://assets/mapTiles/rock1.png"), "description": "Oznacza 3 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
-	"wybuch_gazu": {"name": "Wybuch Gazu", "icon": preload("res://assets/ui/poison_cloud.png"), "description": "Tworzy toksyczna chmure na 5-8 polach na 2 rundy. Zatrucie zadaje 1 obrazenie za kazda zywa jednostke w oddziale przez 2 tury."},
-	"pekniecie_chodnika": {"name": "Pekniecie Chodnika", "icon": preload("res://assets/ui/water.png"), "description": "Tworzy 3 pola wody. Wejscie zuzywa caly pozostaly ruch jednostki."},
-	"zawal_kopalni": {"name": "Zawal Kopalni", "icon": preload("res://assets/mapTiles/rock2.png"), "description": "Tworzy kamienie na 2 polach. Jednostka na oznaczonym polu otrzymuje 1 obrazenie za kazdego zywego czlonka oddzialu; kamienie powstaja, jesli pole zostanie zwolnione."},
-	"rozprzestrzeniajacy_sie_pozar": {"name": "Rozprzestrzeniajacy sie Pozar", "icon": preload("res://assets/ui/fire.png"), "description": "Tworzy ogien na 5-8 polach na 2 rundy. Ploniecie zadaje 2 obrazenia za kazda zywa jednostke w oddziale przez 3 tury."},
-	"gesty_dym": {"name": "Gesty Dym", "icon": preload("res://assets/ui/reveal.png"), "description": "Okrywa przechodnie pola Mgla na 1 runde. Wrogie jednostki sa widoczne tylko z sasiednich pol."},
-	"przerwanie_grobli": {"name": "Przerwanie Grobli", "icon": preload("res://assets/ui/water.png"), "description": "Tworzy 3 pola wody. Wejscie zuzywa caly pozostaly ruch jednostki."},
-	"plonace_zabudowania": {"name": "Plonace Zabudowania", "icon": preload("res://assets/ui/fire.png"), "description": "Oznacza 3 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
-	"wichura_lodowa": {"name": "Wichura Lodowa", "icon": preload("res://assets/ui/frost.png"), "description": "Zmniejsza zasieg ruchu wszystkich jednostek o 2 przez 1 ture."},
-	"sniezna_zamiec": {"name": "Sniezna Zamiec", "icon": preload("res://assets/ui/frost.png"), "description": "Zmniejsza zasieg ataku wszystkich jednostek o 1 przez 1 ture."},
-	"oblodzenie": {"name": "Oblodzenie", "icon": preload("res://assets/ui/frost.png"), "description": "Tworzy lod na 5-8 polach na 2 rundy. Lodowe Podloze zmniejsza Szybkosc i zasieg ruchu o 2 przez 1 ture."},
-	"lawina": {"name": "Lawina", "icon": preload("res://assets/mapTiles/rock3.png"), "description": "Oznacza 4 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
-	"burza_piaskowa": {"name": "Burza Piaskowa", "icon": preload("res://assets/ui/reveal.png"), "description": "Okrywa przechodnie pola piaskiem na 1 runde. Wrogie jednostki sa widoczne tylko z sasiednich pol."},
-	"zapadlisko": {"name": "Zapadlisko", "icon": preload("res://assets/ui/exhaust.png"), "description": "Tworzy 3 pola ruchomych piaskow. Wejscie zuzywa caly pozostaly ruch jednostki."},
-	"palacy_skwar": {"name": "Palacy Skwar", "icon": preload("res://assets/ui/fire.png"), "description": "Oznacza 3 pola. Zadaje 1 obrazenie za kazda zywa jednostke w stojacym na nich oddziale."},
-	"pustynny_podmuch": {"name": "Pustynny Podmuch", "icon": preload("res://assets/ui/speed.png"), "description": "Zmniejsza zasieg ruchu wszystkich jednostek o 2 przez 1 ture."},
-}
 const DEFAULT_GENERAL_PORTRAIT: Texture2D = preload("res://assets/ui/general1.png")
 const GENERAL_PORTRAITS: Dictionary = {
 	"elves": preload("res://assets/ui/general_elf_1.png"),
@@ -84,6 +49,8 @@ const TurnQueueCardScript = preload("res://scripts/turn_queue_card.gd")
 const HexUtilsScript = preload("res://scripts/hex_utils.gd")
 const ObstacleGeneratorScript = preload("res://scripts/obstacle_generator.gd")
 const UnitDetailsPopupScript = preload("res://scripts/unit_details_popup.gd")
+const BibliotekaZdarzenMapyScript = preload("res://scripts/biblioteka_zdarzen_mapy.gd")
+const PlanerAIScript = preload("res://scripts/planer_ai.gd")
 
 var OBSTACLE_PORTRAITS: Dictionary = {
 	"woda": preload("res://assets/mapTiles/water.png"),
@@ -342,7 +309,7 @@ func _on_team_setup_finished(player_faction: String, enemy_faction: String, sele
 		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
-	ai_difficulty = selected_ai_difficulty if AI_PROFILES.has(selected_ai_difficulty) else "sredni"
+	ai_difficulty = selected_ai_difficulty if PlanerAIScript.PROFILE.has(selected_ai_difficulty) else "sredni"
 	castle_stage = 0
 	free_setup_mode = false
 	_set_battle_background(DEFAULT_BATTLE_BACKGROUND_PATH)
@@ -366,7 +333,7 @@ func _on_team_setup_loaded(save_data: Dictionary) -> void:
 	current_player_faction = str(save_data.get("player_faction", ""))
 	current_enemy_faction = str(save_data.get("enemy_faction", ""))
 	ai_difficulty = str(save_data.get("ai_difficulty", "sredni"))
-	if not AI_PROFILES.has(ai_difficulty):
+	if not PlanerAIScript.PROFILE.has(ai_difficulty):
 		ai_difficulty = "sredni"
 	castle_stage = int(save_data.get("castle_stage", 0))
 	orc_general_is_kishak = bool(save_data.get("orc_general_is_kishak", false))
@@ -390,7 +357,7 @@ func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: 
 		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
-	ai_difficulty = selected_ai_difficulty if AI_PROFILES.has(selected_ai_difficulty) else "sredni"
+	ai_difficulty = selected_ai_difficulty if PlanerAIScript.PROFILE.has(selected_ai_difficulty) else "sredni"
 	castle_stage = 1 if background_path.get_file().get_basename() == "zamek_etap_1_mury" else 0
 	free_setup_mode = player_faction == "testowa" and enemy_faction == "testowa"
 	_set_battle_background(background_path if background_path != "" else DEFAULT_BATTLE_BACKGROUND_PATH)
@@ -503,35 +470,6 @@ func _build_test_battle_config(custom_units: Array[Dictionary]) -> void:
 			"grid_x": pos.x,
 			"grid_y": pos.y,
 		})
-
-
-func _build_battle_config_from_selection(player_types: Array[String], enemy_types: Array[String]) -> void:
-	var next_id := 1
-	var player_positions := _compute_player_positions(player_types.size())
-	var enemy_positions := _compute_enemy_positions(enemy_types.size())
-	unit_configs.clear()
-	for index in player_types.size():
-		var type_id: String = player_types[index]
-		var pos: Vector2i = player_positions[index]
-		unit_configs.append({
-			"id": next_id,
-			"type_id": type_id,
-			"side": "player",
-			"grid_x": pos.x,
-			"grid_y": pos.y,
-		})
-		next_id += 1
-	for index in enemy_types.size():
-		var type_id: String = enemy_types[index]
-		var pos: Vector2i = enemy_positions[index]
-		unit_configs.append({
-			"id": next_id,
-			"type_id": type_id,
-			"side": "enemy",
-			"grid_x": pos.x,
-			"grid_y": pos.y,
-		})
-		next_id += 1
 
 
 func _compute_player_positions(count: int) -> Array[Vector2i]:
@@ -1277,7 +1215,7 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		if str(pending_skill.get("effect_type", "")) == "charge":
 			_try_execute_charge_move(active_unit, cell)
 		else:
-			var skill_used: bool = await _try_use_skill(active_unit, pending_skill_id, cell)
+			await _try_use_skill(active_unit, pending_skill_id, cell)
 		_update_highlighted_cells(active_unit)
 		_update_action_buttons()
 		return
@@ -1476,8 +1414,8 @@ func _ai_choose_plan(unit: Dictionary) -> Dictionary:
 		})
 		for plan in plans:
 			plan["score"] = int(plan.get("score", 0)) - _ai_hazard_penalty(unit, path)
-			plan["score"] = _ai_apply_decision_noise(unit, plan)
-			if _ai_is_better_plan(plan, best_plan):
+			plan["score"] = PlanerAIScript.zastosuj_szum(unit, plan, round_number, ai_difficulty)
+			if PlanerAIScript.czy_lepszy_plan(plan, best_plan):
 				best_plan = plan
 	unit.grid_x = origin.x
 	unit.grid_y = origin.y
@@ -1562,7 +1500,7 @@ func _ai_score_skill(caster: Dictionary, target: Dictionary, target_cell: Vector
 		"pnacza":
 			return (0 if _has_effect(target, "immobilize") else _ai_score_control(target, 2)) - cooldown_cost
 		"curse_throw":
-			return (0 if _has_effect(target, "klatwa") else 100 + int(_ai_unit_value(target) / 5.0)) - cooldown_cost
+			return (0 if _has_effect(target, "klatwa") else 100 + int(PlanerAIScript.wartosc_jednostki(target) / 5.0)) - cooldown_cost
 		"hook_throw":
 			return 80 + _ai_score_forced_destination(target, _get_pull_destination(caster, target)) - cooldown_cost
 		"zaklete_ciecie":
@@ -1598,7 +1536,7 @@ func _ai_score_skill(caster: Dictionary, target: Dictionary, target_cell: Vector
 			var protected_threat: int = _ai_expected_threat(target, Vector2i(int(target.grid_x), int(target.grid_y)))
 			if protected_threat == 0:
 				return 0
-			return protected_threat + int(_ai_unit_value(target) / 8.0) - cooldown_cost
+			return protected_threat + int(PlanerAIScript.wartosc_jednostki(target) / 8.0) - cooldown_cost
 		"taunt_burst":
 			var affected := 0
 			for other in units:
@@ -1635,12 +1573,12 @@ func _ai_score_damage(attacker: Dictionary, target: Dictionary, multiplier: floa
 	var base_hp: int = max(1, int(target.get("base_hp", target.get("hp", 1))))
 	var hp_after: int = maxi(0, current_hp - damage)
 	var casualties: int = ceili(float(current_hp) / float(base_hp)) - ceili(float(hp_after) / float(base_hp))
-	var profile: Dictionary = _ai_profile()
+	var profile: Dictionary = PlanerAIScript.pobierz_profil(ai_difficulty)
 	var score: int = min(damage, current_hp) * 4
 	score += casualties * int(profile.get("casualty_weight", 75))
 	if damage >= current_hp:
 		score += int(profile.get("kill_bonus", 400))
-	score += int(round(float(_ai_unit_value(target)) * float(profile.get("target_value_weight", 0.06))))
+	score += int(round(float(PlanerAIScript.wartosc_jednostki(target)) * float(profile.get("target_value_weight", 0.06))))
 	score += int(round(float(_ai_score_coordination(attacker, target)) * float(profile.get("coordination_weight", 0.4))))
 	return score
 
@@ -1740,7 +1678,7 @@ func _ai_score_forced_destination(target: Dictionary, cell: Vector2i) -> int:
 
 func _ai_score_position(unit: Dictionary, cell: Vector2i) -> int:
 	var score: int = -_ai_hazard_penalty(unit, [cell])
-	if map_event_cells.has(cell) and _is_map_event_warning_round(round_number, next_map_event_round):
+	if map_event_cells.has(cell) and BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(round_number, next_map_event_round):
 		score -= 500
 	if _terrain_hides_unit(cell):
 		score += 80 if int(unit.get("attack_range", 1)) > 1 else 35
@@ -1753,27 +1691,13 @@ func _ai_score_position(unit: Dictionary, cell: Vector2i) -> int:
 				ally_distance = min(ally_distance, _hex_distance(cell, Vector2i(int(ally.grid_x), int(ally.grid_y))))
 		if ally_distance < 1000:
 			score -= max(0, ally_distance - 1) * 8
-	score += int(round(float(_ai_score_formation(unit, cell)) * float(_ai_profile().get("formation_weight", 0.65))))
-	score -= int(round(float(threat) * float(_ai_profile().get("threat_weight", 0.5))))
+	score += int(round(float(_ai_score_formation(unit, cell)) * float(PlanerAIScript.pobierz_profil(ai_difficulty).get("formation_weight", 0.65))))
+	score -= int(round(float(threat) * float(PlanerAIScript.pobierz_profil(ai_difficulty).get("threat_weight", 0.5))))
 	return score
 
 
-func _ai_profile() -> Dictionary:
-	return AI_PROFILES.get(ai_difficulty, AI_PROFILES["sredni"])
-
-
 func _ai_hazard_penalty(unit: Dictionary, path: Array[Vector2i]) -> int:
-	return int(round(float(_get_path_hazard_penalty(unit, path)) * float(_ai_profile().get("hazard_weight", 1.0))))
-
-
-func _ai_apply_decision_noise(unit: Dictionary, plan: Dictionary) -> int:
-	var score: int = int(plan.get("score", 0))
-	var noise: float = float(_ai_profile().get("decision_noise", 0.0))
-	if noise <= 0.0:
-		return score
-	var key: String = "%d:%d:%s:%s:%s:%s:%s" % [round_number, int(unit.id), plan.get("kind", ""), plan.get("skill_id", ""), plan.get("target_id", -1), plan.get("target_cell", Vector2i(-1, -1)), plan.get("path", [])]
-	var direction: float = float(posmod(hash(key), 201) - 100) / 100.0
-	return score + int(round(direction * maxf(30.0, absf(float(score)) * noise)))
+	return int(round(float(_get_path_hazard_penalty(unit, path)) * float(PlanerAIScript.pobierz_profil(ai_difficulty).get("hazard_weight", 1.0))))
 
 
 func _ai_score_coordination(attacker: Dictionary, target: Dictionary) -> int:
@@ -1845,23 +1769,9 @@ func _ai_expected_threat(unit: Dictionary, cell: Vector2i) -> int:
 	return threat * 3
 
 
-func _ai_unit_value(unit: Dictionary) -> int:
-	return int(unit.get("current_total_hp", int(unit.get("hp", 1)) * int(unit.get("count", 1)))) + _srednie_obrazenia_jednostki(unit) * int(unit.get("count", 1)) + int(unit.get("attack_range", 1)) * 20
-
-
 func _ai_will_kill(attacker: Dictionary, target: Dictionary, multiplier: float) -> bool:
 	var damage: int = _adjust_incoming_damage(target, _calculate_expected_damage(attacker, target, multiplier))
 	return damage >= int(target.get("current_total_hp", int(target.get("hp", 1)) * int(target.get("count", 1))))
-
-
-func _ai_is_better_plan(candidate: Dictionary, current: Dictionary) -> bool:
-	var candidate_score: int = int(candidate.get("score", -1000000))
-	var current_score: int = int(current.get("score", -1000000))
-	if candidate_score != current_score:
-		return candidate_score > current_score
-	var candidate_key: String = "%s:%s:%s:%s" % [candidate.get("kind", ""), candidate.get("skill_id", ""), candidate.get("target_id", -1), candidate.get("target_cell", Vector2i(-1, -1))]
-	var current_key: String = "%s:%s:%s:%s" % [current.get("kind", ""), current.get("skill_id", ""), current.get("target_id", -1), current.get("target_cell", Vector2i(-1, -1))]
-	return candidate_key < current_key
 
 
 func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
@@ -2071,7 +1981,7 @@ func _sync_board() -> void:
 	board.set_units(units)
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
-	board.set_map_event_warning_cells(map_event_cells if _is_map_event_warning_round(round_number, next_map_event_round) else [])
+	board.set_map_event_warning_cells(map_event_cells if BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(round_number, next_map_event_round) else [])
 	if board.has_method("set_viewer_side"):
 		board.set_viewer_side("player")
 	_update_selection_visibility()
@@ -3257,18 +3167,6 @@ func _execute_taunt_burst(caster: Dictionary) -> void:
 	_log_event("%s prowokuje: %s." % [_unit_name_log_text(caster), ", ".join(affected)])
 
 
-func _has_adjacent_enemy_unit(unit: Dictionary) -> bool:
-	var unit_cell := Vector2i(unit.grid_x, unit.grid_y)
-	for other in units:
-		if other.side == unit.side:
-			continue
-		if _hex_distance(unit_cell, Vector2i(other.grid_x, other.grid_y)) != 1:
-			continue
-		if _can_see_target(unit, other):
-			return true
-	return false
-
-
 func _execute_dancing_blade(caster: Dictionary) -> void:
 	var caster_cell := Vector2i(caster.grid_x, caster.grid_y)
 	var targets: Array[Dictionary] = []
@@ -4228,21 +4126,6 @@ func _is_water_cell(cell: Vector2i) -> bool:
 	return false
 
 
-func _remove_hiding_effects(unit: Dictionary) -> void:
-	var effects: Array = unit.get("active_effects", [])
-	var kept_effects: Array = []
-	var removed := false
-	for existing in effects:
-		if bool(existing.get("hides_unit", false)):
-			removed = true
-			continue
-		kept_effects.append(existing)
-	if removed:
-		unit["active_effects"] = kept_effects
-		unit["is_hidden"] = false
-		_recalculate_unit_stats(unit)
-
-
 func _reveal_if_in_bush(unit: Dictionary) -> void:
 	var cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
 	if not _terrain_hides_unit(cell) or _has_map_concealment_at(cell):
@@ -4377,7 +4260,7 @@ func _try_trigger_map_event() -> void:
 
 func _schedule_next_map_event(after_round: int) -> void:
 	var scenario_id: String = current_battle_background_path.get_file().get_basename()
-	var raw_pool: Array = MAP_EVENT_POOLS.get(scenario_id, [])
+	var raw_pool: Array = BibliotekaZdarzenMapyScript.pobierz_pule(scenario_id)
 	var pool: Array = raw_pool.filter(func(event_id: String) -> bool: return _event_can_be_scheduled(event_id))
 	if pool.is_empty():
 		next_map_event_round = 0
@@ -4395,22 +4278,12 @@ func _schedule_next_map_event(after_round: int) -> void:
 
 
 func _map_event_name() -> String:
-	return str(MAP_EVENT_DATA.get(next_map_event_id, {}).get("name", ""))
+	return BibliotekaZdarzenMapyScript.pobierz_nazwe(next_map_event_id)
 
 
 func _event_can_be_scheduled(event_id: String) -> bool:
-	var obstacle_type: String = _event_obstacle_type(event_id)
+	var obstacle_type: String = BibliotekaZdarzenMapyScript.pobierz_typ_przeszkody(event_id)
 	return obstacle_type == "" or _available_event_obstacle_slots(obstacle_type) > 0
-
-
-func _event_obstacle_type(event_id: String) -> String:
-	return str({
-		"przebudzenie_gaju": "krzok",
-		"pekniecie_chodnika": "woda",
-		"zawal_kopalni": "kamienie",
-		"przerwanie_grobli": "woda",
-		"zapadlisko": "ruchome_piaski",
-	}.get(event_id, ""))
 
 
 func _available_event_obstacle_slots(type_id: String) -> int:
@@ -4418,7 +4291,7 @@ func _available_event_obstacle_slots(type_id: String) -> int:
 	for obstacle in obstacles:
 		if str(obstacle.get("type", "")) == type_id and str(obstacle.get("source", "")) == "map_event":
 			used += 1
-	return maxi(0, int(MAX_EVENT_OBSTACLES.get(type_id, 0)) - used)
+	return maxi(0, BibliotekaZdarzenMapyScript.pobierz_limit_przeszkod(type_id) - used)
 
 
 func _event_forest_roots() -> void:
@@ -4555,37 +4428,18 @@ func _random_map_event_cells(count: int) -> Array[Vector2i]:
 
 
 func _prepare_map_event_warning() -> void:
-	if not _is_map_event_warning_round(round_number, next_map_event_round) or not map_event_cells.is_empty():
+	if not BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(round_number, next_map_event_round) or not map_event_cells.is_empty():
 		return
-	var cell_count: int = int({
-		"gniew_korzeni": 3,
-		"przebudzenie_gaju": 3,
-		"magiczny_rozkwit": 3,
-		"spadajacy_rumosz": 3,
-		"wybuch_gazu": 3,
-		"pekniecie_chodnika": 3,
-		"zawal_kopalni": 2,
-		"rozprzestrzeniajacy_sie_pozar": 3,
-		"przerwanie_grobli": 3,
-		"plonace_zabudowania": 3,
-		"oblodzenie": 3,
-		"lawina": 4,
-		"zapadlisko": 3,
-		"palacy_skwar": 3,
-	}.get(next_map_event_id, 0))
+	var cell_count: int = BibliotekaZdarzenMapyScript.pobierz_liczbe_pol_ostrzezenia(next_map_event_id)
 	if ["wybuch_gazu", "rozprzestrzeniajacy_sie_pozar", "oblodzenie"].has(next_map_event_id):
 		cell_count = randi_range(5, 8)
-	var obstacle_type: String = _event_obstacle_type(next_map_event_id)
+	var obstacle_type: String = BibliotekaZdarzenMapyScript.pobierz_typ_przeszkody(next_map_event_id)
 	if obstacle_type != "":
 		cell_count = mini(cell_count, _available_event_obstacle_slots(obstacle_type))
 	if cell_count == 0:
 		return
 	map_event_cells = _random_map_event_cells(cell_count)
 	_log_event(_color_log_text("OSTRZEŻENIE: %s uderzy w oznaczone pola w rundzie %d." % [_map_event_name(), next_map_event_round], LOG_COLOR_YELLOW), false)
-
-
-func _is_map_event_warning_round(current_round_number: int, event_round: int) -> bool:
-	return event_round >= 2 and current_round_number == event_round - 1
 
 
 func _can_use_skill(unit: Dictionary, skill_id: String) -> bool:
@@ -4902,17 +4756,6 @@ func _maksymalny_koszt_prostej_trasy() -> int:
 
 func _pole_na_planszy(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.x < GRID_COLUMNS and cell.y >= 0 and cell.y < GRID_ROWS
-
-
-func _try_push_unit_away(source: Dictionary, target: Dictionary) -> bool:
-	var destination: Vector2i = _get_push_destination(source, target)
-	if destination == Vector2i(-1, -1):
-		return false
-	target["grid_x"] = destination.x
-	target["grid_y"] = destination.y
-	board.snap_unit_to_cell(int(target.id), destination)
-	_apply_terrain_effects_to_unit(target)
-	return true
 
 
 func _try_trigger_agility(moved_unit: Dictionary) -> void:
@@ -5704,11 +5547,16 @@ func _disable_hud_mouse(node: Node) -> void:
 
 
 func _validate_setup() -> void:
+	_validate_static_setup()
+	_validate_runtime_setup()
+
+
+func _validate_static_setup() -> void:
 	assert(GRID_COLUMNS == 15 and GRID_ROWS == 10, "Scenariusz Zamek wymaga planszy 15x10.")
 	assert(_get_castle_stages().size() == 3, "Scenariusz Zamek musi miec trzy etapy.")
-	assert(AI_PROFILES.keys().all(func(key: Variant) -> bool: return ["latwy", "sredni", "trudny"].has(str(key))) and AI_PROFILES.size() == 3, "AI musi miec dokladnie trzy profile trudnosci.")
+	assert(PlanerAIScript.PROFILE.keys().all(func(key: Variant) -> bool: return ["latwy", "sredni", "trudny"].has(str(key))) and PlanerAIScript.PROFILE.size() == 3, "AI musi miec dokladnie trzy profile trudnosci.")
 	var reload_existing: Dictionary = _prepare_unit({"type_id": "human_knights", "count": 3})
-	reload_existing["current_hp"] = 5
+	reload_existing["current_total_hp"] = int(reload_existing.base_hp) * 2 + 5
 	var reload_target: Dictionary = _prepare_unit({"type_id": "human_knights", "count": 3})
 	_reapply_runtime_state(reload_target, reload_existing)
 	assert(int(reload_target.count) == 3 and int(reload_target.current_hp) == 5, "Reload nie moze zwiekszac liczebnosci ani leczyc oddzialu.")
@@ -5775,13 +5623,13 @@ func _validate_setup() -> void:
 		assert(faction_general_skills.size() == 2, "Frakcja musi miec dokladnie 2 umiejetnosci generala: %s" % faction_id)
 		for general_skill_id in faction_general_skills:
 			assert(general_skills.has(general_skill_id), "Brak umiejetnosci generala: %s" % general_skill_id)
-	assert(_is_map_event_warning_round(2, 3) and not _is_map_event_warning_round(1, 3), "Pola eventu maja byc widoczne tylko runde przed jego aktywacja.")
+	assert(BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(2, 3) and not BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(1, 3), "Pola eventu maja byc widoczne tylko runde przed jego aktywacja.")
 	assert(bool(UnitTypeLibrary.build_active_effect("mgla").get("hides_unit", false)), "Mgla musi korzystac z ukrycia jednostek.")
-	for scenario_id in MAP_EVENT_POOLS:
-		var event_pool: Array = MAP_EVENT_POOLS[scenario_id]
+	for scenario_id in BibliotekaZdarzenMapyScript.PULE:
+		var event_pool: Array = BibliotekaZdarzenMapyScript.PULE[scenario_id]
 		assert(event_pool.size() == 4, "Kazdy scenariusz musi miec cztery eventy: %s" % scenario_id)
 		for event_id in event_pool:
-			assert(MAP_EVENT_DATA.has(event_id), "Brak danych eventu: %s" % event_id)
+			assert(BibliotekaZdarzenMapyScript.DANE.has(event_id), "Brak danych eventu: %s" % event_id)
 	assert(is_equal_approx(MatematykaWalkiScript.mnoznik_ataku_obrony(20, 14), 1.3), "Przewaga 6 ATK musi dawac +30% obrazen.")
 	assert(is_equal_approx(MatematykaWalkiScript.mnoznik_ataku_obrony(14, 20), 0.85), "Przewaga 6 DEF musi zmniejszac obrazenia o 15%.")
 	assert(is_equal_approx(MatematykaWalkiScript.mnoznik_ataku_obrony(100, 0), 4.0), "Bonus ATK musi zatrzymac sie na 400% obrazen.")
@@ -5804,7 +5652,7 @@ func _validate_setup() -> void:
 	assert(str(skill_library["walniecie_mlotem"].get("effect_type", "")) == "hammer_strike", "Walniecie Mlotem musi miec efekt hammer_strike.")
 	assert(skill_library.has("druzgocacy_cios"), "Brak skilla druzgocacy_cios w bibliotece.")
 	assert(str(skill_library["druzgocacy_cios"].get("effect_type", "")) == "shattering_strike", "Druzgocacy Cios musi miec efekt shattering_strike.")
-	assert(int(skill_library["druzgocacy_cios"].get("cooldown", 0)) == 1, "Druzgocacy Cios musi miec cooldown 1 tury.")
+	assert(int(skill_library["druzgocacy_cios"].get("cooldown", 0)) == 4, "Druzgocacy Cios musi miec cooldown 4 tur.")
 	assert(skill_library.has("przebijajacy_strzal"), "Brak skilla przebijajacy_strzal w bibliotece.")
 	assert(str(skill_library["przebijajacy_strzal"].get("effect_type", "")) == "piercing_shot", "Przebijajacy Strzal musi miec efekt piercing_shot.")
 	assert(skill_library.has("deszcz_strzal"), "Brak skilla deszcz_strzal w bibliotece.")
@@ -5827,6 +5675,7 @@ func _validate_setup() -> void:
 	assert(int(skill_library["sztandar"].get("cooldown", 0)) == 6, "Sztandar musi miec cooldown 6 tur.")
 	var sztandar_target: Dictionary = {
 		"id": 901,
+		"name": "Cel",
 		"side": "player",
 		"grid_x": 6,
 		"grid_y": 5,
@@ -5873,6 +5722,9 @@ func _validate_setup() -> void:
 	assert(skill_library.has("zadza_krwi"), "Brak skilla zadza_krwi w bibliotece.")
 	assert(str(skill_library["zadza_krwi"].get("effect_type", "")) == "zadza_krwi", "Zadza krwi musi miec efekt zadza_krwi.")
 	assert(not _can_use_skill({"action_points": 1, "skill_cooldowns": {}, "skill_ids": []}, "pulapka_na_niedzwiedzie"), "Jednostka nie moze uzywac umiejetnosci spoza skill_ids.")
+
+
+func _validate_runtime_setup() -> void:
 	var previous_units: Array = units.duplicate(true)
 	var previous_obstacles: Array[Dictionary] = obstacles.duplicate(true)
 	var previous_terrain_effects: Array[Dictionary] = terrain_effects.duplicate(true)
@@ -6354,7 +6206,7 @@ func _create_turn_queue_card(unit: Dictionary) -> Button:
 
 
 func _create_map_event_queue_card() -> Button:
-	var event_data: Dictionary = MAP_EVENT_DATA.get(next_map_event_id, {})
+	var event_data: Dictionary = BibliotekaZdarzenMapyScript.DANE.get(next_map_event_id, {})
 	var event_unit: Dictionary = {
 		"id": -100000,
 		"name": "R%d: %s" % [next_map_event_round, _map_event_name()],
@@ -6421,7 +6273,7 @@ func _on_turn_queue_gui_input(event: InputEvent, unit_id: int) -> void:
 	if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_LEFT or not mouse_event.double_click:
 		return
 	if unit_id == -100000:
-		var event_data: Dictionary = MAP_EVENT_DATA.get(next_map_event_id, {})
+		var event_data: Dictionary = BibliotekaZdarzenMapyScript.DANE.get(next_map_event_id, {})
 		unit_details_popup.show_map_object(
 			str(event_data.get("name", "Event mapy")),
 			str(event_data.get("description", "Brak opisu eventu.")),

@@ -31,6 +31,9 @@ func _uruchom() -> void:
 	root.add_child(gra)
 	await process_frame
 	gra._load_skill_library()
+	gra._load_general_skills()
+	gra._validate_setup()
+	print("PASS: Walidacja konfiguracji bitwy")
 	_test_geometrii()
 	_test_podstawowych_tras()
 	_test_pol_konczacych_ruch()

@@ -3,8 +3,6 @@ extends Button
 
 signal activated(slot: int)
 
-const NAME_COLOR := Color(0.95, 0.9, 0.78, 1.0)
-const DESC_COLOR := Color(0.72, 0.68, 0.6, 1.0)
 const CD_COLOR := Color(0.62, 0.58, 0.5, 1.0)
 const CD_ACTIVE_COLOR := Color(0.92, 0.55, 0.3, 1.0)
 

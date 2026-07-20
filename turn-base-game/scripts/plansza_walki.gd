@@ -175,10 +175,6 @@ func set_grid_visible(visible: bool) -> void:
 	queue_redraw()
 
 
-func get_obstacles() -> Array:
-	return obstacles
-
-
 func get_hovered_cell() -> Vector2i:
 	return hovered_cell
 
@@ -1417,20 +1413,6 @@ func _build_hex_points(center: Vector2, radius: float) -> PackedVector2Array:
 		var angle: float = deg_to_rad(60.0 * corner - 30.0)
 		points.append(center + Vector2(cos(angle), sin(angle)) * radius)
 	return points
-
-
-func get_unit_at_cell(cell: Vector2i) -> Dictionary:
-	for unit in units:
-		if unit.grid_x == cell.x and unit.grid_y == cell.y:
-			return unit
-	return {}
-
-
-func get_unit_at_position(local_mouse_position: Vector2) -> Dictionary:
-	var cell: Vector2i = get_cell_at_position(local_mouse_position)
-	if cell.x == -1:
-		return {}
-	return get_unit_at_cell(cell)
 
 
 func get_cell_at_position(local_mouse_position: Vector2) -> Vector2i:

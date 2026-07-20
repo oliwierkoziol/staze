@@ -42,16 +42,8 @@ func setup(side: String, faction_options: Array[String], initial_faction: String
 		_subtitle_label.text = "(wybierasz ty)" if _side == "player" else "(przeciwnik sterowany przez komputer)"
 
 
-func get_side() -> String:
-	return _side
-
-
 func get_selected_faction() -> String:
 	return _current_faction
-
-
-func set_faction(faction: String) -> void:
-	_set_faction(faction)
 
 
 func randomize_faction() -> void:

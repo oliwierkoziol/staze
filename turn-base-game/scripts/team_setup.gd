@@ -592,10 +592,6 @@ func _on_randomize_requested(side: String) -> void:
 		_enemy_panel.randomize_faction()
 
 
-func _on_start_pressed() -> void:
-	setup_finished.emit(_player_panel.get_selected_faction(), _enemy_panel.get_selected_faction(), _ai_difficulty)
-
-
 func _on_load_pressed() -> void:
 	if OS.has_feature("web"):
 		_open_web_load_dialog()
