@@ -11,7 +11,7 @@
 		{"type_id": "orc_warrior", "count": 7},
 		{"type_id": "orc_berserker", "count": 5},
 		{"type_id": "orc_shaman", "count": 5},
-		{"type_id": "orc_shieldman", "count": 4}
+		{"type_id": "orc_shieldman", "count": 5}
 	  ],
 	  "enemy_units": [
 		{"type_id": "elf_archer", "count": 7},
@@ -36,7 +36,7 @@
 	  "enemy_units": [
 		{"type_id": "goblin_thief", "count": 14},
 		{"type_id": "goblin_warrior", "count": 11},
-		{"type_id": "goblin_shaman", "count": 11},
+		{"type_id": "goblin_shaman", "count": 10},
 		{"type_id": "goblin_trapper", "count": 11}
 	  ]
 	},
