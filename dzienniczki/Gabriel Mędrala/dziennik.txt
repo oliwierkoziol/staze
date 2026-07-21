@@ -123,3 +123,17 @@ link do narzędzia: https://github.com/Crunczyslaw/GenApp
 - przesłanie projektu na githuba oraz naprawienie błedu z wielkością okna przy testowaniu w przeglądarce
 link do githuba: https://github.com/Crunczyslaw/PlatformTest
 link do testu mini projektu: https://crunczyslaw.github.io/PlatformTest/
+
+Dzień 14 (21.07.2026)
+- optymalizacja skryptów z projektu z fizyką (tworzenie klas)
+- tworzenie projektu odnośnie pathfindingu 
+- stworzenie ludzika poruszającego się z punktu A do punktu B
+- dodanie wizualnej reprezentacji ściezki ludzika
+- naprawienie błędu, gdzie ludzik przestaje się poruszać po kilka przejściach
+- dodanie możliwości stawiania bloków, aby utrudnić ludzikowi drogę 
+- dodanie pasków do zmienianai dystansów (celu oraz ścieżki)
+- dodanie przycisku restartującego projekt
+- dodanie indyktatora utknięcia ludzika
+- transfer skryptów kamery ze starych projektów
+- dodanie tekstów o sterowaniu
+- przesłanie projektu do githuba i naprawa kilku błędów
