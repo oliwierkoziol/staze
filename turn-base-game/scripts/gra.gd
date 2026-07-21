@@ -1989,9 +1989,12 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 		board.set_highlighted_cells([], [])
 		board.set_hovered_move_path([])
 		return
+	var selected_cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
 
 	if setup_mode:
-		board.set_highlighted_cells(_get_setup_placeable_cells(unit), [])
+		var setup_cells: Array[Vector2i] = _get_setup_placeable_cells(unit)
+		setup_cells.erase(selected_cell)
+		board.set_highlighted_cells(setup_cells, [])
 		_on_board_cell_hovered(board.get_hovered_cell())
 		return
 
@@ -2004,8 +2007,11 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 	var charge_skill: Dictionary = _get_active_charge_skill(unit)
 	var move_cells: Array[Vector2i] = []
 	var attack_cells: Array[Vector2i] = []
+	var przyjazne_podswietlenie_ataku: bool = false
+	var zielone_pola_ataku: Array[Vector2i] = []
 	if pending_general_skill_id != "":
 		var target_type: String = str(general_skills.get(pending_general_skill_id, {}).get("effect_type", ""))
+		przyjazne_podswietlenie_ataku = target_type == "ally"
 		if target_type == "area":
 			for column in GRID_COLUMNS:
 				for row in GRID_ROWS:
@@ -2015,6 +2021,8 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 				var active_only: bool = bool(general_skills.get(pending_general_skill_id, {}).get("active_only", false))
 				if ((target_type == "ally" and candidate.side == "player") or (target_type == "enemy" and candidate.side == "enemy")) and (not active_only or candidate.id == active_unit_id):
 					attack_cells.append(Vector2i(candidate.grid_x, candidate.grid_y))
+		if target_type == "ally":
+			zielone_pola_ataku.assign(attack_cells)
 	elif not charge_skill.is_empty():
 		move_budget += MechanikaUmiejetnosciScript.pobierz_bonus_szarzy(charge_skill, "move_range")
 		move_cells = _get_reachable_cells(unit, move_budget, charge_skill)
@@ -2022,16 +2030,28 @@ func _update_highlighted_cells(unit: Dictionary) -> void:
 			attack_cells = _get_attackable_cells(unit, charge_skill)
 	elif unit.id == active_unit_id and pending_skill_id != "":
 		var pending_skill: Dictionary = skill_library.get(pending_skill_id, {})
+		var target_type: String = str(pending_skill.get("target_type", ""))
+		przyjazne_podswietlenie_ataku = target_type in ["ally_unit", "self"]
 		if str(pending_skill.get("effect_type", "")) == "dancing_blade":
 			attack_cells = _get_neighbors(Vector2i(unit.grid_x, unit.grid_y))
 		else:
 			attack_cells = _get_skill_target_cells(unit, pending_skill_id)
+		if target_type == "self":
+			zielone_pola_ataku.assign(attack_cells)
+			if not zielone_pola_ataku.has(selected_cell):
+				zielone_pola_ataku.append(selected_cell)
+		elif target_type == "ally_unit":
+			for candidate in units:
+				var pole_kandydata := Vector2i(int(candidate.grid_x), int(candidate.grid_y))
+				if attack_cells.has(pole_kandydata) and _can_target_ally_with_skill(unit, candidate, pending_skill):
+					zielone_pola_ataku.append(pole_kandydata)
 	else:
 		move_cells = _get_reachable_cells(unit, move_budget)
 		if unit.id == active_unit_id and pending_skill_id == "" and _can_unit_attack(unit):
 			attack_cells = _get_attackable_cells(unit)
+	move_cells.erase(selected_cell)
 	var move_opacity_mult: float = 0.5 if unit.id != active_unit_id else 1.0
-	board.set_highlighted_cells(move_cells, attack_cells, move_opacity_mult)
+	board.set_highlighted_cells(move_cells, attack_cells, move_opacity_mult, przyjazne_podswietlenie_ataku, zielone_pola_ataku)
 	_on_board_cell_hovered(board.get_hovered_cell())
 
 

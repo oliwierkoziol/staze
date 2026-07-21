@@ -117,6 +117,17 @@ func _show_mode_menu() -> void:
 	cards.add_child(_make_mode_card("SANDBOX", "Armie i liczebnosc oddzialow.", _show_sandbox_faction_select))
 	cards.add_child(_make_mode_card("DEBUG", "Dowolne jednostki testowe.", _show_debug_count_config))
 
+	_load_button = _make_action_button("WCZYTAJ ZAPIS", Vector2(220, 60))
+	_load_button.pressed.connect(_on_load_pressed)
+	column.add_child(_load_button)
+
+	_load_dialog = FileDialog.new()
+	_load_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	_load_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_load_dialog.filters = PackedStringArray(["*.json ; Zapis armii"])
+	_load_dialog.file_selected.connect(_on_load_file_selected)
+	add_child(_load_dialog)
+
 
 func _show_scenarios_placeholder() -> void:
 	_clear()
@@ -322,21 +333,10 @@ func _show_sandbox_faction_select() -> void:
 	back_button.pressed.connect(_show_mode_menu)
 	actions_row.add_child(back_button)
 
-	_load_button = _make_action_button("WCZYTAJ ZAPIS", Vector2(220, 60))
-	_load_button.pressed.connect(_on_load_pressed)
-	actions_row.add_child(_load_button)
-
 	_start_button = _make_action_button("DALEJ", Vector2(220, 60))
 	_start_button.add_theme_font_size_override("font_size", 28)
 	_start_button.pressed.connect(_show_sandbox_count_config)
 	actions_row.add_child(_start_button)
-
-	_load_dialog = FileDialog.new()
-	_load_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	_load_dialog.access = FileDialog.ACCESS_FILESYSTEM
-	_load_dialog.filters = PackedStringArray(["*.json ; Zapis armii"])
-	_load_dialog.file_selected.connect(_on_load_file_selected)
-	add_child(_load_dialog)
 
 
 func _show_sandbox_count_config() -> void:

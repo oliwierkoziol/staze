@@ -47,6 +47,19 @@ func _uruchom() -> void:
 	gra.current_turn = "player"
 	gra.active_unit_id = 9000
 	gra.selected_unit_id = 9000
+	gra._load_skill_library()
+	gra.pending_skill_id = "mistrz_trucizn"
+	gra._update_highlighted_cells(hover_unit)
+	_sprawdz(gra.board.zielone_pola_ataku.has(Vector2i(4, 4)), "Umiejetnosc na siebie podswietla cel na zielono")
+	var sojusznik: Dictionary = hover_unit.duplicate(true)
+	sojusznik["id"] = 9001
+	sojusznik["grid_x"] = 5
+	gra.units = [hover_unit, sojusznik]
+	gra.pending_skill_id = "zelazna_kurtyna"
+	gra._update_highlighted_cells(hover_unit)
+	_sprawdz(gra.board.zielone_pola_ataku.has(Vector2i(5, 4)), "Sojusznik w zasiegu pozostaje zielony")
+	_sprawdz(gra.board.highlighted_attack_cells.has(Vector2i(3, 4)) and not gra.board.zielone_pola_ataku.has(Vector2i(3, 4)), "Puste pole zasiegu umiejetnosci sojuszniczej jest zolte")
+	gra.pending_skill_id = ""
 	gra._show_move_cost_label(1, 3)
 	gra._on_board_cell_hovered(Vector2i(4, 4))
 	_sprawdz(not gra.move_cost_label.visible, "Pole aktywnej jednostki nie pokazuje komunikatu Za daleko")

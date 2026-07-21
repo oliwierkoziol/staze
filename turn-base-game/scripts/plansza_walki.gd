@@ -64,6 +64,8 @@ var unit_textures: Dictionary = {}
 var selected_unit_id := -1
 var highlighted_move_cells: Array[Vector2i] = []
 var highlighted_attack_cells: Array[Vector2i] = []
+var przyjazne_podswietlenie_ataku: bool = false
+var zielone_pola_ataku: Array[Vector2i] = []
 var map_event_warning_cells: Array[Vector2i] = []
 var detonator_warning_cells: Array[Vector2i] = []
 var falling_rock_cells: Array[Vector2i] = []
@@ -179,18 +181,22 @@ func set_selected_unit(unit_id: int) -> void:
 	queue_redraw()
 
 
-func set_highlighted_cells(move_cells: Array, attack_cells: Array = [], move_opacity_mult: float = 1.0) -> void:
+func set_highlighted_cells(move_cells: Array, attack_cells: Array = [], move_opacity_mult: float = 1.0, przyjazny_atak: bool = false, zielone_pola: Array = []) -> void:
 	highlighted_move_cells.clear()
 	highlighted_attack_cells.clear()
+	zielone_pola_ataku.clear()
 	hovered_move_path.clear()
 	hovered_attack_cell = Vector2i(-1, -1)
 	hovered_area_cells.clear()
 	hovered_pull_destination_cell = Vector2i(-1, -1)
 	move_highlight_opacity_mult = move_opacity_mult
+	przyjazne_podswietlenie_ataku = przyjazny_atak
 	for cell in move_cells:
 		highlighted_move_cells.append(cell)
 	for cell in attack_cells:
 		highlighted_attack_cells.append(cell)
+	for cell in zielone_pola:
+		zielone_pola_ataku.append(cell)
 	queue_redraw()
 
 
@@ -1256,28 +1262,42 @@ func _load_unit_portrait(unit: Dictionary) -> Texture2D:
 
 func draw_highlighted_cells() -> void:
 	var overlapping_cells: Array[Vector2i] = _get_overlapping_highlight_cells()
+	var wypelnienie_ataku: Color = Color(0.90, 0.64, 0.08, 0.24) if przyjazne_podswietlenie_ataku else Color(0.82, 0.12, 0.08, 0.22)
+	var obramowanie_ataku: Color = Color(1.0, 0.86, 0.22, 0.98) if przyjazne_podswietlenie_ataku else Color(1.0, 0.26, 0.20, 0.98)
 	_draw_cell_highlights(
 		highlighted_move_cells,
-		Color(0.35, 0.72, 0.95, 0.0),
-		Color(0.45, 0.82, 1.0, 0.58 * move_highlight_opacity_mult)
+		Color(0.12, 0.48, 0.80, 0.22 * move_highlight_opacity_mult),
+		Color(0.35, 0.85, 1.0, 0.95 * move_highlight_opacity_mult),
+		HEX_RADIUS - 6.0,
+		true
 	)
 	_draw_hovered_move_path()
 	var attack_only_cells: Array[Vector2i] = []
 	for cell in highlighted_attack_cells:
-		if overlapping_cells.has(cell):
+		if overlapping_cells.has(cell) or zielone_pola_ataku.has(cell):
 			continue
 		attack_only_cells.append(cell)
 	_draw_cell_highlights(
 		attack_only_cells,
-		Color(0.82, 0.20, 0.20, 0.0),
-		Color(0.62, 0.10, 0.10, 0.95)
+		wypelnienie_ataku,
+		obramowanie_ataku,
+		HEX_RADIUS - 6.0,
+		true
 	)
-	# Dla pól wspólnych: duży (niebieski) rysuje się z ruchu, a w środku rysujemy mniejszy czerwony.
+	# Dla pól wspólnych duży niebieski obrys oznacza ruch, a mniejszy ma kolor celu umiejętności.
 	_draw_cell_highlights(
 		overlapping_cells,
-		Color(0.82, 0.20, 0.20, 0.0),
-		Color(0.62, 0.10, 0.10, 0.95),
-		HEX_RADIUS - 12.0
+		wypelnienie_ataku,
+		obramowanie_ataku,
+		HEX_RADIUS - 12.0,
+		true
+	)
+	_draw_cell_highlights(
+		zielone_pola_ataku,
+		Color(0.10, 0.72, 0.22, 0.24),
+		Color(0.28, 1.0, 0.38, 0.98),
+		HEX_RADIUS - 6.0,
+		true
 	)
 	_draw_hovered_attack_cell()
 	_draw_hovered_area_cells()
@@ -1293,12 +1313,15 @@ func _draw_hovered_pull_destination_cell() -> void:
 	draw_polyline(points + PackedVector2Array([points[0]]), Color(1.0, 0.78, 0.20, 0.95), 3.0)
 
 
-func _draw_cell_highlights(cells: Array[Vector2i], fill_color: Color, border_color: Color, radius: float = HEX_RADIUS - 6.0) -> void:
+func _draw_cell_highlights(cells: Array[Vector2i], fill_color: Color, border_color: Color, radius: float = HEX_RADIUS - 6.0, wysoki_kontrast: bool = false) -> void:
 	for cell in cells:
 		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
 		var points: PackedVector2Array = _build_hex_points(center, radius)
+		var zamkniete_punkty: PackedVector2Array = points + PackedVector2Array([points[0]])
 		draw_colored_polygon(points, fill_color)
-		draw_polyline(points + PackedVector2Array([points[0]]), border_color, 2.0)
+		if wysoki_kontrast:
+			draw_polyline(zamkniete_punkty, Color(0.02, 0.02, 0.02, maxf(0.45, border_color.a * 0.9)), 5.5, true)
+		draw_polyline(zamkniete_punkty, border_color, 2.5, true)
 
 
 func _get_overlapping_highlight_cells() -> Array[Vector2i]:
@@ -1334,7 +1357,10 @@ func _draw_hovered_attack_cell() -> void:
 		return
 	var center: Vector2 = axial_to_pixel(hovered_attack_cell.x, hovered_attack_cell.y)
 	var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 8.0)
-	draw_polyline(points + PackedVector2Array([points[0]]), Color(1.0, 0.30, 0.30, 1.0), 3.0)
+	var kolor: Color = Color(1.0, 0.90, 0.28, 1.0) if przyjazne_podswietlenie_ataku else Color(1.0, 0.30, 0.30, 1.0)
+	if zielone_pola_ataku.has(hovered_attack_cell):
+		kolor = Color(0.32, 1.0, 0.42, 1.0)
+	draw_polyline(points + PackedVector2Array([points[0]]), kolor, 3.0)
 
 
 func _draw_hovered_area_cells() -> void:
@@ -1344,7 +1370,10 @@ func _draw_hovered_area_cells() -> void:
 		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
 		var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 8.0)
 		var is_center: bool = cell == hovered_attack_cell
-		if is_center:
+		if zielone_pola_ataku.has(hovered_attack_cell):
+			draw_colored_polygon(points, Color(0.10, 0.72, 0.22, 0.38 if is_center else 0.30))
+			draw_polyline(points + PackedVector2Array([points[0]]), Color(0.32, 1.0, 0.42, 0.98 if is_center else 0.90), 3.0 if is_center else 2.5)
+		elif is_center:
 			draw_colored_polygon(points, Color(0.95, 0.72, 0.22, 0.38))
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(1.0, 0.82, 0.28, 0.98), 3.0)
 		else:
