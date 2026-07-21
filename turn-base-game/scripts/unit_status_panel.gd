@@ -255,7 +255,7 @@ func _build_effect_tooltip(effect: Dictionary) -> String:
 	var effect_name: String = str(meta.get("name", effect.get("name", "")))
 	var lines: Array[String] = [effect_name.to_upper()]
 
-	var description := str(meta.get("description", ""))
+	var description := str(meta.get("description", effect.get("description", "")))
 	if description != "":
 		lines.append(description)
 

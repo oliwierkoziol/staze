@@ -280,7 +280,40 @@ static func get_status_effect(effect_id: String) -> Dictionary:
 		lookup_id = "taunt"
 	if _status_effects.has(lookup_id):
 		return _status_effects[lookup_id].duplicate(true)
-	return {}
+	return _lookup_external_status_effect(lookup_id)
+
+
+static func _lookup_external_status_effect(effect_id: String) -> Dictionary:
+	const BibliotekaZdarzenMapyScript = preload("res://scripts/biblioteka_zdarzen_mapy.gd")
+	var event_data: Dictionary = BibliotekaZdarzenMapyScript.DANE.get(effect_id, {})
+	if not event_data.is_empty():
+		return {
+			"id": effect_id,
+			"name": str(event_data.get("name", effect_id)),
+			"description": str(event_data.get("description", "")),
+			"category": "debuff",
+		}
+	var general_skill: Dictionary = get_general_skill(effect_id)
+	if not general_skill.is_empty():
+		var effect: Dictionary = general_skill.get("effect", {})
+		var target_effect: Dictionary = general_skill.get("target_effect", {})
+		var category_source: Dictionary = effect if not effect.is_empty() else target_effect
+		return {
+			"id": effect_id,
+			"name": str(general_skill.get("name", effect_id)),
+			"description": str(general_skill.get("description", "")),
+			"category": str(category_source.get("category", "buff")),
+		}
+	var skill: Dictionary = get_skill(effect_id)
+	if skill.is_empty():
+		return {}
+	var skill_effect: Dictionary = skill.get("effect", {})
+	return {
+		"id": effect_id,
+		"name": str(skill.get("name", effect_id)),
+		"description": str(skill.get("description", "")),
+		"category": str(skill_effect.get("category", "buff")),
+	}
 
 
 static func build_active_effect(effect_id: String, overrides: Dictionary = {}) -> Dictionary:

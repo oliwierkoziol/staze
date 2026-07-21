@@ -5315,6 +5315,13 @@ func _validate_static_setup() -> void:
 		assert(faction_general_skills.size() == 2, "Frakcja musi miec dokladnie 2 umiejetnosci generala: %s" % faction_id)
 		for general_skill_id in faction_general_skills:
 			assert(general_skills.has(general_skill_id), "Brak umiejetnosci generala: %s" % general_skill_id)
+	for map_event_debuff_id in ["lesne_opary", "sniezna_zamiec", "gniew_korzeni", "wichura_lodowa", "pustynny_podmuch"]:
+		assert(str(UnitTypeLibraryScript.get_status_effect(map_event_debuff_id).get("description", "")) != "", "Debuff eventu mapy musi miec opis: %s" % map_event_debuff_id)
+	for general_skill_id in general_skills.keys():
+		var general_skill: Dictionary = general_skills[general_skill_id]
+		if str(general_skill.get("effect_type", "")) != "army_buff" and not general_skill.has("target_effect"):
+			continue
+		assert(str(UnitTypeLibraryScript.get_status_effect(general_skill_id).get("description", "")) != "", "Buff/debuff generala musi miec opis: %s" % general_skill_id)
 	assert(BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(2, 3) and not BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(1, 3), "Pola eventu maja byc widoczne tylko runde przed jego aktywacja.")
 	assert(bool(UnitTypeLibrary.build_active_effect("mgla").get("hides_unit", false)), "Mgla musi korzystac z ukrycia jednostek.")
 	for scenario_id in BibliotekaZdarzenMapyScript.PULE:
@@ -6361,9 +6368,11 @@ func _use_general_skill_by_index(index: int) -> void:
 		_update_highlighted_cells(_get_active_unit())
 		_refresh_general_ability_buttons()
 		return
-	var effect: Dictionary = skill.get("effect", {})
+	var effect: Dictionary = skill.get("effect", {}).duplicate(true)
 	if effect.is_empty():
 		return
+	effect["id"] = skill_id
+	effect["name"] = str(skill.get("name", skill_id))
 	for unit in units:
 		if unit.side != "player":
 			continue
