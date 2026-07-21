@@ -83,6 +83,8 @@ var active_projectiles: Array[Dictionary] = []
 var active_falling_arrows: Array[Dictionary] = []
 var arrow_rain_overlay_cells: Array[Vector2i] = []
 var arrow_rain_overlay_alpha: float = 0.0
+var rock_overlay_cells: Array[Vector2i] = []
+var rock_overlay_alpha: float = 0.0
 var fireball_overlay_cells: Array[Vector2i] = []
 var fireball_overlay_alpha: float = 0.0
 var ice_ground_overlay_cells: Array[Vector2i] = []
@@ -208,6 +210,8 @@ func set_detonator_warning_cells(cells: Array) -> void:
 
 func clear_falling_rock_cells() -> void:
 	falling_rock_cells.clear()
+	rock_overlay_cells.clear()
+	rock_overlay_alpha = 0.0
 	queue_redraw()
 
 
@@ -276,6 +280,7 @@ func _draw() -> void:
 	draw_highlighted_cells()
 	_draw_hovered_detonator_preview()
 	_draw_arrow_rain_overlay()
+	_draw_rock_overlay()
 	_draw_fireball_overlay()
 	_draw_ice_ground_overlay()
 	draw_units()
@@ -482,6 +487,10 @@ func play_falling_rocks_animation(cells: Array) -> void:
 	for cell in cells:
 		falling_rock_cells.append(cell)
 
+	rock_overlay_cells.clear()
+	for cell in cells:
+		rock_overlay_cells.append(cell)
+
 	var overlay_tween: Tween = create_tween()
 	overlay_tween.tween_method(_set_rock_overlay_alpha, 0.0, 0.55, 0.12)
 	overlay_tween.tween_method(_set_rock_overlay_alpha, 0.55, 0.22, 0.32)
@@ -500,7 +509,7 @@ func play_falling_rocks_animation(cells: Array) -> void:
 
 
 func _set_rock_overlay_alpha(alpha: float) -> void:
-	arrow_rain_overlay_alpha = alpha
+	rock_overlay_alpha = alpha
 	queue_redraw()
 
 
@@ -590,7 +599,7 @@ func play_attack_animation(attacker_id: int, target_id: int, projectile_kind: St
 
 func play_damage_animation(unit_id: int) -> void:
 	var tween: Tween = create_tween()
-	var shake := 0.0
+	var shake := 5.0
 	tween.parallel().tween_method(_set_unit_damage_tint_alpha.bind(unit_id), 0.0, 0.72, 0.03)
 	tween.tween_method(_set_unit_attack_offset.bind(unit_id), Vector2.ZERO, Vector2(-shake, -shake * 0.35), 0.018)
 	tween.tween_method(_set_unit_attack_offset.bind(unit_id), Vector2(-shake, -shake * 0.35), Vector2(shake, -shake * 0.2), 0.018)
@@ -1186,6 +1195,20 @@ func _draw_arrow_rain_overlay() -> void:
 		draw_polyline(
 			points + PackedVector2Array([points[0]]),
 			Color(1.0, 0.9, 0.45, arrow_rain_overlay_alpha * 0.88),
+			2.5
+		)
+
+
+func _draw_rock_overlay() -> void:
+	if rock_overlay_alpha <= 0.0 or rock_overlay_cells.is_empty():
+		return
+	for cell in rock_overlay_cells:
+		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
+		var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 4.0)
+		draw_colored_polygon(points, Color(0.55, 0.48, 0.42, rock_overlay_alpha * 0.35))
+		draw_polyline(
+			points + PackedVector2Array([points[0]]),
+			Color(0.72, 0.62, 0.52, rock_overlay_alpha * 0.90),
 			2.5
 		)
 

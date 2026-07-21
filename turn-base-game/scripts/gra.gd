@@ -192,7 +192,6 @@ var last_hover_warning_text := ""
 var stage_transition_overlay: ColorRect
 var stage_transition_title: Label
 var stage_transition_progress: Label
-var detonator_activated := false
 var unit_details_popup: PopupPanel
 
 
@@ -255,11 +254,6 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if save_setup_dialog != null and save_setup_dialog.visible:
-		return
-
-	if event.keycode == KEY_RIGHT and castle_stage > 0 and castle_stage < _get_castle_stages().size() and not setup_mode and not is_animating:
-		_advance_castle_stage()
-		get_viewport().set_input_as_handled()
 		return
 
 	if event.keycode == KEY_ESCAPE:
@@ -570,7 +564,6 @@ func _enter_setup_mode() -> void:
 	round_number = 1
 	next_map_event_id = ""
 	map_event_cells.clear()
-	detonator_activated = false
 	board.set_detonator_warning_cells([])
 	board.clear_falling_rock_cells()
 	_schedule_next_map_event(0)
@@ -611,7 +604,6 @@ func _on_start_battle_pressed() -> void:
 	round_number = 1
 	turn_queue_index = -1
 	event_log.clear()
-	detonator_activated = false
 	board.set_detonator_warning_cells([])
 	board.clear_falling_rock_cells()
 	board.set_obstacles(obstacles)
@@ -673,7 +665,6 @@ func _make_save_data() -> Dictionary:
 		"pending_skill_id": pending_skill_id,
 		"general_skill_used": general_skill_used,
 		"orc_general_is_kishak": orc_general_is_kishak,
-		"detonator_activated": detonator_activated,
 	}
 
 
@@ -722,7 +713,6 @@ func _apply_save_data(save_data: Dictionary) -> void:
 	orc_general_is_kishak = bool(save_data.get("orc_general_is_kishak", false))
 	is_animating = false
 	selected_obstacle_cell = Vector2i(-1, -1)
-	detonator_activated = bool(save_data.get("detonator_activated", false))
 	board.set_detonator_warning_cells([])
 	board.clear_falling_rock_cells()
 	board.set_selected_unit(selected_unit_id)
@@ -1222,10 +1212,13 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		_update_action_buttons()
 		return
 
-	var clicked_unit := _find_unit_at_cell(cell)
+	var clicked_unit := _find_visible_unit_at_cell(cell, active_unit)
 	if not clicked_unit.is_empty():
 		if clicked_unit.id == selected_unit_id:
 			_clear_selected_unit()
+			return
+		if clicked_unit.side != active_unit.side:
+			_render_unit_details(clicked_unit)
 			return
 		selected_unit_id = clicked_unit.id
 		selected_obstacle_cell = Vector2i(-1, -1)
@@ -1239,6 +1232,9 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		# Pierwszy klik tylko zaznacza, kolejny dopiero rusza.
 		return
 
+	if _is_immobilized(active_unit):
+		return
+
 	var remaining_move: int = _get_remaining_move(active_unit)
 	if remaining_move <= 0:
 		return
@@ -1246,6 +1242,15 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	var path := _find_path(active_unit, Vector2i(active_unit.grid_x, active_unit.grid_y), cell, {}, remaining_move)
 	var path_cost: int = _get_path_cost(path)
 	if path.is_empty():
+		if _is_ambush_cell_for_unit(active_unit, cell):
+			var ambush_defender: Dictionary = _get_ambush_defender_at_cell(active_unit, cell)
+			if not ambush_defender.is_empty() and _hex_distance(Vector2i(active_unit.grid_x, active_unit.grid_y), cell) == 1:
+				_try_trigger_bush_ambush(active_unit, ambush_defender)
+				if _find_unit_by_id(int(active_unit.id)).is_empty():
+					_end_current_activation()
+					return
+				_sync_board()
+				return
 		if _is_cell_obstacle(cell):
 			_show_obstacle_details(cell)
 		return
@@ -1253,10 +1258,16 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		_clear_move_cost_label()
 		return
 
-	var move_path: Array[Vector2i] = _get_executable_move_path(path)
+	var move_path: Array[Vector2i] = _get_executable_move_path(path, active_unit)
 	var move_cost: int = _get_path_cost(move_path)
 	is_animating = true
-	var destination: Vector2i = move_path[move_path.size() - 1]
+	var destination: Vector2i = move_path[move_path.size() - 1] if not move_path.is_empty() else Vector2i(active_unit.grid_x, active_unit.grid_y)
+	var ambush_defender: Dictionary = {}
+	# Zasadzka odpala się dopiero gdy planowana trasa ma wkroczyć w heks z ukrytym wrogiem.
+	for step in path:
+		if _is_ambush_cell_for_unit(active_unit, step):
+			ambush_defender = _get_ambush_defender_at_cell(active_unit, step)
+			break
 	active_unit.grid_x = destination.x
 	active_unit.grid_y = destination.y
 	active_unit.remaining_move = max(0, remaining_move - move_cost)
@@ -1267,6 +1278,10 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	await board.animation_finished
 	_clear_move_cost_label()
 	_log_event("%s porusza się." % _unit_name_log_text(active_unit))
+	_try_trigger_bush_ambush(active_unit, ambush_defender)
+	if _find_unit_by_id(int(active_unit.id)).is_empty():
+		_end_current_activation()
+		return
 	_apply_terrain_effects_to_unit(active_unit)
 	if _find_unit_by_id(int(active_unit.id)).is_empty():
 		_end_current_activation()
@@ -1746,7 +1761,21 @@ func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
 	var path: Array[Vector2i] = []
 	for cell in plan.get("path", []):
 		path.append(cell)
-	path = _get_executable_move_path(path)
+	var ambush_cell_in_plan: Vector2i = Vector2i(-1, -1)
+	var ambush_defender_in_plan: Dictionary = {}
+	for step in path:
+		if _is_ambush_cell_for_unit(unit, step):
+			ambush_cell_in_plan = step
+			ambush_defender_in_plan = _get_ambush_defender_at_cell(unit, step)
+			break
+	path = _get_executable_move_path(path, unit)
+	if path.is_empty() and not ambush_defender_in_plan.is_empty() and _hex_distance(Vector2i(int(unit.grid_x), int(unit.grid_y)), ambush_cell_in_plan) == 1 and not _is_immobilized(unit):
+		_try_trigger_bush_ambush(unit, ambush_defender_in_plan)
+		if _find_unit_by_id(int(unit.id)).is_empty():
+			_end_current_activation()
+			return
+		_end_current_activation()
+		return
 	if not path.is_empty() and not _is_immobilized(unit):
 		var destination: Vector2i = path[path.size() - 1]
 		var path_cost: int = _get_path_cost(path)
@@ -1761,6 +1790,10 @@ func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
 		is_animating = false
 		_clear_move_cost_label()
 		_log_event("%s porusza się." % _unit_name_log_text(unit))
+		_try_trigger_bush_ambush(unit, ambush_defender_in_plan)
+		if _find_unit_by_id(int(unit.id)).is_empty():
+			_end_current_activation()
+			return
 		_apply_terrain_effects_to_unit(unit)
 		if _find_unit_by_id(int(unit.id)).is_empty():
 			_end_current_activation()
@@ -1788,7 +1821,7 @@ func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
 			legal = _can_target_ally_with_skill(unit, target, skill)
 		elif target_type == "cell":
 			legal = _can_target_cell_with_skill(unit, target_cell, skill)
-		if legal and MechanikaUmiejetnosciScript.czy_mozna_uzyc(unit, skill_id, skill_library):
+		if legal and MechanikaUmiejetnosciScript.czy_mozna_uzyc(unit, skill_id, skill_library) and _skill_effect_will_succeed(unit, target, skill, target_cell):
 			await _execute_skill(unit, target, skill, target_cell)
 	if active_unit_id != int(unit.id):
 		return
@@ -1807,6 +1840,61 @@ func _find_unit_at_cell(cell: Vector2i) -> Dictionary:
 		if unit.grid_x == cell.x and unit.grid_y == cell.y:
 			return unit
 	return {}
+
+
+func _find_visible_unit_at_cell(cell: Vector2i, observer: Dictionary) -> Dictionary:
+	var unit: Dictionary = _find_unit_at_cell(cell)
+	if unit.is_empty():
+		return {}
+	if unit.side == "player":
+		return unit
+	if observer.is_empty() or not _can_see_target(observer, unit):
+		return {}
+	return unit
+
+
+func _skill_effect_will_succeed(caster: Dictionary, target: Dictionary, skill: Dictionary, target_cell: Vector2i) -> bool:
+	var effect_type: String = str(skill.get("effect_type", ""))
+	match effect_type:
+		"taunt_burst":
+			var caster_cell := Vector2i(caster.grid_x, caster.grid_y)
+			for other in units:
+				if other.side == caster.side:
+					continue
+				if _hex_distance(caster_cell, Vector2i(other.grid_x, other.grid_y)) <= 2:
+					return true
+			return false
+		"dancing_blade":
+			var blade_cell := Vector2i(caster.grid_x, caster.grid_y)
+			for other in units:
+				if other.side == caster.side:
+					continue
+				if _hex_distance(blade_cell, Vector2i(other.grid_x, other.grid_y)) != 1:
+					continue
+				if _can_see_target(caster, other):
+					return true
+			return false
+		"hook_throw":
+			return _get_pull_destination(caster, target) != Vector2i(-1, -1)
+		"magic_projection":
+			return _get_magic_projection_cells(target_cell, str(caster.side)).size() == 3
+		"summon_statue":
+			return _can_place_summoned_statue_at(target_cell)
+	return true
+
+
+func _log_failed_skill(caster: Dictionary, skill: Dictionary, target: Dictionary = {}) -> void:
+	match str(skill.get("effect_type", "")):
+		"taunt_burst":
+			_log_event("%s używa Prowokacji, ale nikt nie znajduje się w zasięgu." % _unit_name_log_text(caster))
+		"dancing_blade":
+			_log_event("%s używa Tańczącego Ostrza, ale nikt nie znajduje się w zasięgu." % _unit_name_log_text(caster))
+		"hook_throw":
+			_log_event("%s rzuca hakiem w %s, ale nie może przyciągnąć celu." % [_unit_name_log_text(caster), _unit_name_log_text(target)])
+		"magic_projection":
+			_log_event("%s nie może postawić Magicznej Projekcji w tym miejscu." % _unit_name_log_text(caster))
+		"summon_statue":
+			_log_event("%s nie może przyzwać Pomnika w tym miejscu." % _unit_name_log_text(caster))
 
 
 func _find_nearest_player_unit(enemy_unit: Dictionary) -> Dictionary:
@@ -2168,7 +2256,7 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 			_clear_move_cost_label()
 		return
 
-	board.set_hovered_move_path(path)
+	board.set_hovered_move_path(_get_executable_move_path(path, active_unit))
 	board.set_hovered_attack_cell(Vector2i(-1, -1))
 	_show_move_cost_label(path_cost, remaining - path_cost)
 	_clear_hover_warning()
@@ -2659,7 +2747,8 @@ func _find_charge_approach_path(unit: Dictionary, target: Dictionary, skill: Dic
 	if destination == origin:
 		return []
 	var move_budget: int = _get_remaining_move(unit) + MechanikaUmiejetnosciScript.pobierz_bonus_szarzy(skill, "move_range")
-	return _get_executable_move_path(_find_path(unit, origin, destination, skill, move_budget))
+	# Raw path (z potencjalnym heks z zasadzka). Zatrzymanie/wyzwolenie logiki robimy w _perform_charge_attack.
+	return _find_path(unit, origin, destination, skill, move_budget)
 
 
 func _can_charge_attack_target(unit: Dictionary, target: Dictionary, skill: Dictionary) -> bool:
@@ -2709,28 +2798,54 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 		return
 
 	var move_path: Array[Vector2i] = _find_charge_approach_path(attacker, target, skill)
+	var ambush_defender: Dictionary = {}
+	# Zasadzka wyzwala się, gdy trasa ma zamiar wkroczyć w heks z ukrytym wrogiem.
+	for step in move_path:
+		if _is_ambush_cell_for_unit(attacker, step):
+			ambush_defender = _get_ambush_defender_at_cell(attacker, step)
+			break
+
+	var exec_move_path: Array[Vector2i] = _get_executable_move_path(move_path, attacker)
 	var moved := false
-	if not move_path.is_empty():
-		var destination: Vector2i = move_path[move_path.size() - 1]
+	if not exec_move_path.is_empty():
+		var destination: Vector2i = exec_move_path[exec_move_path.size() - 1]
 		attacker.grid_x = destination.x
 		attacker.grid_y = destination.y
 		attacker.remaining_move = 0
 		moved = true
+
 		if animate_move:
 			is_animating = true
 			_sync_board()
-			board.animate_unit_path(attacker.id, move_path)
+			board.animate_unit_path(attacker.id, exec_move_path)
 			await board.animation_finished
 			is_animating = false
+			if _try_trigger_bush_ambush(attacker, ambush_defender):
+				if _find_unit_by_id(int(attacker.id)).is_empty() or end_turn_after:
+					_end_current_activation()
+				return
 			_apply_terrain_effects_to_unit(attacker)
 			if _find_unit_by_id(int(attacker.id)).is_empty():
-				_end_current_activation()
+				if end_turn_after:
+					_end_current_activation()
 				return
 			_stop_unit_on_terrain(attacker)
 			_try_trigger_agility(attacker)
 		else:
 			_sync_board()
 			board.snap_unit_to_cell(attacker.id, destination)
+			if _try_trigger_bush_ambush(attacker, ambush_defender):
+				if _find_unit_by_id(int(attacker.id)).is_empty() or end_turn_after:
+					_end_current_activation()
+				return
+	elif not ambush_defender.is_empty():
+		# Zatrzymanie tuż przed zasadzka, gdy pierwszym krokiem byl sam heks z ukrytym wrogiem.
+		var ambush_cell := Vector2i(int(ambush_defender.grid_x), int(ambush_defender.grid_y))
+		if _hex_distance(Vector2i(int(attacker.grid_x), int(attacker.grid_y)), ambush_cell) == 1:
+			if _try_trigger_bush_ambush(attacker, ambush_defender):
+				if _find_unit_by_id(int(attacker.id)).is_empty() or end_turn_after:
+					_end_current_activation()
+				return
 
 	var attacker_cell := Vector2i(attacker.grid_x, attacker.grid_y)
 	var target_cell := Vector2i(target.grid_x, target.grid_y)
@@ -2786,9 +2901,16 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 	if path_cost > max_distance:
 		return
 
-	var move_path: Array[Vector2i] = _get_executable_move_path(path)
+	var ambush_defender: Dictionary = {}
+	# Zasadzka odpala się, gdy trasa rzeczywiście wchodzi w heks z ukrytym wrogiem.
+	for step in path:
+		if _is_ambush_cell_for_unit(unit, step):
+			ambush_defender = _get_ambush_defender_at_cell(unit, step)
+			break
+
+	var move_path: Array[Vector2i] = _get_executable_move_path(path, unit)
 	is_animating = true
-	var destination: Vector2i = move_path[move_path.size() - 1]
+	var destination: Vector2i = move_path[move_path.size() - 1] if not move_path.is_empty() else Vector2i(unit.grid_x, unit.grid_y)
 	unit.grid_x = destination.x
 	unit.grid_y = destination.y
 	unit.remaining_move = 0
@@ -2798,8 +2920,11 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 	await board.animation_finished
 	is_animating = false
 	_clear_move_cost_label()
-	_commit_charge_skill(unit, skill)
-	_log_event("%s szarżuje do przodu." % _unit_name_log_text(unit))
+	_log_event("%s porusza się w kierunku szarży." % _unit_name_log_text(unit))
+	_try_trigger_bush_ambush(unit, ambush_defender)
+	if _find_unit_by_id(int(unit.id)).is_empty():
+		_end_current_activation()
+		return
 	_apply_terrain_effects_to_unit(unit)
 	if _find_unit_by_id(int(unit.id)).is_empty():
 		_end_current_activation()
@@ -2938,6 +3063,9 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> bool:
 	if str(skill.get("target_type", "")) == "self":
 		if cell != Vector2i(unit.grid_x, unit.grid_y):
 			return false
+		if not _skill_effect_will_succeed(unit, unit, skill, cell):
+			_log_failed_skill(unit, skill)
+			return false
 		await _execute_skill(unit, unit, skill, cell)
 		return true
 
@@ -2953,6 +3081,9 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> bool:
 		if str(skill.get("effect_type", "")) == "magic_projection" and not _can_place_magic_projection_at(unit, cell):
 			return false
 		if str(skill.get("effect_type", "")) == "summon_statue" and not _can_place_summoned_statue_at(cell):
+			return false
+		if not _skill_effect_will_succeed(unit, {}, skill, cell):
+			_log_failed_skill(unit, skill)
 			return false
 		await _execute_skill(unit, {}, skill, cell)
 		return true
@@ -2971,8 +3102,10 @@ func _try_use_skill(unit: Dictionary, skill_id: String, cell: Vector2i) -> bool:
 		return false
 	if _is_attack_blocked(unit, cell):
 		return false
-	if str(skill.get("effect_type", "")) == "hook_throw" and not _can_hook_throw_target(unit, target, skill):
-		return false
+	if str(skill.get("effect_type", "")) == "hook_throw":
+		if not _can_hook_throw_target(unit, target, skill) or not _skill_effect_will_succeed(unit, target, skill, cell):
+			_log_failed_skill(unit, skill, target)
+			return false
 	await _execute_skill(unit, target, skill, cell)
 	return true
 
@@ -3896,8 +4029,6 @@ func _try_activate_detonator(active_unit: Dictionary, cell: Vector2i) -> bool:
 	var detonator_index := _find_detonator_index(cell)
 	if detonator_index < 0:
 		return false
-	if detonator_activated:
-		return false
 	_trigger_detonator(active_unit, cell, detonator_index)
 	return true
 
@@ -3947,7 +4078,6 @@ func _trigger_detonator(active_unit: Dictionary, cell: Vector2i, detonator_index
 		_cleanup_destroyed_unit(hit_target)
 
 	obstacles.remove_at(detonator_index)
-	detonator_activated = true
 	board.set_detonator_warning_cells([])
 	board.clear_falling_rock_cells()
 	_log_event(
@@ -4452,11 +4582,27 @@ func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i, charge_skill:
 	return _odtworz_trase(mapa, start, goal)
 
 
+func _find_ambush_approach_cell(unit: Dictionary, start: Vector2i, ambush_cell: Vector2i, charge_skill: Dictionary, max_distance: int) -> Vector2i:
+	var mapa: Dictionary = _zbuduj_mape_tras(unit, start, max_distance, charge_skill)
+	var best_states: Dictionary = mapa.get("best_state_by_cell", {})
+	var best_cell := Vector2i(-1, -1)
+	var best_cost: int = 1000000
+	for neighbor in _get_neighbors(ambush_cell):
+		if not best_states.has(neighbor):
+			continue
+		var state: Vector3i = best_states[neighbor]
+		var cost: int = int(state.z)
+		if cost < best_cost:
+			best_cost = cost
+			best_cell = neighbor
+	return best_cell
+
+
 func _zbuduj_mape_tras(unit: Dictionary, start: Vector2i, max_distance: int, charge_skill: Dictionary = {}) -> Dictionary:
 	if not _pole_na_planszy(start):
 		return {"came_from": {}, "risk_by_state": {}, "priority_by_state": {}, "best_state_by_cell": {}}
 	var limit: int = max_distance if max_distance >= 0 else _maksymalny_koszt_prostej_trasy()
-	var blocked: Dictionary = _get_blocked_cells(int(unit.get("id", -1)))
+	var blocked: Dictionary = _get_blocked_cells(int(unit.get("id", -1)), unit)
 	var start_state := Vector3i(start.x, start.y, 0)
 	var frontier: Array[Vector3i] = [start_state]
 	var came_from: Dictionary = {start_state: start_state}
@@ -4752,7 +4898,7 @@ func _get_path_cost(path: Array[Vector2i]) -> int:
 	return cost
 
 
-func _get_executable_move_path(path: Array[Vector2i]) -> Array[Vector2i]:
+func _get_executable_move_path(path: Array[Vector2i], mover: Dictionary = {}) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for cell in path:
 		result.append(cell)
@@ -4838,12 +4984,63 @@ func _can_see_target(observer: Dictionary, target: Dictionary) -> bool:
 	return _hex_distance(observer_cell, target_cell) == 1
 
 
-func _get_blocked_cells(excluded_unit_id: int) -> Dictionary:
+func _is_ambush_cell_for_unit(mover: Dictionary, cell: Vector2i) -> bool:
+	var defender: Dictionary = _find_unit_at_cell(cell)
+	if defender.is_empty() or str(defender.side) == str(mover.side):
+		return false
+	if not bool(defender.get("is_hidden", false)):
+		return false
+	if bool(defender.get("is_revealed", false)) or _has_effect(defender, "wykrycie"):
+		return false
+	return _terrain_hides_unit(cell)
+
+
+func _get_ambush_defender_at_cell(mover: Dictionary, cell: Vector2i) -> Dictionary:
+	if not _is_ambush_cell_for_unit(mover, cell):
+		return {}
+	return _find_unit_at_cell(cell)
+
+
+func _get_ambush_defender_adjacent_to(mover: Dictionary, cell: Vector2i) -> Dictionary:
+	for neighbor in _get_neighbors(cell):
+		var defender: Dictionary = _get_ambush_defender_at_cell(mover, neighbor)
+		if not defender.is_empty():
+			return defender
+	return {}
+
+
+func _try_trigger_bush_ambush(mover: Dictionary, defender: Dictionary) -> bool:
+	if defender.is_empty() or _find_unit_by_id(int(mover.id)).is_empty():
+		return false
+	_reveal_if_in_bush(defender)
+	var total_damage: int = _calculate_damage(defender, mover)
+	var result: Dictionary = _apply_attack_damage(defender, mover, total_damage)
+	var casualties: int = int(result.get("casualties", 0))
+	_log_event(
+		"%s otrzymuje %s obrażeń z zasadzki %s i ponosi %s strat." % [
+			_unit_name_log_text(mover),
+			_color_log_text(str(result.get("damage", total_damage)), LOG_COLOR_DAMAGE),
+			_unit_name_log_text(defender),
+			_color_log_text(str(casualties), LOG_COLOR_DAMAGE)
+		]
+	)
+	_try_apply_poison_master(defender, mover)
+	_cleanup_destroyed_unit(mover)
+	mover["remaining_move"] = 0
+	_sync_board()
+	return true
+
+
+func _get_blocked_cells(excluded_unit_id: int, mover: Dictionary = {}) -> Dictionary:
 	var blocked: Dictionary = {}
 	for unit in units:
 		if unit.id == excluded_unit_id:
 			continue
-		blocked[Vector2i(unit.grid_x, unit.grid_y)] = true
+		var cell := Vector2i(unit.grid_x, unit.grid_y)
+		# Ukryty wróg w krzaku nie blokuje wejścia w jego hex (dopóki nie jest wykryty).
+		if not mover.is_empty() and _is_ambush_cell_for_unit(mover, cell):
+			continue
+		blocked[cell] = true
 	for obstacle in obstacles:
 		var cell := Vector2i(int(obstacle.grid_x), int(obstacle.grid_y))
 		if not _is_cell_passable(cell):
@@ -5367,6 +5564,13 @@ func _validate_static_setup() -> void:
 	assert(_get_magic_projection_cells(Vector2i(10, 4), "enemy").size() == 3, "Magiczna Projekcja wroga musi tworzyc 3 hexy.")
 	assert(_get_ice_ground_cells(Vector2i(7, 5)).size() == 8, "Lodowe Podloze musi zamrazac 8 hexow.")
 	assert(not _get_ice_ground_cells(Vector2i(7, 5)).has(Vector2i(7, 5)), "Lodowe Podloze nie zamraza wskazanego srodka.")
+	var lone_cavalry: Dictionary = _prepare_unit({"id": 901, "type_id": "human_cavalry", "side": "player", "grid_x": 5, "grid_y": 5})
+	var saved_units: Array = units
+	units = [lone_cavalry]
+	var taunt_skill: Dictionary = skill_library.get("prowokacja", {})
+	assert(not taunt_skill.is_empty(), "Brak skilla prowokacja w bibliotece.")
+	assert(not _skill_effect_will_succeed(lone_cavalry, lone_cavalry, taunt_skill, Vector2i(5, 5)), "Prowokacja bez celow nie moze sie udac.")
+	units = saved_units
 	assert(skill_library.has("sztandar"), "Brak skilla sztandar w bibliotece.")
 	assert(str(skill_library["sztandar"].get("effect_type", "")) == "sztandar", "Sztandar musi miec efekt sztandar.")
 	assert(str(skill_library["sztandar"].get("target_type", "")) == "ally_unit", "Sztandar musi celowac w sojusznika.")
@@ -5488,6 +5692,48 @@ func _validate_runtime_setup() -> void:
 	terrain_effects = [{"id": "poison_cloud", "grid_x": 5, "grid_y": 4, "remaining_turns": 2, "tick_damage": 1}]
 	_reveal_if_in_bush(bush_unit)
 	assert(int(bush_unit.active_effects[0].remaining_turns) == 1, "Wykrycie nie moze odnawiac czasu, dopoki trwa.")
+	var ambush_enemy := {
+		"id": 1005,
+		"name": "Zasadzkarz",
+		"side": "enemy",
+		"grid_x": 5,
+		"grid_y": 5,
+		"atk": 20,
+		"dmg_min": 10,
+		"dmg_max": 10,
+		"def": 0,
+		"count": 5,
+		"base_hp": 10,
+		"hp": 10,
+		"current_total_hp": 50,
+		"active_effects": []
+	}
+	bush_unit.grid_x = 5
+	bush_unit.grid_y = 4
+	units = [bush_unit, ambush_enemy]
+	_apply_terrain_effects_to_unit(ambush_enemy)
+	assert(_is_ambush_cell_for_unit(bush_unit, Vector2i(5, 5)), "Ukryty wrog w krzaku musi byc polem zasadzki.")
+	assert(_get_blocked_cells(int(bush_unit.id)).has(Vector2i(5, 5)), "Ukryty wrog musi blokowac wejscie w krzak.")
+	var ambush_path: Array[Vector2i] = _find_path(bush_unit, Vector2i(5, 4), Vector2i(5, 5), {}, 1)
+	assert(not ambush_path.is_empty(), "Klikniecie w pole zasadzki musi dawac trase, nawet jesli ruch sie urwie przed wejsciem.")
+	assert(_get_executable_move_path(ambush_path, bush_unit).is_empty(), "Gdy jednostka jest juz obok, ruch nie moze wejsc w sam heks z zasadzka.")
+	bush_unit.grid_x = 3
+	bush_unit.grid_y = 5
+	ambush_path = _find_path(bush_unit, Vector2i(3, 5), Vector2i(5, 5), {}, 3)
+	assert(not ambush_path.is_empty(), "Klikniecie w krzak z wrogiem musi prowadzic na sasiednie pole.")
+	var ambush_stop: Vector2i = _get_executable_move_path(ambush_path, bush_unit).back()
+	assert(ambush_stop != Vector2i(5, 5), "Ruch musi zatrzymac sie przed krzakiem z zasadzka.")
+	assert(not _get_ambush_defender_adjacent_to(bush_unit, ambush_stop).is_empty(), "Zatrzymanie musi byc przy zasadzce.")
+	bush_unit.grid_x = 5
+	bush_unit.grid_y = 4
+	var ambush_hp_before: int = int(bush_unit.current_total_hp)
+	assert(_try_trigger_bush_ambush(bush_unit, ambush_enemy), "Zasadzka musi sie uruchomic z sasiedniego pola.")
+	assert(int(bush_unit.current_total_hp) < ambush_hp_before, "Zasadzka musi zadawac obrazenia jak zwykly atak.")
+	assert(_has_effect(ambush_enemy, "wykrycie"), "Zasadzka musi ujawnic ukrytego wroga.")
+	assert(int(ambush_enemy.grid_x) == 5 and int(ambush_enemy.grid_y) == 5, "Wrog w zasadzce zostaje w krzaku.")
+	ambush_enemy["active_effects"] = [{"id": "wykrycie", "name": "Wykrycie", "category": "debuff", "remaining_turns": 1, "stat_changes": []}]
+	ambush_enemy["is_hidden"] = true
+	assert(_get_blocked_cells(int(bush_unit.id)).has(Vector2i(5, 5)), "Wykryty wrog nadal blokuje pole.")
 	var ai_archer := {
 		"id": 1001,
 		"name": "AI Archer",
@@ -6124,6 +6370,7 @@ func _start_unit_activation(unit: Dictionary) -> void:
 		_end_current_activation()
 		return
 	if _is_immobilized(unit) and _is_manual_side(str(unit.side)):
+		unit.remaining_move = 0
 		_log_event("%s nie rusza się, ponieważ jest unieruchomiony." % _unit_name_log_text(unit))
 	if not _is_manual_side(str(unit.side)) and not _can_unit_continue_turn(unit):
 		if _is_immobilized(unit):
