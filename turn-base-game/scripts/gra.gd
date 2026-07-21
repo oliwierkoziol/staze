@@ -1941,7 +1941,7 @@ func _find_visible_unit_at_cell(cell: Vector2i, observer: Dictionary) -> Diction
 	var unit: Dictionary = _find_unit_at_cell(cell)
 	if unit.is_empty():
 		return {}
-	if unit.side == "player":
+	if not observer.is_empty() and str(unit.side) == str(observer.side):
 		return unit
 	if observer.is_empty() or not _can_see_target(observer, unit):
 		return {}
@@ -2363,7 +2363,7 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 			_clear_move_cost_label()
 			_clear_hover_warning()
 			return
-		_show_hover_warning("Cel poza zasięgiem ataku!", cell)
+		_clear_hover_warning()
 
 	var remaining: int = _get_remaining_move(active_unit)
 	if not charge_skill.is_empty():
@@ -2381,7 +2381,7 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 			_clear_move_cost_label()
 		return
 
-	board.set_hovered_move_path(_get_executable_move_path(path, active_unit))
+	board.set_hovered_move_path(_get_executable_move_path(path))
 	board.set_hovered_attack_cell(Vector2i(-1, -1))
 	_show_move_cost_label(path_cost, remaining - path_cost)
 	_clear_hover_warning()
@@ -4802,22 +4802,6 @@ func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i, charge_skill:
 	return _odtworz_trase(mapa, start, goal)
 
 
-func _find_ambush_approach_cell(unit: Dictionary, start: Vector2i, ambush_cell: Vector2i, charge_skill: Dictionary, max_distance: int) -> Vector2i:
-	var mapa: Dictionary = _zbuduj_mape_tras(unit, start, max_distance, charge_skill)
-	var best_states: Dictionary = mapa.get("best_state_by_cell", {})
-	var best_cell := Vector2i(-1, -1)
-	var best_cost: int = 1000000
-	for neighbor in _get_neighbors(ambush_cell):
-		if not best_states.has(neighbor):
-			continue
-		var state: Vector3i = best_states[neighbor]
-		var cost: int = int(state.z)
-		if cost < best_cost:
-			best_cost = cost
-			best_cell = neighbor
-	return best_cell
-
-
 func _zbuduj_mape_tras(unit: Dictionary, start: Vector2i, max_distance: int, charge_skill: Dictionary = {}) -> Dictionary:
 	if not _pole_na_planszy(start):
 		return {"came_from": {}, "risk_by_state": {}, "priority_by_state": {}, "best_state_by_cell": {}}
@@ -5121,6 +5105,8 @@ func _get_path_cost(path: Array[Vector2i]) -> int:
 func _get_executable_move_path(path: Array[Vector2i], mover: Dictionary = {}) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for cell in path:
+		if not mover.is_empty() and _is_ambush_cell_for_unit(mover, cell):
+			break
 		result.append(cell)
 		if _pole_konczy_ruch(cell):
 			break
@@ -5212,7 +5198,7 @@ func _is_ambush_cell_for_unit(mover: Dictionary, cell: Vector2i) -> bool:
 		return false
 	if bool(defender.get("is_revealed", false)) or _has_effect(defender, "wykrycie"):
 		return false
-	return _terrain_hides_unit(cell)
+	return _get_terrain_type_at(cell) in ["krzok", "zimowy_krzak"]
 
 
 func _get_ambush_defender_at_cell(mover: Dictionary, cell: Vector2i) -> Dictionary:
@@ -5231,6 +5217,10 @@ func _get_ambush_defender_adjacent_to(mover: Dictionary, cell: Vector2i) -> Dict
 
 func _try_trigger_bush_ambush(mover: Dictionary, defender: Dictionary) -> bool:
 	if defender.is_empty() or _find_unit_by_id(int(mover.id)).is_empty():
+		return false
+	var defender_cell: Vector2i = Vector2i(int(defender.grid_x), int(defender.grid_y))
+	var current_defender: Dictionary = _get_ambush_defender_at_cell(mover, defender_cell)
+	if current_defender.is_empty() or int(current_defender.id) != int(defender.id) or _hex_distance(Vector2i(int(mover.grid_x), int(mover.grid_y)), defender_cell) != 1:
 		return false
 	_reveal_if_in_bush(defender)
 	var total_damage: int = _calculate_damage(defender, mover)
@@ -5930,6 +5920,10 @@ func _validate_runtime_setup() -> void:
 	assert(_can_see_target({"side": "enemy", "grid_x": 6, "grid_y": 5}, {"side": "player", "grid_x": 5, "grid_y": 5, "is_hidden": true}), "Wróg obok krzaka musi widziec ukrytego gracza.")
 	assert(not _can_see_target({"grid_x": 5, "grid_y": 3}, hidden_enemy), "Tylko sasiednia jednostka moze widziec ukryty cel.")
 	assert(_can_see_target({"grid_x": 0, "grid_y": 0}, {"grid_x": 5, "grid_y": 5, "is_hidden": true, "is_revealed": true}), "Wykrycie musi pokazywac jednostke ukryta w krzaku.")
+	var hidden_player: Dictionary = {"id": 1006, "side": "player", "grid_x": 3, "grid_y": 5, "is_hidden": true, "active_effects": []}
+	var enemy_observer: Dictionary = {"id": 1007, "side": "enemy", "grid_x": 7, "grid_y": 5}
+	units = [hidden_player, enemy_observer]
+	assert(_find_visible_unit_at_cell(Vector2i(3, 5), enemy_observer).is_empty(), "Ukryty gracz musi byc niewidoczny dla odleglego przeciwnika.")
 	terrain_effects = [{"id": "mgla", "grid_x": 5, "grid_y": 5, "remaining_turns": 1}]
 	hidden_enemy["is_revealed"] = true
 	assert(not _can_see_target({"grid_x": 0, "grid_y": 0}, hidden_enemy), "Mgla musi ukrywac wykryty cel przed odleglym wrogiem.")
@@ -5969,6 +5963,9 @@ func _validate_runtime_setup() -> void:
 	bush_unit.grid_y = 4
 	units = [bush_unit, ambush_enemy]
 	_apply_terrain_effects_to_unit(ambush_enemy)
+	obstacles[2]["type"] = "holy_tree"
+	assert(not _is_ambush_cell_for_unit(bush_unit, Vector2i(5, 5)), "Ukrycie poza krzakiem nie moze wykonac zasadzki.")
+	obstacles[2]["type"] = "krzok"
 	assert(_is_ambush_cell_for_unit(bush_unit, Vector2i(5, 5)), "Ukryty wrog w krzaku musi byc polem zasadzki.")
 	assert(_get_blocked_cells(int(bush_unit.id)).has(Vector2i(5, 5)), "Ukryty wrog musi blokowac wejscie w krzak.")
 	var ambush_path: Array[Vector2i] = _find_path(bush_unit, Vector2i(5, 4), Vector2i(5, 5), {}, 1)
@@ -5990,6 +5987,8 @@ func _validate_runtime_setup() -> void:
 	assert(int(ambush_enemy.grid_x) == 5 and int(ambush_enemy.grid_y) == 5, "Wrog w zasadzce zostaje w krzaku.")
 	ambush_enemy["active_effects"] = [{"id": "wykrycie", "name": "Wykrycie", "category": "debuff", "remaining_turns": 1, "stat_changes": []}]
 	ambush_enemy["is_hidden"] = true
+	ambush_enemy["is_revealed"] = false
+	assert(not _is_ambush_cell_for_unit(bush_unit, Vector2i(5, 5)), "Wykryty wrog nie moze wykonac zasadzki.")
 	assert(_get_blocked_cells(int(bush_unit.id)).has(Vector2i(5, 5)), "Wykryty wrog nadal blokuje pole.")
 	var ai_archer := {
 		"id": 1001,

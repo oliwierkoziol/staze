@@ -9,10 +9,10 @@
 	  "name": "Mury",
 	  "background": "res://assets/backgrounds/scenarios/zamek_etap_1_mury.png",
 	  "player_units": [
-		{"type_id": "orc_warrior", "count": 14},
-		{"type_id": "orc_berserker", "count": 10},
-		{"type_id": "orc_shaman", "count": 10},
-		{"type_id": "orc_shieldman", "count": 12}
+		{"type_id": "orc_warrior", "count": 16},
+		{"type_id": "orc_berserker", "count": 12},
+		{"type_id": "orc_shaman", "count": 12},
+		{"type_id": "orc_shieldman", "count": 13}
 	  ],
 	  "enemy_units": [
 		{"type_id": "human_knights", "count": 9, "grid_x": 11, "grid_y": 6},
