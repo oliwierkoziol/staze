@@ -296,6 +296,7 @@ func _show_team_setup() -> void:
 		existing_setup.free()
 	var setup: Control = TEAM_SETUP_SCENE.instantiate()
 	setup.name = "TeamSetup"
+	setup.set("_ai_difficulty", ai_difficulty)
 	setup.setup_finished.connect(_on_team_setup_finished)
 	setup.setup_loaded.connect(_on_team_setup_loaded)
 	setup.custom_setup_finished.connect(_on_custom_setup_finished)
