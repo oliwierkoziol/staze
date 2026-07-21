@@ -1341,8 +1341,10 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		if _is_ambush_cell_for_unit(active_unit, step):
 			ambush_defender = _get_ambush_defender_at_cell(active_unit, step)
 			break
+	var origin := Vector2i(active_unit.grid_x, active_unit.grid_y)
 	active_unit.grid_x = destination.x
 	active_unit.grid_y = destination.y
+	_reveal_unit_leaving_concealment(active_unit, origin)
 	active_unit.remaining_move = max(0, remaining_move - move_cost)
 	pending_skill_id = ""
 	_sync_board()
@@ -1857,8 +1859,10 @@ func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
 	if not path.is_empty() and not _is_immobilized(unit):
 		var destination: Vector2i = path[path.size() - 1]
 		var path_cost: int = _get_path_cost(path)
+		var origin := Vector2i(int(unit.grid_x), int(unit.grid_y))
 		unit.grid_x = destination.x
 		unit.grid_y = destination.y
+		_reveal_unit_leaving_concealment(unit, origin)
 		unit.remaining_move = max(0, _get_remaining_move(unit) - path_cost)
 		is_animating = true
 		_sync_board()
@@ -2910,8 +2914,10 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 	var moved := false
 	if not exec_move_path.is_empty():
 		var destination: Vector2i = exec_move_path[exec_move_path.size() - 1]
+		var origin := Vector2i(int(attacker.grid_x), int(attacker.grid_y))
 		attacker.grid_x = destination.x
 		attacker.grid_y = destination.y
+		_reveal_unit_leaving_concealment(attacker, origin)
 		attacker.remaining_move = 0
 		moved = true
 
@@ -3391,8 +3397,10 @@ func _execute_hook_throw(caster: Dictionary, target: Dictionary) -> void:
 	is_animating = true
 	board.play_hook_throw_animation(int(caster.id), int(target.id))
 	await get_tree().create_timer(0.15).timeout
+	var origin := Vector2i(target.grid_x, target.grid_y)
 	target["grid_x"] = destination.x
 	target["grid_y"] = destination.y
+	_reveal_unit_leaving_concealment(target, origin)
 	_sync_board()
 	if pull_path.is_empty():
 		board.snap_unit_to_cell(int(target.id), destination)
@@ -3428,8 +3436,10 @@ func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
 		if destination != Vector2i(-1, -1):
 			pushed = true
 			var push_path: Array[Vector2i] = [destination]
+			var origin := Vector2i(int(target.grid_x), int(target.grid_y))
 			target["grid_x"] = destination.x
 			target["grid_y"] = destination.y
+			_reveal_unit_leaving_concealment(target, origin)
 			_sync_board()
 			board.animate_unit_knockback_path(int(target.id), push_path)
 			await board.animation_finished
@@ -3835,10 +3845,10 @@ func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dict
 
 
 func _execute_shattering_strike(caster: Dictionary, target: Dictionary, skill: Dictionary = {}) -> void:
+	var target_id: int = int(target.get("id", -1))
 	var total_damage := _calculate_damage(caster, target, 1.5)
 	var result := _apply_attack_damage(caster, target, total_damage)
 	var hit_target: Dictionary = result.get("target", target)
-	var hit_target_id: int = int(hit_target.get("id", -1))
 	var casualties := int(result.get("casualties", 0))
 	_log_event(
 		"%s uderza %s Druzgocacym Ciosem za %s obrazen i %s strat." % [
@@ -3849,7 +3859,7 @@ func _execute_shattering_strike(caster: Dictionary, target: Dictionary, skill: D
 		]
 	)
 	_cleanup_destroyed_unit(hit_target)
-	if hit_target_id != -1 and _find_unit_by_id(hit_target_id).is_empty():
+	if target_id != -1 and _find_unit_by_id(target_id).is_empty():
 		if not caster.has("skill_cooldowns"):
 			caster["skill_cooldowns"] = {}
 		caster.skill_cooldowns[str(skill.get("id", "druzgocacy_cios"))] = 0
@@ -4258,6 +4268,17 @@ func _reveal_if_in_bush(unit: Dictionary) -> void:
 		"stat_changes": []
 	})
 	unit["is_revealed"] = true
+
+
+func _reveal_unit_leaving_concealment(unit: Dictionary, origin: Vector2i) -> void:
+	if not bool(unit.get("is_hidden", false)):
+		return
+	if not _terrain_hides_unit(origin) and not _has_map_concealment_at(origin):
+		return
+	var destination := Vector2i(int(unit.grid_x), int(unit.grid_y))
+	if _terrain_hides_unit(destination) or _has_map_concealment_at(destination):
+		return
+	_refresh_terrain_bound_effects(unit)
 
 
 func _apply_poison_effect(unit: Dictionary, id: String, name: String, turns: int, tick_damage: int, reduce_def := false) -> bool:
@@ -5687,6 +5708,9 @@ func _validate_static_setup() -> void:
 		assert(faction_general_skills.size() == 2, "Frakcja musi miec dokladnie 2 umiejetnosci generala: %s" % faction_id)
 		for general_skill_id in faction_general_skills:
 			assert(general_skills.has(general_skill_id), "Brak umiejetnosci generala: %s" % general_skill_id)
+	for general_skill_id in general_skills.keys():
+		var general_tooltip: String = _build_general_skill_tooltip(general_skills[general_skill_id])
+		assert(str(general_skills[general_skill_id].get("description", "")) in general_tooltip, "Tooltip generala musi zawierac opis: %s" % general_skill_id)
 	for map_event_debuff_id in ["lesne_opary", "sniezna_zamiec", "gniew_korzeni", "wichura_lodowa", "pustynny_podmuch"]:
 		assert(str(UnitTypeLibraryScript.get_status_effect(map_event_debuff_id).get("description", "")) != "", "Debuff eventu mapy musi miec opis: %s" % map_event_debuff_id)
 	for general_skill_id in general_skills.keys():
@@ -5724,6 +5748,13 @@ func _validate_static_setup() -> void:
 	assert(skill_library.has("druzgocacy_cios"), "Brak skilla druzgocacy_cios w bibliotece.")
 	assert(str(skill_library["druzgocacy_cios"].get("effect_type", "")) == "shattering_strike", "Druzgocacy Cios musi miec efekt shattering_strike.")
 	assert(int(skill_library["druzgocacy_cios"].get("cooldown", 0)) == 4, "Druzgocacy Cios musi miec cooldown 4 tur.")
+	var shatter_survivor: Dictionary = _prepare_unit({"id": 913, "type_id": "human_archers", "count": 10, "side": "enemy", "grid_x": 1, "grid_y": 1})
+	_apply_damage_to_unit(shatter_survivor, int(shatter_survivor.base_hp))
+	assert(int(shatter_survivor.count) > 0, "Smoke Druzgocacego Ciosu wymaga czesciowego trafienia.")
+	var shatter_units_backup: Array = units
+	units = [shatter_survivor]
+	assert(not _find_unit_by_id(913).is_empty(), "Druzgocacy Cios nie odswieza CD, gdy wybrany cel nadal zyje.")
+	units = shatter_units_backup
 	assert(skill_library.has("przebijajacy_strzal"), "Brak skilla przebijajacy_strzal w bibliotece.")
 	assert(str(skill_library["przebijajacy_strzal"].get("effect_type", "")) == "piercing_shot", "Przebijajacy Strzal musi miec efekt piercing_shot.")
 	assert(skill_library.has("deszcz_strzal"), "Brak skilla deszcz_strzal w bibliotece.")
@@ -5880,6 +5911,15 @@ func _validate_runtime_setup() -> void:
 	assert(_can_see_target({"grid_x": 6, "grid_y": 5}, hidden_enemy), "Sasiedni wrog musi widziec cel we mgle.")
 	_reveal_if_in_bush(hidden_enemy)
 	assert(not _has_effect(hidden_enemy, "wykrycie"), "Atak ani obrazenia we mgle nie moga nakladac Wykrycia.")
+	var leaving_bush_unit := {
+		"side": "enemy",
+		"grid_x": 6,
+		"grid_y": 5,
+		"is_hidden": true,
+		"active_effects": [{"id": "krzok", "name": "Krzak", "category": "buff", "hides_unit": true, "terrain_bound": true, "permanent": true, "stat_changes": []}]
+	}
+	_reveal_unit_leaving_concealment(leaving_bush_unit, Vector2i(5, 5))
+	assert(not bool(leaving_bush_unit.get("is_hidden", true)), "Wyjscie z krzaka musi ujawniac jednostke przed animacja ruchu.")
 	bush_unit["active_effects"] = [{"id": "wykrycie", "name": "Wykrycie", "category": "debuff", "remaining_turns": 1, "stat_changes": []}]
 	terrain_effects = [{"id": "poison_cloud", "grid_x": 5, "grid_y": 4, "remaining_turns": 2, "tick_damage": 1}]
 	_reveal_if_in_bush(bush_unit)
@@ -6452,6 +6492,27 @@ func _build_skill_tooltip(unit: Dictionary, index: int) -> String:
 	return "\n".join(lines)
 
 
+func _build_general_skill_tooltip(skill: Dictionary) -> String:
+	if skill.is_empty():
+		return "Brak umiejetnosci."
+
+	var lines: Array[String] = [
+		str(skill.get("name", "")),
+		"Uzycie: raz na bitwe",
+		"Cel: %s" % _general_skill_target_label(skill),
+	]
+	var effect_type: String = str(skill.get("effect_type", ""))
+	if effect_type == "area":
+		var radius: int = int(skill.get("radius", 0))
+		if radius > 0:
+			lines.append("Promien: %d" % radius)
+	var description: String = str(skill.get("description", ""))
+	if description != "":
+		lines.append("")
+		lines.append(description)
+	return "\n".join(lines)
+
+
 func _skill_target_label(target_type: String) -> String:
 	match target_type:
 		"self":
@@ -6464,6 +6525,21 @@ func _skill_target_label(target_type: String) -> String:
 			return "Hex"
 		"passive":
 			return "Pasywna"
+	return "Brak"
+
+
+func _general_skill_target_label(skill: Dictionary) -> String:
+	match str(skill.get("effect_type", "")):
+		"army_buff":
+			return "Wszyscy sojusznicy"
+		"ally":
+			if bool(skill.get("active_only", false)):
+				return "Aktywny sojuszniczy oddzial"
+			return "Sojuszniczy oddzial"
+		"enemy":
+			return "Wrogi oddzial"
+		"area":
+			return "Wybrany hex"
 	return "Brak"
 
 
@@ -6914,6 +6990,7 @@ func _refresh_general_ability_buttons() -> void:
 		var cd_label: Label = button.get_node("AbilityContent/AbilityText/AbilityCooldown")
 		if index >= general_skill_ids.size():
 			button.disabled = true
+			button.tooltip_text = "Brak umiejetnosci."
 			name_label.text = "-"
 			desc_label.text = "Brak umiejetnosci"
 			cd_label.text = ""
@@ -6931,3 +7008,4 @@ func _refresh_general_ability_buttons() -> void:
 		name_label.text = str(skill.get("name", skill_id)).to_upper()
 		desc_label.text = str(skill.get("description", ""))
 		cd_label.text = ""
+		button.tooltip_text = _build_general_skill_tooltip(skill)

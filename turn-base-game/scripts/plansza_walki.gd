@@ -1087,9 +1087,12 @@ func draw_units() -> void:
 		var unit_id := int(unit.id)
 		var hidden := bool(unit.get("is_hidden", false))
 		var revealed := bool(unit.get("is_revealed", false)) and not _unit_is_under_map_concealment(unit)
-		if hidden and not revealed and not _should_draw_hidden_unit(unit):
+		var is_moving := active_tweens.has(unit_id)
+		if hidden and not revealed and not _should_draw_hidden_unit(unit) and not is_moving:
 			continue
 		var alpha := REVEALED_HIDDEN_UNIT_ALPHA if hidden and revealed else HIDDEN_UNIT_ALPHA if hidden else 1.0
+		if is_moving and hidden:
+			alpha = 1.0
 		var center: Vector2 = visual_positions.get(unit_id, axial_to_pixel(unit.grid_x, unit.grid_y))
 		center += unit_attack_offsets.get(unit_id, Vector2.ZERO)
 		var portrait: Texture2D = unit_textures.get(unit_id, null)

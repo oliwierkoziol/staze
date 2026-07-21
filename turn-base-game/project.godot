@@ -12,11 +12,11 @@ config_version=5
 
 config/name="TurnBaseGame"
 config/version="0.1.0"
-config/build_date="2026-07-21"
 run/main_scene="res://gra.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 run/max_fps=144
 config/icon="res://icon.svg"
+config/build_date="2026-07-21"
 
 [display]
 
