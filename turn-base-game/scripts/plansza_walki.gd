@@ -594,6 +594,10 @@ func play_attack_animation(attacker_id: int, target_id: int, projectile_kind: St
 	tween.tween_method(_set_unit_attack_offset.bind(attacker_id), dash_offset, Vector2.ZERO, 0.10)
 
 
+func play_attack_animation_to_cell(attacker_id: int, target_cell: Vector2i, projectile_kind: String) -> void:
+	_spawn_projectile(visual_positions.get(attacker_id, Vector2.ZERO), axial_to_pixel(target_cell.x, target_cell.y), projectile_kind)
+
+
 func play_damage_animation(unit_id: int) -> void:
 	var tween: Tween = create_tween()
 	var shake := 0.0

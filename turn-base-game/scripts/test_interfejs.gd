@@ -21,11 +21,17 @@ func _sprawdz(warunek: bool, opis: String) -> void:
 func _uruchom() -> void:
 	_sprawdz(TrescPomocyScript.STRONY_TUTORIALA.size() == 5, "Tutorial zachowuje 5 stron")
 	_sprawdz(TrescPomocyScript.SEKCJE_POMOCY.size() == 3, "Pomoc zachowuje 3 sekcje")
+	_sprawdz(TrescPomocyScript.STRONY_TUTORIALA[0].has("Przycisk WCZYTAJ w menu lub prawym panelu przywraca zapisaną bitwę."), "Tutorial opisuje wczytywanie zapisu")
+	_sprawdz(TrescPomocyScript.STRONY_TUTORIALA[2].any(func(line: String) -> bool: return "Niebieskie pola" in line), "Tutorial wyjaśnia kolory pól")
+	_sprawdz(TrescPomocyScript.STRONY_TUTORIALA[3].any(func(line: String) -> bool: return "wydarzenie mapy" in line), "Tutorial opisuje wydarzenia mapy")
 	var gra: Control = load("res://gra.tscn").instantiate()
 	root.add_child(gra)
 	await process_frame
 	var build_info: Label = gra.get_node("TeamSetup/BuildInfo")
 	_sprawdz(build_info.text == "BUILD 0.1.0 • 2026-07-21", "Menu pokazuje numer buildu i datę")
+	gra._build_setup_controls()
+	_sprawdz(gra.setup_controls.get_parent() == gra.end_turn_button.get_parent() and gra.setup_controls.get_index() + 1 == gra.end_turn_button.get_index(), "Przyciski zapisu są nad końcem tury w prawym panelu")
+	_sprawdz(gra.save_setup_button.text == "ZAPISZ" and gra.reset_battle_button.text == "RESET" and gra.load_setup_button.text == "WCZYTAJ", "Prawy panel ma trzy właściwe przyciski")
 	gra.help_mode_tutorial = true
 	gra.tutorial_page = 0
 	gra._help_rebuild_content()

@@ -42,6 +42,7 @@ const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
 const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
 const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 const TEAM_SETUP_SCENE: PackedScene = preload("res://scenes/team_setup.tscn")
+const TeamSetupScript = preload("res://scripts/team_setup.gd")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
 const MatematykaWalkiScript = preload("res://scripts/matematyka_walki.gd")
 const BattleSetupPositionsScript = preload("res://scripts/battle_setup_positions.gd")
@@ -95,7 +96,7 @@ const OBSTACLE_DESCRIPTIONS: Dictionary = {
 	"cart": "Jednostka na polu wozu jest ukryta. Wróg może ją zobaczyć z sąsiedniego pola zapewniającego ukrycie. Atak lub otrzymanie obrażeń nakłada Wykrycie na 2 tury.",
 	"elf_statue": "Posag blokuje ruch i linie strzalu. Sasiadujaca jednostka otrzymuje +2 do obrazen.",
 	"hole": "Jednostka ktora wpadnie do dziury ginie natychmiast.",
-	"detonator": "Jednorazowy detonator. Aktywowany z sasiedniego hexa. Przywoluje spadajace kamienie na cztery losowe hexy.",
+	"detonator": "Jednorazowy detonator aktywowany PPM. Z sasiedniego hexa pokazuje pola upadku; jednostka dystansowa moze go zastrzelic bez ostrzezenia. Przywoluje kamienie na cztery hexy.",
 	"magiczna_bariera": "Tymczasowa bariera blokuje ruch i linie strzalu. Znika po kilku turach.",
 }
 const OBSTACLE_WINTER_DESCRIPTIONS: Dictionary = {
@@ -162,8 +163,13 @@ var last_battle_config_source := ""
 var setup_controls: HBoxContainer
 var save_setup_button: Button
 var reset_battle_button: Button
-var reload_json_button: Button
+var load_setup_button: Button
 var save_setup_dialog: FileDialog
+var load_setup_dialog: FileDialog
+var _web_load_input: Variant
+var _web_load_reader: Variant
+var _web_load_change_callback: Variant
+var _web_load_callback: Variant
 var current_player_faction := ""
 var current_enemy_faction := ""
 var ai_difficulty := "sredni"
@@ -254,7 +260,7 @@ func _input(event: InputEvent) -> void:
 	if hud == null or not hud.visible:
 		return
 
-	if save_setup_dialog != null and save_setup_dialog.visible:
+	if (save_setup_dialog != null and save_setup_dialog.visible) or (load_setup_dialog != null and load_setup_dialog.visible):
 		return
 
 	if event.keycode == KEY_RIGHT and castle_stage > 0 and castle_stage < _get_castle_stages().size() and not setup_mode and not is_animating:
@@ -512,8 +518,9 @@ func _build_setup_controls() -> void:
 		return
 	setup_controls = HBoxContainer.new()
 	setup_controls.add_theme_constant_override("separation", 8)
-	left_content.add_child(setup_controls)
-	left_content.move_child(setup_controls, 3)
+	var right_content: Node = end_turn_button.get_parent()
+	right_content.add_child(setup_controls)
+	right_content.move_child(setup_controls, end_turn_button.get_index())
 
 	save_setup_button = _make_setup_button("ZAPISZ")
 	save_setup_button.pressed.connect(_on_save_setup_pressed)
@@ -523,9 +530,9 @@ func _build_setup_controls() -> void:
 	reset_battle_button.pressed.connect(_on_reset_battle_pressed)
 	setup_controls.add_child(reset_battle_button)
 
-	reload_json_button = _make_setup_button("RELOAD JSON")
-	reload_json_button.pressed.connect(_on_reload_json_pressed)
-	setup_controls.add_child(reload_json_button)
+	load_setup_button = _make_setup_button("WCZYTAJ")
+	load_setup_button.pressed.connect(_on_load_setup_pressed)
+	setup_controls.add_child(load_setup_button)
 
 	save_setup_dialog = FileDialog.new()
 	save_setup_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
@@ -533,6 +540,13 @@ func _build_setup_controls() -> void:
 	save_setup_dialog.filters = PackedStringArray(["*.json ; Zapis armii"])
 	save_setup_dialog.file_selected.connect(_on_save_setup_file_selected)
 	add_child(save_setup_dialog)
+
+	load_setup_dialog = FileDialog.new()
+	load_setup_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	load_setup_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	load_setup_dialog.filters = PackedStringArray(["*.json ; Zapis armii"])
+	load_setup_dialog.file_selected.connect(_on_load_setup_file_selected)
+	add_child(load_setup_dialog)
 
 
 func _connect_signal_once(source_signal: Signal, callback: Callable) -> void:
@@ -645,6 +659,55 @@ func _on_save_setup_file_selected(path: String) -> void:
 		return
 	file.store_string(JSON.stringify(_make_save_data(), "	"))
 	_log_event(_color_log_text("Zapisano stan gry.", LOG_COLOR_YELLOW), false)
+
+
+func _on_load_setup_pressed() -> void:
+	if help_popup != null and help_popup.visible:
+		return
+	if OS.has_feature("web"):
+		_open_web_load_setup_dialog()
+		return
+	load_setup_dialog.popup_centered(Vector2i(900, 600))
+
+
+func _on_load_setup_file_selected(path: String) -> void:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		_show_screen_message("Nie udało się odczytać zapisu.", 2.5)
+		return
+	_load_setup_from_text(file.get_as_text())
+
+
+func _open_web_load_setup_dialog() -> void:
+	var document: Variant = JavaScriptBridge.get_interface("document")
+	_web_load_input = document.createElement("input")
+	_web_load_input.type = "file"
+	_web_load_input.accept = ".json,application/json"
+	_web_load_change_callback = JavaScriptBridge.create_callback(_on_web_load_setup_selected)
+	_web_load_input.addEventListener("change", _web_load_change_callback)
+	_web_load_input.click()
+
+
+func _on_web_load_setup_selected(args: Array) -> void:
+	var files: Variant = args[0].target.files
+	if int(files.length) == 0:
+		return
+	_web_load_reader = JavaScriptBridge.create_object("FileReader")
+	_web_load_callback = JavaScriptBridge.create_callback(_on_web_load_setup_finished)
+	_web_load_reader.onload = _web_load_callback
+	_web_load_reader.readAsText(files[0])
+
+
+func _on_web_load_setup_finished(args: Array) -> void:
+	_load_setup_from_text(str(args[0].target.result))
+
+
+func _load_setup_from_text(text: String) -> void:
+	var data: Dictionary = TeamSetupScript._parse_save_text(text)
+	if data.is_empty():
+		_show_screen_message("Nieprawidłowy plik zapisu.", 2.5)
+		return
+	_on_team_setup_loaded(data)
 
 
 func _make_save_data() -> Dictionary:
@@ -1213,9 +1276,6 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)):
 		return
 
-	if _try_activate_detonator(active_unit, cell):
-		return
-
 	if pending_skill_id != "":
 		var pending_skill: Dictionary = skill_library.get(pending_skill_id, {})
 		if str(pending_skill.get("effect_type", "")) == "charge":
@@ -1305,6 +1365,8 @@ func _on_cell_right_clicked(cell: Vector2i) -> void:
 		return
 	var active_unit := _get_active_unit()
 	if active_unit.is_empty() or not _is_manual_side(str(active_unit.side)) or selected_unit_id != active_unit.id:
+		return
+	if _try_activate_detonator(active_unit, cell):
 		return
 	var target := _find_unit_at_cell(cell)
 	if target.is_empty() or target.side == active_unit.side:
@@ -2075,15 +2137,16 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		return
 	if not setup_mode and cell.x != -1 and _get_terrain_type_at(cell) == "detonator":
 		board.set_hovered_move_path([])
-		board.set_hovered_attack_cell(Vector2i(-1, -1))
 		board.set_hovered_pull_destination_cell(Vector2i(-1, -1))
 		_clear_move_cost_label()
+		var active_unit: Dictionary = _get_active_unit()
+		var can_activate: bool = not active_unit.is_empty() and selected_unit_id == active_unit.id and _can_activate_detonator(active_unit, cell)
+		board.set_hovered_attack_cell(cell if can_activate else Vector2i(-1, -1))
+		if active_unit.is_empty() or _hex_distance(Vector2i(int(active_unit.grid_x), int(active_unit.grid_y)), cell) != 1:
+			board.set_hovered_detonator_preview([])
+			return
 		var detonator_index := _find_detonator_index(cell)
-		var preview_cells: Array = []
-		if detonator_index >= 0:
-			var stored: Variant = obstacles[detonator_index].get("target_cells", [])
-			if stored is Array:
-				preview_cells = stored
+		var preview_cells: Array[Vector2i] = _get_detonator_target_cells(detonator_index, cell)
 		board.set_hovered_detonator_preview(preview_cells)
 		return
 	board.set_hovered_detonator_preview([])
@@ -2590,6 +2653,9 @@ func _get_attackable_cells(unit: Dictionary, charge_skill: Dictionary = {}) -> A
 		for column in GRID_COLUMNS:
 			var cell := Vector2i(column, row)
 			if cell == origin:
+				continue
+			if charge_skill.is_empty() and _can_activate_detonator(unit, cell):
+				attackable.append(cell)
 				continue
 			var target: Dictionary = _find_unit_at_cell(cell)
 			if target.is_empty() or target.side == unit.side or not _can_see_target(unit, target):
@@ -3918,18 +3984,22 @@ func _get_terrain_type_at(cell: Vector2i) -> String:
 
 
 func _try_activate_detonator(active_unit: Dictionary, cell: Vector2i) -> bool:
-	if _get_terrain_type_at(cell) != "detonator":
+	if not _can_activate_detonator(active_unit, cell):
 		return false
 	var unit_cell := Vector2i(int(active_unit.grid_x), int(active_unit.grid_y))
-	if _hex_distance(unit_cell, cell) != 1:
-		return false
+	var ranged_shot: bool = _hex_distance(unit_cell, cell) > 1
 	var detonator_index := _find_detonator_index(cell)
 	if detonator_index < 0:
 		return false
-	if detonator_activated:
-		return false
-	_trigger_detonator(active_unit, cell, detonator_index)
+	_trigger_detonator(active_unit, cell, detonator_index, ranged_shot)
 	return true
+
+
+func _can_activate_detonator(unit: Dictionary, cell: Vector2i) -> bool:
+	if _get_terrain_type_at(cell) != "detonator" or detonator_activated or not _can_unit_attack(unit):
+		return false
+	var distance: int = _hex_distance(Vector2i(int(unit.grid_x), int(unit.grid_y)), cell)
+	return distance == 1 or (distance > 1 and int(unit.get("attack_range", 1)) > 1 and _is_in_attack_range(unit, cell))
 
 
 func _find_detonator_index(cell: Vector2i) -> int:
@@ -3940,25 +4010,38 @@ func _find_detonator_index(cell: Vector2i) -> int:
 	return -1
 
 
-func _trigger_detonator(active_unit: Dictionary, cell: Vector2i, detonator_index: int) -> void:
+func _get_detonator_target_cells(detonator_index: int, cell: Vector2i) -> Array[Vector2i]:
+	var target_cells: Array[Vector2i] = []
+	if detonator_index >= 0:
+		var stored_targets: Variant = obstacles[detonator_index].get("target_cells", [])
+		if stored_targets is Array:
+			for stored in stored_targets:
+				if stored is Vector2i:
+					target_cells.append(stored)
+	if target_cells.is_empty() and detonator_index >= 0:
+		target_cells = _random_detonator_target_cells(cell)
+		obstacles[detonator_index]["target_cells"] = target_cells
+	return target_cells
+
+
+func _trigger_detonator(active_unit: Dictionary, cell: Vector2i, detonator_index: int, ranged_shot: bool = false) -> void:
 	is_animating = true
 	active_unit.action_points = max(0, int(active_unit.action_points) - 1)
 	pending_skill_id = ""
 	selected_obstacle_cell = Vector2i(-1, -1)
+	board.set_hovered_detonator_preview([])
+	board.set_detonator_warning_cells([])
 	_log_event("%s aktywuje detonator." % _unit_name_log_text(active_unit))
 	_show_screen_message("Detonator aktywowany!", 2.0)
 
-	var target_cells: Array[Vector2i] = []
-	var stored_targets: Variant = obstacles[detonator_index].get("target_cells", [])
-	if stored_targets is Array:
-		for stored in stored_targets:
-			if stored is Vector2i:
-				target_cells.append(stored)
+	var target_cells: Array[Vector2i] = _get_detonator_target_cells(detonator_index, cell)
+	if ranged_shot:
+		board.play_attack_animation_to_cell(int(active_unit.id), cell, _get_attack_projectile_kind(active_unit))
+		await get_tree().create_timer(0.16).timeout
 	else:
-		target_cells = _random_detonator_target_cells(cell)
-	board.set_detonator_warning_cells(target_cells)
-	_sync_board()
-	await get_tree().create_timer(0.8).timeout
+		board.set_detonator_warning_cells(target_cells)
+		_sync_board()
+		await get_tree().create_timer(0.8).timeout
 
 	board.play_falling_rocks_animation(target_cells)
 	await get_tree().create_timer(0.55).timeout
@@ -5456,6 +5539,7 @@ func _validate_static_setup() -> void:
 func _validate_runtime_setup() -> void:
 	var previous_units: Array = units.duplicate(true)
 	var previous_obstacles: Array[Dictionary] = obstacles.duplicate(true)
+	var previous_detonator_activated: bool = detonator_activated
 	var previous_terrain_effects: Array[Dictionary] = terrain_effects.duplicate(true)
 	var previous_event_log: Array[String] = event_log.duplicate()
 	var previous_active_turn_has_log: bool = active_turn_has_log
@@ -5829,8 +5913,16 @@ func _validate_runtime_setup() -> void:
 	units = [push_hole_victim]
 	_apply_terrain_entry_effect(push_hole_victim)
 	assert(_find_unit_by_id(1205).is_empty(), "Odepchniety w dziure musi zginac.")
+	obstacles = [{"grid_x": 6, "grid_y": 5, "type": "detonator"}]
+	detonator_activated = false
+	assert(_get_detonator_target_cells(0, Vector2i(6, 5)).size() == 4, "Detonator bez zapisanego podgladu musi wylosowac cztery pola kamieni.")
+	assert(_can_activate_detonator({"grid_x": 5, "grid_y": 5, "attack_range": 1, "action_points": 1}, Vector2i(6, 5)), "Jednostka obok musi moc aktywowac detonator.")
+	assert(_can_activate_detonator({"grid_x": 2, "grid_y": 5, "attack_range": 4, "action_points": 1}, Vector2i(6, 5)), "Jednostka dystansowa musi moc zastrzelic detonator.")
+	assert(_get_attackable_cells({"grid_x": 2, "grid_y": 5, "attack_range": 4, "action_points": 1, "side": "player"}).has(Vector2i(6, 5)), "Detonator musi byc podswietlony jako cel ataku.")
+	assert(not _can_activate_detonator({"grid_x": 2, "grid_y": 5, "attack_range": 4, "action_points": 0}, Vector2i(6, 5)), "Detonator wymaga punktu akcji.")
 	units = previous_units
 	obstacles = previous_obstacles
+	detonator_activated = previous_detonator_activated
 	event_log = previous_event_log
 	active_turn_has_log = previous_active_turn_has_log
 	ai_difficulty = previous_ai_difficulty
