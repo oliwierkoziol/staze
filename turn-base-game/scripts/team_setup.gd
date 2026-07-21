@@ -99,6 +99,7 @@ func _show_mode_menu() -> void:
 		{"id": "latwy", "label": "LATWY — NIEDOSWIADCZONY DOWODCA"},
 		{"id": "sredni", "label": "SREDNI — DOWODCA POLOWY"},
 		{"id": "trudny", "label": "TRUDNY — TAKTYK"},
+		{"id": "gracz", "label": "DRUGI GRACZ — TRYB LOKALNY"},
 	]:
 		difficulty_select.add_item(str(difficulty.label))
 		difficulty_select.set_item_metadata(difficulty_select.item_count - 1, str(difficulty.id))

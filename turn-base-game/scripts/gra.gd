@@ -191,6 +191,7 @@ var victory_title_label: Label
 var tutorial_acknowledged := false
 var displayed_path_cost := -1
 var selected_obstacle_cell := Vector2i(-1, -1)
+var detonator_activated := false
 var screen_message_label: Label
 var screen_message_tween: Tween
 var last_hover_warning_cell := Vector2i(-2, -2)
@@ -199,6 +200,7 @@ var stage_transition_overlay: ColorRect
 var stage_transition_title: Label
 var stage_transition_progress: Label
 var unit_details_popup: PopupPanel
+var debug_map_event_menu: PopupMenu
 
 
 func _ready() -> void:
@@ -208,6 +210,8 @@ func _ready() -> void:
 	_build_victory_overlay()
 	_build_screen_message_label()
 	_build_stage_transition_overlay()
+	if OS.is_debug_build():
+		_build_debug_map_event_menu()
 	unit_details_popup = UnitDetailsPopupScript.new()
 	add_child(unit_details_popup)
 	_load_terrain_types()
@@ -261,6 +265,11 @@ func _input(event: InputEvent) -> void:
 
 	if (save_setup_dialog != null and save_setup_dialog.visible) or (load_setup_dialog != null and load_setup_dialog.visible):
 		return
+	if event.keycode == KEY_D and OS.is_debug_build() and debug_map_event_menu != null and not setup_mode and not is_animating:
+		debug_map_event_menu.position = Vector2i(get_viewport().get_mouse_position())
+		debug_map_event_menu.popup()
+		get_viewport().set_input_as_handled()
+		return
 
 	if event.keycode == KEY_ESCAPE:
 		_on_reset_battle_pressed()
@@ -312,7 +321,7 @@ func _on_team_setup_finished(player_faction: String, enemy_faction: String, sele
 		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
-	ai_difficulty = selected_ai_difficulty if PlanerAIScript.PROFILE.has(selected_ai_difficulty) else "sredni"
+	ai_difficulty = selected_ai_difficulty if selected_ai_difficulty == "gracz" or PlanerAIScript.PROFILE.has(selected_ai_difficulty) else "sredni"
 	castle_stage = 0
 	free_setup_mode = false
 	_set_battle_background(DEFAULT_BATTLE_BACKGROUND_PATH)
@@ -336,7 +345,7 @@ func _on_team_setup_loaded(save_data: Dictionary) -> void:
 	current_player_faction = str(save_data.get("player_faction", ""))
 	current_enemy_faction = str(save_data.get("enemy_faction", ""))
 	ai_difficulty = str(save_data.get("ai_difficulty", "sredni"))
-	if not PlanerAIScript.PROFILE.has(ai_difficulty):
+	if ai_difficulty != "gracz" and not PlanerAIScript.PROFILE.has(ai_difficulty):
 		ai_difficulty = "sredni"
 	castle_stage = int(save_data.get("castle_stage", 0))
 	orc_general_is_kishak = bool(save_data.get("orc_general_is_kishak", false))
@@ -360,7 +369,7 @@ func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: 
 		victory_overlay.visible = false
 	current_player_faction = player_faction
 	current_enemy_faction = enemy_faction
-	ai_difficulty = selected_ai_difficulty if PlanerAIScript.PROFILE.has(selected_ai_difficulty) else "sredni"
+	ai_difficulty = selected_ai_difficulty if selected_ai_difficulty == "gracz" or PlanerAIScript.PROFILE.has(selected_ai_difficulty) else "sredni"
 	castle_stage = 1 if background_path.get_file().get_basename() == "zamek_etap_1_mury" else 0
 	free_setup_mode = player_faction == "testowa" and enemy_faction == "testowa"
 	_set_battle_background(background_path if background_path != "" else DEFAULT_BATTLE_BACKGROUND_PATH)
@@ -993,7 +1002,7 @@ func _show_unit_details(unit_data: Dictionary) -> void:
 	selected_unit_id = unit_data.id
 	board.set_selected_unit(unit_data.id)
 	_update_selection_visibility()
-	if setup_mode or unit_data.side == "player":
+	if setup_mode or (_is_manual_side(str(unit_data.side)) and str(unit_data.side) == current_turn):
 		_update_highlighted_cells(unit_data)
 	else:
 		board.set_highlighted_cells([], [])
@@ -1589,7 +1598,7 @@ func _ai_score_skill(caster: Dictionary, target: Dictionary, target_cell: Vector
 		"taunt_burst":
 			var affected := 0
 			for other in units:
-				if other.side != caster.side and _hex_distance(Vector2i(int(caster.grid_x), int(caster.grid_y)), Vector2i(int(other.grid_x), int(other.grid_y))) <= 2:
+				if other.side != caster.side and _can_see_target(caster, other) and _hex_distance(Vector2i(int(caster.grid_x), int(caster.grid_y)), Vector2i(int(other.grid_x), int(other.grid_y))) <= 2:
 					affected += 1
 			return affected * 100 - int(_ai_expected_threat(caster, target_cell) / 2.0) - cooldown_cost
 		"eagle_eye":
@@ -1636,7 +1645,7 @@ func _ai_score_area_damage(caster: Dictionary, center: Vector2i, center_multipli
 	var score := 0
 	for cell in _get_area_cells(center):
 		var target: Dictionary = _find_unit_at_cell(cell)
-		if target.is_empty() or target.side == caster.side:
+		if target.is_empty() or target.side == caster.side or not _can_see_target(caster, target):
 			continue
 		var multiplier: float = center_multiplier if cell == center else neighbor_multiplier
 		score += _ai_score_damage(caster, target, multiplier)
@@ -1648,13 +1657,13 @@ func _ai_score_area_control(caster: Dictionary, center: Vector2i, effect_type: S
 	var score := 0
 	for cell in cells:
 		var target: Dictionary = _find_unit_at_cell(cell)
-		if not target.is_empty():
+		if not target.is_empty() and (target.side == caster.side or _can_see_target(caster, target)):
 			var value := 90 + _ai_score_control(target, 1)
 			if effect_type == "poison_cloud" and _is_poison_immune(target):
 				value = 0
 			score += value if target.side != caster.side else -value * 3
 		for player in units:
-			if player.side != caster.side and _hex_distance(cell, Vector2i(int(player.grid_x), int(player.grid_y))) <= int(player.get("move_range", 0)):
+			if player.side != caster.side and _can_see_target(caster, player) and _hex_distance(cell, Vector2i(int(player.grid_x), int(player.grid_y))) <= int(player.get("move_range", 0)):
 				score += 12
 	return score
 
@@ -1682,7 +1691,7 @@ func _ai_score_trap(caster: Dictionary, cell: Vector2i) -> int:
 		return 0
 	var score := 20
 	for target in units:
-		if target.side == caster.side:
+		if target.side == caster.side or not _can_see_target(caster, target):
 			continue
 		var distance: int = _hex_distance(cell, Vector2i(int(target.grid_x), int(target.grid_y)))
 		if distance <= int(target.get("move_range", 0)):
@@ -1697,8 +1706,9 @@ func _ai_score_projection(caster: Dictionary, cell: Vector2i) -> int:
 	for projection_cell in _get_magic_projection_cells(cell, str(caster.side)):
 		for neighbor in _get_neighbors(projection_cell):
 			var target: Dictionary = _find_unit_at_cell(neighbor)
-			if not target.is_empty():
-				score += 45 if target.side != caster.side else -25
+			if target.is_empty() or (target.side != caster.side and not _can_see_target(caster, target)):
+				continue
+			score += 45 if target.side != caster.side else -25
 	return score
 
 
@@ -1778,6 +1788,8 @@ func _ai_score_formation(unit: Dictionary, cell: Vector2i) -> int:
 		if other.side == unit.side:
 			nearest_ally = min(nearest_ally, _hex_distance(cell, other_cell))
 		else:
+			if not _can_see_target(unit, other):
+				continue
 			var distance: int = _hex_distance(cell, other_cell)
 			nearest_enemy = min(nearest_enemy, distance)
 			for ally in units:
@@ -1793,7 +1805,7 @@ func _ai_score_formation(unit: Dictionary, cell: Vector2i) -> int:
 func _ai_score_approach(unit: Dictionary, cell: Vector2i) -> int:
 	var best_distance := 1000
 	for target in units:
-		if target.side != unit.side:
+		if target.side != unit.side and _can_see_target(unit, target):
 			best_distance = min(best_distance, _hex_distance(cell, Vector2i(int(target.grid_x), int(target.grid_y))))
 	if best_distance == 1000:
 		return 0
@@ -1969,22 +1981,15 @@ func _find_nearest_player_unit(enemy_unit: Dictionary) -> Dictionary:
 		return forced_target
 
 	var best_visible: Dictionary = {}
-	var best_unseen: Dictionary = {}
 	var best_visible_score: int = 1000000
-	var best_unseen_score: int = 1000000
 	for unit in units:
-		if unit.side != "player":
+		if unit.side != "player" or not _can_see_target(enemy_unit, unit):
 			continue
 		var score: int = _score_enemy_target(enemy_unit, unit)
-		if not _can_see_target(enemy_unit, unit):
-			if score < best_unseen_score:
-				best_unseen_score = score
-				best_unseen = unit
-			continue
 		if score < best_visible_score:
 			best_visible_score = score
 			best_visible = unit
-	return best_visible if not best_visible.is_empty() else best_unseen
+	return best_visible
 
 
 func _score_enemy_target(enemy_unit: Dictionary, target: Dictionary) -> int:
@@ -2105,7 +2110,7 @@ func _sync_board() -> void:
 	board.set_terrain_effects(terrain_effects)
 	board.set_map_event_warning_cells(map_event_cells if BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(round_number, next_map_event_round) else [])
 	if board.has_method("set_viewer_side"):
-		board.set_viewer_side("player")
+		board.set_viewer_side(current_turn if ai_difficulty == "gracz" and current_turn in ["player", "enemy"] else "player")
 	_update_selection_visibility()
 	var selected_unit: Dictionary = _find_unit_by_id(selected_unit_id)
 	if selected_unit.is_empty():
@@ -4319,6 +4324,56 @@ func _try_trigger_map_event() -> void:
 	BibliotekaZdarzenMapyScript.wykonaj(self)
 
 
+func _build_debug_map_event_menu() -> void:
+	debug_map_event_menu = PopupMenu.new()
+	debug_map_event_menu.name = "DebugMapEventMenu"
+	add_child(debug_map_event_menu)
+	var event_ids: Array[String] = []
+	for event_id in BibliotekaZdarzenMapyScript.DANE:
+		event_ids.append(str(event_id))
+	event_ids.sort()
+	for event_id in event_ids:
+		debug_map_event_menu.add_item(BibliotekaZdarzenMapyScript.pobierz_nazwe(event_id))
+		debug_map_event_menu.set_item_metadata(debug_map_event_menu.item_count - 1, event_id)
+	debug_map_event_menu.id_pressed.connect(_on_debug_map_event_selected)
+
+
+func _on_debug_map_event_selected(item_id: int) -> void:
+	var item_index: int = debug_map_event_menu.get_item_index(item_id)
+	if item_index >= 0:
+		_debug_trigger_map_event(str(debug_map_event_menu.get_item_metadata(item_index)))
+
+
+func _debug_trigger_map_event(event_id: String) -> void:
+	if not OS.is_debug_build() or setup_mode or is_animating or not BibliotekaZdarzenMapyScript.DANE.has(event_id):
+		return
+	next_map_event_id = event_id
+	next_map_event_round = round_number
+	map_event_cells.clear()
+	_prepare_map_event_cells()
+	var event_cells: Array[Vector2i] = map_event_cells.duplicate()
+	_try_trigger_map_event()
+	_extend_debug_map_event_duration(event_id, event_cells)
+
+
+func _extend_debug_map_event_duration(event_id: String, event_cells: Array[Vector2i]) -> void:
+	var terrain_effect_id: String = {
+		"gesty_dym": "mgla",
+		"burza_piaskowa": "burza_piaskowa",
+		"wybuch_gazu": "poison_cloud",
+		"rozprzestrzeniajacy_sie_pozar": "fire",
+		"oblodzenie": "ice",
+	}.get(event_id, "")
+	for effect in terrain_effects:
+		var effect_cell := Vector2i(int(effect.get("grid_x", -1)), int(effect.get("grid_y", -1)))
+		if str(effect.get("id", "")) == terrain_effect_id and (event_cells.is_empty() or event_cells.has(effect_cell)):
+			effect["remaining_turns"] = int(effect.get("remaining_turns", 0)) + 1
+	var active_unit: Dictionary = _get_active_unit()
+	for effect in active_unit.get("active_effects", []):
+		if str(effect.get("id", "")) == event_id and not bool(effect.get("terrain_bound", false)):
+			effect["remaining_turns"] = int(effect.get("remaining_turns", 0)) + 1
+
+
 func _schedule_next_map_event(after_round: int) -> void:
 	var scenario_id: String = current_battle_background_path.get_file().get_basename()
 	var raw_pool: Array = BibliotekaZdarzenMapyScript.pobierz_pule(scenario_id)
@@ -4491,6 +4546,12 @@ func _random_map_event_cells(count: int) -> Array[Vector2i]:
 func _prepare_map_event_warning() -> void:
 	if not BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(round_number, next_map_event_round) or not map_event_cells.is_empty():
 		return
+	_prepare_map_event_cells()
+	if not map_event_cells.is_empty():
+		_log_event(_color_log_text("OSTRZEŻENIE: %s uderzy w oznaczone pola w rundzie %d." % [_map_event_name(), next_map_event_round], LOG_COLOR_YELLOW), false)
+
+
+func _prepare_map_event_cells() -> void:
 	var cell_count: int = BibliotekaZdarzenMapyScript.pobierz_liczbe_pol_ostrzezenia(next_map_event_id)
 	if ["wybuch_gazu", "rozprzestrzeniajacy_sie_pozar", "oblodzenie"].has(next_map_event_id):
 		cell_count = randi_range(5, 8)
@@ -4500,7 +4561,6 @@ func _prepare_map_event_warning() -> void:
 	if cell_count == 0:
 		return
 	map_event_cells = _random_map_event_cells(cell_count)
-	_log_event(_color_log_text("OSTRZEŻENIE: %s uderzy w oznaczone pola w rundzie %d." % [_map_event_name(), next_map_event_round], LOG_COLOR_YELLOW), false)
 
 
 func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void:
@@ -5750,6 +5810,22 @@ func _validate_runtime_setup() -> void:
 	var previous_event_log: Array[String] = event_log.duplicate()
 	var previous_active_turn_has_log: bool = active_turn_has_log
 	var previous_ai_difficulty: String = ai_difficulty
+	if OS.is_debug_build():
+		assert(debug_map_event_menu != null and debug_map_event_menu.item_count == BibliotekaZdarzenMapyScript.DANE.size(), "Menu debug musi udostepniac eventy ze wszystkich map.")
+	ai_difficulty = "gracz"
+	assert(_is_manual_side("enemy"), "Tryb lokalny musi oddawac przeciwnika drugiemu graczowi.")
+	ai_difficulty = "sredni"
+	assert(not _is_manual_side("enemy"), "Tryb AI nie moze oddawac przeciwnika graczowi.")
+	ai_difficulty = previous_ai_difficulty
+	var debug_duration_active_unit_id: int = active_unit_id
+	units = [{"id": 998, "active_effects": [{"id": "wichura_lodowa", "remaining_turns": 1}]}]
+	active_unit_id = 998
+	terrain_effects = [{"id": "mgla", "grid_x": 0, "grid_y": 0, "remaining_turns": 1}]
+	_extend_debug_map_event_duration("gesty_dym", [])
+	_extend_debug_map_event_duration("wichura_lodowa", [])
+	assert(int(terrain_effects[0].remaining_turns) == 2, "Debugowy event terenu musi przetrwac najblizsza zmiane rundy.")
+	assert(int(units[0].active_effects[0].remaining_turns) == 2, "Debugowy event aktywnej jednostki musi przetrwac koniec jej aktywacji.")
+	active_unit_id = debug_duration_active_unit_id
 	obstacles = [
 		{"grid_x": 4, "grid_y": 4, "type": "kamienie"},
 		{"grid_x": 5, "grid_y": 3, "type": "krzok"},
@@ -5909,8 +5985,9 @@ func _validate_runtime_setup() -> void:
 	assert(int(ai_plan.get("target_id", -1)) == int(weak_target.id), "AI musi preferowac pewne dobicie oddzialu.")
 	units = [ai_archer, ai_target]
 	ai_target["is_hidden"] = true
-	assert(int(_find_nearest_player_unit(ai_archer).id) == int(ai_target.id), "AI musi miec cel do ruchu, nawet gdy wszyscy gracze sa ukryci.")
-	assert(not _find_best_enemy_path(ai_archer, ai_target).is_empty(), "AI powinno isc w strone ukrytego gracza zamiast konczyc ture.")
+	assert(_find_nearest_player_unit(ai_archer).is_empty(), "AI nie moze wybierac niewidocznego gracza jako celu ruchu.")
+	assert(_ai_score_approach(ai_archer, Vector2i(6, 5)) == 0, "Ukryty gracz nie moze wplywac na kierunek ruchu AI.")
+	assert(_ai_score_area_damage(ai_archer, Vector2i(3, 5), 1.0, 0.5) == 0, "AI nie moze celowac obszarowo na podstawie pozycji ukrytego gracza.")
 	ai_target["is_hidden"] = false
 	assert(_get_path_hazard_penalty(ai_archer, [Vector2i(6, 5)]) == 0, "Pusta sciezka AI nie powinna miec kary.")
 	terrain_effects = [{"id": "fire", "grid_x": 6, "grid_y": 5, "remaining_turns": 1, "caster_side": "player"}]
@@ -6522,7 +6599,7 @@ func _is_manual_turn() -> bool:
 
 
 func _is_manual_side(side: String) -> bool:
-	return side == "player" or (side == "enemy" and current_player_faction == "testowa" and current_enemy_faction == "testowa")
+	return side == "player" or (side == "enemy" and ai_difficulty == "gracz")
 
 
 func _log_turn_separator() -> void:

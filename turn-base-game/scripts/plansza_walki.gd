@@ -1140,10 +1140,10 @@ func draw_units() -> void:
 func _should_draw_hidden_unit(unit: Dictionary) -> bool:
 	if bool(unit.get("is_revealed", false)) and not _unit_is_under_map_concealment(unit):
 		return true
-	if unit.side == "player":
+	if unit.side == viewer_side:
 		return true
 	for other in units:
-		if other.side != "player":
+		if other.side != viewer_side:
 			continue
 		if _units_are_adjacent(other, unit):
 			return true
