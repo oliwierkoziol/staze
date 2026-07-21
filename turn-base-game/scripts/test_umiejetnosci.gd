@@ -85,7 +85,7 @@ func _test_obrazen_i_obszarow() -> void:
 	var blocked: Vector2i = gra._calculate_attack_preview_damage({"atk": 10, "dmg_min": 5, "dmg_max": 5, "count": 2}, {"def": 0, "active_effects": [{"block_next_attack": true}]}, 1.0)
 	_sprawdz(blocked == Vector2i.ZERO, "Bariera zeruje podglad obrazen")
 	_sprawdz(gra._get_magic_projection_cells(Vector2i(4, 4), "player").size() == 3, "Magiczna Projekcja tworzy 3 pola")
-	_sprawdz(gra._get_ice_ground_cells(Vector2i(7, 5)).size() == 8, "Lodowe Podloze tworzy 8 pol")
+	_sprawdz(gra._get_ice_ground_cells(Vector2i(7, 5)) == [Vector2i(7, 5), Vector2i(8, 6), Vector2i(7, 6)], "Lodowe Podloze tworzy 3 pola w trojkacie")
 
 
 func _test_wykonania() -> void:

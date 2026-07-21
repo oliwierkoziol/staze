@@ -30,5 +30,10 @@ func _uruchom() -> void:
 	_sprawdz(is_zero_approx(float(gra.board.active_projectiles[0].rotation)), "Pocisk zachowuje kierunek w lokalnym ukladzie planszy")
 	await create_timer(0.2).timeout
 	_sprawdz(gra.board.active_projectiles.is_empty(), "Pocisk jest usuwany po zakonczeniu tweenu")
+	gra.board.set_active_unit(42)
+	_sprawdz(gra.board.active_unit_id == 42, "Plansza zna aktywna jednostke tury")
+	_sprawdz(gra.board.turn_indicator_pulse_tween != null, "Puls wskaznika tury jest uruchomiony")
+	gra.board.set_active_unit(-1)
+	_sprawdz(gra.board.turn_indicator_pulse_tween == null, "Puls wskaznika tury zatrzymuje sie bez aktywnej jednostki")
 	print("ANIMATION_TEST_FAILURES=", bledy.size())
 	quit(bledy.size())

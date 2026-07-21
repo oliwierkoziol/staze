@@ -415,6 +415,13 @@ func _set_battle_background(path: String) -> void:
 	var texture: Resource = load(current_battle_background_path)
 	if texture is Texture2D:
 		battle_background.texture = texture
+	_sync_board_map_theme()
+
+
+func _sync_board_map_theme() -> void:
+	if not is_node_ready() or board == null:
+		return
+	board.set_mapa_zimowa(_is_winter_scenario())
 
 
 func _build_battle_config_from_factions(player_faction: String, enemy_faction: String) -> void:
@@ -1000,6 +1007,7 @@ func _on_unit_selected(unit_data: Dictionary) -> void:
 
 func _show_unit_details(unit_data: Dictionary) -> void:
 	selected_unit_id = unit_data.id
+	selected_obstacle_cell = Vector2i(-1, -1)
 	board.set_selected_unit(unit_data.id)
 	_update_selection_visibility()
 	if setup_mode or (_is_manual_side(str(unit_data.side)) and str(unit_data.side) == current_turn):
@@ -1298,6 +1306,10 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		_show_unit_details(clicked_unit)
 		return
 
+	if selected_unit_id == -1 and selected_obstacle_cell == Vector2i(-1, -1) and _is_cell_obstacle(cell):
+		_show_obstacle_details(cell)
+		return
+
 	if selected_unit_id != active_unit.id:
 		selected_unit_id = active_unit.id
 		_show_unit_details(active_unit)
@@ -1459,6 +1471,7 @@ func _end_current_activation() -> void:
 	selected_unit_id = -1
 	selected_obstacle_cell = Vector2i(-1, -1)
 	board.set_selected_unit(-1)
+	board.set_selected_obstacle(Vector2i(-1, -1))
 	board.set_highlighted_cells([], [])
 	board.set_hovered_move_path([])
 	_clear_move_cost_label()
@@ -2109,10 +2122,13 @@ func _has_trap_near_cell_for_side(center: Vector2i, side: String) -> bool:
 func _sync_board() -> void:
 	for unit in units:
 		_recalculate_unit_stats(unit)
+	_sync_board_map_theme()
 	board.set_units(units)
 	board.set_obstacles(obstacles)
 	board.set_terrain_effects(terrain_effects)
 	board.set_map_event_warning_cells(map_event_cells if BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(round_number, next_map_event_round) else [])
+	if board.has_method("set_active_unit"):
+		board.set_active_unit(active_unit_id)
 	if board.has_method("set_viewer_side"):
 		board.set_viewer_side(current_turn if ai_difficulty == "gracz" and current_turn in ["player", "enemy"] else "player")
 	_update_selection_visibility()
@@ -2133,6 +2149,13 @@ func _update_selection_visibility() -> void:
 	var has_obstacle_selection := selected_obstacle_cell.x != -1
 	if board.has_method("set_grid_visible"):
 		board.set_grid_visible(true)
+	if has_unit_selection:
+		board.set_selected_unit(selected_unit_id)
+	elif has_obstacle_selection:
+		board.set_selected_obstacle(selected_obstacle_cell)
+	else:
+		board.set_selected_unit(-1)
+		board.set_selected_obstacle(Vector2i(-1, -1))
 	left_panel.visible = setup_mode or has_unit_selection or has_obstacle_selection
 	unit_abilities_panel_frame.visible = has_unit_selection
 
@@ -2381,7 +2404,7 @@ func _update_damage_tooltip(cell: Vector2i) -> void:
 	if _is_area_damage_skill(selected_skill):
 		_update_area_damage_tooltip(attacker, selected_skill, cell)
 		return
-	var target: Dictionary = _find_unit_at_cell(cell)
+	var target: Dictionary = _find_visible_unit_at_cell(cell, attacker)
 	if attacker.is_empty() or target.is_empty() or target.side == attacker.side:
 		return
 	if not _can_show_damage_tooltip_in_range(attacker, target, cell):
@@ -2394,12 +2417,12 @@ func _update_damage_tooltip(cell: Vector2i) -> void:
 
 
 func _update_piercing_shot_damage_tooltip(attacker: Dictionary, skill: Dictionary, cell: Vector2i) -> void:
-	var first_target: Dictionary = _find_unit_at_cell(cell)
+	var first_target: Dictionary = _find_visible_unit_at_cell(cell, attacker)
 	if attacker.is_empty() or not _can_target_enemy_with_skill(attacker, first_target, skill):
 		return
 	var lines: Array[String] = []
 	for hit_cell in _get_piercing_shot_preview_cells(attacker, first_target):
-		var target: Dictionary = _find_unit_at_cell(hit_cell)
+		var target: Dictionary = _find_visible_unit_at_cell(hit_cell, attacker)
 		if target.is_empty():
 			continue
 		lines.append("%s: %s" % [str(target.get("name", "Jednostka")), _format_damage_range(_calculate_attack_preview_damage(attacker, target, 1.0))])
@@ -2413,7 +2436,7 @@ func _update_area_damage_tooltip(attacker: Dictionary, skill: Dictionary, center
 		return
 	var lines: Array[String] = []
 	for hit_cell in _get_area_cells(center):
-		var target: Dictionary = _find_unit_at_cell(hit_cell)
+		var target: Dictionary = _find_visible_unit_at_cell(hit_cell, attacker)
 		if target.is_empty() or target.side == attacker.side:
 			continue
 		var multiplier: float = MechanikaUmiejetnosciScript.pobierz_mnoznik_obszaru(str(skill.get("effect_type", "")), hit_cell == center)
@@ -2615,6 +2638,8 @@ func _can_target_cell_with_skill(caster: Dictionary, cell: Vector2i, skill: Dict
 		return _find_unit_at_cell(cell).is_empty() and _get_terrain_effect_at(cell, "goblin_trap").is_empty()
 	if effect_type == "magic_projection":
 		return _can_place_magic_projection_at(caster, cell)
+	if effect_type == "ice_ground":
+		return _get_ice_ground_cells(cell).size() == 3
 	if effect_type == "summon_statue":
 		return _can_place_summoned_statue_at(cell)
 	return true
@@ -2901,6 +2926,7 @@ func _commit_charge_skill(caster: Dictionary, skill: Dictionary) -> void:
 func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dictionary, end_turn_after := true, animate_move := true) -> void:
 	if not _can_charge_attack_target(attacker, target, skill):
 		return
+	_commit_charge_skill(attacker, skill)
 
 	var move_path: Array[Vector2i] = _find_charge_approach_path(attacker, target, skill)
 	var ambush_defender: Dictionary = {}
@@ -2961,7 +2987,6 @@ func _perform_charge_attack(attacker: Dictionary, target: Dictionary, skill: Dic
 			board.snap_unit_to_cell(attacker.id, attacker_cell)
 		return
 
-	_commit_charge_skill(attacker, skill)
 	_reveal_if_in_bush(attacker)
 	var total_damage: int = _calculate_damage(attacker, target, MechanikaUmiejetnosciScript.pobierz_mnoznik_szarzy(skill))
 	var result: Dictionary = _apply_attack_damage(attacker, target, total_damage)
@@ -3007,6 +3032,8 @@ func _try_execute_charge_move(unit: Dictionary, cell: Vector2i) -> void:
 		return
 	if path_cost > max_distance:
 		return
+
+	_commit_charge_skill(unit, skill)
 
 	var ambush_defender: Dictionary = {}
 	# Zasadzka odpala się, gdy trasa rzeczywiście wchodzi w heks z ukrytym wrogiem.
@@ -3578,18 +3605,14 @@ func _execute_ice_ground(caster: Dictionary, center: Vector2i) -> void:
 	_log_event("%s zamraża podłoże." % _unit_name_log_text(caster))
 
 
-func _get_ice_ground_cells(center: Vector2i) -> Array[Vector2i]:
-	var cells: Array[Vector2i] = []
-	var frontier: Array[Vector2i] = [center]
-	while not frontier.is_empty() and cells.size() < 8:
-		var current: Vector2i = frontier.pop_front()
-		for neighbor in _get_neighbors(current):
-			if neighbor == center or cells.has(neighbor):
-				continue
-			cells.append(neighbor)
-			frontier.append(neighbor)
-			if cells.size() == 8:
-				return cells
+func _get_ice_ground_cells(top: Vector2i) -> Array[Vector2i]:
+	var row_offset: int = top.y & 1
+	var cells: Array[Vector2i] = [top]
+	for offset in [Vector2i(row_offset, 1), Vector2i(row_offset - 1, 1)]:
+		var cell: Vector2i = top + offset
+		if cell.x < 0 or cell.x >= GRID_COLUMNS or cell.y < 0 or cell.y >= GRID_ROWS:
+			return []
+		cells.append(cell)
 	return cells
 
 
@@ -4177,6 +4200,7 @@ func _trigger_detonator(active_unit: Dictionary, cell: Vector2i, detonator_index
 	active_unit.action_points = max(0, int(active_unit.action_points) - 1)
 	pending_skill_id = ""
 	selected_obstacle_cell = Vector2i(-1, -1)
+	board.set_selected_obstacle(Vector2i(-1, -1))
 	board.set_hovered_detonator_preview([])
 	board.set_detonator_warning_cells([])
 	_log_event("%s aktywuje detonator." % _unit_name_log_text(active_unit))
@@ -5768,8 +5792,8 @@ func _validate_static_setup() -> void:
 	assert(int(skill_library["magiczna_projekcja"].get("cooldown", 0)) == 6, "Magiczna Projekcja musi miec cooldown 6 tur.")
 	assert(_get_magic_projection_cells(Vector2i(4, 4), "player").size() == 3, "Magiczna Projekcja gracza musi tworzyc 3 hexy.")
 	assert(_get_magic_projection_cells(Vector2i(10, 4), "enemy").size() == 3, "Magiczna Projekcja wroga musi tworzyc 3 hexy.")
-	assert(_get_ice_ground_cells(Vector2i(7, 5)).size() == 8, "Lodowe Podloze musi zamrazac 8 hexow.")
-	assert(not _get_ice_ground_cells(Vector2i(7, 5)).has(Vector2i(7, 5)), "Lodowe Podloze nie zamraza wskazanego srodka.")
+	assert(_get_ice_ground_cells(Vector2i(7, 5)) == [Vector2i(7, 5), Vector2i(8, 6), Vector2i(7, 6)], "Lodowe Podloze musi zamrazac 3 hexy w trojkacie od wskazanego gornego pola.")
+	assert(_get_ice_ground_cells(Vector2i(7, 9)).is_empty(), "Lodowe Podloze nie moze wychodzic poza plansze.")
 	var lone_cavalry: Dictionary = _prepare_unit({"id": 901, "type_id": "human_cavalry", "side": "player", "grid_x": 5, "grid_y": 5})
 	var saved_units: Array = units
 	units = [lone_cavalry]
@@ -5900,6 +5924,7 @@ func _validate_runtime_setup() -> void:
 	assert(_has_effect(bush_unit, "zatrucie"), "Toksyczna chmura musi dzialac na jednostke stojaca w krzaku.")
 	var hidden_enemy := {"side": "enemy", "grid_x": 5, "grid_y": 5, "is_hidden": true, "active_effects": []}
 	assert(not _can_see_target({"side": "player", "grid_x": 0, "grid_y": 0}, hidden_enemy), "Ukryty cel w krzaku nie moze byc widoczny z daleka.")
+	assert(_find_visible_unit_at_cell(Vector2i(5, 5), {"side": "player", "grid_x": 0, "grid_y": 0}).is_empty(), "Tooltip obrazen nie moze celowac w ukrytego wroga z daleka.")
 	assert(_can_see_target({"side": "player", "grid_x": 6, "grid_y": 5}, hidden_enemy), "Gracz obok krzaka musi widziec ukrytego wroga.")
 	assert(not _has_effect(hidden_enemy, "wykrycie"), "Samo sasiedztwo nie moze nakladac Wykrycia.")
 	assert(_can_see_target({"side": "enemy", "grid_x": 6, "grid_y": 5}, {"side": "player", "grid_x": 5, "grid_y": 5, "is_hidden": true}), "Wróg obok krzaka musi widziec ukrytego gracza.")
@@ -6191,6 +6216,12 @@ func _validate_runtime_setup() -> void:
 	assert(_can_charge_attack_target(charge_unit, enemy_charge_target, charge_skill), "Szarza wroga musi moc zaatakowac cel przed soba.")
 	var enemy_charge_path: Array[Vector2i] = _find_charge_approach_path(charge_unit, enemy_charge_target, charge_skill)
 	assert(not enemy_charge_path.is_empty(), "Szarza wroga musi miec sciezke podejscia.")
+	var charge_cooldown_unit := charge_unit.duplicate(true)
+	charge_cooldown_unit.action_points = 2
+	charge_cooldown_unit.skill_cooldowns = {}
+	_commit_charge_skill(charge_cooldown_unit, charge_skill)
+	assert(int(charge_cooldown_unit.skill_cooldowns.get("szarza", 0)) == 4, "Szarza musi ustawiac cooldown po uzyciu.")
+	assert(int(charge_cooldown_unit.action_points) == 1, "Szarza musi kosztowac 1 AP po uzyciu.")
 	active_unit_id = previous_active_unit_id
 	pending_skill_id = previous_pending_skill_id
 	terrain_effects = previous_terrain_effects

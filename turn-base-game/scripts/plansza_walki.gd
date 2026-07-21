@@ -21,6 +21,13 @@ const UNIT_COUNT_BADGE_BORDER := Color(0.65, 0.52, 0.20, 0.90)
 const UNIT_COUNT_BADGE_TEXT := Color(0.95, 0.90, 0.78, 1.0)
 const PLAYER_OUTLINE_COLOR := Color(0.35, 0.65, 0.95, 0.95)
 const ENEMY_OUTLINE_COLOR := Color(0.92, 0.35, 0.30, 0.95)
+const TURN_INDICATOR_COLOR := Color(1.0, 0.92, 0.45, 1.0)
+const SELECTION_HIGHLIGHT_BORDER := Color(0.90, 0.77, 0.34, 0.98)
+const SELECTION_HIGHLIGHT_SHADOW := Color(0.02, 0.02, 0.02, 0.50)
+const SELECTION_HIGHLIGHT_OPACITY := 0.2
+const TURN_INDICATOR_SELECTED_ALPHA := 0.9
+const TURN_INDICATOR_UNSELECTED_ALPHA := 0.45
+const TURN_INDICATOR_PULSE_HALF_DURATION := 0.85
 const HIDDEN_UNIT_ALPHA := 0.45
 const REVEALED_HIDDEN_UNIT_ALPHA := 0.68
 const ROCK1_TEXTURE: Texture2D = preload("res://assets/mapTiles/rock1.png")
@@ -62,6 +69,10 @@ var MAGIC_PROJECTION_TEXTURE: Texture2D = load("res://assets/magic_projection.pn
 var units: Array = []
 var unit_textures: Dictionary = {}
 var selected_unit_id := -1
+var selected_obstacle_cell := Vector2i(-1, -1)
+var active_unit_id := -1
+var turn_indicator_pulse := 0.0
+var turn_indicator_pulse_tween: Tween
 var highlighted_move_cells: Array[Vector2i] = []
 var highlighted_attack_cells: Array[Vector2i] = []
 var przyjazne_podswietlenie_ataku: bool = false
@@ -97,6 +108,7 @@ var terrain_effects: Array[Dictionary] = []
 var hovered_cell := Vector2i(-1, -1)
 var viewer_side := "player"
 var grid_visible := true
+var mapa_zimowa: bool = false
 
 
 func _ready() -> void:
@@ -174,12 +186,55 @@ func set_grid_visible(visible: bool) -> void:
 	queue_redraw()
 
 
+func set_mapa_zimowa(enabled: bool) -> void:
+	if mapa_zimowa == enabled:
+		return
+	mapa_zimowa = enabled
+	queue_redraw()
+
+
 func get_hovered_cell() -> Vector2i:
 	return hovered_cell
 
 
 func set_selected_unit(unit_id: int) -> void:
 	selected_unit_id = unit_id
+	if unit_id != -1:
+		selected_obstacle_cell = Vector2i(-1, -1)
+	queue_redraw()
+
+
+func set_selected_obstacle(cell: Vector2i) -> void:
+	selected_obstacle_cell = cell
+	if cell.x != -1:
+		selected_unit_id = -1
+	queue_redraw()
+
+
+func set_active_unit(unit_id: int) -> void:
+	active_unit_id = unit_id
+	_restart_turn_indicator_pulse()
+	queue_redraw()
+
+
+func _restart_turn_indicator_pulse() -> void:
+	if turn_indicator_pulse_tween != null:
+		turn_indicator_pulse_tween.kill()
+		turn_indicator_pulse_tween = null
+	if active_unit_id == -1:
+		turn_indicator_pulse = 0.0
+		return
+	turn_indicator_pulse = 0.0
+	var tween: Tween = create_tween().set_loops()
+	turn_indicator_pulse_tween = tween
+	tween.tween_method(_set_turn_indicator_pulse, 0.0, 1.0, TURN_INDICATOR_PULSE_HALF_DURATION)\
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_method(_set_turn_indicator_pulse, 1.0, 0.0, TURN_INDICATOR_PULSE_HALF_DURATION)\
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _set_turn_indicator_pulse(value: float) -> void:
+	turn_indicator_pulse = value
 	queue_redraw()
 
 
@@ -279,6 +334,7 @@ func _draw() -> void:
 	if grid_visible:
 		draw_hex_grid()
 	draw_obstacles()
+	_draw_selection_highlight_for_obstacle()
 	_draw_statue_buff_cells()
 	draw_terrain_effects()
 	_draw_cell_highlights(map_event_warning_cells, Color(1.0, 0.25, 0.08, 0.32), Color(1.0, 0.55, 0.12, 0.95))
@@ -289,6 +345,7 @@ func _draw() -> void:
 	_draw_rock_overlay()
 	_draw_fireball_overlay()
 	_draw_ice_ground_overlay()
+	_draw_selection_highlight_for_unit()
 	draw_units()
 	draw_projectiles()
 
@@ -1101,9 +1158,13 @@ func draw_units() -> void:
 		var damage_tint_alpha: float = float(unit_damage_tint_alpha.get(unit_id, 0.0))
 
 		var marker_center := center + Vector2(0.0, HEX_RADIUS * 0.18)
-		if unit_id == selected_unit_id:
-			var outline_radius := HEX_RADIUS * 0.55
-			draw_arc(marker_center, outline_radius, 0.0, TAU, 24, Color(1.0, 0.92, 0.45, 0.9 * alpha), 3.0)
+		if unit_id == active_unit_id:
+			var base_alpha: float = TURN_INDICATOR_SELECTED_ALPHA if unit_id == selected_unit_id else TURN_INDICATOR_UNSELECTED_ALPHA
+			var pulse_alpha: float = lerpf(0.72, 1.0, turn_indicator_pulse)
+			var outline_radius: float = HEX_RADIUS * lerpf(0.50, 0.58, turn_indicator_pulse)
+			var indicator_color: Color = TURN_INDICATOR_COLOR
+			indicator_color.a = base_alpha * pulse_alpha * alpha
+			draw_arc(marker_center, outline_radius, 0.0, TAU, 24, indicator_color, 3.0)
 		else:
 			var team_radius := HEX_RADIUS * 0.52
 			var team_color := PLAYER_OUTLINE_COLOR if unit.side == "player" else ENEMY_OUTLINE_COLOR
@@ -1290,16 +1351,42 @@ func _load_unit_portrait(unit: Dictionary) -> Texture2D:
 	return null
 
 
+func _draw_selection_highlight_for_unit() -> void:
+	if selected_unit_id == -1:
+		return
+	for unit in units:
+		if int(unit.id) != selected_unit_id:
+			continue
+		_draw_selection_hex(Vector2i(int(unit.grid_x), int(unit.grid_y)))
+		return
+
+
+func _draw_selection_highlight_for_obstacle() -> void:
+	if selected_obstacle_cell.x == -1:
+		return
+	_draw_selection_hex(selected_obstacle_cell)
+
+
+func _draw_selection_hex(cell: Vector2i) -> void:
+	var center: Vector2 = axial_to_pixel(cell.x, cell.y)
+	var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 4.0)
+	var zamkniete_punkty: PackedVector2Array = points + PackedVector2Array([points[0]])
+	var shadow: Color = SELECTION_HIGHLIGHT_SHADOW
+	shadow.a *= SELECTION_HIGHLIGHT_OPACITY
+	var border: Color = SELECTION_HIGHLIGHT_BORDER
+	border.a *= SELECTION_HIGHLIGHT_OPACITY
+	draw_polyline(zamkniete_punkty, shadow, 5.0, true)
+	draw_polyline(zamkniete_punkty, border, 3.0, true)
+
+
 func draw_highlighted_cells() -> void:
 	var overlapping_cells: Array[Vector2i] = _get_overlapping_highlight_cells()
-	var wypelnienie_ataku: Color = Color(0.90, 0.64, 0.08, 0.24) if przyjazne_podswietlenie_ataku else Color(0.82, 0.12, 0.08, 0.22)
-	var obramowanie_ataku: Color = Color(1.0, 0.86, 0.22, 0.98) if przyjazne_podswietlenie_ataku else Color(1.0, 0.26, 0.20, 0.98)
+	var obramowanie_ataku: Color = Color(1.0, 0.86, 0.22, 0.98) if przyjazne_podswietlenie_ataku else Color(0.62, 0.10, 0.10, 0.95)
+	var obramowanie_ruchu: Color = _kolor_podswietlenia_ruchu()
 	_draw_cell_highlights(
 		highlighted_move_cells,
-		Color(0.12, 0.48, 0.80, 0.22 * move_highlight_opacity_mult),
-		Color(0.35, 0.85, 1.0, 0.95 * move_highlight_opacity_mult),
-		HEX_RADIUS - 6.0,
-		true
+		Color(0.35, 0.72, 0.95, 0.0),
+		obramowanie_ruchu
 	)
 	_draw_hovered_move_path()
 	var attack_only_cells: Array[Vector2i] = []
@@ -1309,25 +1396,20 @@ func draw_highlighted_cells() -> void:
 		attack_only_cells.append(cell)
 	_draw_cell_highlights(
 		attack_only_cells,
-		wypelnienie_ataku,
-		obramowanie_ataku,
-		HEX_RADIUS - 6.0,
-		true
+		Color(0.82, 0.20, 0.20, 0.0),
+		obramowanie_ataku
 	)
-	# Dla pól wspólnych duży niebieski obrys oznacza ruch, a mniejszy ma kolor celu umiejętności.
+	# Dla pól wspólnych: duży (niebieski) rysuje się z ruchu, a w środku mniejszy w kolorze celu.
 	_draw_cell_highlights(
 		overlapping_cells,
-		wypelnienie_ataku,
+		Color(0.82, 0.20, 0.20, 0.0),
 		obramowanie_ataku,
-		HEX_RADIUS - 12.0,
-		true
+		HEX_RADIUS - 12.0
 	)
 	_draw_cell_highlights(
 		zielone_pola_ataku,
-		Color(0.10, 0.72, 0.22, 0.24),
-		Color(0.28, 1.0, 0.38, 0.98),
-		HEX_RADIUS - 6.0,
-		true
+		Color(0.10, 0.72, 0.22, 0.0),
+		Color(0.28, 1.0, 0.38, 0.98)
 	)
 	_draw_hovered_attack_cell()
 	_draw_hovered_area_cells()
@@ -1343,15 +1425,24 @@ func _draw_hovered_pull_destination_cell() -> void:
 	draw_polyline(points + PackedVector2Array([points[0]]), Color(1.0, 0.78, 0.20, 0.95), 3.0)
 
 
-func _draw_cell_highlights(cells: Array[Vector2i], fill_color: Color, border_color: Color, radius: float = HEX_RADIUS - 6.0, wysoki_kontrast: bool = false) -> void:
+func _kolor_podswietlenia_ruchu() -> Color:
+	if mapa_zimowa:
+		return Color(0.10, 0.42, 0.72, 0.96 * move_highlight_opacity_mult)
+	return Color(0.45, 0.82, 1.0, 0.58 * move_highlight_opacity_mult)
+
+
+func _grubosc_obramowania_podswietlenia() -> float:
+	return 3.0 if mapa_zimowa else 2.0
+
+
+func _draw_cell_highlights(cells: Array[Vector2i], fill_color: Color, border_color: Color, radius: float = HEX_RADIUS - 6.0) -> void:
+	var grubosc: float = _grubosc_obramowania_podswietlenia()
 	for cell in cells:
 		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
 		var points: PackedVector2Array = _build_hex_points(center, radius)
-		var zamkniete_punkty: PackedVector2Array = points + PackedVector2Array([points[0]])
-		draw_colored_polygon(points, fill_color)
-		if wysoki_kontrast:
-			draw_polyline(zamkniete_punkty, Color(0.02, 0.02, 0.02, maxf(0.45, border_color.a * 0.9)), 5.5, true)
-		draw_polyline(zamkniete_punkty, border_color, 2.5, true)
+		if fill_color.a > 0.01:
+			draw_colored_polygon(points, fill_color)
+		draw_polyline(points + PackedVector2Array([points[0]]), border_color, grubosc)
 
 
 func _get_overlapping_highlight_cells() -> Array[Vector2i]:
@@ -1374,10 +1465,13 @@ func _draw_hovered_move_path() -> void:
 
 	var destination: Vector2 = path_points[path_points.size() - 1]
 	var destination_hex: PackedVector2Array = _build_hex_points(destination, HEX_RADIUS - 8.0)
-	draw_polyline(destination_hex + PackedVector2Array([destination_hex[0]]), Color(0.60, 0.90, 1.0, 0.90), 3.0)
+	var kolor_celu: Color = _kolor_podswietlenia_ruchu()
+	kolor_celu.a = minf(kolor_celu.a + 0.06, 1.0)
+	draw_polyline(destination_hex + PackedVector2Array([destination_hex[0]]), kolor_celu, 3.0)
 
+	var kolor_sciezki: Color = _kolor_podswietlenia_ruchu()
 	for index in range(path_points.size() - 1):
-		_draw_dotted_segment(path_points[index], path_points[index + 1], Color(0.45, 0.82, 1.0, 0.85))
+		_draw_dotted_segment(path_points[index], path_points[index + 1], kolor_sciezki)
 
 
 func _draw_hovered_attack_cell() -> void:
@@ -1396,18 +1490,22 @@ func _draw_hovered_attack_cell() -> void:
 func _draw_hovered_area_cells() -> void:
 	if hovered_area_cells.is_empty():
 		return
+	var wielohexowy_podglad: bool = hovered_area_cells.size() > 1
 	for cell in hovered_area_cells:
 		var center: Vector2 = axial_to_pixel(cell.x, cell.y)
 		var points: PackedVector2Array = _build_hex_points(center, HEX_RADIUS - 8.0)
 		var is_center: bool = cell == hovered_attack_cell
 		if zielone_pola_ataku.has(hovered_attack_cell):
-			draw_colored_polygon(points, Color(0.10, 0.72, 0.22, 0.38 if is_center else 0.30))
+			if wielohexowy_podglad:
+				draw_colored_polygon(points, Color(0.10, 0.72, 0.22, 0.38 if is_center else 0.30))
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(0.32, 1.0, 0.42, 0.98 if is_center else 0.90), 3.0 if is_center else 2.5)
 		elif is_center:
-			draw_colored_polygon(points, Color(0.95, 0.72, 0.22, 0.38))
+			if wielohexowy_podglad:
+				draw_colored_polygon(points, Color(0.95, 0.72, 0.22, 0.38))
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(1.0, 0.82, 0.28, 0.98), 3.0)
 		else:
-			draw_colored_polygon(points, Color(0.92, 0.38, 0.22, 0.30))
+			if wielohexowy_podglad:
+				draw_colored_polygon(points, Color(0.92, 0.38, 0.22, 0.30))
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(1.0, 0.42, 0.26, 0.90), 2.5)
 
 
