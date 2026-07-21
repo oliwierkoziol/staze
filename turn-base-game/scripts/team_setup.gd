@@ -63,6 +63,21 @@ func _show_mode_menu() -> void:
 	_clear()
 	_build_background()
 
+	var build_info := Label.new()
+	build_info.name = "BuildInfo"
+	build_info.text = "BUILD %s • %s" % [
+		ProjectSettings.get_setting("application/config/version", "0.0.0"),
+		ProjectSettings.get_setting("application/config/build_date", "brak daty"),
+	]
+	build_info.offset_left = 20
+	build_info.offset_top = 14
+	build_info.offset_right = 360
+	build_info.offset_bottom = 42
+	build_info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	build_info.add_theme_font_size_override("font_size", 14)
+	build_info.add_theme_color_override("font_color", Color(0.62, 0.58, 0.5, 1.0))
+	add_child(build_info)
+
 	var main := _make_main_container(80, 80)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 28)
@@ -101,6 +116,17 @@ func _show_mode_menu() -> void:
 	cards.add_child(_make_mode_card("GOTOWE SCENARIUSZE", "Wybor przygotowanej bitwy.", _show_scenarios_placeholder))
 	cards.add_child(_make_mode_card("SANDBOX", "Armie i liczebnosc oddzialow.", _show_sandbox_faction_select))
 	cards.add_child(_make_mode_card("DEBUG", "Dowolne jednostki testowe.", _show_debug_count_config))
+
+	_load_button = _make_action_button("WCZYTAJ ZAPIS", Vector2(220, 60))
+	_load_button.pressed.connect(_on_load_pressed)
+	column.add_child(_load_button)
+
+	_load_dialog = FileDialog.new()
+	_load_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	_load_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_load_dialog.filters = PackedStringArray(["*.json ; Zapis armii"])
+	_load_dialog.file_selected.connect(_on_load_file_selected)
+	add_child(_load_dialog)
 
 
 func _show_scenarios_placeholder() -> void:
@@ -307,21 +333,10 @@ func _show_sandbox_faction_select() -> void:
 	back_button.pressed.connect(_show_mode_menu)
 	actions_row.add_child(back_button)
 
-	_load_button = _make_action_button("WCZYTAJ ZAPIS", Vector2(220, 60))
-	_load_button.pressed.connect(_on_load_pressed)
-	actions_row.add_child(_load_button)
-
 	_start_button = _make_action_button("DALEJ", Vector2(220, 60))
 	_start_button.add_theme_font_size_override("font_size", 28)
 	_start_button.pressed.connect(_show_sandbox_count_config)
 	actions_row.add_child(_start_button)
-
-	_load_dialog = FileDialog.new()
-	_load_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	_load_dialog.access = FileDialog.ACCESS_FILESYSTEM
-	_load_dialog.filters = PackedStringArray(["*.json ; Zapis armii"])
-	_load_dialog.file_selected.connect(_on_load_file_selected)
-	add_child(_load_dialog)
 
 
 func _show_sandbox_count_config() -> void:

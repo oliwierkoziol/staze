@@ -27,7 +27,7 @@ func _ready() -> void:
 
 func show_unit(unit: Dictionary, skills: Dictionary, portrait: Texture2D) -> void:
 	_name_label.text = str(unit.get("name", "JEDNOSTKA")).to_upper()
-	_role_label.text = str(unit.get("role", ""))
+	_role_label.text = "Poziom %d • %s" % [int(unit.get("level", 1)), str(unit.get("role", ""))]
 	_portrait.texture = portrait
 	_tabs.visible = true
 	_object_description.visible = false
@@ -130,6 +130,7 @@ func _fill_general_tab(scroll: ScrollContainer, unit: Dictionary) -> void:
 	content.add_child(_rich_description("%s. Walczy po stronie %s i dowodzi oddziałem liczącym obecnie %d wojowników." % [role, _side_name(str(unit.get("side", ""))), int(unit.get("count", 0))]))
 	content.add_child(_section("INFORMACJE OGÓLNE"))
 	_add_row(content, "Nazwa", str(unit.get("name", "-")))
+	_add_row(content, "Poziom", str(unit.get("level", 1)))
 	_add_row(content, "Rola", role)
 	_add_row(content, "Strona", _side_name(str(unit.get("side", ""))))
 	_add_row(content, "Odporność", _resistance_text(unit))
