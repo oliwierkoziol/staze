@@ -690,6 +690,7 @@ func _apply_save_data(save_data: Dictionary) -> void:
 			unit["id"] = int(unit.get("id", 0))
 			unit["grid_x"] = int(unit.get("grid_x", 0))
 			unit["grid_y"] = int(unit.get("grid_y", 0))
+			unit["level"] = maxi(1, int(unit.get("level", 1)))
 			units.append(unit if unit.has("max_hp") else _prepare_unit(unit))
 	unit_configs = []
 	for unit in units:
@@ -697,6 +698,7 @@ func _apply_save_data(save_data: Dictionary) -> void:
 			"id": int(unit.get("id", 0)),
 			"type_id": str(unit.get("type_id", "")),
 			"side": str(unit.get("side", "")),
+			"level": maxi(1, int(unit.get("level", 1))),
 			"grid_x": int(unit.get("grid_x", 0)),
 			"grid_y": int(unit.get("grid_y", 0)),
 		})
@@ -874,8 +876,9 @@ func _read_battle_config_text() -> String:
 
 func _normalize_unit_config(raw_unit: Dictionary) -> Dictionary:
 	var normalized: Dictionary = raw_unit.duplicate(true)
-	for key in ["id", "grid_x", "grid_y"]:
+	for key in ["id", "grid_x", "grid_y", "level"]:
 		normalized[key] = int(normalized.get(key, 0))
+	normalized["level"] = maxi(1, int(normalized.get("level", 1)))
 	for key in ["type_id", "side"]:
 		normalized[key] = str(normalized.get(key, ""))
 	return normalized
@@ -912,6 +915,7 @@ func _prepare_unit(unit: Dictionary) -> Dictionary:
 		if not unit.has(stat_name):
 			unit[stat_name] = 0
 		unit["base_%s" % stat_name] = int(unit.get(stat_name, 0))
+	unit["level"] = maxi(1, int(unit.get("level", 1)))
 	unit["max_hp"] = int(unit["base_hp"])
 	MatematykaWalkiScript.ustaw_pelne_hp(unit)
 	unit["remaining_move"] = int(unit.get("move_range", 0))
@@ -951,7 +955,7 @@ func _render_unit_details(unit_data: Dictionary) -> void:
 	if tex != null:
 		unit_portrait.texture = tex
 	unit_name_label.text = str(unit_data.get("name", "")).to_upper()
-	unit_meta_label.text = "Poziom 1"
+	unit_meta_label.text = "Poziom %d" % int(unit_data.get("level", 1))
 	var current_hp: int = int(unit_data.get("current_hp", unit_data.get("hp", 0)))
 	var max_hp: int = int(unit_data.get("max_hp", unit_data.get("hp", 0)))
 	unit_stats_display.set_values({
@@ -2137,6 +2141,12 @@ func _on_board_cell_hovered(cell: Vector2i) -> void:
 		return
 
 	var hovered_unit: Dictionary = _find_unit_at_cell(cell)
+	if not hovered_unit.is_empty() and int(hovered_unit.id) == int(active_unit.id):
+		board.set_hovered_move_path([])
+		board.set_hovered_attack_cell(Vector2i(-1, -1))
+		_clear_move_cost_label()
+		_clear_hover_warning()
+		return
 	if not hovered_unit.is_empty() and hovered_unit.side != active_unit.side and _can_see_target(active_unit, hovered_unit) and _can_unit_attack(active_unit):
 		if not charge_skill.is_empty() and _can_charge_attack_target(active_unit, hovered_unit, charge_skill):
 			board.set_hovered_move_path([])
@@ -6291,14 +6301,7 @@ func _advance_castle_stage() -> void:
 
 func _set_stage_transition_content(stage_number: int, stages: Array[Dictionary]) -> void:
 	stage_transition_title.text = str(stages[stage_number - 1].get("name", "ETAP %d" % stage_number)).to_upper()
-	stage_transition_progress.text = "ETAP %d/%d\n%s" % [stage_number, stages.size(), "  ".join(_get_stage_markers(stage_number, stages.size()))]
-
-
-func _get_stage_markers(active_stage: int, stage_count: int) -> PackedStringArray:
-	var markers := PackedStringArray()
-	for stage_number in range(1, stage_count + 1):
-		markers.append("●" if stage_number == active_stage else "○")
-	return markers
+	stage_transition_progress.text = "ETAP %d/%d" % [stage_number, stages.size()]
 
 
 func _get_visible_turn_queue() -> Array[int]:

@@ -63,6 +63,21 @@ func _show_mode_menu() -> void:
 	_clear()
 	_build_background()
 
+	var build_info := Label.new()
+	build_info.name = "BuildInfo"
+	build_info.text = "BUILD %s • %s" % [
+		ProjectSettings.get_setting("application/config/version", "0.0.0"),
+		ProjectSettings.get_setting("application/config/build_date", "brak daty"),
+	]
+	build_info.offset_left = 20
+	build_info.offset_top = 14
+	build_info.offset_right = 360
+	build_info.offset_bottom = 42
+	build_info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	build_info.add_theme_font_size_override("font_size", 14)
+	build_info.add_theme_color_override("font_color", Color(0.62, 0.58, 0.5, 1.0))
+	add_child(build_info)
+
 	var main := _make_main_container(80, 80)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 28)

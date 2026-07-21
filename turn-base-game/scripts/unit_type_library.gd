@@ -120,6 +120,7 @@ static func _normalize_unit_type(raw_unit: Dictionary) -> Dictionary:
 	unit["atk"] = int(unit.get("atk", 0))
 	unit["dmg_min"] = int(unit.get("dmg_min", stare_obrazenia))
 	unit["dmg_max"] = maxi(int(unit.dmg_min), int(unit.get("dmg_max", stare_obrazenia)))
+	unit["level"] = maxi(1, int(unit.get("level", 1)))
 	unit.erase("dmg")
 	for key in ["hp", "def", "speed", "action_points", "count", "move_range", "attack_range"]:
 		unit[key] = int(unit.get(key, 0))
@@ -372,6 +373,7 @@ static func build_instance(type_id: String, instance_id: int, side: String, grid
 	unit["side"] = side
 	unit["grid_x"] = grid_x
 	unit["grid_y"] = grid_y
+	unit["level"] = maxi(1, int(unit.get("level", 1)))
 	for key in ["base_hp", "base_atk", "base_dmg_min", "base_dmg_max", "base_def", "base_speed", "base_move_range", "base_attack_range"]:
 		var stat_name: String = key.replace("base_", "")
 		unit[key] = int(unit.get(stat_name, 0))
