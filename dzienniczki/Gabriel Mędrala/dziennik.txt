@@ -137,3 +137,17 @@ Dzień 15 (21.07.2026)
 - transfer skryptów kamery ze starych projektów
 - dodanie tekstów o sterowaniu
 - przesłanie projektu do githuba i naprawa kilku błędów
+
+Dzień 16 (22.07.2026)
+- dodanie zakładek pod muzykę i tts
+- dodanie możliwości tworzenia folderów
+- dodanie nazywania audio
+- dodanie MiniMax 2.5, Lyria 2 i Stability AI
+- dodanie cennika
+- dodanie ulepszonej wyszukiwarki folderów
+- dodanie możliwości zmiany nazw folderów i plików audio
+- dodanie możliwości porównywania audio w folderach
+- dodanie opcji wstawiania komentarzy i ich edytowania
+- naprawa błedu gdzie klikanie w dowolny guzik przesuwa ekran na samą górę strony
+- dodanie możliwości usuwania folderów i plików
+
