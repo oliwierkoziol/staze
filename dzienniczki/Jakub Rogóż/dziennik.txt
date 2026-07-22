@@ -41,3 +41,89 @@ Ustaliliśmy sposób zaznaczania jednostek oraz wyświetlania ich statystyk
     Wprowadzono umiejętność generała.
 
     Ukończono kluczowe komponenty interfejsu użytkownika.
+
+9 lipca
+
+    Naprawiłem mechanizm krzaków.
+
+    Przebudowałem panel buffów.
+
+    Zmieniłem pasek kolejności ruchów.
+
+    Dodałem nowe skillki charakterystyczne dla klas, np. pułapka, dynamit.
+
+    Rozszerzyłem system buffów/debuffów.
+
+    Wygenerowałem nowe grafiki dla hexów oraz buffów/debuffów.
+
+10 lipca
+
+    Rozpoczęto dodawanie skilli.
+
+    Dorzucono zdjęcia generałów.
+
+    Zrobiony samouczek.
+
+13 lipca
+
+    Kolejne umiejętności.
+
+    Dalsza praca nad buffami.
+
+    Dodano wskaźniki-strzałki przy jednostkach oznaczające buffa/debuffa.
+
+    Dodano efekt pnączy.
+
+    Wygenerowano nowe grafiki do map.
+
+    Dodano nowy scenariusz pustynny.
+
+    Dodano mechanikę eventów.
+
+14 lipca
+
+    Dodano efekt przy elfim posągu.
+
+    Zmieniono wzór obliczania obrażeń.
+
+    Dodano nowe hexy.
+
+    Dodano nakładające się buffy/debuffy.
+
+    Dodano scenariusz „Zamek”.
+
+    Dokończono dodawanie umiejętności.
+
+15 lipca
+
+    Poprawka działania szarży.
+
+    Dodawanie miniaturek umiejętności.
+
+    Dodano hexy (dziury).
+
+    Zakończono dodawanie skilli.
+
+16 lipca
+
+    Ujednolicenie opisów umiejętności.
+
+    Poprawiono skillki generałów.
+
+    Ukończono ikonki umiejętności.
+
+17 lipca
+
+    Dalsze eventy.
+
+    Rebalans walki.
+
+    Wygenerowane i dodane miniaturki skilli generałów.
+
+20 lipca
+
+    Naprawa licznych drobnych błędów.
+
+    Dalszy balancing.
+
+    Naprawa ataków dystansowych.
