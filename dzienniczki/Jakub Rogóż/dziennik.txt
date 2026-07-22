@@ -127,3 +127,31 @@ Ustaliliśmy sposób zaznaczania jednostek oraz wyświetlania ich statystyk
     Dalszy balancing.
 
     Naprawa ataków dystansowych.
+
+21 lipca
+
+    Poprawiono podświetlanie hexów.
+
+    Wprowadzono zmiany balansujące.
+
+    Naprawiono działanie krzaka, tooltipa umiejętności generała oraz animacji.
+
+    Naprawiono Detonator na jednym z poziomow.
+
+    Ustalono widoczność ataków, akcji i ruchów.
+
+    Zbuffowano frakcję goblinów.
+
+    Wdrożono drobne poprawki.
+
+    Zaeksportowano projekt i naprawiono błędy z buffami.
+
+    Skorygowano poziom trudności.
+
+22 lipca
+
+    Przeprowadzono testy gry z udziałem dwóch grup.
+
+    Zebrano propozycje poprawek od testerów.
+
+    Rozpoczęto wdrażanie sugerowanych zmian.
