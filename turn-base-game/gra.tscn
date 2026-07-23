@@ -100,6 +100,15 @@ grow_vertical = 2
 theme = ExtResource("13_georgia_theme")
 script = ExtResource("1_a1tqk")
 
+[node name="OdtwarzaczSfxJednostek" type="AudioStreamPlayer" parent="."]
+volume_db = -10.0
+
+[node name="OdtwarzaczSfxBroni" type="AudioStreamPlayer" parent="."]
+volume_db = -12.0
+
+[node name="OdtwarzaczSfxTrafienia" type="AudioStreamPlayer" parent="."]
+volume_db = -12.0
+
 [node name="Background" type="TextureRect" parent="." unique_id=214506001]
 layout_mode = 1
 anchors_preset = 15

@@ -43,6 +43,75 @@ const LOG_COLOR_YELLOW := Color(0.95, 0.82, 0.25, 1.0)
 const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
 const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
 const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
+const SFX_LUDZKICH_JEDNOSTEK: Dictionary = {
+	"human_knights": {
+		"wybor": preload("res://assets/sfx/human/knight-select.wav"),
+		"obrazenia": preload("res://assets/sfx/human/knight-hurt.wav"),
+		"smierc": preload("res://assets/sfx/human/knight-death.wav"),
+	},
+	"human_cavalry": {
+		"wybor": preload("res://assets/sfx/human/chariot-select.wav"),
+		"obrazenia": preload("res://assets/sfx/human/chariot-damage.wav"),
+		"smierc": preload("res://assets/sfx/human/chariot-death.wav"),
+	},
+	"human_archers": {
+		"wybor": preload("res://assets/sfx/human/archer-select.wav"),
+		"obrazenia": preload("res://assets/sfx/human/archer-hurt.wav"),
+		"smierc": preload("res://assets/sfx/human/archer-death.wav"),
+	},
+	"human_mages": {
+		"wybor": preload("res://assets/sfx/human/mage-select.wav"),
+		"obrazenia": preload("res://assets/sfx/human/mage-damage.wav"),
+		"smierc": preload("res://assets/sfx/human/mage-death.wav"),
+	},
+}
+const SFX_FRAKCJI: Dictionary = {
+	"dwarf": {
+		"wybor": preload("res://assets/sfx/dwarf/dwarf-select.wav"),
+		"obrazenia": preload("res://assets/sfx/dwarf/dwarf-damage.wav"),
+		"smierc": preload("res://assets/sfx/dwarf/dwarf-death.wav"),
+	},
+	"elf": {
+		"wybor": preload("res://assets/sfx/elf/elf-select.wav"),
+		"obrazenia": preload("res://assets/sfx/elf/elf-damage.wav"),
+		"smierc": preload("res://assets/sfx/elf/elf-death.wav"),
+	},
+	"goblin": {
+		"wybor": preload("res://assets/sfx/goblin/goblin-select.wav"),
+		"obrazenia": preload("res://assets/sfx/goblin/goblin-damage.wav"),
+		"smierc": preload("res://assets/sfx/goblin/goblin-death.wav"),
+	},
+	"orc": {
+		"wybor": preload("res://assets/sfx/orc/warrior-select.wav"),
+		"obrazenia": preload("res://assets/sfx/orc/warrior-damage.wav"),
+		"smierc": preload("res://assets/sfx/orc/warrior-death.wav"),
+	},
+}
+const SFX_WYBOR_KISHAKA: AudioStream = preload("res://assets/sfx/orc/warrior-kishak.wav")
+const SZANSA_SFX_KISHAKA := 0.2
+const SFX_BRONI: Dictionary = {
+	"arrow": preload("res://assets/sfx/hit/arrow.mp3"),
+	"axe": preload("res://assets/sfx/hit/axe.mp3"),
+	"dagger": preload("res://assets/sfx/hit/dagger.mp3"),
+	"sword": preload("res://assets/sfx/hit/sword.mp3"),
+}
+const SFX_TRAFIENIA: AudioStream = preload("res://assets/sfx/hit/hitSound.mp3")
+const BRON_JEDNOSTEK: Dictionary = {
+	"dwarf_warrior": "axe",
+	"dwarf_guardian": "axe",
+	"dwarf_axeman": "axe",
+	"elf_archer": "arrow",
+	"elf_swordsman": "sword",
+	"goblin_thief": "dagger",
+	"goblin_warrior": "axe",
+	"goblin_trapper": "dagger",
+	"human_knights": "sword",
+	"human_cavalry": "sword",
+	"human_archers": "arrow",
+	"orc_warrior": "axe",
+	"orc_berserker": "axe",
+	"orc_shieldman": "axe",
+}
 const TEAM_SETUP_SCENE: PackedScene = preload("res://scenes/team_setup.tscn")
 const TeamSetupScript = preload("res://scripts/team_setup.gd")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
@@ -134,6 +203,9 @@ const OBSTACLE_WINTER_DESCRIPTIONS: Dictionary = {
 @onready var move_cost_label: Label = $HUD/Overlay/MoveCostLabel
 @onready var damage_tooltip: PanelContainer = $HUD/Overlay/DamageTooltip
 @onready var damage_tooltip_label: Label = $HUD/Overlay/DamageTooltip/Label
+@onready var odtwarzacz_sfx_jednostek: AudioStreamPlayer = $OdtwarzaczSfxJednostek
+@onready var odtwarzacz_sfx_broni: AudioStreamPlayer = $OdtwarzaczSfxBroni
+@onready var odtwarzacz_sfx_trafienia: AudioStreamPlayer = $OdtwarzaczSfxTrafienia
 
 var units: Array = []
 var obstacles: Array[Dictionary] = []
@@ -206,9 +278,11 @@ var debug_map_event_menu: PopupMenu
 
 var save_setup_dialog: FileDialog
 var load_setup_dialog: FileDialog
+var losowanie_sfx: RandomNumberGenerator = RandomNumberGenerator.new()
 
 
 func _ready() -> void:
+	losowanie_sfx.randomize()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_disable_hud_mouse(hud)
 	_build_help_popup()
@@ -3156,24 +3230,33 @@ func _apply_damage_to_unit(target: Dictionary, total_damage: int) -> int:
 		_reveal_if_in_bush(target)
 	target["current_total_hp"] = max(0, current_total_hp - max(1, damage))
 	_refresh_unit_health_state(target)
+	if damage > 0 and int(target.get("count", 0)) > 0:
+		_odtworz_sfx_jednostki(target, "obrazenia")
 	return max(0, previous_count - int(target.get("count", 0)))
 
 
-func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage: int, play_animation := true, projectile_kind_override := "") -> Dictionary:
+func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage: int, play_animation: bool = true, projectile_kind_override: String = "", weapon_sfx_override: String = "") -> Dictionary:
 	var hit_target: Dictionary = target
-	var damage := total_damage
+	var damage: int = total_damage
 	# Żelazna Kurtyna: wszystkie ataki/skille poza DoT (DoT idzie przez _apply_damage_to_unit).
 	var guardian := _get_guardian_for(target)
 	if not guardian.is_empty():
 		hit_target = guardian
 		damage = max(1, int(ceil(float(damage) * 0.75)))
 		_log_event("%s osłania %s Żelazną Kurtyną." % [_unit_name_log_text(guardian), _unit_name_log_text(target)])
+	var projectile_kind: String = ""
 	if play_animation:
-		var projectile_kind: String = projectile_kind_override if projectile_kind_override != "" else _get_attack_projectile_kind(attacker)
+		if projectile_kind_override == "none":
+			projectile_kind = ""
+		else:
+			projectile_kind = projectile_kind_override if projectile_kind_override != "" else _get_attack_projectile_kind(attacker)
+		_odtworz_sfx_broni(_pobierz_rodzaj_sfx_broni(attacker, projectile_kind, weapon_sfx_override))
 		board.play_attack_animation(int(attacker.id), int(hit_target.id), projectile_kind)
 	if _consume_energy_barrier(hit_target):
 		_log_event("Bariera Energetyczna blokuje atak na %s." % _unit_name_log_text(hit_target))
 		return {"target": hit_target, "damage": 0, "casualties": 0}
+	if play_animation:
+		_odtworz_sfx_trafienia_po_czasie(0.14 if projectile_kind != "" else 0.08)
 	var casualties: int = _apply_damage_to_unit(hit_target, damage)
 	return {"target": hit_target, "damage": _adjust_incoming_damage(hit_target, damage), "casualties": casualties}
 
@@ -3226,6 +3309,7 @@ func _cleanup_destroyed_unit(target: Dictionary) -> void:
 		return
 	if _find_unit_by_id(int(target.get("id", -1))).is_empty():
 		return
+	_odtworz_sfx_jednostki(target, "smierc")
 	_log_event("%s zostaje rozbity." % _unit_name_log_text(target))
 	units.erase(target)
 	var removed_queue_index: int = turn_queue.find(int(target.get("id", -1)))
@@ -3412,7 +3496,7 @@ func _execute_knee_shot(caster: Dictionary, target: Dictionary) -> void:
 
 func _execute_poison_dagger(caster: Dictionary, target: Dictionary) -> void:
 	var total_damage := _calculate_damage(caster, target, 0.7)
-	var result := _apply_attack_damage(caster, target, total_damage)
+	var result := _apply_attack_damage(caster, target, total_damage, true, "none", "dagger")
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	if int(result.get("damage", 0)) > 0:
@@ -3503,6 +3587,8 @@ func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
 	await get_tree().create_timer(0.12).timeout
 	var total_damage := _calculate_damage(caster, target)
 	var result := _apply_attack_damage(caster, target, total_damage, false)
+	if int(result.get("damage", 0)) > 0:
+		_odtworz_sfx_trafienia_po_czasie(0.0)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	var pushed := false
@@ -3554,7 +3640,7 @@ func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
 
 func _execute_hammer_strike(caster: Dictionary, target: Dictionary) -> void:
 	var total_damage := _calculate_damage(caster, target)
-	var result := _apply_attack_damage(caster, target, total_damage)
+	var result := _apply_attack_damage(caster, target, total_damage, true, "", "axe")
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	var stun_suffix := ""
@@ -3603,6 +3689,8 @@ func _execute_fireball(caster: Dictionary, center: Vector2i) -> void:
 			]
 		)
 		_cleanup_destroyed_unit(hit_target)
+	if not hit_names.is_empty():
+		_odtworz_sfx_trafienia_po_czasie(0.0)
 	_add_terrain_effect(center, "fire", 1)
 	is_animating = false
 	_log_event("%s rzuca Kulę Ognia: %s." % [_unit_name_log_text(caster), "brak trafień" if hit_names.is_empty() else ", ".join(hit_names)])
@@ -3626,6 +3714,7 @@ func _execute_dynamite_throw(caster: Dictionary, center: Vector2i) -> void:
 func _execute_arrow_rain(caster: Dictionary, center: Vector2i) -> void:
 	var area_cells: Array[Vector2i] = _get_area_cells(center)
 	is_animating = true
+	_odtworz_sfx_broni("arrow")
 	board.play_arrow_rain_animation(int(caster.id), area_cells)
 	await get_tree().create_timer(0.42).timeout
 	var hit_names: Array[String] = []
@@ -3639,6 +3728,8 @@ func _execute_arrow_rain(caster: Dictionary, center: Vector2i) -> void:
 		var hit_target: Dictionary = result.get("target", target)
 		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
 		_cleanup_destroyed_unit(hit_target)
+	if not hit_names.is_empty():
+		_odtworz_sfx_trafienia_po_czasie(0.0)
 	is_animating = false
 	_log_event("%s używa Deszczu Strzał: %s." % [_unit_name_log_text(caster), "brak trafień" if hit_names.is_empty() else ", ".join(hit_names)])
 
@@ -3920,7 +4011,7 @@ func _execute_focused_strike(caster: Dictionary, target: Dictionary, skill: Dict
 func _execute_shattering_strike(caster: Dictionary, target: Dictionary, skill: Dictionary = {}) -> void:
 	var target_id: int = int(target.get("id", -1))
 	var total_damage := _calculate_damage(caster, target, 1.5)
-	var result := _apply_attack_damage(caster, target, total_damage)
+	var result := _apply_attack_damage(caster, target, total_damage, true, "", "axe")
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	_log_event(
@@ -4007,7 +4098,7 @@ func _execute_piercing_shot(caster: Dictionary, target: Dictionary, skill: Dicti
 
 func _execute_zaklete_ciecie(caster: Dictionary, target: Dictionary) -> void:
 	var total_damage := _calculate_damage(caster, target, 0.5)
-	var result := _apply_attack_damage(caster, target, total_damage)
+	var result := _apply_attack_damage(caster, target, total_damage, true, "", "sword")
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	var curse_suffix := ""
@@ -6720,6 +6811,7 @@ func _start_unit_activation(unit: Dictionary) -> void:
 	current_turn = unit.side
 	active_turn_has_log = false
 	_log_turn_separator()
+	_odtworz_sfx_jednostki(unit, "wybor")
 	unit.remaining_move = int(unit.move_range)
 	unit.action_points = int(unit.get("base_action_points", unit.get("action_points", 1)))
 	pending_skill_id = ""
@@ -6750,6 +6842,53 @@ func _start_unit_activation(unit: Dictionary) -> void:
 	_sync_board()
 	if unit.side == "enemy" and not _is_manual_side(str(unit.side)):
 		_enemy_take_turn()
+
+
+func _odtworz_sfx_jednostki(unit: Dictionary, zdarzenie: String) -> void:
+	if setup_mode or str(unit.get("side", "")) != "player":
+		return
+	var type_id: String = str(unit.get("type_id", ""))
+	var zestaw: Dictionary = SFX_LUDZKICH_JEDNOSTEK.get(type_id, {})
+	if zestaw.is_empty():
+		zestaw = SFX_FRAKCJI.get(type_id.get_slice("_", 0), {})
+	var dzwiek: AudioStream = zestaw.get(zdarzenie) as AudioStream
+	if zdarzenie == "wybor" and type_id.begins_with("orc_") and str(unit.get("side", "")) == "player" and orc_general_is_kishak and general_portrait.texture == ORC_GENERAL_KISHAK_PORTRAIT and losowanie_sfx.randf() < SZANSA_SFX_KISHAKA:
+		dzwiek = SFX_WYBOR_KISHAKA
+	if dzwiek == null:
+		return
+	odtwarzacz_sfx_jednostek.stop()
+	odtwarzacz_sfx_jednostek.stream = dzwiek
+	odtwarzacz_sfx_jednostek.play()
+
+
+func _pobierz_rodzaj_sfx_broni(attacker: Dictionary, projectile_kind: String, override: String = "") -> String:
+	if override != "":
+		return override
+	match projectile_kind:
+		"arrows":
+			return "arrow"
+		"throwing_axe":
+			return "axe"
+		"":
+			return str(BRON_JEDNOSTEK.get(str(attacker.get("type_id", "")), ""))
+	return ""
+
+
+func _odtworz_sfx_broni(rodzaj: String) -> void:
+	var dzwiek: AudioStream = SFX_BRONI.get(rodzaj) as AudioStream
+	if dzwiek == null:
+		return
+	odtwarzacz_sfx_broni.stream = dzwiek
+	odtwarzacz_sfx_broni.play()
+
+
+func _odtworz_sfx_trafienia_po_czasie(opoznienie: float) -> void:
+	if opoznienie > 0.0:
+		await get_tree().create_timer(opoznienie).timeout
+	if not is_inside_tree():
+		return
+	odtwarzacz_sfx_trafienia.stream = SFX_TRAFIENIA
+	odtwarzacz_sfx_trafienia.play()
 
 
 func _get_active_unit() -> Dictionary:
@@ -7018,6 +7157,7 @@ func _execute_general_area_skill(skill_id: String, skill: Dictionary, center: Ve
 	var cells: Array[Vector2i] = _get_general_area_cells(center, int(skill.get("radius", 1)))
 	if str(skill.get("animation", "")) == "arrows":
 		is_animating = true
+		_odtworz_sfx_broni("arrow")
 		board.play_arrow_rain_animation(-1, cells)
 		await get_tree().create_timer(0.42).timeout
 		is_animating = false
@@ -7035,6 +7175,8 @@ func _execute_general_area_skill(skill_id: String, skill: Dictionary, center: Ve
 			target_effect["name"] = str(skill.get("name", skill_id))
 			_apply_or_refresh_effect(target, target_effect)
 		_cleanup_destroyed_unit(target)
+	if hits > 0:
+		_odtworz_sfx_trafienia_po_czasie(0.0)
 	_finish_general_skill(skill_id, skill, " Trafione oddziały: %d." % hits)
 
 
