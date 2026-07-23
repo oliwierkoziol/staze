@@ -164,6 +164,7 @@ var setup_controls: HBoxContainer
 var save_setup_button: Button
 var reset_battle_button: Button
 var load_setup_button: Button
+var pause_content: VBoxContainer
 var save_setup_dialog: FileDialog
 var load_setup_dialog: FileDialog
 var _web_load_input: Variant
@@ -201,6 +202,13 @@ var stage_transition_title: Label
 var stage_transition_progress: Label
 var unit_details_popup: PopupPanel
 var debug_map_event_menu: PopupMenu
+
+@onready var pause_menu: CanvasLayer = $HUD/PauseMenu
+@onready var pause_save_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseSaveButton
+@onready var pause_load_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseLoadButton
+@onready var pause_reset_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseResetButton
+@onready var pause_resume_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseResumeButton
+@onready var pause_exit_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseExitButton
 
 
 func _ready() -> void:
@@ -272,7 +280,7 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if event.keycode == KEY_ESCAPE:
-		_on_reset_battle_pressed()
+		_toggle_pause_menu()
 		get_viewport().set_input_as_handled()
 		return
 
@@ -528,9 +536,8 @@ func _build_setup_controls() -> void:
 		return
 	setup_controls = HBoxContainer.new()
 	setup_controls.add_theme_constant_override("separation", 8)
-	var right_content: Node = end_turn_button.get_parent()
-	right_content.add_child(setup_controls)
-	right_content.move_child(setup_controls, end_turn_button.get_index())
+	setup_controls.visible = false
+	add_child(setup_controls)
 
 	save_setup_button = _make_setup_button("ZAPISZ")
 	save_setup_button.pressed.connect(_on_save_setup_pressed)
@@ -557,6 +564,61 @@ func _build_setup_controls() -> void:
 	load_setup_dialog.filters = PackedStringArray(["*.json ; Zapis armii"])
 	load_setup_dialog.file_selected.connect(_on_load_setup_file_selected)
 	add_child(load_setup_dialog)
+
+	if pause_menu != null:
+		pause_save_button.pressed.connect(_on_save_setup_pressed)
+		pause_load_button.pressed.connect(_on_load_setup_pressed)
+		pause_reset_button.pressed.connect(_on_pause_reset_pressed)
+		pause_resume_button.pressed.connect(_on_pause_resume_pressed)
+		pause_exit_button.pressed.connect(_on_pause_exit_pressed)
+
+
+func _toggle_pause_menu() -> void:
+	if pause_menu == null or hud == null or not hud.visible:
+		return
+	var will_show := not pause_menu.visible
+	pause_menu.visible = will_show
+	get_tree().paused = will_show
+	if will_show:
+		pause_resume_button.grab_focus()
+
+
+func _on_pause_resume_pressed() -> void:
+	pause_menu.visible = false
+	get_tree().paused = false
+
+
+func _on_pause_reset_pressed() -> void:
+	pause_menu.visible = false
+	get_tree().paused = false
+	if current_player_faction == "" or current_enemy_faction == "":
+		_on_reset_battle_pressed()
+		return
+	setup_mode = true
+	help_mode_tutorial = true
+	tutorial_page = 0
+	tutorial_acknowledged = false
+	selected_unit_id = -1
+	setup_drag_unit_id = -1
+	active_unit_id = -1
+	current_turn = ""
+	pending_skill_id = ""
+	selected_obstacle_cell = Vector2i(-1, -1)
+	is_animating = false
+	turn_queue_index = -1
+	event_log.clear()
+	general_skill_used = false
+	pending_general_skill_id = ""
+	_load_general_skills()
+	_refresh_general_display()
+	_refresh_general_ability_buttons()
+	_enter_setup_mode()
+
+
+func _on_pause_exit_pressed() -> void:
+	pause_menu.visible = false
+	get_tree().paused = false
+	_on_reset_battle_pressed()
 
 
 func _connect_signal_once(source_signal: Signal, callback: Callable) -> void:
