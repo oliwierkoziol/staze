@@ -750,8 +750,15 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("10_abilities")
 
-[node name="PauseMenu" type="CanvasLayer" parent="HUD" unique_id=920011000]
+[node name="PauseMenu" type="Control" parent="HUD" unique_id=920011000]
 visible = false
+z_index = 10
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("14_pause_menu")
 
 [node name="PauseOverlay" type="ColorRect" parent="HUD/PauseMenu" unique_id=920011001]

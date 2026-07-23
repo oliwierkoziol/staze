@@ -203,7 +203,7 @@ var stage_transition_progress: Label
 var unit_details_popup: PopupPanel
 var debug_map_event_menu: PopupMenu
 
-@onready var pause_menu: CanvasLayer = $HUD/PauseMenu
+@onready var pause_menu: Control = $HUD/PauseMenu
 @onready var pause_save_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseSaveButton
 @onready var pause_load_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseLoadButton
 @onready var pause_reset_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseResetButton
