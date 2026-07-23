@@ -30,8 +30,16 @@ func _uruchom() -> void:
 	var build_info: Label = gra.get_node("TeamSetup/BuildInfo")
 	_sprawdz(build_info.text == "BUILD 0.1.0 • 2026-07-21", "Menu pokazuje numer buildu i datę")
 	gra._build_setup_controls()
-	_sprawdz(gra.setup_controls.get_parent() == gra.end_turn_button.get_parent() and gra.setup_controls.get_index() + 1 == gra.end_turn_button.get_index(), "Przyciski zapisu są nad końcem tury w prawym panelu")
-	_sprawdz(gra.save_setup_button.text == "ZAPISZ" and gra.reset_battle_button.text == "RESET" and gra.load_setup_button.text == "WCZYTAJ", "Prawy panel ma trzy właściwe przyciski")
+	_sprawdz(gra.pause_menu != null, "Menu pauzy istnieje")
+	_sprawdz(gra.pause_save_button.text == "ZAPISZ" and gra.pause_load_button.text == "WCZYTAJ" and gra.pause_reset_button.text == "RESET" and gra.pause_resume_button.text == "POWRÓT" and gra.pause_exit_button.text == "WYJDŹ", "Menu pauzy ma wszystkie wymagane przyciski")
+	_sprawdz(gra.setup_controls.visible == false, "Stary kontener przycisków jest niewidoczny")
+	gra.hud.visible = true
+	gra._toggle_pause_menu()
+	_sprawdz(gra.pause_menu.visible, "ESC otwiera menu pauzy")
+	_sprawdz(gra.get_tree().paused, "Menu pauzy wstrzymuje drzewo sceny")
+	gra._on_pause_resume_pressed()
+	_sprawdz(not gra.pause_menu.visible, "Przycisk POWRÓT zamyka menu pauzy")
+	_sprawdz(not gra.get_tree().paused, "Powrót wznawia drzewo sceny")
 	gra.help_mode_tutorial = true
 	gra.tutorial_page = 0
 	gra._help_rebuild_content()
