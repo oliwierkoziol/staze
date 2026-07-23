@@ -14,6 +14,8 @@
 [ext_resource type="Texture2D" uid="uid://cymiq2f6b8k8c" path="res://assets/ui/general_ability1.png" id="12_general_ability1"]
 [ext_resource type="Theme" uid="uid://cna4ihybudjlx" path="res://theme/georgia_theme.tres" id="13_georgia_theme"]
 
+[ext_resource type="Script" uid="uid://cyck0vsv6yf62" path="res://scripts/pause_menu.gd" id="14_pause"]
+
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_general_ability"]
 texture = ExtResource("4_panel")
 texture_margin_left = 8.0
@@ -748,3 +750,9 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("10_abilities")
+
+[node name="PauseMenu" type="CanvasLayer" parent="." unique_id=3000000001]
+process_mode = 3
+layer = 2
+visible = false
+script = ExtResource("14_pause")

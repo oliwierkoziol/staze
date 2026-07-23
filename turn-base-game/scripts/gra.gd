@@ -164,12 +164,7 @@ var setup_controls: HBoxContainer
 var save_setup_button: Button
 var reset_battle_button: Button
 var load_setup_button: Button
-var pause_menu: CanvasLayer
-var pause_save_button: Button
-var pause_load_button: Button
-var pause_reset_button: Button
-var pause_resume_button: Button
-var pause_exit_button: Button
+@onready var pause_menu: CanvasLayer = $PauseMenu
 var _web_load_input: Variant
 var _web_load_reader: Variant
 var _web_load_change_callback: Variant
@@ -214,10 +209,10 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_disable_hud_mouse(hud)
 	_build_help_popup()
-	_build_pause_menu()
 	_build_victory_overlay()
 	_build_screen_message_label()
 	_build_stage_transition_overlay()
+	_connect_pause_menu_signals()
 	if OS.is_debug_build():
 		_build_debug_map_event_menu()
 	unit_details_popup = UnitDetailsPopupScript.new()
@@ -566,114 +561,18 @@ func _build_setup_controls() -> void:
 	add_child(load_setup_dialog)
 
 
-func _build_pause_menu() -> void:
-	pause_menu = CanvasLayer.new()
-	pause_menu.name = "PauseMenu"
-	pause_menu.layer = 2
-	pause_menu.visible = false
-	add_child(pause_menu)
-
-	var blocker := ColorRect.new()
-	blocker.name = "PauseBlocker"
-	blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
-	blocker.mouse_filter = Control.MOUSE_FILTER_STOP
-	blocker.color = Color(0.02, 0.02, 0.04, 0.78)
-	pause_menu.add_child(blocker)
-
-	var panel := NinePatchRect.new()
-	panel.name = "PausePanel"
-	panel.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	panel.custom_minimum_size = Vector2(360, 0)
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.offset_left = -180
-	panel.offset_top = -250
-	panel.offset_right = 180
-	panel.offset_bottom = 250
-	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	panel.texture = preload("res://assets/ui/panel.png")
-	panel.patch_margin_left = 8
-	panel.patch_margin_top = 8
-	panel.patch_margin_right = 8
-	panel.patch_margin_bottom = 8
-	panel.axis_stretch_horizontal = NinePatchRect.AXIS_STRETCH_MODE_STRETCH
-	panel.axis_stretch_vertical = NinePatchRect.AXIS_STRETCH_MODE_STRETCH
-	pause_menu.add_child(panel)
-
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_top", 24)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_bottom", 24)
-	panel.add_child(margin)
-
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 14)
-	margin.add_child(column)
-
-	var title := Label.new()
-	title.text = "MENU"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
-	title.add_theme_color_override("font_color", Color(0.86, 0.72, 0.34, 1.0))
-	column.add_child(title)
-
-	var divider := TextureRect.new()
-	divider.texture = preload("res://assets/ui/divider.png")
-	divider.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	divider.stretch_mode = TextureRect.STRETCH_SCALE
-	divider.custom_minimum_size = Vector2(0, 2)
-	divider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.add_child(divider)
-
-	pause_save_button = _make_pause_button("ZAPISZ")
-	pause_save_button.pressed.connect(_on_save_setup_pressed)
-	column.add_child(pause_save_button)
-
-	pause_load_button = _make_pause_button("WCZYTAJ")
-	pause_load_button.pressed.connect(_on_load_setup_pressed)
-	column.add_child(pause_load_button)
-
-	pause_reset_button = _make_pause_button("RESET")
-	pause_reset_button.pressed.connect(_on_pause_reset_pressed)
-	column.add_child(pause_reset_button)
-
-	pause_resume_button = _make_pause_button("POWRÓT")
-	pause_resume_button.pressed.connect(_on_pause_resume_pressed)
-	column.add_child(pause_resume_button)
-
-	pause_exit_button = _make_pause_button("WYJDŹ")
-	pause_exit_button.pressed.connect(_on_pause_exit_pressed)
-	column.add_child(pause_exit_button)
-
-
-func _make_pause_button(text: String) -> Button:
-	var button := Button.new()
-	button.custom_minimum_size = Vector2(0, 48)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.text = text
-	button.add_theme_font_size_override("font_size", 20)
-	button.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78, 1.0))
-	return button
-
 func _toggle_pause_menu() -> void:
 	if pause_menu == null or hud == null or not hud.visible:
 		return
-	var will_show := not pause_menu.visible
-	pause_menu.visible = will_show
-	get_tree().paused = will_show
-	if will_show:
-		pause_resume_button.grab_focus()
+	pause_menu.toggle()
 
 
 func _on_pause_resume_pressed() -> void:
-	pause_menu.visible = false
-	get_tree().paused = false
+	pause_menu.close_menu()
 
 
 func _on_pause_reset_pressed() -> void:
-	pause_menu.visible = false
-	get_tree().paused = false
+	pause_menu.close_menu()
 	if current_player_faction == "" or current_enemy_faction == "":
 		_on_reset_battle_pressed()
 		return
@@ -699,8 +598,7 @@ func _on_pause_reset_pressed() -> void:
 
 
 func _on_pause_exit_pressed() -> void:
-	pause_menu.visible = false
-	get_tree().paused = false
+	pause_menu.close_menu()
 	_on_reset_battle_pressed()
 
 
@@ -5438,6 +5336,16 @@ func _cube_to_oddr(cube: Vector3i) -> Vector2i:
 
 func _get_neighbors(cell: Vector2i) -> Array[Vector2i]:
 	return HexUtilsScript.neighbors(cell, GRID_COLUMNS, GRID_ROWS)
+
+
+func _connect_pause_menu_signals() -> void:
+	if pause_menu == null:
+		return
+	pause_menu.resume_requested.connect(_on_pause_resume_pressed)
+	pause_menu.save_requested.connect(_on_save_setup_pressed)
+	pause_menu.load_requested.connect(_on_load_setup_pressed)
+	pause_menu.reset_requested.connect(_on_pause_reset_pressed)
+	pause_menu.exit_requested.connect(_on_pause_exit_pressed)
 
 
 func _build_help_popup() -> void:
