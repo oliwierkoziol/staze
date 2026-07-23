@@ -167,9 +167,7 @@ var setup_controls: HBoxContainer
 var save_setup_button: Button
 var reset_battle_button: Button
 var load_setup_button: Button
-var pause_content: VBoxContainer
-var save_setup_dialog: FileDialog
-var load_setup_dialog: FileDialog
+@onready var pause_menu: CanvasLayer = $PauseMenu
 var _web_load_input: Variant
 var _web_load_reader: Variant
 var _web_load_change_callback: Variant
@@ -206,12 +204,8 @@ var stage_transition_progress: Label
 var unit_details_popup: PopupPanel
 var debug_map_event_menu: PopupMenu
 
-@onready var pause_menu: CanvasLayer = $HUD/PauseMenu
-@onready var pause_save_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseSaveButton
-@onready var pause_load_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseLoadButton
-@onready var pause_reset_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseResetButton
-@onready var pause_resume_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseResumeButton
-@onready var pause_exit_button: Button = $HUD/PauseMenu/PausePanel/PauseMargin/PauseContent/PauseExitButton
+var save_setup_dialog: FileDialog
+var load_setup_dialog: FileDialog
 
 
 func _ready() -> void:
@@ -221,6 +215,7 @@ func _ready() -> void:
 	_build_victory_overlay()
 	_build_screen_message_label()
 	_build_stage_transition_overlay()
+	_connect_pause_menu_signals()
 	if OS.is_debug_build():
 		_build_debug_map_event_menu()
 	unit_details_popup = UnitDetailsPopupScript.new()
@@ -570,32 +565,19 @@ func _build_setup_controls() -> void:
 	load_setup_dialog.file_selected.connect(_on_load_setup_file_selected)
 	add_child(load_setup_dialog)
 
-	if pause_menu != null:
-		pause_save_button.pressed.connect(_on_save_setup_pressed)
-		pause_load_button.pressed.connect(_on_load_setup_pressed)
-		pause_reset_button.pressed.connect(_on_pause_reset_pressed)
-		pause_resume_button.pressed.connect(_on_pause_resume_pressed)
-		pause_exit_button.pressed.connect(_on_pause_exit_pressed)
-
 
 func _toggle_pause_menu() -> void:
 	if pause_menu == null or hud == null or not hud.visible:
 		return
-	var will_show := not pause_menu.visible
-	pause_menu.visible = will_show
-	get_tree().paused = will_show
-	if will_show:
-		pause_resume_button.grab_focus()
+	pause_menu.toggle()
 
 
 func _on_pause_resume_pressed() -> void:
-	pause_menu.visible = false
-	get_tree().paused = false
+	pause_menu.close_menu()
 
 
 func _on_pause_reset_pressed() -> void:
-	pause_menu.visible = false
-	get_tree().paused = false
+	pause_menu.close_menu()
 	if current_player_faction == "" or current_enemy_faction == "":
 		_on_reset_battle_pressed()
 		return
@@ -621,8 +603,7 @@ func _on_pause_reset_pressed() -> void:
 
 
 func _on_pause_exit_pressed() -> void:
-	pause_menu.visible = false
-	get_tree().paused = false
+	pause_menu.close_menu()
 	_on_reset_battle_pressed()
 
 
@@ -5362,6 +5343,16 @@ func _cube_to_oddr(cube: Vector3i) -> Vector2i:
 
 func _get_neighbors(cell: Vector2i) -> Array[Vector2i]:
 	return HexUtilsScript.neighbors(cell, GRID_COLUMNS, GRID_ROWS)
+
+
+func _connect_pause_menu_signals() -> void:
+	if pause_menu == null:
+		return
+	pause_menu.resume_requested.connect(_on_pause_resume_pressed)
+	pause_menu.save_requested.connect(_on_save_setup_pressed)
+	pause_menu.load_requested.connect(_on_load_setup_pressed)
+	pause_menu.reset_requested.connect(_on_pause_reset_pressed)
+	pause_menu.exit_requested.connect(_on_pause_exit_pressed)
 
 
 func _build_help_popup() -> void:
