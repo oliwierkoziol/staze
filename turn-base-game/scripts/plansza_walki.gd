@@ -7,6 +7,7 @@ signal cell_left_released(cell: Vector2i)
 signal cell_right_clicked(cell: Vector2i)
 signal cell_hovered(cell: Vector2i)
 signal animation_finished(unit_id: int)
+signal unit_step(unit_id: int)
 
 const HEX_RADIUS := 42.0
 const GRID_COLUMNS := 15
@@ -369,6 +370,7 @@ func animate_unit_path(unit_id: int, path: Array) -> void:
 	var from_position: Vector2 = current_position
 	for index in range(1, points.size()):
 		var target_position: Vector2 = points[index]
+		tween.tween_callback(unit_step.emit.bind(unit_id))
 		tween.tween_method(_set_unit_visual_position.bind(unit_id), from_position, target_position, 0.12)
 		from_position = target_position
 	tween.finished.connect(_on_unit_tween_finished.bind(unit_id))

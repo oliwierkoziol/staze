@@ -30,6 +30,16 @@ func _uruchom() -> void:
 	_sprawdz(is_zero_approx(float(gra.board.active_projectiles[0].rotation)), "Pocisk zachowuje kierunek w lokalnym ukladzie planszy")
 	await create_timer(0.2).timeout
 	_sprawdz(gra.board.active_projectiles.is_empty(), "Pocisk jest usuwany po zakonczeniu tweenu")
+	gra._connect_signal_once(gra.board.animation_finished, gra._on_board_animation_finished)
+	gra._connect_signal_once(gra.board.unit_step, gra._on_board_unit_step)
+	var policzone_kroki: Array[int] = []
+	gra.board.unit_step.connect(func(_unit_id: int) -> void: policzone_kroki.append(1))
+	gra.board.animate_unit_path(7999, [Vector2i(1, 1), Vector2i(2, 1)])
+	await process_frame
+	_sprawdz(gra.odtwarzacz_sfx_broni.stream.resource_path.contains("footsteps"), "Ruch jednostki uruchamia SFX krokow")
+	await create_timer(0.3).timeout
+	_sprawdz(policzone_kroki.size() == 2, "Kazdy przebyty hex uruchamia dokladnie jeden SFX kroku")
+	_sprawdz(not gra.odtwarzacz_sfx_broni.playing, "SFX krokow zatrzymuje sie po zakonczeniu ruchu")
 	gra.board.set_active_unit(42)
 	_sprawdz(gra.board.active_unit_id == 42, "Plansza zna aktywna jednostke tury")
 	_sprawdz(gra.board.turn_indicator_pulse_tween != null, "Puls wskaznika tury jest uruchomiony")
@@ -71,6 +81,7 @@ func _uruchom() -> void:
 	var ziarno_kishaka: int = 0
 	while true:
 		probnik.seed = ziarno_kishaka
+		probnik.randi_range(0, gra.SFX_FRAKCJI["orc"]["wybor"].size() - 1)
 		if probnik.randf() < gra.SZANSA_SFX_KISHAKA:
 			break
 		ziarno_kishaka += 1
@@ -89,16 +100,34 @@ func _uruchom() -> void:
 	_sprawdz(gra._pobierz_rodzaj_sfx_broni({"type_id": "elf_archer"}, "arrows") == "arrow", "Pocisk strzaly korzysta z SFX luku")
 	_sprawdz(gra._pobierz_rodzaj_sfx_broni({"type_id": "goblin_thief"}, "") == "dagger", "Zlodziej korzysta z SFX sztyletu")
 	_sprawdz(gra._pobierz_rodzaj_sfx_broni({"type_id": "goblin_trapper"}, "") == "dagger", "Traper korzysta z SFX sztyletu")
-	_sprawdz(gra._pobierz_rodzaj_sfx_broni({"type_id": "human_mages"}, "spell") == "", "Atak magiczny nie udaje broni fizycznej")
+	_sprawdz(gra._pobierz_rodzaj_sfx_broni({"type_id": "human_mages"}, "spell") == "magic", "Atak magiczny korzysta z wlasnego SFX")
 	_sprawdz(gra._pobierz_rodzaj_sfx_broni({"type_id": "dwarf_axeman"}, "", "axe") == "axe", "Mlot korzysta z SFX topora")
-	gra.odtwarzacz_sfx_trafienia.stream = null
 	gra._odtworz_sfx_broni("sword")
 	_sprawdz(gra.odtwarzacz_sfx_broni.stream.resource_path.ends_with("sword.mp3"), "SFX broni odtwarza przypisany plik")
-	gra._odtworz_sfx_trafienia_po_czasie(0.02)
-	_sprawdz(gra.odtwarzacz_sfx_trafienia.stream == null, "SFX trafienia nie wyprzedza SFX broni")
-	await create_timer(0.03).timeout
-	_sprawdz(gra.odtwarzacz_sfx_trafienia.stream.resource_path.ends_with("hitSound.mp3"), "Po SFX broni odtwarzany jest osobny SFX trafienia")
+	var sfx_efektow: Dictionary = {
+		"fireball": "fireball_spell_cast",
+		"ice": "ice.mp3",
+		"pnacza": "vines_erupting",
+		"shield_push": "shield_shove",
+		"toxic_cloud": "toxiccloud.mp3",
+	}
+	for efekt in sfx_efektow:
+		gra._odtworz_sfx_efektu(efekt)
+		_sprawdz(gra.odtwarzacz_sfx_broni.stream.resource_path.contains(str(sfx_efektow[efekt])), "Umiejetnosc ma przypisany SFX: %s" % efekt)
+	gra._odtworz_sfx_broni("magic")
+	_sprawdz(gra.odtwarzacz_sfx_broni.stream.resource_path.ends_with("magicDefaultAttack.mp3"), "Magiczny atak podstawowy odtwarza wlasny SFX")
+	gra.odtwarzacz_sfx_broni.stream = null
+	gra._execute_self_buff(lucznicy, {"id": "tarcza", "name": "Tarcza", "effect": {"remaining_turns": 2, "stat_changes": []}})
+	_sprawdz(gra.odtwarzacz_sfx_broni.stream.resource_path.contains("shield_shove"), "Umiejetnosc Tarcza korzysta z SFX tarczy")
+	gra.odtwarzacz_sfx_broni.stream = null
+	gra._execute_iron_curtain(lucznicy, przeciwnik)
+	_sprawdz(gra.odtwarzacz_sfx_broni.stream.resource_path.contains("shield_shove"), "Zelazna Kurtyna korzysta z SFX tarczy")
+	gra._odtworz_sfx_klikniecia()
+	_sprawdz(gra.odtwarzacz_sfx_interfejsu.stream.resource_path.contains("ui_button_click"), "Przyciski korzystaja z SFX klikniecia")
+	var nowy_przycisk := Button.new()
+	gra.add_child(nowy_przycisk)
+	_sprawdz(nowy_przycisk.pressed.is_connected(gra._odtworz_sfx_klikniecia), "Nowe przyciski automatycznie otrzymuja SFX klikniecia")
 	_sprawdz(is_equal_approx(gra.odtwarzacz_sfx_broni.volume_db, -12.0), "SFX broni ma stonowana glosnosc")
-	_sprawdz(is_equal_approx(gra.odtwarzacz_sfx_trafienia.volume_db, -12.0), "SFX trafienia ma stonowana glosnosc")
+	_sprawdz(is_equal_approx(gra.odtwarzacz_sfx_interfejsu.volume_db, -12.0), "SFX interfejsu ma stonowana glosnosc")
 	print("ANIMATION_TEST_FAILURES=", bledy.size())
 	quit(bledy.size())
