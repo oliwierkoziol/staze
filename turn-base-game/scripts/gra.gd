@@ -175,9 +175,18 @@ const SFX_BRONI: Dictionary = {
 	"arrow": preload("res://assets/sfx/hit/arrow.mp3"),
 	"axe": preload("res://assets/sfx/hit/axe.mp3"),
 	"dagger": preload("res://assets/sfx/hit/dagger.mp3"),
+	"magic": preload("res://assets/sfx/hit/magicDefaultAttack.mp3"),
 	"sword": preload("res://assets/sfx/hit/sword.mp3"),
 }
-const SFX_TRAFIENIA: AudioStream = preload("res://assets/sfx/hit/hitSound.mp3")
+const SFX_EFEKTOW: Dictionary = {
+	"fireball": preload("res://assets/sfx/hit/fireball_spell_cast,_#1-1784878501498.mp3"),
+	"ice": preload("res://assets/sfx/effects/ice.mp3"),
+	"pnacza": preload("res://assets/sfx/effects/vines_erupting_from__#1-1784878658547.mp3"),
+	"shield_push": preload("res://assets/sfx/hit/shield_shove,_heavy__#2-1784879250378.mp3"),
+	"toxic_cloud": preload("res://assets/sfx/effects/toxiccloud.mp3"),
+	"walking": preload("res://assets/sfx/walking/footsteps,_walking_o_#3-1784878329571.mp3"),
+}
+const SFX_KLIKNIECIA: AudioStream = preload("res://assets/sfx/ButtonsClick/ui_button_click,_cri_#4-1784879887088.mp3")
 const BRON_JEDNOSTEK: Dictionary = {
 	"dwarf_warrior": "axe",
 	"dwarf_guardian": "axe",
@@ -287,7 +296,7 @@ const OBSTACLE_WINTER_DESCRIPTIONS: Dictionary = {
 @onready var damage_tooltip_label: Label = $HUD/Overlay/DamageTooltip/Label
 @onready var odtwarzacz_sfx_jednostek: AudioStreamPlayer = $OdtwarzaczSfxJednostek
 @onready var odtwarzacz_sfx_broni: AudioStreamPlayer = $OdtwarzaczSfxBroni
-@onready var odtwarzacz_sfx_trafienia: AudioStreamPlayer = $OdtwarzaczSfxTrafienia
+@onready var odtwarzacz_sfx_interfejsu: AudioStreamPlayer = $OdtwarzaczSfxInterfejsu
 @onready var odtwarzacz_muzyki: AudioStreamPlayer = $OdtwarzaczMuzyki
 
 var units: Array = []
@@ -386,6 +395,9 @@ func _ready() -> void:
 	_load_terrain_types()
 	_unit_type_library_warn()
 	_show_team_setup()
+	for button in find_children("*", "BaseButton", true, false):
+		_podlacz_sfx_przycisku(button)
+	get_tree().node_added.connect(_podlacz_sfx_przycisku)
 
 
 func _load_terrain_types() -> void:
@@ -627,7 +639,7 @@ func _on_glosnosc_walki_changed(value: float) -> void:
 	glosnosc_walki = value
 	var volume_db: float = _glosnosc_db(GLOSNOSC_WALKI_DB, value)
 	odtwarzacz_sfx_broni.volume_db = volume_db
-	odtwarzacz_sfx_trafienia.volume_db = volume_db
+	odtwarzacz_sfx_interfejsu.volume_db = volume_db
 
 
 func _on_glosnosc_dialogow_changed(value: float) -> void:
@@ -724,6 +736,7 @@ func _setup_battle_scene() -> void:
 	_connect_signal_once(board.cell_right_clicked, _on_cell_right_clicked)
 	_connect_signal_once(board.cell_hovered, _on_board_cell_hovered)
 	_connect_signal_once(board.animation_finished, _on_board_animation_finished)
+	_connect_signal_once(board.unit_step, _on_board_unit_step)
 	_connect_signal_once(unit_abilities_panel.skill_pressed, _on_skill_button_pressed)
 	_connect_signal_once(end_turn_button.pressed, _on_end_turn_button_pressed)
 	_connect_signal_once(general_ability_button_1.pressed, _on_general_ability_1_pressed)
@@ -3390,8 +3403,6 @@ func _apply_attack_damage(attacker: Dictionary, target: Dictionary, total_damage
 	if _consume_energy_barrier(hit_target):
 		_log_event("Bariera Energetyczna blokuje atak na %s." % _unit_name_log_text(hit_target))
 		return {"target": hit_target, "damage": 0, "casualties": 0}
-	if play_animation:
-		_odtworz_sfx_trafienia_po_czasie(0.14 if projectile_kind != "" else 0.08)
 	var casualties: int = _apply_damage_to_unit(hit_target, damage)
 	return {"target": hit_target, "damage": _adjust_incoming_damage(hit_target, damage), "casualties": casualties}
 
@@ -3663,6 +3674,7 @@ func _execute_eagle_eye(caster: Dictionary) -> void:
 
 
 func _execute_pnacza(caster: Dictionary, target: Dictionary) -> void:
+	_odtworz_sfx_efektu("pnacza")
 	_apply_or_refresh_effect(target, {
 		"id": "immobilize",
 		"name": "Unieruchomienie",
@@ -3718,12 +3730,11 @@ func _get_pull_path(start_cell: Vector2i, destination_cell: Vector2i) -> Array[V
 
 func _execute_shield_push(caster: Dictionary, target: Dictionary) -> void:
 	is_animating = true
+	_odtworz_sfx_efektu("shield_push")
 	board.play_shield_push_animation(int(caster.id), int(target.id))
 	await get_tree().create_timer(0.12).timeout
 	var total_damage := _calculate_damage(caster, target)
 	var result := _apply_attack_damage(caster, target, total_damage, false)
-	if int(result.get("damage", 0)) > 0:
-		_odtworz_sfx_trafienia_po_czasie(0.0)
 	var hit_target: Dictionary = result.get("target", target)
 	var casualties := int(result.get("casualties", 0))
 	var pushed := false
@@ -3804,6 +3815,7 @@ func _execute_hammer_strike(caster: Dictionary, target: Dictionary) -> void:
 func _execute_fireball(caster: Dictionary, center: Vector2i) -> void:
 	var area_cells: Array[Vector2i] = _get_area_cells(center)
 	is_animating = true
+	_odtworz_sfx_efektu("fireball")
 	board.play_fireball_animation(int(caster.id), center, area_cells)
 	await get_tree().create_timer(0.40).timeout
 	var hit_names: Array[String] = []
@@ -3824,8 +3836,6 @@ func _execute_fireball(caster: Dictionary, center: Vector2i) -> void:
 			]
 		)
 		_cleanup_destroyed_unit(hit_target)
-	if not hit_names.is_empty():
-		_odtworz_sfx_trafienia_po_czasie(0.0)
 	_add_terrain_effect(center, "fire", 1)
 	is_animating = false
 	_log_event("%s rzuca Kulę Ognia: %s." % [_unit_name_log_text(caster), "brak trafień" if hit_names.is_empty() else ", ".join(hit_names)])
@@ -3863,8 +3873,6 @@ func _execute_arrow_rain(caster: Dictionary, center: Vector2i) -> void:
 		var hit_target: Dictionary = result.get("target", target)
 		hit_names.append("%s (%s/%s)" % [_unit_name_log_text(hit_target), result.get("damage", total_damage), result.get("casualties", 0)])
 		_cleanup_destroyed_unit(hit_target)
-	if not hit_names.is_empty():
-		_odtworz_sfx_trafienia_po_czasie(0.0)
 	is_animating = false
 	_log_event("%s używa Deszczu Strzał: %s." % [_unit_name_log_text(caster), "brak trafień" if hit_names.is_empty() else ", ".join(hit_names)])
 
@@ -3872,6 +3880,7 @@ func _execute_arrow_rain(caster: Dictionary, center: Vector2i) -> void:
 func _execute_ice_ground(caster: Dictionary, center: Vector2i) -> void:
 	var cells: Array[Vector2i] = _get_ice_ground_cells(center)
 	is_animating = true
+	_odtworz_sfx_efektu("ice")
 	board.play_ice_ground_animation(int(caster.id), cells)
 	await get_tree().create_timer(0.36).timeout
 	for cell in cells:
@@ -3944,6 +3953,7 @@ func _execute_magic_projection(caster: Dictionary, anchor: Vector2i) -> void:
 
 func _execute_poison_cloud(caster: Dictionary, center: Vector2i) -> void:
 	var cells: Array[Vector2i] = _get_area_cells(center)
+	_odtworz_sfx_efektu("toxic_cloud")
 	for cell in cells:
 		_add_terrain_effect(cell, "poison_cloud", 2, int(caster.id), maxi(1, int(ceil(float(_srednie_obrazenia_jednostki(caster)) * 0.25))))
 	_apply_terrain_effects_in_cells(cells)
@@ -4051,6 +4061,7 @@ func _execute_energy_barrier(caster: Dictionary) -> void:
 
 
 func _execute_iron_curtain(caster: Dictionary, target: Dictionary) -> void:
+	_odtworz_sfx_efektu("shield_push")
 	_apply_or_refresh_effect(target, {
 		"id": "zelazna_kurtyna",
 		"name": "Zelazna Kurtyna",
@@ -4066,6 +4077,8 @@ func _execute_self_buff(caster: Dictionary, skill: Dictionary) -> void:
 	var effect: Dictionary = skill.get("effect", {}).duplicate(true)
 	if effect.is_empty():
 		return
+	if str(skill.get("id", "")) == "tarcza":
+		_odtworz_sfx_efektu("shield_push")
 	if str(effect.get("id", "")) == "":
 		effect["id"] = str(skill.get("id", ""))
 	if str(effect.get("name", "")) == "":
@@ -6714,8 +6727,14 @@ func _validate_runtime_setup() -> void:
 
 
 func _on_board_animation_finished(_unit_id: int) -> void:
+	if odtwarzacz_sfx_broni.stream == SFX_EFEKTOW["walking"]:
+		odtwarzacz_sfx_broni.stop()
 	is_animating = false
 	_refresh_turn_queue()
+
+
+func _on_board_unit_step(_unit_id: int) -> void:
+	_odtworz_sfx_efektu("walking")
 
 
 func _update_action_buttons() -> void:
@@ -7112,6 +7131,8 @@ func _pobierz_rodzaj_sfx_broni(attacker: Dictionary, projectile_kind: String, ov
 	match projectile_kind:
 		"arrows":
 			return "arrow"
+		"spell":
+			return "magic"
 		"throwing_axe":
 			return "axe"
 		"":
@@ -7120,20 +7141,26 @@ func _pobierz_rodzaj_sfx_broni(attacker: Dictionary, projectile_kind: String, ov
 
 
 func _odtworz_sfx_broni(rodzaj: String) -> void:
-	var dzwiek: AudioStream = SFX_BRONI.get(rodzaj) as AudioStream
+	var dzwiek: AudioStream = SFX_BRONI.get(rodzaj, SFX_EFEKTOW.get(rodzaj)) as AudioStream
 	if dzwiek == null:
 		return
 	odtwarzacz_sfx_broni.stream = dzwiek
 	odtwarzacz_sfx_broni.play()
 
 
-func _odtworz_sfx_trafienia_po_czasie(opoznienie: float) -> void:
-	if opoznienie > 0.0:
-		await get_tree().create_timer(opoznienie).timeout
-	if not is_inside_tree():
+func _odtworz_sfx_efektu(rodzaj: String) -> void:
+	_odtworz_sfx_broni(rodzaj)
+
+
+func _odtworz_sfx_klikniecia() -> void:
+	odtwarzacz_sfx_interfejsu.stream = SFX_KLIKNIECIA
+	odtwarzacz_sfx_interfejsu.play()
+
+
+func _podlacz_sfx_przycisku(node: Node) -> void:
+	if not node is BaseButton:
 		return
-	odtwarzacz_sfx_trafienia.stream = SFX_TRAFIENIA
-	odtwarzacz_sfx_trafienia.play()
+	_connect_signal_once((node as BaseButton).pressed, _odtworz_sfx_klikniecia)
 
 
 func _get_active_unit() -> Dictionary:
@@ -7400,6 +7427,8 @@ func _execute_general_unit_skill(skill_id: String, skill: Dictionary, target: Di
 
 func _execute_general_area_skill(skill_id: String, skill: Dictionary, center: Vector2i) -> void:
 	var cells: Array[Vector2i] = _get_general_area_cells(center, int(skill.get("radius", 1)))
+	if skill_id == "toksyczny_deszcz":
+		_odtworz_sfx_efektu("toxic_cloud")
 	if str(skill.get("animation", "")) == "arrows":
 		is_animating = true
 		_odtworz_sfx_broni("arrow")
@@ -7420,8 +7449,6 @@ func _execute_general_area_skill(skill_id: String, skill: Dictionary, center: Ve
 			target_effect["name"] = str(skill.get("name", skill_id))
 			_apply_or_refresh_effect(target, target_effect)
 		_cleanup_destroyed_unit(target)
-	if hits > 0:
-		_odtworz_sfx_trafienia_po_czasie(0.0)
 	_finish_general_skill(skill_id, skill, " Trafione oddziały: %d." % hits)
 
 
