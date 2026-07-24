@@ -5,7 +5,7 @@
 	  "name": "Bariera Energetyczna",
 	  "description": "Blokuje 100% obrazen z jednego nastepnego ataku lub efektu okresowego. Po zuzyciu odnawia sie przez 5 tur.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/energy_shield.png",
+	  "icon": "res://turn-base-game/assets/ui/energy_shield.png",
 	  "color": "#57C7F5"
 	},
 	"berserk": {
@@ -13,7 +13,7 @@
 	  "name": "Berserk",
 	  "description": "Przez 2 tury zadaje o 50% wiecej obrazen, ale ma o 25% mniej obrony.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/berserk.png",
+	  "icon": "res://turn-base-game/assets/ui/berserk.png",
 	  "color": "#DB5959"
 	},
 	"zadza_krwi": {
@@ -21,7 +21,7 @@
 	  "name": "Żądza krwi",
 	  "description": "Na stałe zwieksza obrazenia o 2 i zmniejsza obrone o 2 do konca bitwy.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/berserk.png",
+	  "icon": "res://turn-base-game/assets/ui/berserk.png",
 	  "color": "#B83232",
 	  "permanent": true,
 	  "stat_changes": []
@@ -31,7 +31,7 @@
 	  "name": "Utwardzenie",
 	  "description": "Na stale zwieksza DEF o 1 do konca bitwy.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/defence.png",
+	  "icon": "res://turn-base-game/assets/ui/defence.png",
 	  "color": "#8FBDFB",
 	  "permanent": true,
 	  "stat_changes": []
@@ -41,7 +41,7 @@
 	  "name": "Bitewny Trucht",
 	  "description": "+1 do szybkosci i +1 do zasiegu ruchu przez 2 tury.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/speed.png",
+	  "icon": "res://turn-base-game/assets/ui/speed.png",
 	  "color": "#99E65C"
 	},
 	"blogoslawienstwo_elfow": {
@@ -49,7 +49,7 @@
 	  "name": "Blogoslawienstwo Elfow",
 	  "description": "Sasiadujaca z posagiem elfow jednostka otrzymuje +2 do obrazen.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/aura.png",
+	  "icon": "res://turn-base-game/assets/ui/aura.png",
 	  "color": "#7AD67A",
 	  "terrain_bound": true,
 	  "stat_changes": [
@@ -61,7 +61,7 @@
 	  "name": "Woz",
 	  "description": "Jednostka na polu wozu jest ukryta. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/invisibility.png",
+	  "icon": "res://turn-base-game/assets/ui/invisibility.png",
 	  "color": "#A88B5C",
 	  "terrain_bound": true,
 	  "hides_unit": true,
@@ -72,7 +72,7 @@
 	  "name": "Unieruchomienie",
 	  "description": "Zasieg ruchu ustawiony na 0 przez 1 ture.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/root.png",
+	  "icon": "res://turn-base-game/assets/ui/root.png",
 	  "color": "#66B8F5"
 	},
 	"hole": {
@@ -80,7 +80,7 @@
 	  "name": "Dziura",
 	  "description": "Jednostka wpada do dziury i ginie natychmiast.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/reveal.png",
+	  "icon": "res://turn-base-game/assets/ui/reveal.png",
 	  "color": "#5A5A5A",
 	  "remaining_turns": 1,
 	  "instant_death": true,
@@ -91,7 +91,7 @@
 	  "name": "Krwawa Ofiara",
 	  "description": "Przez 1 ture zadaje o 40% wiecej obrazen, ale ma o 20% mniej obrony.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/blood_offering.png",
+	  "icon": "res://turn-base-game/assets/ui/blood_offering.png",
 	  "color": "#E03333"
 	},
 	"klatwa": {
@@ -99,7 +99,7 @@
 	  "name": "Klątwa",
 	  "description": "Jednostka otrzymuje o 50% więcej obrażeń.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/curse.png",
+	  "icon": "res://turn-base-game/assets/ui/curse.png",
 	  "color": "#9B59B6",
 	  "remaining_turns": 2,
 	  "incoming_damage_percent": 50,
@@ -110,7 +110,7 @@
 	  "name": "Krwawienie",
 	  "description": "Przez 2 tury zadaje na poczatku tury 2 obrazenia za kazda zywa jednostke w oddziale.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/bleed.png",
+	  "icon": "res://turn-base-game/assets/ui/bleed.png",
 	  "color": "#E62429"
 	},
 	"holy_tree": {
@@ -118,7 +118,7 @@
 	  "name": "Swiete Drzewo",
 	  "description": "Jednostka w Swietym Drzewie jest ukryta. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/invisibility.png",
+	  "icon": "res://turn-base-game/assets/ui/invisibility.png",
 	  "color": "#7AD67A",
 	  "terrain_bound": true,
 	  "hides_unit": true,
@@ -129,7 +129,7 @@
 	  "name": "Krzak",
 	  "description": "Jednostka pozostaje ukryta w krzaku. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/invisibility.png",
+	  "icon": "res://turn-base-game/assets/ui/invisibility.png",
 	  "color": "#57C757",
 	  "terrain_bound": true,
 	  "hides_unit": true,
@@ -140,7 +140,7 @@
 	  "name": "Mgla",
 	  "description": "Jednostka jest ukryta przez mgle. Widzi ja tylko wrog na sasiednim polu; atak i obrazenia nie nakladaja Wykrycia.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/invisibility.png",
+	  "icon": "res://turn-base-game/assets/ui/invisibility.png",
 	  "color": "#777C82",
 	  "terrain_bound": true,
 	  "hides_unit": true,
@@ -151,7 +151,7 @@
 	  "name": "Burza Piaskowa",
 	  "description": "Jednostka jest ukryta przez piasek. Widzi ja tylko wrog na sasiednim polu; atak i obrazenia nie nakladaja Wykrycia.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/invisibility.png",
+	  "icon": "res://turn-base-game/assets/ui/invisibility.png",
 	  "color": "#C69E38",
 	  "terrain_bound": true,
 	  "hides_unit": true,
@@ -162,7 +162,7 @@
 	  "name": "Lodowe Podloze",
 	  "description": "-2 do szybkosci i -2 do zasiegu ruchu przez 1 ture.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/frost.png",
+	  "icon": "res://turn-base-game/assets/ui/frost.png",
 	  "color": "#80D6FF",
 	  "remaining_turns": 1,
 	  "stat_changes": [
@@ -175,7 +175,7 @@
 	  "name": "Mistrz Trucizn",
 	  "description": "Przez 5 tur zwykle ataki nakladaja Zatrucie, jednostka jest odporna na trucizny.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/poison_master.png",
+	  "icon": "res://turn-base-game/assets/ui/poison_master.png",
 	  "color": "#52C747"
 	},
 	"medytacja": {
@@ -183,7 +183,7 @@
 	  "name": "Medytacja",
 	  "description": "Przez 2 tury zadaje o 25% wiecej obrazen.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/meditation.png",
+	  "icon": "res://turn-base-game/assets/ui/meditation.png",
 	  "color": "#8A75EB"
 	},
 	"ogluszenie": {
@@ -191,7 +191,7 @@
 	  "name": "Ogluszenie",
 	  "description": "Jednostka traci najblizsza ture.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/stun.png",
+	  "icon": "res://turn-base-game/assets/ui/stun.png",
 	  "color": "#F5D64D",
 	  "remaining_turns": 1,
 	  "skip_turn": true,
@@ -202,7 +202,7 @@
 	  "name": "Ploniecie",
 	  "description": "Przez 3 tury zadaje na poczatku tury 2 obrazenia za kazda zywa jednostke w oddziale.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/focus.png",
+	  "icon": "res://turn-base-game/assets/ui/focus.png",
 	  "color": "#F77F3D",
 	  "remaining_turns": 3,
 	  "tick_damage": 2,
@@ -213,7 +213,7 @@
 	  "name": "Przyspieszenie",
 	  "description": "+2 do szybkosci przez 1 ture.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/speed.png",
+	  "icon": "res://turn-base-game/assets/ui/speed.png",
 	  "color": "#A3F05A"
 	},
 	"ruchome_piaski": {
@@ -221,7 +221,7 @@
 	  "name": "Ruchome Piaski",
 	  "description": "Wejscie w ruchome piaski zuzywa caly pozostaly ruch w tej turze.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/water.png",
+	  "icon": "res://turn-base-game/assets/ui/water.png",
 	  "color": "#C4A35A",
 	  "skip_turn": true,
 	  "stat_changes": []
@@ -231,7 +231,7 @@
 	  "name": "Runiczna Ochrona",
 	  "description": "+2 do obrony i +1 do zasiegu ataku przez 2 tury.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/aura.png",
+	  "icon": "res://turn-base-game/assets/ui/aura.png",
 	  "color": "#80CCFF"
 	},
 	"silna_motywacja": {
@@ -239,7 +239,7 @@
 	  "name": "Silna Motywacja",
 	  "description": "Przez 2 tury zadaje o 25% wiecej obrazen.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/focus.png",
+	  "icon": "res://turn-base-game/assets/ui/focus.png",
 	  "color": "#FABA47"
 	},
 	"sokole_oko": {
@@ -247,7 +247,7 @@
 	  "name": "Sokole Oko",
 	  "description": "+2 do zasiegu ataku i +25% obrazen przez 2 tury.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/eagle_eye.png",
+	  "icon": "res://turn-base-game/assets/ui/eagle_eye.png",
 	  "color": "#F2DB5C"
 	},
 	"szarza": {
@@ -255,7 +255,7 @@
 	  "name": "Szarza",
 	  "description": "+1 zasieg ruchu i ataku, +50% obrazen. Ruch i atak tylko bezposrednio przed soba; atak najpierw rusza na wprost wroga. Po ruchu tracisz caly pozostaly ruch.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/speed.png",
+	  "icon": "res://turn-base-game/assets/ui/speed.png",
 	  "color": "#F79E33"
 	},
 	"szybkie_manewry": {
@@ -263,7 +263,7 @@
 	  "name": "Szybkie Manewry",
 	  "description": "+1 do zasiegu ruchu przez 1 ture.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/speed.png",
+	  "icon": "res://turn-base-game/assets/ui/speed.png",
 	  "color": "#B8E65C"
 	},
 	"tarcza": {
@@ -271,7 +271,7 @@
 	  "name": "Tarcza",
 	  "description": "Przez 2 tury ma o 25% wiecej obrony.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/defence.png",
+	  "icon": "res://turn-base-game/assets/ui/defence.png",
 	  "color": "#8FBDFB"
 	},
 	"tarcza_bastionu": {
@@ -279,7 +279,7 @@
 	  "name": "Tarcza Bastionu",
 	  "description": "Przez 2 tury ma o 20% wiecej obrony.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/defence.png",
+	  "icon": "res://turn-base-game/assets/ui/defence.png",
 	  "color": "#8FBDFB"
 	},
 	"taunt": {
@@ -287,7 +287,7 @@
 	  "name": "Prowokacja",
 	  "description": "Przez 1 ture zmusza do atakowania prowokujacego celu i zmniejsza zadawane obrazenia o 20%.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/reveal.png",
+	  "icon": "res://turn-base-game/assets/ui/reveal.png",
 	  "color": "#FA9E33"
 	},
 	"toksyna": {
@@ -295,7 +295,7 @@
 	  "name": "Toksyna",
 	  "description": "Przez 3 tury zadaje na poczatku tury 50% DMG atakujacego na kazda zywa jednostke w oddziale celu (minimum 1) i zmniejsza DEF o 15%.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/poison_cloud.png",
+	  "icon": "res://turn-base-game/assets/ui/poison_cloud.png",
 	  "color": "#6BE04D"
 	},
 	"twardy_zakaz": {
@@ -303,7 +303,7 @@
 	  "name": "Twardy Zakaz",
 	  "description": "Przez 2 tury zwieksza obrone o 2.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/armor_break.png",
+	  "icon": "res://turn-base-game/assets/ui/armor_break.png",
 	  "color": "#66B8F0"
 	},
 	"woda": {
@@ -311,7 +311,7 @@
 	  "name": "Woda",
 	  "description": "Po wejsciu do wody zuzywa caly pozostaly ruch.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/water.png",
+	  "icon": "res://turn-base-game/assets/ui/water.png",
 	  "color": "#5CAEFB",
 	  "skip_turn": true,
 	  "stat_changes": []
@@ -321,7 +321,7 @@
 	  "name": "Wola Przetrwania",
 	  "description": "Przez 2 tury zwieksza obrazenia o 10% i obrone o 10%.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/immunity.png",
+	  "icon": "res://turn-base-game/assets/ui/immunity.png",
 	  "color": "#E6C761"
 	},
 	"wykrycie": {
@@ -329,7 +329,7 @@
 	  "name": "Wykrycie",
 	  "description": "Przez 2 tury ujawnia ukryta jednostke.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/reveal.png",
+	  "icon": "res://turn-base-game/assets/ui/reveal.png",
 	  "color": "#FA9E3D"
 	},
 	"zatrucie": {
@@ -337,7 +337,7 @@
 	  "name": "Zatrucie",
 	  "description": "Zadaje na poczatku tury 25% DMG atakujacego na kazda zywa jednostke w oddziale celu (minimum 1). Trwa 2 tury z chmury albo 1 ture z truciznego ataku.",
 	  "category": "debuff",
-	  "icon": "res://assets/ui/poison_cloud.png",
+	  "icon": "res://turn-base-game/assets/ui/poison_cloud.png",
 	  "color": "#52C747"
 	},
 	"zelazna_kurtyna": {
@@ -345,7 +345,7 @@
 	  "name": "Zelazna Kurtyna",
 	  "description": "Przez 2 tury oslona przejmuje ataki i umiejetnosci wymierzone w chronionego sojusznika (poza DoT) oraz chroni przed odepchnieciem.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/iron_curtain.png",
+	  "icon": "res://turn-base-game/assets/ui/iron_curtain.png",
 	  "color": "#A8BDD1"
 	},
 	"zimna_krew": {
@@ -353,7 +353,7 @@
 	  "name": "Zimna Krew",
 	  "description": "Krotkotrwaly efekt wspierajacy bez bezposredniej zmiany statystyk.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/immunity.png",
+	  "icon": "res://turn-base-game/assets/ui/immunity.png",
 	  "color": "#9EDBFF"
 	},
 	"zimowy_krzak": {
@@ -361,7 +361,7 @@
 	  "name": "Zimowy Krzak",
 	  "description": "Jednostka pozostaje ukryta w zimowym krzaku. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/invisibility.png",
+	  "icon": "res://turn-base-game/assets/ui/invisibility.png",
 	  "color": "#80D6FF",
 	  "terrain_bound": true,
 	  "hides_unit": true,
@@ -372,7 +372,7 @@
 	  "name": "Zmasowany Atak",
 	  "description": "+15% obrazen i +1 do zasiegu ataku przez 1 ture.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/focus.png",
+	  "icon": "res://turn-base-game/assets/ui/focus.png",
 	  "color": "#F77F3D"
 	},
 	"krzyk_wodza": {
@@ -380,7 +380,7 @@
 	  "name": "Krzyk Wodza",
 	  "description": "+10% obrazen, +10% obrony i +1 do zasiegu ataku przez 1 ture.",
 	  "category": "buff",
-	  "icon": "res://assets/ui/focus.png",
+	  "icon": "res://turn-base-game/assets/ui/focus.png",
 	  "color": "#F77F3D"
 	}
   }

@@ -7,7 +7,7 @@ path="res://.godot/imported/vines_erupting_from__#1-1784878658547.mp3-aaa7ca4ddb
 
 [deps]
 
-source_file="res://assets/sfx/effects/vines_erupting_from__#1-1784878658547.mp3"
+source_file="res://turn-base-game/assets/sfx/effects/vines_erupting_from__#1-1784878658547.mp3"
 dest_files=["res://.godot/imported/vines_erupting_from__#1-1784878658547.mp3-aaa7ca4ddbd39c3a463eb1488e5d35f0.mp3str"]
 
 [params]

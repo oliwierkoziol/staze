@@ -20,7 +20,7 @@
 		"move_range": 4,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/orcWarrior.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/orcWarrior.png",
 		"skill_ids": [
 		  "rzut_toporem",
 		  "rzut_hakiem",
@@ -44,7 +44,7 @@
 		"move_range": 5,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/orcBerserker.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/orcBerserker.png",
 		"skill_ids": [
 		  "rozszarpanie",
 		  "berserk",
@@ -69,7 +69,7 @@
 		"attack_range": 4,
 		"attack_mode": "ranged",
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/orcShaman.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/orcShaman.png",
 		"skill_ids": [
 		  "chmura_toksyczna",
 		  "medytacja",
@@ -93,7 +93,7 @@
 		"move_range": 3,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/OrcShieldman.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/OrcShieldman.png",
 		"skill_ids": [
 		  "prowokacja",
 		  "tarcza",

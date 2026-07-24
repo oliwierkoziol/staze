@@ -7,7 +7,7 @@ path="res://.godot/imported/knight-hurt-1.wav-c9d37ee251d6a4453cd885da65d2f353.s
 
 [deps]
 
-source_file="res://assets/sfx/human/knight-hurt-1.wav"
+source_file="res://turn-base-game/assets/sfx/human/knight-hurt-1.wav"
 dest_files=["res://.godot/imported/knight-hurt-1.wav-c9d37ee251d6a4453cd885da65d2f353.sample"]
 
 [params]

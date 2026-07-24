@@ -7,7 +7,7 @@ path="res://.godot/imported/goblin-select-3.wav-1c44813adb326c76b128fcf42c9cd8db
 
 [deps]
 
-source_file="res://assets/sfx/goblin/goblin-select-3.wav"
+source_file="res://turn-base-game/assets/sfx/goblin/goblin-select-3.wav"
 dest_files=["res://.godot/imported/goblin-select-3.wav-1c44813adb326c76b128fcf42c9cd8db.sample"]
 
 [params]

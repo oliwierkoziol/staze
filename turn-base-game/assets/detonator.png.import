@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/detonator.png"
+source_file="res://turn-base-game/assets/detonator.png"
 dest_files=["res://.godot/imported/detonator.png-59cd892bb70f01b9761f5b20a0e1072c.ctex"]
 
 [params]

@@ -20,7 +20,7 @@
 		"move_range": 3,
 		"attack_range": 5,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/elfArcher.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/elfArcher.png",
 		"skill_ids": [
 		  "deszcz_strzal",
 		  "sokole_oko",
@@ -44,7 +44,7 @@
 		"move_range": 4,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/elfSwordsman.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/elfSwordsman.png",
 		"skill_ids": [
 		  "runiczna_ochrona",
 		  "zaklete_ciecie",
@@ -69,7 +69,7 @@
 		"attack_range": 3,
 		"attack_mode": "ranged",
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/elfMague.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/elfMague.png",
 		"skill_ids": [
 		  "rzut_klatwa",
 		  "lodowe_podloze",
@@ -94,7 +94,7 @@
 		"attack_range": 3,
 		"attack_mode": "ranged",
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/elfArcheMague.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/elfArcheMague.png",
 		"skill_ids": [
 		  "magiczna_projekcja",
 		  "runiczna_ochrona",

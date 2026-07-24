@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/hipnosis.png"
+source_file="res://turn-base-game/assets/ui/hipnosis.png"
 dest_files=["res://.godot/imported/hipnosis.png-ae694bb3696278e37c4e763d78153402.ctex"]
 
 [params]

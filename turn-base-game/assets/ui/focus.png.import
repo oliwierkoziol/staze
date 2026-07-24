@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/focus.png"
+source_file="res://turn-base-game/assets/ui/focus.png"
 dest_files=["res://.godot/imported/focus.png-f8e72fa1533df82c12e6a7e4703256b3.ctex"]
 
 [params]

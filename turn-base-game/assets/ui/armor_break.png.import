@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/armor_break.png"
+source_file="res://turn-base-game/assets/ui/armor_break.png"
 dest_files=["res://.godot/imported/armor_break.png-a1b6a9d8fbd443a8a35cb1c99c35fd5c.ctex"]
 
 [params]

@@ -1,12 +1,12 @@
 extends PopupPanel
 
-const PANEL_TEXTURE: Texture2D = preload("res://assets/ui/panel.png")
+const PANEL_TEXTURE: Texture2D = preload("res://turn-base-game/assets/ui/panel.png")
 const GOLD := Color(0.86, 0.72, 0.34)
 const TEXT := Color(0.9, 0.87, 0.78)
 const MUTED := Color(0.62, 0.58, 0.5)
 const BUFF_COLOR := "#72D572"
 const DEBUFF_COLOR := "#F07878"
-const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
+const UnitTypeLibraryScript = preload("res://turn-base-game/scripts/unit_type_library.gd")
 
 var _portrait: TextureRect
 var _name_label: Label

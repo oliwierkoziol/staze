@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/energy_shield.png"
+source_file="res://turn-base-game/assets/ui/energy_shield.png"
 dest_files=["res://.godot/imported/energy_shield.png-d903466bec8c65840cefedef3bb92cf2.ctex"]
 
 [params]

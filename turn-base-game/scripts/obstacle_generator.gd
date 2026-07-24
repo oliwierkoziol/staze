@@ -1,6 +1,6 @@
 class_name ObstacleGenerator
 
-const HexUtilsScript = preload("res://scripts/hex_utils.gd")
+const HexUtilsScript = preload("res://turn-base-game/scripts/hex_utils.gd")
 
 
 static func generate(units: Array, obstacle_types: Array[String], columns: int, rows: int, setup_columns: int, winter_mode: bool = false, max_detonators: int = 2, max_elf_statues: int = 3, max_hole_clusters: int = 3) -> Array[Dictionary]:

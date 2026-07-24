@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/mapTiles/ice_hex_1.png"
+source_file="res://turn-base-game/assets/mapTiles/ice_hex_1.png"
 dest_files=["res://.godot/imported/ice_hex_1.png-e468cf20e668891b8dc160de9cc9066d.ctex"]
 
 [params]

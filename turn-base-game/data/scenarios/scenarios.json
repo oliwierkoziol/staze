@@ -6,7 +6,7 @@
 	  "description": "Orkowie atakuja elfy na granicy ich lasu.",
 	  "player_faction": "orcs",
 	  "enemy_faction": "elves",
-	  "background": "res://assets/backgrounds/scenarios/orcs_vs_elves_forest.png",
+	  "background": "res://turn-base-game/assets/backgrounds/scenarios/orcs_vs_elves_forest.png",
 	  "player_units": [
 		{"type_id": "orc_warrior", "count": 7},
 		{"type_id": "orc_berserker", "count": 5},
@@ -26,7 +26,7 @@
 	  "description": "Krasnoludy odbijaja wejscie do kopalni z rak goblinow.",
 	  "player_faction": "dwarves",
 	  "enemy_faction": "goblins",
-	  "background": "res://assets/backgrounds/scenarios/dwarves_vs_goblins_mine.png",
+	  "background": "res://turn-base-game/assets/backgrounds/scenarios/dwarves_vs_goblins_mine.png",
 	  "player_units": [
 		{"type_id": "dwarf_warrior", "count": 6},
 		{"type_id": "dwarf_guardian", "count": 5},
@@ -46,7 +46,7 @@
 	  "description": "Ludzie bronia zniszczonej wioski przed orkami.",
 	  "player_faction": "humans",
 	  "enemy_faction": "orcs",
-	  "background": "res://assets/backgrounds/scenarios/humans_vs_orcs_village.png",
+	  "background": "res://turn-base-game/assets/backgrounds/scenarios/humans_vs_orcs_village.png",
 	  "player_units": [
 		{"type_id": "human_knights", "count": 6},
 		{"type_id": "human_cavalry", "count": 2},
@@ -66,7 +66,7 @@
 	  "description": "Elfy i krasnoludy walcza o stary gorski posterunek.",
 	  "player_faction": "elves",
 	  "enemy_faction": "dwarves",
-	  "background": "res://assets/backgrounds/scenarios/elves_vs_dwarves_pass.png",
+	  "background": "res://turn-base-game/assets/backgrounds/scenarios/elves_vs_dwarves_pass.png",
 	  "player_units": [
 		{"type_id": "elf_archer", "count": 8},
 		{"type_id": "elf_swordsman", "count": 6},
@@ -86,7 +86,7 @@
 	  "description": "Gobliny zasadzaja sie na ludzka karawane na pustyni.",
 	  "player_faction": "goblins",
 	  "enemy_faction": "humans",
-	  "background": "res://assets/backgrounds/scenarios/humans_vs_goblins_desert.png",
+	  "background": "res://turn-base-game/assets/backgrounds/scenarios/humans_vs_goblins_desert.png",
 	  "player_units": [
 		{"type_id": "goblin_thief", "count": 10},
 		{"type_id": "goblin_warrior", "count": 8},

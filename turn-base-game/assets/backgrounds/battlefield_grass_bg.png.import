@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/backgrounds/battlefield_grass_bg.png"
+source_file="res://turn-base-game/assets/backgrounds/battlefield_grass_bg.png"
 dest_files=["res://.godot/imported/battlefield_grass_bg.png-a2bb9e00f38594a38980b6e288df9ef8.ctex"]
 
 [params]

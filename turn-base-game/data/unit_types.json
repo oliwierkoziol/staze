@@ -1,6 +1,6 @@
 {
-  "skill_library_path": "res://data/skills/skills.json",
-  "factions_path": "res://data/factions/",
+  "skill_library_path": "res://turn-base-game/data/skills/skills.json",
+  "factions_path": "res://turn-base-game/data/factions/",
   "factions": [
 	"humans.json",
 	"orcs.json",
@@ -26,7 +26,7 @@
 	  "move_range": 4,
 	  "attack_range": 1,
 	  "resistance": "Brak",
-	  "portrait": "res://assets/characters/humans/king.png",
+	  "portrait": "res://turn-base-game/assets/characters/humans/king.png",
 	  "skill_ids": ["odepchniecie_tarcza", "zelazna_kurtyna", "tarcza"]
 	}
   ]

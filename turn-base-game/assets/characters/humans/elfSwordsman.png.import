@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/characters/humans/elfSwordsman.png"
+source_file="res://turn-base-game/assets/characters/humans/elfSwordsman.png"
 dest_files=["res://.godot/imported/elfSwordsman.png-f0cc0eb8c2a83f9183e0f9823c60e434.ctex"]
 
 [params]

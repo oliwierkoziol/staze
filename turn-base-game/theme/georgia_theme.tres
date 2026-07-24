@@ -1,6 +1,6 @@
 [gd_resource type="Theme" format=3 uid="uid://cna4ihybudjlx"]
 
-[ext_resource type="FontFile" uid="uid://b7at424svjkvy" path="res://theme/georgia.ttf" id="1_georgia"]
+[ext_resource type="FontFile" uid="uid://b7at424svjkvy" path="res://turn-base-game/theme/georgia.ttf" id="1_georgia"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tooltip"]
 content_margin_left = 12.0

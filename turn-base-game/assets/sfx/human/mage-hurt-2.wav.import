@@ -7,7 +7,7 @@ path="res://.godot/imported/mage-hurt-2.wav-2bb37e70bb9c6b3472aea3a359efa58f.sam
 
 [deps]
 
-source_file="res://assets/sfx/human/mage-hurt-2.wav"
+source_file="res://turn-base-game/assets/sfx/human/mage-hurt-2.wav"
 dest_files=["res://.godot/imported/mage-hurt-2.wav-2bb37e70bb9c6b3472aea3a359efa58f.sample"]
 
 [params]

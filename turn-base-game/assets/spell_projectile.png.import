@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/spell_projectile.png"
+source_file="res://turn-base-game/assets/spell_projectile.png"
 dest_files=["res://.godot/imported/spell_projectile.png-1f22e484e52abdbd7703e900bebf0c86.ctex"]
 
 [params]

@@ -1,7 +1,7 @@
 extends SceneTree
 
 
-const TrescPomocyScript = preload("res://scripts/tresc_pomocy.gd")
+const TrescPomocyScript = preload("res://turn-base-game/scripts/tresc_pomocy.gd")
 
 var bledy: Array[String] = []
 
@@ -24,7 +24,7 @@ func _uruchom() -> void:
 	_sprawdz(TrescPomocyScript.STRONY_TUTORIALA[0].has("Przycisk WCZYTAJ w menu lub prawym panelu przywraca zapisaną bitwę."), "Tutorial opisuje wczytywanie zapisu")
 	_sprawdz(TrescPomocyScript.STRONY_TUTORIALA[2].any(func(line: String) -> bool: return "Niebieskie pola" in line), "Tutorial wyjaśnia kolory pól")
 	_sprawdz(TrescPomocyScript.STRONY_TUTORIALA[3].any(func(line: String) -> bool: return "wydarzenie mapy" in line), "Tutorial opisuje wydarzenia mapy")
-	var gra: Control = load("res://gra.tscn").instantiate()
+	var gra: Control = load("res://turn-base-game/gra.tscn").instantiate()
 	root.add_child(gra)
 	await process_frame
 	var build_info: Label = gra.get_node("TeamSetup/BuildInfo")

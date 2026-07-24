@@ -7,7 +7,7 @@ path="res://.godot/imported/frozenLands.mp3-344c02d136b644958de9d945f4144f38.mp3
 
 [deps]
 
-source_file="res://assets/music/frozenLands.mp3"
+source_file="res://turn-base-game/assets/music/frozenLands.mp3"
 dest_files=["res://.godot/imported/frozenLands.mp3-344c02d136b644958de9d945f4144f38.mp3str"]
 
 [params]

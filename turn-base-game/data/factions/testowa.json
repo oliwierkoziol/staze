@@ -19,7 +19,7 @@
 		"move_range": 4,
 		"attack_range": 3,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/elfSwordsman.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/elfSwordsman.png",
 		"skill_ids": [
 		  "bariera_energetyczna",
 		  "pulapka_na_niedzwiedzie",
@@ -42,7 +42,7 @@
 		"move_range": 5,
 		"attack_range": 3,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/elfArcher.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/elfArcher.png",
 		"skill_ids": [
 		  "strzal_w_kolano",
 		  "precyzyjny_strzal",

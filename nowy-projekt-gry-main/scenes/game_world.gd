@@ -1461,46 +1461,17 @@ func _build_enemy_battle_stacks(raw_army: Array, first_id: int) -> Array[Diction
 
 func _open_battle_scene() -> bool:
 	battle_error_message = ""
-	const BATTLE_SCENE := "res://gra.tscn"
+	const BATTLE_SCENE := "res://turn-base-game/gra.tscn"
 	if not ResourceLoader.exists(BATTLE_SCENE):
-		var combat_project_dir := ProjectSettings.globalize_path("res://../turn-base-game")
-		var editor_pack_path := combat_project_dir.path_join("build/TurnBaseGame.pck")
-		if OS.has_feature("editor"):
-			_build_battle_pack(combat_project_dir, editor_pack_path)
-		var pack_paths: Array[String] = [
-			editor_pack_path,
-			OS.get_executable_path().get_base_dir().path_join("TurnBaseGame.pck"),
-		]
-		for pack_path in pack_paths:
-			if FileAccess.file_exists(pack_path) and ProjectSettings.load_resource_pack(pack_path, false):
-				break
-		if not ResourceLoader.exists(BATTLE_SCENE):
-			battle_error_message = "Nie udało się przygotować modułu walki. Sprawdź konsolę Godota."
-			push_error("Brak sceny walki po załadowaniu paczki TurnBaseGame.pck.")
-			return false
+		battle_error_message = "Brak sceny walki."
+		push_error("Brak sceny walki: %s" % BATTLE_SCENE)
+		return false
 	var change_error := get_tree().change_scene_to_file(BATTLE_SCENE)
 	if change_error != OK:
 		battle_error_message = "Nie udało się otworzyć sceny walki."
 		push_error("Nie można otworzyć sceny walki: %s" % error_string(change_error))
 		return false
 	return true
-
-func _build_battle_pack(project_dir: String, output_path: String) -> void:
-	DirAccess.make_dir_recursive_absolute(output_path.get_base_dir())
-	var output: Array = []
-	var exit_code := OS.execute(
-		OS.get_executable_path(),
-		PackedStringArray([
-			"--headless",
-			"--path", project_dir,
-			"--export-pack", "Windows Desktop", output_path,
-		]),
-		output,
-		true,
-		false
-	)
-	if exit_code != 0:
-		push_error("Eksport paczki walki nie powiódł się:\n%s" % "\n".join(output))
 
 func _apply_battle_result() -> void:
 	var file := FileAccess.open(battle_result_path, FileAccess.READ)

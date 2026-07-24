@@ -7,7 +7,7 @@ path="res://.godot/imported/orc-kishak.wav-24880fdd2bae7862ae7a70c1234b6ca9.samp
 
 [deps]
 
-source_file="res://assets/sfx/orc/orc-kishak.wav"
+source_file="res://turn-base-game/assets/sfx/orc/orc-kishak.wav"
 dest_files=["res://.godot/imported/orc-kishak.wav-24880fdd2bae7862ae7a70c1234b6ca9.sample"]
 
 [params]

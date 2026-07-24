@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/spell_fireball.png"
+source_file="res://turn-base-game/assets/spell_fireball.png"
 dest_files=["res://.godot/imported/spell_fireball.png-a6800ff8935798250fa1c4557da1908b.ctex"]
 
 [params]

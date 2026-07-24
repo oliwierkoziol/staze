@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/arrows_projectile.png"
+source_file="res://turn-base-game/assets/arrows_projectile.png"
 dest_files=["res://.godot/imported/arrows_projectile.png-8d57637e5d1df9460ea1e62dd1590418.ctex"]
 
 [params]

@@ -1,7 +1,7 @@
 extends SceneTree
 
-const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
-const MatematykaWalkiScript = preload("res://scripts/matematyka_walki.gd")
+const UnitTypeLibraryScript = preload("res://turn-base-game/scripts/unit_type_library.gd")
+const MatematykaWalkiScript = preload("res://turn-base-game/scripts/matematyka_walki.gd")
 const ODLEGLOSCI: Array[int] = [1, 3, 5, 7, 9, 12]
 const LICZEBNOSCI_1V1: Array[int] = [1, 3, 5, 10, 20, 50]
 const LICZEBNOSCI_ARMII: Array[int] = [15, 20, 50, 75, 100]
@@ -43,7 +43,7 @@ func _initialize() -> void:
 
 
 func _zapisz_scenariusze(frakcje: Array[Dictionary]) -> void:
-	var dane: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/scenarios/scenarios.json"))
+	var dane: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://turn-base-game/data/scenarios/scenarios.json"))
 	var raport: FileAccess = FileAccess.open(RAPORT_SCENARIUSZY, FileAccess.WRITE)
 	raport.store_string("\ufeff")
 	raport.store_csv_line(PackedStringArray(["scenariusz", "frakcja_gracza", "frakcja_wroga", "walki", "szacowany_wr_gracza_proc", "status"]))

@@ -15,7 +15,7 @@ func _sprawdz(warunek: bool, opis: String) -> void:
 
 
 func _uruchom() -> void:
-	gra = load("res://gra.tscn").instantiate()
+	gra = load("res://turn-base-game/gra.tscn").instantiate()
 	root.add_child(gra)
 	await process_frame
 	var ai: Dictionary = {"id": 1, "side": "enemy", "grid_x": 7, "grid_y": 5, "active_effects": [], "attack_range": 4}

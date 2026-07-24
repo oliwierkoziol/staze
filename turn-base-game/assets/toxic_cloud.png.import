@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/toxic_cloud.png"
+source_file="res://turn-base-game/assets/toxic_cloud.png"
 dest_files=["res://.godot/imported/toxic_cloud.png-e9614ee20606d46626289efe69639f9a.ctex"]
 
 [params]

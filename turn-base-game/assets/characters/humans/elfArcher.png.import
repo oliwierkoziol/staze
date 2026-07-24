@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/characters/humans/elfArcher.png"
+source_file="res://turn-base-game/assets/characters/humans/elfArcher.png"
 dest_files=["res://.godot/imported/elfArcher.png-0a06464502cae60cfb780b7671d6ca27.ctex"]
 
 [params]

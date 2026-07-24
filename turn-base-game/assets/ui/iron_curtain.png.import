@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/iron_curtain.png"
+source_file="res://turn-base-game/assets/ui/iron_curtain.png"
 dest_files=["res://.godot/imported/iron_curtain.png-4b3c4a41ed27f6d1e39895557e94ed23.ctex"]
 
 [params]

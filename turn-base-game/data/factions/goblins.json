@@ -20,7 +20,7 @@
 		"move_range": 4,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/goblinTheft.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/goblinTheft.png",
 		"skill_ids": [
 		  "zatruty_sztylet",
 		  "chmura_toksyczna",
@@ -44,7 +44,7 @@
 		"move_range": 5,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/goblinWarrior.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/goblinWarrior.png",
 		"skill_ids": [
 		  "odepchniecie_tarcza",
 		  "rzut_toporem",
@@ -69,7 +69,7 @@
 		"attack_range": 4,
 		"attack_mode": "ranged",
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/goblinShaman.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/goblinShaman.png",
 		"skill_ids": [
 		  "pnacza",
 		  "sztandar",
@@ -94,7 +94,7 @@
 		"attack_range": 4,
 		"attack_mode": "ranged",
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/goblinTrapper.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/goblinTrapper.png",
 		"skill_ids": [
 		  "pulapka_na_niedzwiedzie",
 		  "zatruty_sztylet",

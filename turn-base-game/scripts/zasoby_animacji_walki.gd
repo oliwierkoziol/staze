@@ -2,11 +2,11 @@ class_name ZasobyAnimacjiWalki
 
 
 const POCISKI: Dictionary = {
-	"arrows": preload("res://assets/arrows_projectile.png"),
-	"spell": preload("res://assets/spell_projectile.png"),
-	"fireball": preload("res://assets/spell_fireball.png"),
-	"dynamite": preload("res://assets/dynamite.png"),
-	"throwing_axe": preload("res://assets/throwing_axe.png"),
+	"arrows": preload("res://turn-base-game/assets/arrows_projectile.png"),
+	"spell": preload("res://turn-base-game/assets/spell_projectile.png"),
+	"fireball": preload("res://turn-base-game/assets/spell_fireball.png"),
+	"dynamite": preload("res://turn-base-game/assets/dynamite.png"),
+	"throwing_axe": preload("res://turn-base-game/assets/throwing_axe.png"),
 }
 
 

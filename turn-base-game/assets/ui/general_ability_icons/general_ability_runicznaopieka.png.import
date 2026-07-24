@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/general_ability_icons/general_ability_runicznaopieka.png"
+source_file="res://turn-base-game/assets/ui/general_ability_icons/general_ability_runicznaopieka.png"
 dest_files=["res://.godot/imported/general_ability_runicznaopieka.png-d5ca4972c75c532d986c82bb5f7b82a2.ctex"]
 
 [params]

@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/general_ability_icons/general_ability_ryzykownyplan.png"
+source_file="res://turn-base-game/assets/ui/general_ability_icons/general_ability_ryzykownyplan.png"
 dest_files=["res://.godot/imported/general_ability_ryzykownyplan.png-50122244b600caf90272db7d6c22eeb8.ctex"]
 
 [params]

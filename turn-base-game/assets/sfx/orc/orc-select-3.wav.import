@@ -7,7 +7,7 @@ path="res://.godot/imported/orc-select-3.wav-d3cf1992e5c35b41220bdfe88d3b4256.sa
 
 [deps]
 
-source_file="res://assets/sfx/orc/orc-select-3.wav"
+source_file="res://turn-base-game/assets/sfx/orc/orc-select-3.wav"
 dest_files=["res://.godot/imported/orc-select-3.wav-d3cf1992e5c35b41220bdfe88d3b4256.sample"]
 
 [params]

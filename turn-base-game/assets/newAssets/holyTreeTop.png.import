@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/newAssets/holyTreeTop.png"
+source_file="res://turn-base-game/assets/newAssets/holyTreeTop.png"
 dest_files=["res://.godot/imported/holyTreeTop.png-c64c144ca9185517ec741e24ebf3fb5a.ctex"]
 
 [params]

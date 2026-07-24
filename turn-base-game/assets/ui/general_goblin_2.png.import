@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/general_goblin_2.png"
+source_file="res://turn-base-game/assets/ui/general_goblin_2.png"
 dest_files=["res://.godot/imported/general_goblin_2.png-3db8f14df3ddabe2e4a340b0cbda6fef.ctex"]
 
 [params]

@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/throwing_axe.png"
+source_file="res://turn-base-game/assets/throwing_axe.png"
 dest_files=["res://.godot/imported/throwing_axe.png-574a75fa31e632bf9641b75bfa2e9489.ctex"]
 
 [params]

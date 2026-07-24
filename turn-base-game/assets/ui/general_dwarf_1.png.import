@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/general_dwarf_1.png"
+source_file="res://turn-base-game/assets/ui/general_dwarf_1.png"
 dest_files=["res://.godot/imported/general_dwarf_1.png-270fd26006f6003c062c9ba641dded07.ctex"]
 
 [params]

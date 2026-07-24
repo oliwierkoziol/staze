@@ -2,7 +2,7 @@ extends SceneTree
 
 
 var bledy: Array[String] = []
-const BibliotekaZdarzenMapyScript = preload("res://scripts/biblioteka_zdarzen_mapy.gd")
+const BibliotekaZdarzenMapyScript = preload("res://turn-base-game/scripts/biblioteka_zdarzen_mapy.gd")
 
 
 class AtrapaBitwy extends Node:

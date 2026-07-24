@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/buffs.png"
+source_file="res://turn-base-game/assets/ui/buffs.png"
 dest_files=["res://.godot/imported/buffs.png-885ccc5132ebf6c095061fb83e484fee.ctex"]
 
 [params]

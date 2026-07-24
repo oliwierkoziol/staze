@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/newAssets/statueBottom.png"
+source_file="res://turn-base-game/assets/newAssets/statueBottom.png"
 dest_files=["res://.godot/imported/statueBottom.png-95ad66ac79c3af06a5391b6b06060d34.ctex"]
 
 [params]

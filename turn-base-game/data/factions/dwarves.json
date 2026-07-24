@@ -20,7 +20,7 @@
 		"move_range": 3,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/dwarfWarrior.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/dwarfWarrior.png",
 		"skill_ids": [
 		  "utwardzenie",
 		  "szarza",
@@ -44,7 +44,7 @@
 		"move_range": 2,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/dwarfShield.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/dwarfShield.png",
 		"skill_ids": [
 		  "prowokacja",
 		  "tarcza",
@@ -68,7 +68,7 @@
 		"move_range": 3,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/dwarfHammer.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/dwarfHammer.png",
 		"skill_ids": [
 		  "walniecie_mlotem",
 		  "druzgocacy_cios",
@@ -93,7 +93,7 @@
 		"attack_range": 4,
 		"attack_mode": "ranged",
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/dwarfDigger.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/dwarfDigger.png",
 		"skill_ids": [
 		  "rzut_hakiem",
 		  "pulapka_na_niedzwiedzie",

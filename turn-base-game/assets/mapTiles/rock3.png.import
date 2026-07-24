@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/mapTiles/rock3.png"
+source_file="res://turn-base-game/assets/mapTiles/rock3.png"
 dest_files=["res://.godot/imported/rock3.png-9f40f8da8eed67670c52f2fad4272583.ctex"]
 
 [params]

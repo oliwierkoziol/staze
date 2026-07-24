@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/invisibility.png"
+source_file="res://turn-base-game/assets/ui/invisibility.png"
 dest_files=["res://.godot/imported/invisibility.png-dbb10ec42b15c34d2d45921275953cec.ctex"]
 
 [params]

@@ -7,7 +7,7 @@ path="res://.godot/imported/orc-hurt-2.wav-1bad287e1995b832d5cf6b107fbf09ed.samp
 
 [deps]
 
-source_file="res://assets/sfx/orc/orc-hurt-2.wav"
+source_file="res://turn-base-game/assets/sfx/orc/orc-hurt-2.wav"
 dest_files=["res://.godot/imported/orc-hurt-2.wav-1bad287e1995b832d5cf6b107fbf09ed.sample"]
 
 [params]

@@ -7,7 +7,7 @@ path="res://.godot/imported/mage-select-1.wav-739fccff7cc145f19a01d5dc862290ca.s
 
 [deps]
 
-source_file="res://assets/sfx/human/mage-select-1.wav"
+source_file="res://turn-base-game/assets/sfx/human/mage-select-1.wav"
 dest_files=["res://.godot/imported/mage-select-1.wav-739fccff7cc145f19a01d5dc862290ca.sample"]
 
 [params]

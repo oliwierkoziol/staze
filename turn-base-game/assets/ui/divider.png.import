@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/divider.png"
+source_file="res://turn-base-game/assets/ui/divider.png"
 dest_files=["res://.godot/imported/divider.png-89465bed9aae46d609175abd88241b53.ctex"]
 
 [params]

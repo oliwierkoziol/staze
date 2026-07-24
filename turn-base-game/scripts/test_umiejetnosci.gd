@@ -1,7 +1,7 @@
 extends SceneTree
 
 
-const MechanikaUmiejetnosciScript = preload("res://scripts/mechanika_umiejetnosci.gd")
+const MechanikaUmiejetnosciScript = preload("res://turn-base-game/scripts/mechanika_umiejetnosci.gd")
 
 var gra: Control
 var bledy: Array[String] = []
@@ -20,7 +20,7 @@ func _sprawdz(warunek: bool, opis: String) -> void:
 
 
 func _uruchom() -> void:
-	gra = load("res://gra.tscn").instantiate()
+	gra = load("res://turn-base-game/gra.tscn").instantiate()
 	root.add_child(gra)
 	await process_frame
 	gra._load_skill_library()

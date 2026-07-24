@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/backgrounds/scenarios/humans_vs_orcs_village.png"
+source_file="res://turn-base-game/assets/backgrounds/scenarios/humans_vs_orcs_village.png"
 dest_files=["res://.godot/imported/humans_vs_orcs_village.png-f85d519fad91ed72d815fecbb2c7d5b0.ctex"]
 
 [params]

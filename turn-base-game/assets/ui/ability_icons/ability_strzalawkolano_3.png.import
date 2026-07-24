@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/ability_icons/ability_strzalawkolano_3.png"
+source_file="res://turn-base-game/assets/ui/ability_icons/ability_strzalawkolano_3.png"
 dest_files=["res://.godot/imported/ability_strzalawkolano_3.png-428f568ab74e6c1e3a097bcb94181831.ctex"]
 
 [params]

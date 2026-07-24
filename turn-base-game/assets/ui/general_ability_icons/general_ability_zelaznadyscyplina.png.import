@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/general_ability_icons/general_ability_zelaznadyscyplina.png"
+source_file="res://turn-base-game/assets/ui/general_ability_icons/general_ability_zelaznadyscyplina.png"
 dest_files=["res://.godot/imported/general_ability_zelaznadyscyplina.png-42961263d72db1a0115dff88dedbe5dc.ctex"]
 
 [params]

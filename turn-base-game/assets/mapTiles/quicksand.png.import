@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/mapTiles/quicksand.png"
+source_file="res://turn-base-game/assets/mapTiles/quicksand.png"
 dest_files=["res://.godot/imported/quicksand.png-662e76cc1e5c8aa017237b9d7f35f3db.ctex"]
 
 [params]

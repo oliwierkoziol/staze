@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/general_kovalenko.png"
+source_file="res://turn-base-game/assets/ui/general_kovalenko.png"
 dest_files=["res://.godot/imported/general_kovalenko.png-725358ff74dfc8bd3db7bb62be97d2be.ctex"]
 
 [params]

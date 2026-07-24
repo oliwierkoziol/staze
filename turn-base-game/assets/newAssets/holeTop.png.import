@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/newAssets/holeTop.png"
+source_file="res://turn-base-game/assets/newAssets/holeTop.png"
 dest_files=["res://.godot/imported/holeTop.png-055eb7b6eed4cdaa2878dfe7b58b00ac.ctex"]
 
 [params]

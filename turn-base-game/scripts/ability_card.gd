@@ -8,9 +8,9 @@ const CD_ACTIVE_COLOR := Color(0.92, 0.55, 0.3, 1.0)
 
 # ponytail: brak dedykowanej ikony w ability_icons — fallback na ability1/2/3.png z tego samego folderu.
 const PLACEHOLDER_ICONS: Array[Texture2D] = [
-	preload("res://assets/ui/ability_icons/ability1.png"),
-	preload("res://assets/ui/ability_icons/ability2.png"),
-	preload("res://assets/ui/ability_icons/ability3.png"),
+	preload("res://turn-base-game/assets/ui/ability_icons/ability1.png"),
+	preload("res://turn-base-game/assets/ui/ability_icons/ability2.png"),
+	preload("res://turn-base-game/assets/ui/ability_icons/ability3.png"),
 ]
 
 @onready var _icon: TextureRect = %Icon

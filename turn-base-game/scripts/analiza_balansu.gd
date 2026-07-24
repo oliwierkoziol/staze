@@ -1,7 +1,7 @@
 extends SceneTree
 
-const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
-const MatematykaWalkiScript = preload("res://scripts/matematyka_walki.gd")
+const UnitTypeLibraryScript = preload("res://turn-base-game/scripts/unit_type_library.gd")
+const MatematykaWalkiScript = preload("res://turn-base-game/scripts/matematyka_walki.gd")
 const RAPORT_SZCZEGOLOWY := "res://raporty/balans_1v1.csv"
 const RAPORT_PODSUMOWANIE := "res://raporty/podsumowanie_balansu.csv"
 const RAPORT_ROLE := "res://raporty/balans_rol.csv"

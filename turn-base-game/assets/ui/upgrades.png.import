@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/upgrades.png"
+source_file="res://turn-base-game/assets/ui/upgrades.png"
 dest_files=["res://.godot/imported/upgrades.png-031cc0d9057993a247d5c022f3d0b3c0.ctex"]
 
 [params]

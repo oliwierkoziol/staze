@@ -1,10 +1,10 @@
 class_name UnitTypeLibrary
 
-const UNIT_TYPES_PATH := "res://data/unit_types.json"
-const GENERAL_SKILLS_PATH := "res://data/general_skills.json"
-const STATUS_EFFECTS_PATH := "res://data/status_effects.json"
-const ABILITY_ICONS_DIR := "res://assets/ui/ability_icons/"
-const GENERAL_ABILITY_ICONS_DIR := "res://assets/ui/general_ability_icons/"
+const UNIT_TYPES_PATH := "res://turn-base-game/data/unit_types.json"
+const GENERAL_SKILLS_PATH := "res://turn-base-game/data/general_skills.json"
+const STATUS_EFFECTS_PATH := "res://turn-base-game/data/status_effects.json"
+const ABILITY_ICONS_DIR := "res://turn-base-game/assets/ui/ability_icons/"
+const GENERAL_ABILITY_ICONS_DIR := "res://turn-base-game/assets/ui/general_ability_icons/"
 
 const SKILL_ICON_BASE_OVERRIDES := {
 	"strzal_w_kolano": "strzalawkolano",
@@ -78,7 +78,7 @@ static func _load() -> void:
 			continue
 		_general_skills[str(skill_id)] = _normalize_general_skill(str(skill_id), raw_skill)
 
-	var skills_path: String = str(config.get("skill_library_path", "res://data/skills/skills.json"))
+	var skills_path: String = str(config.get("skill_library_path", "res://turn-base-game/data/skills/skills.json"))
 	var skills_data: Dictionary = _load_json_file(skills_path)
 	var raw_skills: Dictionary = skills_data.get("skill_library", {})
 	for skill_id in raw_skills.keys():
@@ -87,7 +87,7 @@ static func _load() -> void:
 			continue
 		_skill_library[str(skill_id)] = _normalize_skill_config(str(skill_id), raw_skill)
 
-	var factions_dir: String = str(config.get("factions_path", "res://data/factions/"))
+	var factions_dir: String = str(config.get("factions_path", "res://turn-base-game/data/factions/"))
 	for raw_unit in config.get("special_units", []):
 		if typeof(raw_unit) == TYPE_DICTIONARY:
 			var special_unit: Dictionary = _normalize_unit_type(raw_unit)
@@ -285,7 +285,7 @@ static func get_status_effect(effect_id: String) -> Dictionary:
 
 
 static func _lookup_external_status_effect(effect_id: String) -> Dictionary:
-	const BibliotekaZdarzenMapyScript = preload("res://scripts/biblioteka_zdarzen_mapy.gd")
+	const BibliotekaZdarzenMapyScript = preload("res://turn-base-game/scripts/biblioteka_zdarzen_mapy.gd")
 	var event_data: Dictionary = BibliotekaZdarzenMapyScript.DANE.get(effect_id, {})
 	if not event_data.is_empty():
 		return {

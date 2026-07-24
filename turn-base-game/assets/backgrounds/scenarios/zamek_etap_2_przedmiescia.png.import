@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/backgrounds/scenarios/zamek_etap_2_przedmiescia.png"
+source_file="res://turn-base-game/assets/backgrounds/scenarios/zamek_etap_2_przedmiescia.png"
 dest_files=["res://.godot/imported/zamek_etap_2_przedmiescia.png-ecaa8d25199d7fc2b0050f0b623db038.ctex"]
 
 [params]

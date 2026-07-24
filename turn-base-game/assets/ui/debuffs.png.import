@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/debuffs.png"
+source_file="res://turn-base-game/assets/ui/debuffs.png"
 dest_files=["res://.godot/imported/debuffs.png-d1b1ad39f668a5c0b898724882f17ce0.ctex"]
 
 [params]

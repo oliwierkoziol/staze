@@ -7,7 +7,7 @@ path="res://.godot/imported/knight-select-2.wav-8ed3be8d494c01911e1ec9d62a4f5e1f
 
 [deps]
 
-source_file="res://assets/sfx/human/knight-select-2.wav"
+source_file="res://turn-base-game/assets/sfx/human/knight-select-2.wav"
 dest_files=["res://.godot/imported/knight-select-2.wav-8ed3be8d494c01911e1ec9d62a4f5e1f.sample"]
 
 [params]

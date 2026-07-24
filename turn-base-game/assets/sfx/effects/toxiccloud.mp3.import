@@ -7,7 +7,7 @@ path="res://.godot/imported/toxiccloud.mp3-db0c378133b4eb5df9ba44fd6acf8411.mp3s
 
 [deps]
 
-source_file="res://assets/sfx/effects/toxiccloud.mp3"
+source_file="res://turn-base-game/assets/sfx/effects/toxiccloud.mp3"
 dest_files=["res://.godot/imported/toxiccloud.mp3-db0c378133b4eb5df9ba44fd6acf8411.mp3str"]
 
 [params]

@@ -27,7 +27,7 @@ func _wyczysc(jednostki: Array) -> void:
 
 
 func _uruchom() -> void:
-	gra = load("res://gra.tscn").instantiate()
+	gra = load("res://turn-base-game/gra.tscn").instantiate()
 	root.add_child(gra)
 	await process_frame
 	gra._load_skill_library()

@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/backgrounds/scenarios/elves_vs_dwarves_pass.png"
+source_file="res://turn-base-game/assets/backgrounds/scenarios/elves_vs_dwarves_pass.png"
 dest_files=["res://.godot/imported/elves_vs_dwarves_pass.png-24608e7978e331b169b646c859b66853.ctex"]
 
 [params]

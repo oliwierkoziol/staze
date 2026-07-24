@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/trap-removebg-preview.png"
+source_file="res://turn-base-game/assets/trap-removebg-preview.png"
 dest_files=["res://.godot/imported/trap-removebg-preview.png-0ea8141ddb29e632fb30cfb3f7e54379.ctex"]
 
 [params]

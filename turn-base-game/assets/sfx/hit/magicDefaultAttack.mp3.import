@@ -7,7 +7,7 @@ path="res://.godot/imported/magicDefaultAttack.mp3-8a6477dc9498ff1001e84ec796137
 
 [deps]
 
-source_file="res://assets/sfx/hit/magicDefaultAttack.mp3"
+source_file="res://turn-base-game/assets/sfx/hit/magicDefaultAttack.mp3"
 dest_files=["res://.godot/imported/magicDefaultAttack.mp3-8a6477dc9498ff1001e84ec796137d04.mp3str"]
 
 [params]

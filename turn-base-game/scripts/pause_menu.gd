@@ -39,7 +39,7 @@ func _build_ui() -> void:
 	panel.offset_right = 180
 	panel.offset_bottom = 250
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	panel.texture = preload("res://assets/ui/panel.png")
+	panel.texture = preload("res://turn-base-game/assets/ui/panel.png")
 	panel.patch_margin_left = 8
 	panel.patch_margin_top = 8
 	panel.patch_margin_right = 8
@@ -68,7 +68,7 @@ func _build_ui() -> void:
 	column.add_child(title)
 
 	var divider := TextureRect.new()
-	divider.texture = preload("res://assets/ui/divider.png")
+	divider.texture = preload("res://turn-base-game/assets/ui/divider.png")
 	divider.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	divider.stretch_mode = TextureRect.STRETCH_SCALE
 	divider.custom_minimum_size = Vector2(0, 2)

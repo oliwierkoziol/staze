@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/characters/humans/orcWarrior_nobg_test.png"
+source_file="res://turn-base-game/assets/characters/humans/orcWarrior_nobg_test.png"
 dest_files=["res://.godot/imported/orcWarrior_nobg_test.png-80c828bdd0fa39c95e13d34c8b129929.ctex"]
 
 [params]

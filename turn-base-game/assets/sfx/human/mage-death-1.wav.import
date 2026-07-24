@@ -7,7 +7,7 @@ path="res://.godot/imported/mage-death-1.wav-e35340781eaff0496dab020b65cde602.sa
 
 [deps]
 
-source_file="res://assets/sfx/human/mage-death-1.wav"
+source_file="res://turn-base-game/assets/sfx/human/mage-death-1.wav"
 dest_files=["res://.godot/imported/mage-death-1.wav-e35340781eaff0496dab020b65cde602.sample"]
 
 [params]

@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/mapTiles/zimowykszok.png"
+source_file="res://turn-base-game/assets/mapTiles/zimowykszok.png"
 dest_files=["res://.godot/imported/zimowykszok.png-87cf493f52c98483e73cd34957ea51ce.ctex"]
 
 [params]

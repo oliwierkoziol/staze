@@ -5,12 +5,12 @@ signal setup_loaded(save_data: Dictionary)
 signal custom_setup_finished(unit_configs: Array[Dictionary], player_faction: String, enemy_faction: String, background_path: String, ai_difficulty: String)
 signal settings_requested
 
-const UnitSelectPanelScene: PackedScene = preload("res://scenes/unit_select_panel.tscn")
-const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
-const UnitSelectPanelClass = preload("res://scripts/unit_select_panel.gd")
-const BATTLE_BACKGROUND: Texture2D = preload("res://assets/backgrounds/back.png")
-const SCENARIOS_PATH := "res://data/scenarios/scenarios.json"
-const CASTLE_SCENARIO_PATH := "res://data/scenarios/zamek.json"
+const UnitSelectPanelScene: PackedScene = preload("res://turn-base-game/scenes/unit_select_panel.tscn")
+const UnitTypeLibraryScript = preload("res://turn-base-game/scripts/unit_type_library.gd")
+const UnitSelectPanelClass = preload("res://turn-base-game/scripts/unit_select_panel.gd")
+const BATTLE_BACKGROUND: Texture2D = preload("res://turn-base-game/assets/backgrounds/back.png")
+const SCENARIOS_PATH := "res://turn-base-game/data/scenarios/scenarios.json"
+const CASTLE_SCENARIO_PATH := "res://turn-base-game/data/scenarios/zamek.json"
 
 var _player_panel: UnitSelectPanelClass
 var _enemy_panel: UnitSelectPanelClass

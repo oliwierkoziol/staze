@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/poison.png"
+source_file="res://turn-base-game/assets/ui/poison.png"
 dest_files=["res://.godot/imported/poison.png-f122540c636f76ddb4ccc918ea1e6b07.ctex"]
 
 [params]

@@ -7,7 +7,7 @@ path="res://.godot/imported/archer-hurt-2.wav-048a0cf0062dab19a736167536d3720e.s
 
 [deps]
 
-source_file="res://assets/sfx/human/archer-hurt-2.wav"
+source_file="res://turn-base-game/assets/sfx/human/archer-hurt-2.wav"
 dest_files=["res://.godot/imported/archer-hurt-2.wav-048a0cf0062dab19a736167536d3720e.sample"]
 
 [params]

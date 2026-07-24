@@ -7,7 +7,7 @@ path="res://.godot/imported/elf-death-1.wav-3125297a8618e07f0927efa05812796d.sam
 
 [deps]
 
-source_file="res://assets/sfx/elf/elf-death-1.wav"
+source_file="res://turn-base-game/assets/sfx/elf/elf-death-1.wav"
 dest_files=["res://.godot/imported/elf-death-1.wav-3125297a8618e07f0927efa05812796d.sample"]
 
 [params]

@@ -4,7 +4,7 @@ extends VBoxContainer
 signal selection_changed(side: String, faction: String)
 signal randomize_requested(side: String)
 
-const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
+const UnitTypeLibraryScript = preload("res://turn-base-game/scripts/unit_type_library.gd")
 
 const SQUARE_SIZE := 120
 const INNER_PADDING := 18

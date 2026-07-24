@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/przeszkody/wydma_wschod_poludniowy_wschod_60.png"
+source_file="res://turn-base-game/assets/przeszkody/wydma_wschod_poludniowy_wschod_60.png"
 dest_files=["res://.godot/imported/wydma_wschod_poludniowy_wschod_60.png-79329ce8fabeaa1d6fd92c6d3299b5ab.ctex"]
 
 [params]

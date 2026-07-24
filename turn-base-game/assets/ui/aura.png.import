@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/aura.png"
+source_file="res://turn-base-game/assets/ui/aura.png"
 dest_files=["res://.godot/imported/aura.png-6e1bda93fd4169d75377ecd508d94f0c.ctex"]
 
 [params]

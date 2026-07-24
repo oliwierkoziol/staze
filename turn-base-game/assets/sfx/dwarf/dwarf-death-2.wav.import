@@ -7,7 +7,7 @@ path="res://.godot/imported/dwarf-death-2.wav-61b5e4faad60c927826c1637d19f6c6b.s
 
 [deps]
 
-source_file="res://assets/sfx/dwarf/dwarf-death-2.wav"
+source_file="res://turn-base-game/assets/sfx/dwarf/dwarf-death-2.wav"
 dest_files=["res://.godot/imported/dwarf-death-2.wav-61b5e4faad60c927826c1637d19f6c6b.sample"]
 
 [params]

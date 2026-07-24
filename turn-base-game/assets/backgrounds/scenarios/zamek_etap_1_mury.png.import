@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/backgrounds/scenarios/zamek_etap_1_mury.png"
+source_file="res://turn-base-game/assets/backgrounds/scenarios/zamek_etap_1_mury.png"
 dest_files=["res://.godot/imported/zamek_etap_1_mury.png-c334ed8a7c7aaa5c1858c1dd0bd87823.ctex"]
 
 [params]

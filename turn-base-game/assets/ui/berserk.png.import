@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/berserk.png"
+source_file="res://turn-base-game/assets/ui/berserk.png"
 dest_files=["res://.godot/imported/berserk.png-14b444a0e64713496d731677ef10c35b.ctex"]
 
 [params]

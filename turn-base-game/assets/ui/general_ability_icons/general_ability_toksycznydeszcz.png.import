@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/general_ability_icons/general_ability_toksycznydeszcz.png"
+source_file="res://turn-base-game/assets/ui/general_ability_icons/general_ability_toksycznydeszcz.png"
 dest_files=["res://.godot/imported/general_ability_toksycznydeszcz.png-192da92183d2dee19242f8ec045bca59.ctex"]
 
 [params]

@@ -7,7 +7,7 @@ path="res://.godot/imported/axe.mp3-4d17cd381364147df718d859b5cccc9c.mp3str"
 
 [deps]
 
-source_file="res://assets/sfx/hit/axe.mp3"
+source_file="res://turn-base-game/assets/sfx/hit/axe.mp3"
 dest_files=["res://.godot/imported/axe.mp3-4d17cd381364147df718d859b5cccc9c.mp3str"]
 
 [params]

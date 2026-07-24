@@ -5,17 +5,17 @@ const ICON_SIZE := Vector2(25, 25)
 const ROW_V_PADDING := 10
 
 const ICONS := {
-	"hp": preload("res://assets/ui/health.png"),
-	"atk": preload("res://assets/ui/damage.png"),
-	"dmg": preload("res://assets/ui/damage.png"),
-	"def": preload("res://assets/ui/defence.png"),
-	"speed": preload("res://assets/ui/speed.png"),
-	"count": preload("res://assets/ui/amount.png"),
-	"move": preload("res://assets/ui/speed.png"),
-	"action_points": preload("res://assets/ui/upgrades.png"),
+	"hp": preload("res://turn-base-game/assets/ui/health.png"),
+	"atk": preload("res://turn-base-game/assets/ui/damage.png"),
+	"dmg": preload("res://turn-base-game/assets/ui/damage.png"),
+	"def": preload("res://turn-base-game/assets/ui/defence.png"),
+	"speed": preload("res://turn-base-game/assets/ui/speed.png"),
+	"count": preload("res://turn-base-game/assets/ui/amount.png"),
+	"move": preload("res://turn-base-game/assets/ui/speed.png"),
+	"action_points": preload("res://turn-base-game/assets/ui/upgrades.png"),
 }
 
-var _divider_tex: Texture2D = preload("res://assets/ui/divider.png")
+var _divider_tex: Texture2D = preload("res://turn-base-game/assets/ui/divider.png")
 var _value_labels: Dictionary = {}
 
 

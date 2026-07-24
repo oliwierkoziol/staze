@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/charm.png"
+source_file="res://turn-base-game/assets/ui/charm.png"
 dest_files=["res://.godot/imported/charm.png-481294e66000e77a4815fe21165339af.ctex"]
 
 [params]

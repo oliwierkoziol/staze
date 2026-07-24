@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/general_ability_icons/general_ability_tempolowow.png"
+source_file="res://turn-base-game/assets/ui/general_ability_icons/general_ability_tempolowow.png"
 dest_files=["res://.godot/imported/general_ability_tempolowow.png-d58c45b2eff70f39660ad2d627456138.ctex"]
 
 [params]

@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/eagle_eye.png"
+source_file="res://turn-base-game/assets/ui/eagle_eye.png"
 dest_files=["res://.godot/imported/eagle_eye.png-9966fdfdf2ed264b8bfe5accf7e1fdb5.ctex"]
 
 [params]

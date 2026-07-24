@@ -1,10 +1,10 @@
 extends Control
 
-const BATTLE_CONFIG_PATH := "res://data/battle_config.json"
-const TERRAIN_TYPES_PATH := "res://data/terrain_types.json"
-const SCENARIOS_PATH := "res://data/scenarios/scenarios.json"
-const DEFAULT_BATTLE_BACKGROUND_PATH := "res://assets/backgrounds/back.png"
-const CASTLE_SCENARIO_PATH := "res://data/scenarios/zamek.json"
+const BATTLE_CONFIG_PATH := "res://turn-base-game/data/battle_config.json"
+const TERRAIN_TYPES_PATH := "res://turn-base-game/data/terrain_types.json"
+const SCENARIOS_PATH := "res://turn-base-game/data/scenarios/scenarios.json"
+const DEFAULT_BATTLE_BACKGROUND_PATH := "res://turn-base-game/assets/backgrounds/back.png"
+const CASTLE_SCENARIO_PATH := "res://turn-base-game/data/scenarios/zamek.json"
 const GRID_COLUMNS := 15
 const GRID_ROWS := 10
 const SETUP_COLUMNS := 3
@@ -19,14 +19,14 @@ const PIERCING_SHOT_HEX_COUNT := 3
 const PLONIECIE_TICK_DAMAGE := 2
 const PLONIECIE_TURNS := 3
 const MAX_VISIBLE_QUEUE_CARDS := 8
-const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://assets/ui/unit1.png")
-const DEFAULT_GENERAL_PORTRAIT: Texture2D = preload("res://assets/ui/general1.png")
+const TURN_QUEUE_PLACEHOLDER_PORTRAIT: Texture2D = preload("res://turn-base-game/assets/ui/unit1.png")
+const DEFAULT_GENERAL_PORTRAIT: Texture2D = preload("res://turn-base-game/assets/ui/general1.png")
 const GENERAL_PORTRAITS: Dictionary = {
-	"elves": preload("res://assets/ui/general_elf_1.png"),
-	"orcs": preload("res://assets/ui/general_orc_1.png"),
-	"dwarves": preload("res://assets/ui/general_dwarf_1.png"),
-	"goblins": preload("res://assets/ui/general_goblin_1.png"),
-	"humans": preload("res://assets/ui/general_human_1.png"),
+	"elves": preload("res://turn-base-game/assets/ui/general_elf_1.png"),
+	"orcs": preload("res://turn-base-game/assets/ui/general_orc_1.png"),
+	"dwarves": preload("res://turn-base-game/assets/ui/general_dwarf_1.png"),
+	"goblins": preload("res://turn-base-game/assets/ui/general_goblin_1.png"),
+	"humans": preload("res://turn-base-game/assets/ui/general_human_1.png"),
 }
 const GENERAL_NAMES: Dictionary = {
 	"elves": "Władca Sylvar",
@@ -36,155 +36,155 @@ const GENERAL_NAMES: Dictionary = {
 	"humans": "Kapitan Alaric",
 }
 const ORC_GENERAL_KISHAK_NAME := "Wódz Kish'ak"
-const ORC_GENERAL_KISHAK_PORTRAIT: Texture2D = preload("res://assets/ui/general_kishak.png")
+const ORC_GENERAL_KISHAK_PORTRAIT: Texture2D = preload("res://turn-base-game/assets/ui/general_kishak.png")
 const HUMAN_GENERAL_KOVALENKO_NAME := "Kapitan Kovalenko"
-const HUMAN_GENERAL_KOVALENKO_PORTRAIT: Texture2D = preload("res://assets/ui/general_kovalenko.png")
+const HUMAN_GENERAL_KOVALENKO_PORTRAIT: Texture2D = preload("res://turn-base-game/assets/ui/general_kovalenko.png")
 const LOG_COLOR_YELLOW := Color(0.95, 0.82, 0.25, 1.0)
 const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
 const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
 const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 const GLOSNOSC_MUZYKI_DB := -24.0
-const MUZYKA_MENU: AudioStream = preload("res://assets/music/menu.mp3")
+const MUZYKA_MENU: AudioStream = preload("res://turn-base-game/assets/music/menu.mp3")
 const MUZYKA_DLA_TLA: Dictionary = {
-	"orcs_vs_elves_forest": preload("res://assets/music/holyForest.mp3"),
-	"dwarves_vs_goblins_mine": preload("res://assets/music/minesGate.mp3"),
-	"humans_vs_orcs_village": preload("res://assets/music/burnedLand.mp3"),
-	"elves_vs_dwarves_pass": preload("res://assets/music/frozenLands.mp3"),
-	"humans_vs_goblins_desert": preload("res://assets/music/dessert.mp3"),
-	"zamek_etap_1_mury": preload("res://assets/music/castle.mp3"),
-	"zamek_etap_2_przedmiescia": preload("res://assets/music/castle.mp3"),
-	"zamek_etap_3_centrum": preload("res://assets/music/castle.mp3"),
+	"orcs_vs_elves_forest": preload("res://turn-base-game/assets/music/holyForest.mp3"),
+	"dwarves_vs_goblins_mine": preload("res://turn-base-game/assets/music/minesGate.mp3"),
+	"humans_vs_orcs_village": preload("res://turn-base-game/assets/music/burnedLand.mp3"),
+	"elves_vs_dwarves_pass": preload("res://turn-base-game/assets/music/frozenLands.mp3"),
+	"humans_vs_goblins_desert": preload("res://turn-base-game/assets/music/dessert.mp3"),
+	"zamek_etap_1_mury": preload("res://turn-base-game/assets/music/castle.mp3"),
+	"zamek_etap_2_przedmiescia": preload("res://turn-base-game/assets/music/castle.mp3"),
+	"zamek_etap_3_centrum": preload("res://turn-base-game/assets/music/castle.mp3"),
 }
 const SFX_LUDZKICH_JEDNOSTEK: Dictionary = {
 	"human_knights": {
 		"wybor": [
-			preload("res://assets/sfx/human/knight-select-1.wav"),
-			preload("res://assets/sfx/human/knight-select-2.wav"),
+			preload("res://turn-base-game/assets/sfx/human/knight-select-1.wav"),
+			preload("res://turn-base-game/assets/sfx/human/knight-select-2.wav"),
 		],
 		"obrazenia": [
-			preload("res://assets/sfx/human/knight-hurt-1.wav"),
-			preload("res://assets/sfx/human/knight-hurt-2.wav"),
+			preload("res://turn-base-game/assets/sfx/human/knight-hurt-1.wav"),
+			preload("res://turn-base-game/assets/sfx/human/knight-hurt-2.wav"),
 		],
-		"smierc": [preload("res://assets/sfx/human/knight-death-1.wav")],
+		"smierc": [preload("res://turn-base-game/assets/sfx/human/knight-death-1.wav")],
 	},
 	"human_cavalry": {
 		"wybor": [
-			preload("res://assets/sfx/human/chariot-select-1.wav"),
-			preload("res://assets/sfx/human/chariot-select-2.wav"),
+			preload("res://turn-base-game/assets/sfx/human/chariot-select-1.wav"),
+			preload("res://turn-base-game/assets/sfx/human/chariot-select-2.wav"),
 		],
 		"obrazenia": [
-			preload("res://assets/sfx/human/chariot-hurt-1.wav"),
-			preload("res://assets/sfx/human/chariot-hurt-2.wav"),
+			preload("res://turn-base-game/assets/sfx/human/chariot-hurt-1.wav"),
+			preload("res://turn-base-game/assets/sfx/human/chariot-hurt-2.wav"),
 		],
-		"smierc": [preload("res://assets/sfx/human/chariot-death-1.wav")],
+		"smierc": [preload("res://turn-base-game/assets/sfx/human/chariot-death-1.wav")],
 	},
 	"human_archers": {
 		"wybor": [
-			preload("res://assets/sfx/human/archer-select-1.wav"),
-			preload("res://assets/sfx/human/archer-select-2.wav"),
+			preload("res://turn-base-game/assets/sfx/human/archer-select-1.wav"),
+			preload("res://turn-base-game/assets/sfx/human/archer-select-2.wav"),
 		],
 		"obrazenia": [
-			preload("res://assets/sfx/human/archer-hurt-1.wav"),
-			preload("res://assets/sfx/human/archer-hurt-2.wav"),
+			preload("res://turn-base-game/assets/sfx/human/archer-hurt-1.wav"),
+			preload("res://turn-base-game/assets/sfx/human/archer-hurt-2.wav"),
 		],
-		"smierc": [preload("res://assets/sfx/human/archer-death-1.wav")],
+		"smierc": [preload("res://turn-base-game/assets/sfx/human/archer-death-1.wav")],
 	},
 	"human_mages": {
 		"wybor": [
-			preload("res://assets/sfx/human/mage-select-1.wav"),
-			preload("res://assets/sfx/human/mage-select-2.wav"),
+			preload("res://turn-base-game/assets/sfx/human/mage-select-1.wav"),
+			preload("res://turn-base-game/assets/sfx/human/mage-select-2.wav"),
 		],
 		"obrazenia": [
-			preload("res://assets/sfx/human/mage-hurt-1.wav"),
-			preload("res://assets/sfx/human/mage-hurt-2.wav"),
+			preload("res://turn-base-game/assets/sfx/human/mage-hurt-1.wav"),
+			preload("res://turn-base-game/assets/sfx/human/mage-hurt-2.wav"),
 		],
-		"smierc": [preload("res://assets/sfx/human/mage-death-1.wav")],
+		"smierc": [preload("res://turn-base-game/assets/sfx/human/mage-death-1.wav")],
 	},
 }
 const SFX_FRAKCJI: Dictionary = {
 	"dwarf": {
 		"wybor": [
-			preload("res://assets/sfx/dwarf/dwarf-select-1.wav"),
-			preload("res://assets/sfx/dwarf/dwarf-select-2.wav"),
-			preload("res://assets/sfx/dwarf/dwarf-select-3.wav"),
+			preload("res://turn-base-game/assets/sfx/dwarf/dwarf-select-1.wav"),
+			preload("res://turn-base-game/assets/sfx/dwarf/dwarf-select-2.wav"),
+			preload("res://turn-base-game/assets/sfx/dwarf/dwarf-select-3.wav"),
 		],
 		"obrazenia": [
-			preload("res://assets/sfx/dwarf/dwarf-hurt-1.wav"),
-			preload("res://assets/sfx/dwarf/dwarf-hurt-2.wav"),
-			preload("res://assets/sfx/dwarf/dwarf-hurt-3.wav"),
+			preload("res://turn-base-game/assets/sfx/dwarf/dwarf-hurt-1.wav"),
+			preload("res://turn-base-game/assets/sfx/dwarf/dwarf-hurt-2.wav"),
+			preload("res://turn-base-game/assets/sfx/dwarf/dwarf-hurt-3.wav"),
 		],
 		"smierc": [
-			preload("res://assets/sfx/dwarf/dwarf-death-1.wav"),
-			preload("res://assets/sfx/dwarf/dwarf-death-2.wav"),
+			preload("res://turn-base-game/assets/sfx/dwarf/dwarf-death-1.wav"),
+			preload("res://turn-base-game/assets/sfx/dwarf/dwarf-death-2.wav"),
 		],
 	},
 	"elf": {
 		"wybor": [
-			preload("res://assets/sfx/elf/elf-select-1.wav"),
-			preload("res://assets/sfx/elf/elf-select-2.wav"),
-			preload("res://assets/sfx/elf/elf-select-3.wav"),
+			preload("res://turn-base-game/assets/sfx/elf/elf-select-1.wav"),
+			preload("res://turn-base-game/assets/sfx/elf/elf-select-2.wav"),
+			preload("res://turn-base-game/assets/sfx/elf/elf-select-3.wav"),
 		],
 		"obrazenia": [
-			preload("res://assets/sfx/elf/elf-hurt-1.wav"),
-			preload("res://assets/sfx/elf/elf-hurt-2.wav"),
-			preload("res://assets/sfx/elf/elf-hurt-3.wav"),
+			preload("res://turn-base-game/assets/sfx/elf/elf-hurt-1.wav"),
+			preload("res://turn-base-game/assets/sfx/elf/elf-hurt-2.wav"),
+			preload("res://turn-base-game/assets/sfx/elf/elf-hurt-3.wav"),
 		],
 		"smierc": [
-			preload("res://assets/sfx/elf/elf-death-1.wav"),
-			preload("res://assets/sfx/elf/elf-death-2.wav"),
+			preload("res://turn-base-game/assets/sfx/elf/elf-death-1.wav"),
+			preload("res://turn-base-game/assets/sfx/elf/elf-death-2.wav"),
 		],
 	},
 	"goblin": {
 		"wybor": [
-			preload("res://assets/sfx/goblin/goblin-select-1.wav"),
-			preload("res://assets/sfx/goblin/goblin-select-2.wav"),
-			preload("res://assets/sfx/goblin/goblin-select-3.wav"),
+			preload("res://turn-base-game/assets/sfx/goblin/goblin-select-1.wav"),
+			preload("res://turn-base-game/assets/sfx/goblin/goblin-select-2.wav"),
+			preload("res://turn-base-game/assets/sfx/goblin/goblin-select-3.wav"),
 		],
 		"obrazenia": [
-			preload("res://assets/sfx/goblin/goblin-hurt-1.wav"),
-			preload("res://assets/sfx/goblin/goblin-hurt-2.wav"),
-			preload("res://assets/sfx/goblin/goblin-hurt-3.wav"),
+			preload("res://turn-base-game/assets/sfx/goblin/goblin-hurt-1.wav"),
+			preload("res://turn-base-game/assets/sfx/goblin/goblin-hurt-2.wav"),
+			preload("res://turn-base-game/assets/sfx/goblin/goblin-hurt-3.wav"),
 		],
 		"smierc": [
-			preload("res://assets/sfx/goblin/goblin-death-1.wav"),
-			preload("res://assets/sfx/goblin/goblin-death-2.wav"),
+			preload("res://turn-base-game/assets/sfx/goblin/goblin-death-1.wav"),
+			preload("res://turn-base-game/assets/sfx/goblin/goblin-death-2.wav"),
 		],
 	},
 	"orc": {
 		"wybor": [
-			preload("res://assets/sfx/orc/orc-select-1.wav"),
-			preload("res://assets/sfx/orc/orc-select-2.wav"),
-			preload("res://assets/sfx/orc/orc-select-3.wav"),
+			preload("res://turn-base-game/assets/sfx/orc/orc-select-1.wav"),
+			preload("res://turn-base-game/assets/sfx/orc/orc-select-2.wav"),
+			preload("res://turn-base-game/assets/sfx/orc/orc-select-3.wav"),
 		],
 		"obrazenia": [
-			preload("res://assets/sfx/orc/orc-hurt-1.wav"),
-			preload("res://assets/sfx/orc/orc-hurt-2.wav"),
-			preload("res://assets/sfx/orc/orc-hurt-3.wav"),
+			preload("res://turn-base-game/assets/sfx/orc/orc-hurt-1.wav"),
+			preload("res://turn-base-game/assets/sfx/orc/orc-hurt-2.wav"),
+			preload("res://turn-base-game/assets/sfx/orc/orc-hurt-3.wav"),
 		],
 		"smierc": [
-			preload("res://assets/sfx/orc/orc-death-1.wav"),
-			preload("res://assets/sfx/orc/orc-death-2.wav"),
+			preload("res://turn-base-game/assets/sfx/orc/orc-death-1.wav"),
+			preload("res://turn-base-game/assets/sfx/orc/orc-death-2.wav"),
 		],
 	},
 }
-const SFX_WYBOR_KISHAKA: AudioStream = preload("res://assets/sfx/orc/orc-kishak.wav")
+const SFX_WYBOR_KISHAKA: AudioStream = preload("res://turn-base-game/assets/sfx/orc/orc-kishak.wav")
 const SZANSA_SFX_KISHAKA := 0.2
 const SFX_BRONI: Dictionary = {
-	"arrow": preload("res://assets/sfx/hit/arrow.mp3"),
-	"axe": preload("res://assets/sfx/hit/axe.mp3"),
-	"dagger": preload("res://assets/sfx/hit/dagger.mp3"),
-	"magic": preload("res://assets/sfx/hit/magicDefaultAttack.mp3"),
-	"sword": preload("res://assets/sfx/hit/sword.mp3"),
+	"arrow": preload("res://turn-base-game/assets/sfx/hit/arrow.mp3"),
+	"axe": preload("res://turn-base-game/assets/sfx/hit/axe.mp3"),
+	"dagger": preload("res://turn-base-game/assets/sfx/hit/dagger.mp3"),
+	"magic": preload("res://turn-base-game/assets/sfx/hit/magicDefaultAttack.mp3"),
+	"sword": preload("res://turn-base-game/assets/sfx/hit/sword.mp3"),
 }
 const SFX_EFEKTOW: Dictionary = {
-	"fireball": preload("res://assets/sfx/hit/fireball_spell_cast,_#1-1784878501498.mp3"),
-	"ice": preload("res://assets/sfx/effects/ice.mp3"),
-	"pnacza": preload("res://assets/sfx/effects/vines_erupting_from__#1-1784878658547.mp3"),
-	"shield_push": preload("res://assets/sfx/hit/shield_shove,_heavy__#2-1784879250378.mp3"),
-	"toxic_cloud": preload("res://assets/sfx/effects/toxiccloud.mp3"),
-	"walking": preload("res://assets/sfx/walking/footsteps,_walking_o_#3-1784878329571.mp3"),
+	"fireball": preload("res://turn-base-game/assets/sfx/hit/fireball_spell_cast,_#1-1784878501498.mp3"),
+	"ice": preload("res://turn-base-game/assets/sfx/effects/ice.mp3"),
+	"pnacza": preload("res://turn-base-game/assets/sfx/effects/vines_erupting_from__#1-1784878658547.mp3"),
+	"shield_push": preload("res://turn-base-game/assets/sfx/hit/shield_shove,_heavy__#2-1784879250378.mp3"),
+	"toxic_cloud": preload("res://turn-base-game/assets/sfx/effects/toxiccloud.mp3"),
+	"walking": preload("res://turn-base-game/assets/sfx/walking/footsteps,_walking_o_#3-1784878329571.mp3"),
 }
-const SFX_KLIKNIECIA: AudioStream = preload("res://assets/sfx/ButtonsClick/ui_button_click,_cri_#4-1784879887088.mp3")
+const SFX_KLIKNIECIA: AudioStream = preload("res://turn-base-game/assets/sfx/ButtonsClick/ui_button_click,_cri_#4-1784879887088.mp3")
 const BRON_JEDNOSTEK: Dictionary = {
 	"dwarf_warrior": "axe",
 	"dwarf_guardian": "axe",
@@ -201,35 +201,35 @@ const BRON_JEDNOSTEK: Dictionary = {
 	"orc_berserker": "axe",
 	"orc_shieldman": "axe",
 }
-const TEAM_SETUP_SCENE: PackedScene = preload("res://scenes/team_setup.tscn")
-const TeamSetupScript = preload("res://scripts/team_setup.gd")
-const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
-const MatematykaWalkiScript = preload("res://scripts/matematyka_walki.gd")
-const BattleSetupPositionsScript = preload("res://scripts/battle_setup_positions.gd")
-const TurnQueueCardScript = preload("res://scripts/turn_queue_card.gd")
-const HexUtilsScript = preload("res://scripts/hex_utils.gd")
-const ObstacleGeneratorScript = preload("res://scripts/obstacle_generator.gd")
-const UnitDetailsPopupScript = preload("res://scripts/unit_details_popup.gd")
-const BibliotekaZdarzenMapyScript = preload("res://scripts/biblioteka_zdarzen_mapy.gd")
-const PlanerAIScript = preload("res://scripts/planer_ai.gd")
-const MechanikaUmiejetnosciScript = preload("res://scripts/mechanika_umiejetnosci.gd")
-const TrescPomocyScript = preload("res://scripts/tresc_pomocy.gd")
+const TEAM_SETUP_SCENE: PackedScene = preload("res://turn-base-game/scenes/team_setup.tscn")
+const TeamSetupScript = preload("res://turn-base-game/scripts/team_setup.gd")
+const UnitTypeLibraryScript = preload("res://turn-base-game/scripts/unit_type_library.gd")
+const MatematykaWalkiScript = preload("res://turn-base-game/scripts/matematyka_walki.gd")
+const BattleSetupPositionsScript = preload("res://turn-base-game/scripts/battle_setup_positions.gd")
+const TurnQueueCardScript = preload("res://turn-base-game/scripts/turn_queue_card.gd")
+const HexUtilsScript = preload("res://turn-base-game/scripts/hex_utils.gd")
+const ObstacleGeneratorScript = preload("res://turn-base-game/scripts/obstacle_generator.gd")
+const UnitDetailsPopupScript = preload("res://turn-base-game/scripts/unit_details_popup.gd")
+const BibliotekaZdarzenMapyScript = preload("res://turn-base-game/scripts/biblioteka_zdarzen_mapy.gd")
+const PlanerAIScript = preload("res://turn-base-game/scripts/planer_ai.gd")
+const MechanikaUmiejetnosciScript = preload("res://turn-base-game/scripts/mechanika_umiejetnosci.gd")
+const TrescPomocyScript = preload("res://turn-base-game/scripts/tresc_pomocy.gd")
 
 var OBSTACLE_PORTRAITS: Dictionary = {
-	"woda": preload("res://assets/mapTiles/water.png"),
-	"kamienie": preload("res://assets/mapTiles/rock1.png"),
-	"krzok": load("res://assets/mapTiles/bush.png"),
-	"zimowy_krzak": load("res://assets/mapTiles/zimowykszok.png"),
-	"ruchome_piaski": load("res://assets/mapTiles/quicksand.png"),
-	"wydmy": load("res://assets/mapTiles/dune.png"),
-	"holy_tree": load("res://assets/holy_tree.png"),
-	"cart": load("res://assets/cart.png"),
-	"elf_statue": load("res://assets/elfStatue.png"),
-	"hole": load("res://assets/hole.png"),
-	"hole_left": load("res://assets/newAssets/holeLeft.png"),
-	"hole_right": load("res://assets/newAssets/holeRight.png"),
-	"detonator": load("res://assets/detonator.png"),
-	"magiczna_bariera": load("res://assets/magic_projection.png"),
+	"woda": preload("res://turn-base-game/assets/mapTiles/water.png"),
+	"kamienie": preload("res://turn-base-game/assets/mapTiles/rock1.png"),
+	"krzok": load("res://turn-base-game/assets/mapTiles/bush.png"),
+	"zimowy_krzak": load("res://turn-base-game/assets/mapTiles/zimowykszok.png"),
+	"ruchome_piaski": load("res://turn-base-game/assets/mapTiles/quicksand.png"),
+	"wydmy": load("res://turn-base-game/assets/mapTiles/dune.png"),
+	"holy_tree": load("res://turn-base-game/assets/holy_tree.png"),
+	"cart": load("res://turn-base-game/assets/cart.png"),
+	"elf_statue": load("res://turn-base-game/assets/elfStatue.png"),
+	"hole": load("res://turn-base-game/assets/hole.png"),
+	"hole_left": load("res://turn-base-game/assets/newAssets/holeLeft.png"),
+	"hole_right": load("res://turn-base-game/assets/newAssets/holeRight.png"),
+	"detonator": load("res://turn-base-game/assets/detonator.png"),
+	"magiczna_bariera": load("res://turn-base-game/assets/magic_projection.png"),
 }
 const OBSTACLE_NAMES: Dictionary = {
 	"woda": "Woda",
@@ -5757,7 +5757,7 @@ func _build_settings_menu() -> void:
 
 	var panel := NinePatchRect.new()
 	panel.custom_minimum_size = Vector2(560, 520)
-	panel.texture = preload("res://assets/ui/panel.png")
+	panel.texture = preload("res://turn-base-game/assets/ui/panel.png")
 	panel.patch_margin_left = 8
 	panel.patch_margin_top = 8
 	panel.patch_margin_right = 8
@@ -5883,7 +5883,7 @@ func _build_help_popup() -> void:
 	column.add_child(subtitle)
 
 	var separator := TextureRect.new()
-	separator.texture = preload("res://assets/ui/divider.png")
+	separator.texture = preload("res://turn-base-game/assets/ui/divider.png")
 	separator.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	separator.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	separator.stretch_mode = TextureRect.STRETCH_SCALE
@@ -6288,10 +6288,10 @@ func _validate_static_setup() -> void:
 				assert(skill_library.has(skill_id), "Brak skilla w bibliotece: %s" % skill_id)
 
 	assert(_hex_distance(Vector2i(0, 3), Vector2i(0, 7)) == _hex_distance(Vector2i(0, 7), Vector2i(0, 3)))
-	assert(UnitTypeLibraryScript.get_skill_icon_path("tarcza", 1) == "res://assets/ui/ability_icons/ability_tarcza_2.png")
-	assert(UnitTypeLibraryScript.get_skill_icon_path("odepchniecie_tarcza", 0) == "res://assets/ui/ability_icons/ability_odpchniecietarcza_1.png")
-	assert(UnitTypeLibraryScript.get_general_skill_icon_path("grad_strzal") == "res://assets/ui/general_ability_icons/general_ability_gradstrzal.png")
-	assert(UnitTypeLibraryScript.get_general_skill_icon_path("zelazna_dyscyplina") == "res://assets/ui/general_ability_icons/general_ability_zelaznadyscyplina.png")
+	assert(UnitTypeLibraryScript.get_skill_icon_path("tarcza", 1) == "res://turn-base-game/assets/ui/ability_icons/ability_tarcza_2.png")
+	assert(UnitTypeLibraryScript.get_skill_icon_path("odepchniecie_tarcza", 0) == "res://turn-base-game/assets/ui/ability_icons/ability_odpchniecietarcza_1.png")
+	assert(UnitTypeLibraryScript.get_general_skill_icon_path("grad_strzal") == "res://turn-base-game/assets/ui/general_ability_icons/general_ability_gradstrzal.png")
+	assert(UnitTypeLibraryScript.get_general_skill_icon_path("zelazna_dyscyplina") == "res://turn-base-game/assets/ui/general_ability_icons/general_ability_zelaznadyscyplina.png")
 	var test_line: Array[Vector2i] = _get_hex_line(Vector2i(0, 0), Vector2i(3, 0))
 	assert(test_line.size() == 4 and test_line.front() == Vector2i(0, 0) and test_line.back() == Vector2i(3, 0), "Linia heksow musi zawierac oba konce.")
 	for obstacle in obstacles:

@@ -7,7 +7,7 @@ path="res://.godot/imported/hitSound.mp3-8762c761e48ecd44895389658f5d2d5d.mp3str
 
 [deps]
 
-source_file="res://assets/sfx/hit/hitSound.mp3"
+source_file="res://turn-base-game/assets/sfx/hit/hitSound.mp3"
 dest_files=["res://.godot/imported/hitSound.mp3-8762c761e48ecd44895389658f5d2d5d.mp3str"]
 
 [params]

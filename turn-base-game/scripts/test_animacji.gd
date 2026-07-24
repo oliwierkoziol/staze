@@ -1,7 +1,7 @@
 extends SceneTree
 
 
-const ZasobyAnimacjiWalkiScript = preload("res://scripts/zasoby_animacji_walki.gd")
+const ZasobyAnimacjiWalkiScript = preload("res://turn-base-game/scripts/zasoby_animacji_walki.gd")
 
 var bledy: Array[String] = []
 
@@ -22,7 +22,7 @@ func _uruchom() -> void:
 	for projectile_kind in ["arrows", "spell", "fireball", "dynamite", "throwing_axe"]:
 		_sprawdz(ZasobyAnimacjiWalkiScript.pobierz_pocisk(projectile_kind) != null, "Zasob pocisku istnieje: %s" % projectile_kind)
 	_sprawdz(ZasobyAnimacjiWalkiScript.pobierz_pocisk("nieznany") == null, "Nieznany pocisk nie tworzy zasobu")
-	var gra: Control = load("res://gra.tscn").instantiate()
+	var gra: Control = load("res://turn-base-game/gra.tscn").instantiate()
 	root.add_child(gra)
 	await process_frame
 	gra.board._spawn_projectile(Vector2.ZERO, Vector2(100.0, 0.0), "spell")

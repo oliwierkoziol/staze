@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/general_human_3.png"
+source_file="res://turn-base-game/assets/ui/general_human_3.png"
 dest_files=["res://.godot/imported/general_human_3.png-6d5480d2f5deef87cb7a808352b1fa50.ctex"]
 
 [params]

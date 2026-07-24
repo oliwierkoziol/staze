@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/ability_icons/ability_tarcza_3.png"
+source_file="res://turn-base-game/assets/ui/ability_icons/ability_tarcza_3.png"
 dest_files=["res://.godot/imported/ability_tarcza_3.png-43e5de6efe601c3a42b11f95230ecb85.ctex"]
 
 [params]

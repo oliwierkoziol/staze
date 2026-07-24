@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/characters/humans/king.png"
+source_file="res://turn-base-game/assets/characters/humans/king.png"
 dest_files=["res://.godot/imported/king.png-721e76161d594d0d17f24822b614c9db.ctex"]
 
 [params]

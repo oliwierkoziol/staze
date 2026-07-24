@@ -7,7 +7,7 @@ path="res://.godot/imported/elf-hurt-3.wav-4becd2c2d062dae07eb1a92dd6fdeeab.samp
 
 [deps]
 
-source_file="res://assets/sfx/elf/elf-hurt-3.wav"
+source_file="res://turn-base-game/assets/sfx/elf/elf-hurt-3.wav"
 dest_files=["res://.godot/imported/elf-hurt-3.wav-4becd2c2d062dae07eb1a92dd6fdeeab.sample"]
 
 [params]

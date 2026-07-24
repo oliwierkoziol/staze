@@ -7,7 +7,7 @@ path="res://.godot/imported/ice.mp3-a5c723b30aae059b9aec835472122bee.mp3str"
 
 [deps]
 
-source_file="res://assets/sfx/effects/ice.mp3"
+source_file="res://turn-base-game/assets/sfx/effects/ice.mp3"
 dest_files=["res://.godot/imported/ice.mp3-a5c723b30aae059b9aec835472122bee.mp3str"]
 
 [params]

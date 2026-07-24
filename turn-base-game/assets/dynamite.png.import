@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/dynamite.png"
+source_file="res://turn-base-game/assets/dynamite.png"
 dest_files=["res://.godot/imported/dynamite.png-e22b839ff9dfa4a574a662618a8627b5.ctex"]
 
 [params]

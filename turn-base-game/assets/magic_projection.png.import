@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/magic_projection.png"
+source_file="res://turn-base-game/assets/magic_projection.png"
 dest_files=["res://.godot/imported/magic_projection.png-37ff021045a5e07ac4f7c559da5b3d1d.ctex"]
 
 [params]

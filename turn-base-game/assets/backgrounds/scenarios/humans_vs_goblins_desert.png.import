@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/backgrounds/scenarios/humans_vs_goblins_desert.png"
+source_file="res://turn-base-game/assets/backgrounds/scenarios/humans_vs_goblins_desert.png"
 dest_files=["res://.godot/imported/humans_vs_goblins_desert.png-20ec69e5013026e237f9478579e468d4.ctex"]
 
 [params]

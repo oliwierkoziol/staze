@@ -7,7 +7,7 @@ path="res://.godot/imported/minesGate.mp3-785047c61f873fc85fe55e6fdf7ee1e1.mp3st
 
 [deps]
 
-source_file="res://assets/music/minesGate.mp3"
+source_file="res://turn-base-game/assets/music/minesGate.mp3"
 dest_files=["res://.godot/imported/minesGate.mp3-785047c61f873fc85fe55e6fdf7ee1e1.mp3str"]
 
 [params]

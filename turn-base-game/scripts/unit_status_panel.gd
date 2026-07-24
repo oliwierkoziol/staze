@@ -10,18 +10,18 @@ const EFFECT_ITEM_SEPARATION := 8
 const EFFECT_ROW_SEPARATION := 2
 const EFFECT_ENTRY_SEPARATION := 1
 const EFFECTS_PER_ROW := 6
-const EFFECT_PLACEHOLDER_ICON: Texture2D = preload("res://assets/ui/fire.png")
-const EFFECT_BUFF_FALLBACK_ICON: Texture2D = preload("res://assets/ui/buffs.png")
-const EFFECT_DEBUFF_FALLBACK_ICON: Texture2D = preload("res://assets/ui/debuffs.png")
-const PANEL_TEXTURE: Texture2D = preload("res://assets/ui/panel.png")
-const NINE_PATCH_PANEL_SCRIPT: Script = preload("res://scripts/nine_patch_panel.gd")
+const EFFECT_PLACEHOLDER_ICON: Texture2D = preload("res://turn-base-game/assets/ui/fire.png")
+const EFFECT_BUFF_FALLBACK_ICON: Texture2D = preload("res://turn-base-game/assets/ui/buffs.png")
+const EFFECT_DEBUFF_FALLBACK_ICON: Texture2D = preload("res://turn-base-game/assets/ui/debuffs.png")
+const PANEL_TEXTURE: Texture2D = preload("res://turn-base-game/assets/ui/panel.png")
+const NINE_PATCH_PANEL_SCRIPT: Script = preload("res://turn-base-game/scripts/nine_patch_panel.gd")
 const PANEL_PATCH_MARGIN := 8
 const EFFECT_PANEL_MARGIN_H := 4
 const EFFECT_PANEL_MARGIN_V := 6
 const BUFF_ICON_TINT := Color(0.35, 0.72, 0.32, 1.0)
 const DEFAULT_DEBUFF_ICON_TINT := Color(0.55, 0.32, 0.72, 1.0)
 const EFFECT_HOVER_BRIGHTNESS := 1.18
-const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
+const UnitTypeLibraryScript = preload("res://turn-base-game/scripts/unit_type_library.gd")
 
 var _buffs_list: VBoxContainer
 var _debuffs_list: VBoxContainer

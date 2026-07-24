@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://assets/przeszkody/wydmy_para_ne_sw.png"
+source_file="res://turn-base-game/assets/przeszkody/wydmy_para_ne_sw.png"
 dest_files=["res://.godot/imported/wydmy_para_ne_sw.png-6d6b33b96d9b53a4079e9e0e094d812f.ctex"]
 
 [params]

@@ -20,7 +20,7 @@
 		"move_range": 3,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/ChatGPT Image 6 lip 2026, 12_21_05.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/ChatGPT Image 6 lip 2026, 12_21_05.png",
 		"skill_ids": [
 		  "odepchniecie_tarcza",
 		  "zelazna_kurtyna",
@@ -44,7 +44,7 @@
 		"move_range": 6,
 		"attack_range": 1,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/ChatGPT Image 6 lip 2026, 12_31_33.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/ChatGPT Image 6 lip 2026, 12_31_33.png",
 		"skill_ids": [
 		  "odepchniecie_tarcza",
 		  "szarza",
@@ -68,7 +68,7 @@
 		"move_range": 4,
 		"attack_range": 4,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/ChatGPT Image 6 lip 2026, 12_28_29.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/ChatGPT Image 6 lip 2026, 12_28_29.png",
 		"skill_ids": [
 		  "strzal_w_kolano",
 		  "sokole_oko",
@@ -92,7 +92,7 @@
 		"move_range": 3,
 		"attack_range": 4,
 		"resistance": "Brak",
-		"portrait": "res://assets/characters/humans/replicate-prediction-mehwr8c30nrmw0cz6wfadpar2m-1.png",
+		"portrait": "res://turn-base-game/assets/characters/humans/replicate-prediction-mehwr8c30nrmw0cz6wfadpar2m-1.png",
 		"skill_ids": [
 		  "kula_ognia",
 		  "lodowe_podloze",

@@ -7,7 +7,7 @@ path="res://.godot/imported/orc-death-1.wav-08b4fd587d7d3f9b02d5eb7c634354de.sam
 
 [deps]
 
-source_file="res://assets/sfx/orc/orc-death-1.wav"
+source_file="res://turn-base-game/assets/sfx/orc/orc-death-1.wav"
 dest_files=["res://.godot/imported/orc-death-1.wav-08b4fd587d7d3f9b02d5eb7c634354de.sample"]
 
 [params]
