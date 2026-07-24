@@ -1464,7 +1464,8 @@ func _build_enemy_battle_stacks(raw_army: Array, first_id: int) -> Array[Diction
 func _open_battle_scene() -> bool:
 	battle_error_message = ""
 	const BATTLE_SCENE := "res://gra.tscn"
-	if not FileAccess.file_exists(ProjectSettings.globalize_path(BATTLE_SCENE)):
+	# ResourceLoader.exists działa też w eksporcie (PCK/web); FileAccess + globalize_path — tylko na dysku.
+	if not ResourceLoader.exists(BATTLE_SCENE):
 		battle_error_message = "Nie znaleziono sceny walki gra.tscn (turn-base-game niepodpięty)."
 		push_error("Brak sceny walki: %s" % BATTLE_SCENE)
 		return false
