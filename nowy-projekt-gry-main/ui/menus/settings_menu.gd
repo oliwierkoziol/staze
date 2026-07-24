@@ -6,6 +6,10 @@ var settings_window: PanelContainer
 var settings_seed_value_label: Label
 var settings_copy_button: Button
 var settings_volume_slider: HSlider
+var save_button: Button
+var load_button: Button
+var save_dialog: FileDialog
+var load_dialog: FileDialog
 
 func _init(_hud: Control):
 	hud = _hud
@@ -27,6 +31,8 @@ func setup_settings_window():
 	style_panel.shadow_color = Color(0, 0, 0, 0.6)
 	style_panel.shadow_size = 8
 	settings_window.add_theme_stylebox_override("panel", style_panel)
+	_setup_file_dialogs()
+	SaveManager.external_load_finished.connect(_on_external_load_finished)
 
 	var main_vbox = VBoxContainer.new()
 	main_vbox.add_theme_constant_override("separation", 16)
@@ -127,19 +133,19 @@ func setup_settings_window():
 	)
 	main_vbox.add_child(resume_btn)
 
-	var save_btn = Button.new()
-	save_btn.text = "💾 Zapisz Grę"
-	save_btn.custom_minimum_size = Vector2(0, 42)
-	hud._style_df_button(save_btn)
-	save_btn.pressed.connect(func():
-		SaveManager.save_game(GameSettings.current_seed, hud.world_ref)
-		save_btn.text = "✅ Zapisano!"
-		hud.get_tree().create_timer(1.5).timeout.connect(func():
-			if is_instance_valid(save_btn):
-				save_btn.text = "💾 Zapisz Grę"
-		)
-	)
-	main_vbox.add_child(save_btn)
+	save_button = Button.new()
+	save_button.text = "Zapis"
+	save_button.custom_minimum_size = Vector2(0, 42)
+	hud._style_df_button(save_button)
+	save_button.pressed.connect(_on_save_game_pressed)
+	main_vbox.add_child(save_button)
+
+	load_button = Button.new()
+	load_button.text = "Wczytaj"
+	load_button.custom_minimum_size = Vector2(0, 42)
+	hud._style_df_button(load_button)
+	load_button.pressed.connect(_on_load_game_pressed)
+	main_vbox.add_child(load_button)
 
 	var reset_btn = Button.new()
 	reset_btn.text = "🔄 Zresetuj Grę (Ten sam seed)"
@@ -180,6 +186,74 @@ func setup_settings_window():
 	main_vbox.add_child(quit_btn)
 
 	hud.add_child(settings_window)
+
+func _setup_file_dialogs() -> void:
+	save_dialog = FileDialog.new()
+	save_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	save_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	save_dialog.filters = PackedStringArray(["*.json ; Zapis gry JSON"])
+	save_dialog.file_selected.connect(_on_save_file_selected)
+	hud.add_child(save_dialog)
+	load_dialog = FileDialog.new()
+	load_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	load_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	load_dialog.filters = PackedStringArray(["*.json ; Zapis gry JSON"])
+	load_dialog.file_selected.connect(_on_load_file_selected)
+	hud.add_child(load_dialog)
+
+func _on_save_game_pressed() -> void:
+	if OS.has_feature("web"):
+		_show_file_result(
+			save_button,
+			SaveManager.export_game("", GameSettings.current_seed, hud.world_ref),
+			"Zapis pobrany",
+			"Zapis nieudany",
+			"Zapis"
+		)
+		return
+	save_dialog.current_file = "zapis_gry_%s.json" % GameSettings.current_seed
+	save_dialog.popup_centered(Vector2i(900, 600))
+
+func _on_save_file_selected(path: String) -> void:
+	_show_file_result(
+		save_button,
+		SaveManager.export_game(path, GameSettings.current_seed, hud.world_ref),
+		"Zapisano",
+		"Zapis nieudany",
+		"Zapis"
+	)
+
+func _on_load_game_pressed() -> void:
+	if OS.has_feature("web"):
+		SaveManager.open_web_load_dialog()
+	else:
+		load_dialog.popup_centered(Vector2i(900, 600))
+
+func _on_load_file_selected(path: String) -> void:
+	_finish_external_load(SaveManager.import_game(path), SaveManager.last_error)
+
+func _on_external_load_finished(success: bool, message: String) -> void:
+	_finish_external_load(success, message)
+
+func _finish_external_load(success: bool, message: String) -> void:
+	if success:
+		settings_window.visible = false
+		hud.get_tree().call_deferred("change_scene_to_file", "res://scenes/game_world.tscn")
+		return
+	_show_file_result(
+		load_button,
+		false,
+		"",
+		message if message != "" else "Wczytanie nieudane",
+		"Wczytaj"
+	)
+
+func _show_file_result(button: Button, success: bool, success_text: String, error_text: String, default_text: String) -> void:
+	button.text = success_text if success else error_text
+	hud.get_tree().create_timer(1.8).timeout.connect(func() -> void:
+		if is_instance_valid(button):
+			button.text = default_text
+	)
 
 func _on_volume_changed(value: float) -> void:
 	var master_idx = AudioServer.get_bus_index("Master")
