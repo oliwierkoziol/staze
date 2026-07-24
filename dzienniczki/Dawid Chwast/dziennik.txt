@@ -12,3 +12,7 @@
 16.07.2026 - Stworzenie dodatkowej funkcjonalności budynków kulturowych, generowanie potrzebnych do nich grafik, poprawa błędów
 17.07.2026 - Szukanie błędów w grze i ich poprawa, rebalans początku gry
 20.07.2026 - Szukanie błędów w grze i ich poprawa, rebalans gry
+21.07.2026 - Szukanie błędów w grze i ich poprawa, rebalans gry
+22.07.2026 - Szukanie błędów w grze i ich poprawa, rebalans gry
+23.07.2026 - Szukanie błędów w grze i ich poprawa, rebalans gry, generowanie muzyki
+24.07.2026 - Generowanie muzyki, łączenie projektów.
