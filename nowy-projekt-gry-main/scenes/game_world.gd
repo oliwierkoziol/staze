@@ -1063,6 +1063,8 @@ func _get_building_color(building_name: String) -> Color:
 		_: return Color(0.85, 0.65, 0.15)
 
 func _update_tile_texture_for_building(pos: Vector2, building_name: String) -> void:
+	if building_name.begins_with("Obóz"): return
+	
 	var poly = tile_nodes[pos].get_child(0) as Polygon2D
 	if not poly: return
 	
