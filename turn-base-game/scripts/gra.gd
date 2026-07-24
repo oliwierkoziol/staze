@@ -45,49 +45,117 @@ const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
 const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 const SFX_LUDZKICH_JEDNOSTEK: Dictionary = {
 	"human_knights": {
-		"wybor": preload("res://assets/sfx/human/knight-select.wav"),
-		"obrazenia": preload("res://assets/sfx/human/knight-hurt.wav"),
-		"smierc": preload("res://assets/sfx/human/knight-death.wav"),
+		"wybor": [
+			preload("res://assets/sfx/human/knight-select-1.wav"),
+			preload("res://assets/sfx/human/knight-select-2.wav"),
+		],
+		"obrazenia": [
+			preload("res://assets/sfx/human/knight-hurt-1.wav"),
+			preload("res://assets/sfx/human/knight-hurt-2.wav"),
+		],
+		"smierc": [preload("res://assets/sfx/human/knight-death-1.wav")],
 	},
 	"human_cavalry": {
-		"wybor": preload("res://assets/sfx/human/chariot-select.wav"),
-		"obrazenia": preload("res://assets/sfx/human/chariot-damage.wav"),
-		"smierc": preload("res://assets/sfx/human/chariot-death.wav"),
+		"wybor": [
+			preload("res://assets/sfx/human/chariot-select-1.wav"),
+			preload("res://assets/sfx/human/chariot-select-2.wav"),
+		],
+		"obrazenia": [
+			preload("res://assets/sfx/human/chariot-hurt-1.wav"),
+			preload("res://assets/sfx/human/chariot-hurt-2.wav"),
+		],
+		"smierc": [preload("res://assets/sfx/human/chariot-death-1.wav")],
 	},
 	"human_archers": {
-		"wybor": preload("res://assets/sfx/human/archer-select.wav"),
-		"obrazenia": preload("res://assets/sfx/human/archer-hurt.wav"),
-		"smierc": preload("res://assets/sfx/human/archer-death.wav"),
+		"wybor": [
+			preload("res://assets/sfx/human/archer-select-1.wav"),
+			preload("res://assets/sfx/human/archer-select-2.wav"),
+		],
+		"obrazenia": [
+			preload("res://assets/sfx/human/archer-hurt-1.wav"),
+			preload("res://assets/sfx/human/archer-hurt-2.wav"),
+		],
+		"smierc": [preload("res://assets/sfx/human/archer-death-1.wav")],
 	},
 	"human_mages": {
-		"wybor": preload("res://assets/sfx/human/mage-select.wav"),
-		"obrazenia": preload("res://assets/sfx/human/mage-damage.wav"),
-		"smierc": preload("res://assets/sfx/human/mage-death.wav"),
+		"wybor": [
+			preload("res://assets/sfx/human/mage-select-1.wav"),
+			preload("res://assets/sfx/human/mage-select-2.wav"),
+		],
+		"obrazenia": [
+			preload("res://assets/sfx/human/mage-hurt-1.wav"),
+			preload("res://assets/sfx/human/mage-hurt-2.wav"),
+		],
+		"smierc": [preload("res://assets/sfx/human/mage-death-1.wav")],
 	},
 }
 const SFX_FRAKCJI: Dictionary = {
 	"dwarf": {
-		"wybor": preload("res://assets/sfx/dwarf/dwarf-select.wav"),
-		"obrazenia": preload("res://assets/sfx/dwarf/dwarf-damage.wav"),
-		"smierc": preload("res://assets/sfx/dwarf/dwarf-death.wav"),
+		"wybor": [
+			preload("res://assets/sfx/dwarf/dwarf-select-1.wav"),
+			preload("res://assets/sfx/dwarf/dwarf-select-2.wav"),
+			preload("res://assets/sfx/dwarf/dwarf-select-3.wav"),
+		],
+		"obrazenia": [
+			preload("res://assets/sfx/dwarf/dwarf-hurt-1.wav"),
+			preload("res://assets/sfx/dwarf/dwarf-hurt-2.wav"),
+			preload("res://assets/sfx/dwarf/dwarf-hurt-3.wav"),
+		],
+		"smierc": [
+			preload("res://assets/sfx/dwarf/dwarf-death-1.wav"),
+			preload("res://assets/sfx/dwarf/dwarf-death-2.wav"),
+		],
 	},
 	"elf": {
-		"wybor": preload("res://assets/sfx/elf/elf-select.wav"),
-		"obrazenia": preload("res://assets/sfx/elf/elf-damage.wav"),
-		"smierc": preload("res://assets/sfx/elf/elf-death.wav"),
+		"wybor": [
+			preload("res://assets/sfx/elf/elf-select-1.wav"),
+			preload("res://assets/sfx/elf/elf-select-2.wav"),
+			preload("res://assets/sfx/elf/elf-select-3.wav"),
+		],
+		"obrazenia": [
+			preload("res://assets/sfx/elf/elf-hurt-1.wav"),
+			preload("res://assets/sfx/elf/elf-hurt-2.wav"),
+			preload("res://assets/sfx/elf/elf-hurt-3.wav"),
+		],
+		"smierc": [
+			preload("res://assets/sfx/elf/elf-death-1.wav"),
+			preload("res://assets/sfx/elf/elf-death-2.wav"),
+		],
 	},
 	"goblin": {
-		"wybor": preload("res://assets/sfx/goblin/goblin-select.wav"),
-		"obrazenia": preload("res://assets/sfx/goblin/goblin-damage.wav"),
-		"smierc": preload("res://assets/sfx/goblin/goblin-death.wav"),
+		"wybor": [
+			preload("res://assets/sfx/goblin/goblin-select-1.wav"),
+			preload("res://assets/sfx/goblin/goblin-select-2.wav"),
+			preload("res://assets/sfx/goblin/goblin-select-3.wav"),
+		],
+		"obrazenia": [
+			preload("res://assets/sfx/goblin/goblin-hurt-1.wav"),
+			preload("res://assets/sfx/goblin/goblin-hurt-2.wav"),
+			preload("res://assets/sfx/goblin/goblin-hurt-3.wav"),
+		],
+		"smierc": [
+			preload("res://assets/sfx/goblin/goblin-death-1.wav"),
+			preload("res://assets/sfx/goblin/goblin-death-2.wav"),
+		],
 	},
 	"orc": {
-		"wybor": preload("res://assets/sfx/orc/warrior-select.wav"),
-		"obrazenia": preload("res://assets/sfx/orc/warrior-damage.wav"),
-		"smierc": preload("res://assets/sfx/orc/warrior-death.wav"),
+		"wybor": [
+			preload("res://assets/sfx/orc/orc-select-1.wav"),
+			preload("res://assets/sfx/orc/orc-select-2.wav"),
+			preload("res://assets/sfx/orc/orc-select-3.wav"),
+		],
+		"obrazenia": [
+			preload("res://assets/sfx/orc/orc-hurt-1.wav"),
+			preload("res://assets/sfx/orc/orc-hurt-2.wav"),
+			preload("res://assets/sfx/orc/orc-hurt-3.wav"),
+		],
+		"smierc": [
+			preload("res://assets/sfx/orc/orc-death-1.wav"),
+			preload("res://assets/sfx/orc/orc-death-2.wav"),
+		],
 	},
 }
-const SFX_WYBOR_KISHAKA: AudioStream = preload("res://assets/sfx/orc/warrior-kishak.wav")
+const SFX_WYBOR_KISHAKA: AudioStream = preload("res://assets/sfx/orc/orc-kishak.wav")
 const SZANSA_SFX_KISHAKA := 0.2
 const SFX_BRONI: Dictionary = {
 	"arrow": preload("res://assets/sfx/hit/arrow.mp3"),
@@ -6844,6 +6912,12 @@ func _start_unit_activation(unit: Dictionary) -> void:
 		_enemy_take_turn()
 
 
+func _losuj_sfx_zestawu(zestaw: Array) -> AudioStream:
+	if zestaw.is_empty():
+		return null
+	return zestaw[losowanie_sfx.randi_range(0, zestaw.size() - 1)] as AudioStream
+
+
 func _odtworz_sfx_jednostki(unit: Dictionary, zdarzenie: String) -> void:
 	if setup_mode or str(unit.get("side", "")) != "player":
 		return
@@ -6851,7 +6925,8 @@ func _odtworz_sfx_jednostki(unit: Dictionary, zdarzenie: String) -> void:
 	var zestaw: Dictionary = SFX_LUDZKICH_JEDNOSTEK.get(type_id, {})
 	if zestaw.is_empty():
 		zestaw = SFX_FRAKCJI.get(type_id.get_slice("_", 0), {})
-	var dzwiek: AudioStream = zestaw.get(zdarzenie) as AudioStream
+	var warianty: Array = zestaw.get(zdarzenie, [])
+	var dzwiek: AudioStream = _losuj_sfx_zestawu(warianty)
 	if zdarzenie == "wybor" and type_id.begins_with("orc_") and str(unit.get("side", "")) == "player" and orc_general_is_kishak and general_portrait.texture == ORC_GENERAL_KISHAK_PORTRAIT and losowanie_sfx.randf() < SZANSA_SFX_KISHAKA:
 		dzwiek = SFX_WYBOR_KISHAKA
 	if dzwiek == null:
