@@ -852,15 +852,9 @@ func destroy_camp(pos: Vector2) -> void:
 
 	_update_building_label(pos, "Brak", 1)
 
-	# Przywracamy wygląd zwykłej trawy (bez tekstury/sprite'u budynku obozowiska).
-	if tile_nodes.has(pos):
-		var poly = tile_nodes[pos].get_child(0) as Polygon2D
-		if poly:
-			poly.clip_children = CanvasItem.CLIP_CHILDREN_DISABLED
-			for child in poly.get_children():
-				if child is Sprite2D:
-					child.queue_free()
-			poly.color = _get_tile_color("Trawa")
+	# Przywracamy wygląd zwykłej trawy (wraz ze spritem)
+	_update_tile_texture_for_terrain(pos, "Trawa")
+
 
 func buy_tile(pos: Vector2) -> void:
 	if owned_tiles.has(pos): return
@@ -1069,6 +1063,8 @@ func _get_building_color(building_name: String) -> Color:
 		_: return Color(0.85, 0.65, 0.15)
 
 func _update_tile_texture_for_building(pos: Vector2, building_name: String) -> void:
+	if building_name.begins_with("Obóz"): return
+	
 	var poly = tile_nodes[pos].get_child(0) as Polygon2D
 	if not poly: return
 	
