@@ -13,7 +13,6 @@
 [ext_resource type="Texture2D" uid="uid://q6isvretb06q" path="res://assets/ui/general1.png" id="11_general1"]
 [ext_resource type="Texture2D" uid="uid://cymiq2f6b8k8c" path="res://assets/ui/general_ability1.png" id="12_general_ability1"]
 [ext_resource type="Theme" uid="uid://cna4ihybudjlx" path="res://theme/georgia_theme.tres" id="13_georgia_theme"]
-
 [ext_resource type="Script" uid="uid://cyck0vsv6yf62" path="res://scripts/pause_menu.gd" id="14_pause"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_general_ability"]
@@ -100,16 +99,16 @@ grow_vertical = 2
 theme = ExtResource("13_georgia_theme")
 script = ExtResource("1_a1tqk")
 
-[node name="OdtwarzaczSfxJednostek" type="AudioStreamPlayer" parent="."]
+[node name="OdtwarzaczSfxJednostek" type="AudioStreamPlayer" parent="." unique_id=1899824604]
 volume_db = -10.0
 
-[node name="OdtwarzaczSfxBroni" type="AudioStreamPlayer" parent="."]
+[node name="OdtwarzaczSfxBroni" type="AudioStreamPlayer" parent="." unique_id=1647949154]
 volume_db = -12.0
 
-[node name="OdtwarzaczSfxTrafienia" type="AudioStreamPlayer" parent="."]
+[node name="OdtwarzaczSfxTrafienia" type="AudioStreamPlayer" parent="." unique_id=1975652647]
 volume_db = -12.0
 
-[node name="OdtwarzaczMuzyki" type="AudioStreamPlayer" parent="."]
+[node name="OdtwarzaczMuzyki" type="AudioStreamPlayer" parent="." unique_id=1892129226]
 volume_db = -24.0
 
 [node name="Background" type="TextureRect" parent="." unique_id=214506001]
@@ -763,7 +762,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("10_abilities")
 
-[node name="PauseMenu" type="CanvasLayer" parent="." unique_id=3000000001]
+[node name="PauseMenu" type="CanvasLayer" parent="." unique_id=-1294967295]
 process_mode = 3
 layer = 2
 visible = false
