@@ -473,21 +473,19 @@ func _scale_camp_army(camp_pos: Vector2) -> void:
 	var target_level := clampi(barracks_level, 1, 3)
 	var army: Array = []
 	var generated_power := 0.0
-	# ponytail: zachłanny dobór wystarcza dla 4 typów; zastąpić symulatorem, gdy telemetria pokaże odchylenia >8%.
+	var shuffled_candidates: Array = candidates.duplicate(true)
+	shuffled_candidates.shuffle()
 	while army.size() < 50 and generated_power < target_power:
-		var remaining := target_power - generated_power
-		var best_unit: Dictionary = candidates[0]
-		var best_difference := INF
-		for candidate in candidates:
-			var candidate_power := _campaign_unit_power(candidate, false) * (1.0 + 0.12 * float(target_level - 1))
-			var difference := absf(remaining - candidate_power)
-			if difference < best_difference:
-				best_difference = difference
-				best_unit = candidate
+		var best_unit: Dictionary = shuffled_candidates[army.size() % shuffled_candidates.size()]
 		var enemy_unit: Dictionary = best_unit.duplicate(true)
 		enemy_unit["level"] = target_level
 		army.append(enemy_unit)
 		generated_power += _campaign_unit_power(best_unit, false) * (1.0 + 0.12 * float(target_level - 1))
+	if OS.is_debug_build() and army.size() >= candidates.size():
+		var used_types: Dictionary = {}
+		for unit in army:
+			used_types[str(unit.get("id", ""))] = true
+		assert(used_types.size() == candidates.size(), "Skalowanie obozu musi zachowac wszystkie typy jednostek.")
 	camp_data["army"] = army
 	camp_data["level"] = target_level
 	camp_data["power_target"] = target_power
@@ -1464,17 +1462,45 @@ func _build_enemy_battle_stacks(raw_army: Array, first_id: int) -> Array[Diction
 func _open_battle_scene() -> bool:
 	battle_error_message = ""
 	const BATTLE_SCENE := "res://gra.tscn"
-	# ResourceLoader.exists działa też w eksporcie (PCK/web); FileAccess + globalize_path — tylko na dysku.
 	if not ResourceLoader.exists(BATTLE_SCENE):
-		battle_error_message = "Nie znaleziono sceny walki gra.tscn (turn-base-game niepodpięty)."
-		push_error("Brak sceny walki: %s" % BATTLE_SCENE)
-		return false
+		var combat_project_dir := ProjectSettings.globalize_path("res://../turn-base-game")
+		var editor_pack_path := combat_project_dir.path_join("build/TurnBaseGame.pck")
+		if OS.has_feature("editor"):
+			_build_battle_pack(combat_project_dir, editor_pack_path)
+		var pack_paths: Array[String] = [
+			editor_pack_path,
+			OS.get_executable_path().get_base_dir().path_join("TurnBaseGame.pck"),
+		]
+		for pack_path in pack_paths:
+			if FileAccess.file_exists(pack_path) and ProjectSettings.load_resource_pack(pack_path, false):
+				break
+		if not ResourceLoader.exists(BATTLE_SCENE):
+			battle_error_message = "Nie udało się przygotować modułu walki. Sprawdź konsolę Godota."
+			push_error("Brak sceny walki po załadowaniu paczki TurnBaseGame.pck.")
+			return false
 	var change_error := get_tree().change_scene_to_file(BATTLE_SCENE)
 	if change_error != OK:
 		battle_error_message = "Nie udało się otworzyć sceny walki."
 		push_error("Nie można otworzyć sceny walki: %s" % error_string(change_error))
 		return false
 	return true
+
+func _build_battle_pack(project_dir: String, output_path: String) -> void:
+	DirAccess.make_dir_recursive_absolute(output_path.get_base_dir())
+	var output: Array = []
+	var exit_code := OS.execute(
+		OS.get_executable_path(),
+		PackedStringArray([
+			"--headless",
+			"--path", project_dir,
+			"--export-pack", "Windows Desktop", output_path,
+		]),
+		output,
+		true,
+		false
+	)
+	if exit_code != 0:
+		push_error("Eksport paczki walki nie powiódł się:\n%s" % "\n".join(output))
 
 func _apply_battle_result() -> void:
 	var file := FileAccess.open(battle_result_path, FileAccess.READ)

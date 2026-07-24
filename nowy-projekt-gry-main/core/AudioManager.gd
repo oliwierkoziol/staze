@@ -65,6 +65,7 @@ func stop_steps() -> void: if steps_sound and steps_sound.playing: steps_sound.s
 func play_bg_music() -> void:
 	if not bg_music: return
 	is_bg_playing = true
+	bg_music.stream_paused = false
 	if not bg_music.playing:
 		_play_current_bg_track()
 

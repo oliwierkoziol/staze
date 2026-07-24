@@ -104,7 +104,7 @@ func setup_settings_window():
 	var master_idx = AudioServer.get_bus_index("Master")
 	if master_idx >= 0:
 		var current_db = AudioServer.get_bus_volume_db(master_idx)
-		settings_volume_slider.value = clamp(db_to_linear(current_db) * 100.0, 0, 100)
+		settings_volume_slider.value = 0 if AudioServer.is_bus_mute(master_idx) else clamp(db_to_linear(current_db) * 100.0, 0, 100)
 	else:
 		settings_volume_slider.value = 100
 	settings_volume_slider.custom_minimum_size = Vector2(0, 24)

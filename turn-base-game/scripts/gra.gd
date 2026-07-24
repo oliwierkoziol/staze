@@ -44,8 +44,6 @@ const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
 const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
 const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
 const GLOSNOSC_MUZYKI_DB := -24.0
-const GLOSNOSC_WALKI_DB := -12.0
-const GLOSNOSC_DIALOGOW_DB := -10.0
 const MUZYKA_MENU: AudioStream = preload("res://assets/music/menu.mp3")
 const MUZYKA_DLA_TLA: Dictionary = {
 	"orcs_vs_elves_forest": preload("res://assets/music/holyForest.mp3"),
@@ -378,14 +376,14 @@ var save_setup_dialog: FileDialog
 var load_setup_dialog: FileDialog
 var losowanie_sfx: RandomNumberGenerator = RandomNumberGenerator.new()
 var ustawienia_layer: CanvasLayer
-var glosnosc_muzyki := 100.0
-var glosnosc_walki := 100.0
-var glosnosc_dialogow := 100.0
 var tween_muzyki: Tween
 
 
 func _ready() -> void:
 	losowanie_sfx.randomize()
+	var audio_manager: Node = get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method("pause_bg_music"):
+		audio_manager.call("pause_bg_music")
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_disable_hud_mouse(hud)
 	_build_help_popup()
@@ -730,7 +728,7 @@ func _ustaw_muzyke(muzyka: AudioStream) -> void:
 		muzyka.loop = true
 	if tween_muzyki != null and tween_muzyki.is_valid():
 		tween_muzyki.kill()
-	var docelowa_glosnosc: float = _glosnosc_db(GLOSNOSC_MUZYKI_DB, glosnosc_muzyki)
+	var docelowa_glosnosc: float = GLOSNOSC_MUZYKI_DB
 	odtwarzacz_muzyki.stream = muzyka
 	odtwarzacz_muzyki.volume_db = minf(-40.0, docelowa_glosnosc)
 	odtwarzacz_muzyki.play()
@@ -738,27 +736,20 @@ func _ustaw_muzyke(muzyka: AudioStream) -> void:
 	tween_muzyki.tween_property(odtwarzacz_muzyki, "volume_db", docelowa_glosnosc, 2.0)
 
 
-func _glosnosc_db(bazowa_glosnosc: float, procent: float) -> float:
-	return -80.0 if procent <= 0.0 else bazowa_glosnosc + linear_to_db(clampf(procent, 0.0, 100.0) / 100.0)
+func _pobierz_glosnosc_glowna() -> float:
+	var bus_index: int = AudioServer.get_bus_index("Master")
+	if bus_index < 0 or AudioServer.is_bus_mute(bus_index):
+		return 0.0
+	return clampf(db_to_linear(AudioServer.get_bus_volume_db(bus_index)) * 100.0, 0.0, 100.0)
 
 
-func _on_glosnosc_muzyki_changed(value: float) -> void:
-	glosnosc_muzyki = value
-	if tween_muzyki != null and tween_muzyki.is_valid():
-		tween_muzyki.kill()
-	odtwarzacz_muzyki.volume_db = _glosnosc_db(GLOSNOSC_MUZYKI_DB, value)
-
-
-func _on_glosnosc_walki_changed(value: float) -> void:
-	glosnosc_walki = value
-	var volume_db: float = _glosnosc_db(GLOSNOSC_WALKI_DB, value)
-	odtwarzacz_sfx_broni.volume_db = volume_db
-	odtwarzacz_sfx_interfejsu.volume_db = volume_db
-
-
-func _on_glosnosc_dialogow_changed(value: float) -> void:
-	glosnosc_dialogow = value
-	odtwarzacz_sfx_jednostek.volume_db = _glosnosc_db(GLOSNOSC_DIALOGOW_DB, value)
+func _on_glosnosc_glowna_changed(value: float) -> void:
+	var bus_index: int = AudioServer.get_bus_index("Master")
+	if bus_index < 0:
+		return
+	AudioServer.set_bus_mute(bus_index, value <= 0.0)
+	if value > 0.0:
+		AudioServer.set_bus_volume_db(bus_index, linear_to_db(value / 100.0))
 
 
 func _sync_board_map_theme() -> void:
@@ -5792,9 +5783,7 @@ func _build_settings_menu() -> void:
 	title.add_theme_color_override("font_color", Color(0.86, 0.72, 0.34, 1.0))
 	column.add_child(title)
 
-	_add_volume_slider(column, "MUZYKA", glosnosc_muzyki, _on_glosnosc_muzyki_changed)
-	_add_volume_slider(column, "EFEKTY WALKI", glosnosc_walki, _on_glosnosc_walki_changed)
-	_add_volume_slider(column, "DIALOGI", glosnosc_dialogow, _on_glosnosc_dialogow_changed)
+	_add_volume_slider(column, "GŁOŚNOŚĆ", _pobierz_glosnosc_glowna(), _on_glosnosc_glowna_changed)
 
 	var close_button := Button.new()
 	close_button.text = "POWRÓT"
@@ -5804,7 +5793,7 @@ func _build_settings_menu() -> void:
 	column.add_child(close_button)
 
 	ustawienia_layer.visible = false
-	assert(is_equal_approx(_glosnosc_db(GLOSNOSC_WALKI_DB, 100.0), GLOSNOSC_WALKI_DB) and _glosnosc_db(GLOSNOSC_WALKI_DB, 0.0) == -80.0, "Suwak glosnosci musi zachowac poziom bazowy i umiec wyciszyc dzwiek.")
+	assert(AudioServer.get_bus_index("Master") >= 0, "Wspolna magistrala Master musi byc dostepna.")
 
 
 func _add_volume_slider(parent: VBoxContainer, label_text: String, value: float, callback: Callable) -> void:
@@ -7378,6 +7367,8 @@ func _odtworz_sfx_efektu(rodzaj: String) -> void:
 
 
 func _odtworz_sfx_klikniecia() -> void:
+	if not is_instance_valid(odtwarzacz_sfx_interfejsu) or not odtwarzacz_sfx_interfejsu.is_inside_tree():
+		return
 	odtwarzacz_sfx_interfejsu.stream = SFX_KLIKNIECIA
 	odtwarzacz_sfx_interfejsu.play()
 
