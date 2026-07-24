@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c82tii0rc6qwf"
-path="res://.godot/imported/OrcShieldman.png-fa04795fcf0dfceaa0dc2efebf1d3e14.ctex"
+path="res://.godot/imported/OrcShieldman.png-6655134e9347d524ab83b20aa0ebf2be.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/characters/humans/OrcShieldman.png"
-dest_files=["res://.godot/imported/OrcShieldman.png-fa04795fcf0dfceaa0dc2efebf1d3e14.ctex"]
+dest_files=["res://.godot/imported/OrcShieldman.png-6655134e9347d524ab83b20aa0ebf2be.ctex"]
 
 [params]
 

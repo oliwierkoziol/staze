@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c35c08fdb38hk"
-path="res://.godot/imported/ability_szarza_2.png-51c9ae636086790bb178c4f5b8d243ed.ctex"
+path="res://.godot/imported/ability_szarza_2.png-e111f4a8014034f101e2c5d16f2abdc8.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/ability_icons/ability_szarza_2.png"
-dest_files=["res://.godot/imported/ability_szarza_2.png-51c9ae636086790bb178c4f5b8d243ed.ctex"]
+dest_files=["res://.godot/imported/ability_szarza_2.png-e111f4a8014034f101e2c5d16f2abdc8.ctex"]
 
 [params]
 

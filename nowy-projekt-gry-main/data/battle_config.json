@@ -1,0 +1,62 @@
+{
+  "player_faction": "humans",
+  "enemy_faction": "orcs",
+  "units": [
+	{
+	  "id": 1,
+	  "type_id": "human_knights",
+	  "side": "player",
+	  "grid_x": 2,
+	  "grid_y": 5
+	},
+	{
+	  "id": 2,
+	  "type_id": "human_cavalry",
+	  "side": "player",
+	  "grid_x": 3,
+	  "grid_y": 4
+	},
+	{
+	  "id": 3,
+	  "type_id": "human_archers",
+	  "side": "player",
+	  "grid_x": 3,
+	  "grid_y": 6
+	},
+	{
+	  "id": 4,
+	  "type_id": "human_mages",
+	  "side": "player",
+	  "grid_x": 1,
+	  "grid_y": 5
+	},
+	{
+	  "id": 5,
+	  "type_id": "orc_warrior",
+	  "side": "enemy",
+	  "grid_x": 12,
+	  "grid_y": 5
+	},
+	{
+	  "id": 6,
+	  "type_id": "orc_berserker",
+	  "side": "enemy",
+	  "grid_x": 11,
+	  "grid_y": 4
+	},
+	{
+	  "id": 7,
+	  "type_id": "orc_shaman",
+	  "side": "enemy",
+	  "grid_x": 11,
+	  "grid_y": 6
+	},
+	{
+	  "id": 8,
+	  "type_id": "orc_shieldman",
+	  "side": "enemy",
+	  "grid_x": 13,
+	  "grid_y": 5
+	}
+  ]
+}

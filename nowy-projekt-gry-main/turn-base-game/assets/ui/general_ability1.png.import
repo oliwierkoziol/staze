@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cymiq2f6b8k8c"
-path="res://.godot/imported/general_ability1.png-69b77460af893fb2169cf0787e5bde2f.ctex"
+path="res://.godot/imported/general_ability1.png-e363375235f23868a7c74bd14c47a364.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/general_ability1.png"
-dest_files=["res://.godot/imported/general_ability1.png-69b77460af893fb2169cf0787e5bde2f.ctex"]
+dest_files=["res://.godot/imported/general_ability1.png-e363375235f23868a7c74bd14c47a364.ctex"]
 
 [params]
 

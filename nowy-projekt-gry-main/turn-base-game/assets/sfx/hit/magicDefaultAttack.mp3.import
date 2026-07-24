@@ -3,12 +3,12 @@
 importer="mp3"
 type="AudioStreamMP3"
 uid="uid://bqsn0itr3pe4g"
-path="res://.godot/imported/magicDefaultAttack.mp3-8a6477dc9498ff1001e84ec796137d04.mp3str"
+path="res://.godot/imported/magicDefaultAttack.mp3-8c2b83e081a17df899bf49f5b385bb4f.mp3str"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/hit/magicDefaultAttack.mp3"
-dest_files=["res://.godot/imported/magicDefaultAttack.mp3-8a6477dc9498ff1001e84ec796137d04.mp3str"]
+dest_files=["res://.godot/imported/magicDefaultAttack.mp3-8c2b83e081a17df899bf49f5b385bb4f.mp3str"]
 
 [params]
 

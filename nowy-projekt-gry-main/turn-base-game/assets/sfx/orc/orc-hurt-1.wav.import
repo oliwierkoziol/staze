@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://bggkhtdgiue2j"
-path="res://.godot/imported/orc-hurt-1.wav-42e67711891fe3136a17949684912266.sample"
+path="res://.godot/imported/orc-hurt-1.wav-d8d194512fbda7f893340b3ee60c3005.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/orc/orc-hurt-1.wav"
-dest_files=["res://.godot/imported/orc-hurt-1.wav-42e67711891fe3136a17949684912266.sample"]
+dest_files=["res://.godot/imported/orc-hurt-1.wav-d8d194512fbda7f893340b3ee60c3005.sample"]
 
 [params]
 

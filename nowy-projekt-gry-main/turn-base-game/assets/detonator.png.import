@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bnyns4u22bpco"
-path="res://.godot/imported/detonator.png-59cd892bb70f01b9761f5b20a0e1072c.ctex"
+path="res://.godot/imported/detonator.png-b8d75c7c2287f83914700e9922045235.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/detonator.png"
-dest_files=["res://.godot/imported/detonator.png-59cd892bb70f01b9761f5b20a0e1072c.ctex"]
+dest_files=["res://.godot/imported/detonator.png-b8d75c7c2287f83914700e9922045235.ctex"]
 
 [params]
 

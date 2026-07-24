@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c1fvrnrp8d3jk"
-path="res://.godot/imported/orcWarrior_resized.png-152b4e5cccc20ee3f94f18bb929f5548.ctex"
+path="res://.godot/imported/orcWarrior_resized.png-8413da7346be646f1db041e008ed511b.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/characters/humans/orcWarrior_resized.png"
-dest_files=["res://.godot/imported/orcWarrior_resized.png-152b4e5cccc20ee3f94f18bb929f5548.ctex"]
+dest_files=["res://.godot/imported/orcWarrior_resized.png-8413da7346be646f1db041e008ed511b.ctex"]
 
 [params]
 

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://x1mjy5bjarx8"
-path="res://.godot/imported/general_ability_toksycznydeszcz.png-192da92183d2dee19242f8ec045bca59.ctex"
+path="res://.godot/imported/general_ability_toksycznydeszcz.png-95aef55859088a5ffbb7e8ea8f084a49.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/general_ability_icons/general_ability_toksycznydeszcz.png"
-dest_files=["res://.godot/imported/general_ability_toksycznydeszcz.png-192da92183d2dee19242f8ec045bca59.ctex"]
+dest_files=["res://.godot/imported/general_ability_toksycznydeszcz.png-95aef55859088a5ffbb7e8ea8f084a49.ctex"]
 
 [params]
 

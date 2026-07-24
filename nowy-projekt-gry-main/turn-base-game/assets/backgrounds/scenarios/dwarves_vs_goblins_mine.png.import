@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dygn2rste4l7l"
-path="res://.godot/imported/dwarves_vs_goblins_mine.png-6284769e594ed7461b8fc53c34f1209f.ctex"
+path="res://.godot/imported/dwarves_vs_goblins_mine.png-5a114d6e0ccda171ce09394923135c39.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/backgrounds/scenarios/dwarves_vs_goblins_mine.png"
-dest_files=["res://.godot/imported/dwarves_vs_goblins_mine.png-6284769e594ed7461b8fc53c34f1209f.ctex"]
+dest_files=["res://.godot/imported/dwarves_vs_goblins_mine.png-5a114d6e0ccda171ce09394923135c39.ctex"]
 
 [params]
 

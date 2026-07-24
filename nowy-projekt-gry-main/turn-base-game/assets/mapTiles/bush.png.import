@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bsukkmaqo0c5x"
-path="res://.godot/imported/bush.png-51dabe27d27c15cebbcb7ed315754cc2.ctex"
+path="res://.godot/imported/bush.png-a243ea18449ef1ac88d0030d5e9390f4.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/mapTiles/bush.png"
-dest_files=["res://.godot/imported/bush.png-51dabe27d27c15cebbcb7ed315754cc2.ctex"]
+dest_files=["res://.godot/imported/bush.png-a243ea18449ef1ac88d0030d5e9390f4.ctex"]
 
 [params]
 

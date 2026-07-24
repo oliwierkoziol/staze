@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bthyaky2xiu3o"
-path="res://.godot/imported/ability_strzalawkolano_1.png-8e84a32cccf0fdbe411515a263f56e1a.ctex"
+path="res://.godot/imported/ability_strzalawkolano_1.png-44bd7e3aca07ecf22ff3ba2fda589439.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/ability_icons/ability_strzalawkolano_1.png"
-dest_files=["res://.godot/imported/ability_strzalawkolano_1.png-8e84a32cccf0fdbe411515a263f56e1a.ctex"]
+dest_files=["res://.godot/imported/ability_strzalawkolano_1.png-44bd7e3aca07ecf22ff3ba2fda589439.ctex"]
 
 [params]
 

@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://cgedany5gc7ui"
-path="res://.godot/imported/archer-select-1.wav-86a18295eb68191a025c8119fc1e7864.sample"
+path="res://.godot/imported/archer-select-1.wav-23deea3662067770b71457493c765344.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/human/archer-select-1.wav"
-dest_files=["res://.godot/imported/archer-select-1.wav-86a18295eb68191a025c8119fc1e7864.sample"]
+dest_files=["res://.godot/imported/archer-select-1.wav-23deea3662067770b71457493c765344.sample"]
 
 [params]
 

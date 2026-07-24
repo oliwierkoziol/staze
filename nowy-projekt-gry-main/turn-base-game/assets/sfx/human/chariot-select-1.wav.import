@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://drcvt15dkrkd0"
-path="res://.godot/imported/chariot-select-1.wav-51103e06e8c358f3ffeb25c268b8463c.sample"
+path="res://.godot/imported/chariot-select-1.wav-64a4ebcba8137bb9c5de8af85fbe21a0.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/human/chariot-select-1.wav"
-dest_files=["res://.godot/imported/chariot-select-1.wav-51103e06e8c358f3ffeb25c268b8463c.sample"]
+dest_files=["res://.godot/imported/chariot-select-1.wav-64a4ebcba8137bb9c5de8af85fbe21a0.sample"]
 
 [params]
 

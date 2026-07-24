@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cjrbyw11qpxgn"
-path="res://.godot/imported/statueBottom.png-95ad66ac79c3af06a5391b6b06060d34.ctex"
+path="res://.godot/imported/statueBottom.png-b594a4b02d0c629c7f4e7ef7e6ff7e7d.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/newAssets/statueBottom.png"
-dest_files=["res://.godot/imported/statueBottom.png-95ad66ac79c3af06a5391b6b06060d34.ctex"]
+dest_files=["res://.godot/imported/statueBottom.png-b594a4b02d0c629c7f4e7ef7e6ff7e7d.ctex"]
 
 [params]
 

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dpc086rvp2bfc"
-path="res://.godot/imported/orcBerserker.png-0cf170f67cccdf7e17e7c05f2f010f64.ctex"
+path="res://.godot/imported/orcBerserker.png-1739c2f58f7c24f6066ea95ed3a4c530.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/characters/humans/orcBerserker.png"
-dest_files=["res://.godot/imported/orcBerserker.png-0cf170f67cccdf7e17e7c05f2f010f64.ctex"]
+dest_files=["res://.godot/imported/orcBerserker.png-1739c2f58f7c24f6066ea95ed3a4c530.ctex"]
 
 [params]
 

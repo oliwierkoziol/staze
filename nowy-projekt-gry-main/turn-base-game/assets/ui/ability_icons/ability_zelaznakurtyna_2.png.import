@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dgim8d52epnnu"
-path="res://.godot/imported/ability_zelaznakurtyna_2.png-4e2950ebfe798891e52cdf92fc529bec.ctex"
+path="res://.godot/imported/ability_zelaznakurtyna_2.png-40c7a56ad997ecf8c0d0fa839ef94c49.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/ability_icons/ability_zelaznakurtyna_2.png"
-dest_files=["res://.godot/imported/ability_zelaznakurtyna_2.png-4e2950ebfe798891e52cdf92fc529bec.ctex"]
+dest_files=["res://.godot/imported/ability_zelaznakurtyna_2.png-40c7a56ad997ecf8c0d0fa839ef94c49.ctex"]
 
 [params]
 

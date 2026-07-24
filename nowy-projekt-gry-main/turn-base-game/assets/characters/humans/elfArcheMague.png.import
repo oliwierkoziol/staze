@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ctvugklh534m3"
-path="res://.godot/imported/elfArcheMague.png-28e074b6c45b3e64f3b68e99d02f8cb3.ctex"
+path="res://.godot/imported/elfArcheMague.png-13a259ee7bd2ce5499e7cd930aec6d24.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/characters/humans/elfArcheMague.png"
-dest_files=["res://.godot/imported/elfArcheMague.png-28e074b6c45b3e64f3b68e99d02f8cb3.ctex"]
+dest_files=["res://.godot/imported/elfArcheMague.png-13a259ee7bd2ce5499e7cd930aec6d24.ctex"]
 
 [params]
 

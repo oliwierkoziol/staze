@@ -3,12 +3,12 @@
 importer="mp3"
 type="AudioStreamMP3"
 uid="uid://bmau1k3jv5l04"
-path="res://.godot/imported/arrow.mp3-1cbb7b5826b618d8bd9a82fa75646fa8.mp3str"
+path="res://.godot/imported/arrow.mp3-62372a80164f761624bea8ba82b3ab8d.mp3str"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/hit/arrow.mp3"
-dest_files=["res://.godot/imported/arrow.mp3-1cbb7b5826b618d8bd9a82fa75646fa8.mp3str"]
+dest_files=["res://.godot/imported/arrow.mp3-62372a80164f761624bea8ba82b3ab8d.mp3str"]
 
 [params]
 

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://oxug5y1d4e7s"
-path="res://.godot/imported/exhaust.png-196c61fb7600afd4b3ec9d3883c04c68.ctex"
+path="res://.godot/imported/exhaust.png-373627a20db20c2f5e9c0346f67ad273.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/exhaust.png"
-dest_files=["res://.godot/imported/exhaust.png-196c61fb7600afd4b3ec9d3883c04c68.ctex"]
+dest_files=["res://.godot/imported/exhaust.png-373627a20db20c2f5e9c0346f67ad273.ctex"]
 
 [params]
 

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ukc5jkg2voqc"
-path="res://.godot/imported/general_ability_tempolowow.png-d58c45b2eff70f39660ad2d627456138.ctex"
+path="res://.godot/imported/general_ability_tempolowow.png-ceafbe1e789793fd93bb0325b85039c3.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/general_ability_icons/general_ability_tempolowow.png"
-dest_files=["res://.godot/imported/general_ability_tempolowow.png-d58c45b2eff70f39660ad2d627456138.ctex"]
+dest_files=["res://.godot/imported/general_ability_tempolowow.png-ceafbe1e789793fd93bb0325b85039c3.ctex"]
 
 [params]
 

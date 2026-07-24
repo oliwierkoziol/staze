@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://lpxb2qhl6cs5"
-path="res://.godot/imported/ability_pulapkananiedzwiedzie_1.png-2146a106294ca8120a4b3ac86089d406.ctex"
+path="res://.godot/imported/ability_pulapkananiedzwiedzie_1.png-90a5dc81a756bdec233b10cd919a7fe0.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/ability_icons/ability_pulapkananiedzwiedzie_1.png"
-dest_files=["res://.godot/imported/ability_pulapkananiedzwiedzie_1.png-2146a106294ca8120a4b3ac86089d406.ctex"]
+dest_files=["res://.godot/imported/ability_pulapkananiedzwiedzie_1.png-90a5dc81a756bdec233b10cd919a7fe0.ctex"]
 
 [params]
 

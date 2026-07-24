@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bhatt12lhf7ik"
-path="res://.godot/imported/divider.png-89465bed9aae46d609175abd88241b53.ctex"
+path="res://.godot/imported/divider.png-f3aa3268c3b2edecd597b9936e6a6f6a.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/divider.png"
-dest_files=["res://.godot/imported/divider.png-89465bed9aae46d609175abd88241b53.ctex"]
+dest_files=["res://.godot/imported/divider.png-f3aa3268c3b2edecd597b9936e6a6f6a.ctex"]
 
 [params]
 

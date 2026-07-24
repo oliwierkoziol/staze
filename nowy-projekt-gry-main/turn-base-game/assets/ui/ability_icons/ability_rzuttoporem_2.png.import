@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bwj6emj2nff5a"
-path="res://.godot/imported/ability_rzuttoporem_2.png-517530581b80d97ec7626a8449d6f50e.ctex"
+path="res://.godot/imported/ability_rzuttoporem_2.png-d6ee1e70dd51e55efc6f878238a8b9c4.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/ability_icons/ability_rzuttoporem_2.png"
-dest_files=["res://.godot/imported/ability_rzuttoporem_2.png-517530581b80d97ec7626a8449d6f50e.ctex"]
+dest_files=["res://.godot/imported/ability_rzuttoporem_2.png-d6ee1e70dd51e55efc6f878238a8b9c4.ctex"]
 
 [params]
 

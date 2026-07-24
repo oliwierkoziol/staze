@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bdmllu5xgpyf1"
-path="res://.godot/imported/wydma_wschod_poludniowy_wschod_60.png-79329ce8fabeaa1d6fd92c6d3299b5ab.ctex"
+path="res://.godot/imported/wydma_wschod_poludniowy_wschod_60.png-e22c49047725ebb0a3c5b7e364d0c7d3.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/przeszkody/wydma_wschod_poludniowy_wschod_60.png"
-dest_files=["res://.godot/imported/wydma_wschod_poludniowy_wschod_60.png-79329ce8fabeaa1d6fd92c6d3299b5ab.ctex"]
+dest_files=["res://.godot/imported/wydma_wschod_poludniowy_wschod_60.png-e22c49047725ebb0a3c5b7e364d0c7d3.ctex"]
 
 [params]
 

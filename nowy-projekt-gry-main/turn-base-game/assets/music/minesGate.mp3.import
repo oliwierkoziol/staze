@@ -3,12 +3,12 @@
 importer="mp3"
 type="AudioStreamMP3"
 uid="uid://bmm2h7nmrv2q5"
-path="res://.godot/imported/minesGate.mp3-785047c61f873fc85fe55e6fdf7ee1e1.mp3str"
+path="res://.godot/imported/minesGate.mp3-69a539d0c85f00960b43623d84a10b64.mp3str"
 
 [deps]
 
 source_file="res://turn-base-game/assets/music/minesGate.mp3"
-dest_files=["res://.godot/imported/minesGate.mp3-785047c61f873fc85fe55e6fdf7ee1e1.mp3str"]
+dest_files=["res://.godot/imported/minesGate.mp3-69a539d0c85f00960b43623d84a10b64.mp3str"]
 
 [params]
 

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://xait3macvyr6"
-path="res://.godot/imported/dwarfWarrior.png-c0eea22275d8884298de018e232c2a30.ctex"
+path="res://.godot/imported/dwarfWarrior.png-99fc7fea5da78a902b30743555517d81.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/characters/humans/dwarfWarrior.png"
-dest_files=["res://.godot/imported/dwarfWarrior.png-c0eea22275d8884298de018e232c2a30.ctex"]
+dest_files=["res://.godot/imported/dwarfWarrior.png-99fc7fea5da78a902b30743555517d81.ctex"]
 
 [params]
 

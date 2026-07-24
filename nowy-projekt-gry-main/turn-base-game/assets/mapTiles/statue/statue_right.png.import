@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bgbdosptylci0"
-path="res://.godot/imported/statue_right.png-487ef3f0358ea1898afb7d228df25f49.ctex"
+path="res://.godot/imported/statue_right.png-edae7c1f68f03f6c94617822452f3fa0.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/mapTiles/statue/statue_right.png"
-dest_files=["res://.godot/imported/statue_right.png-487ef3f0358ea1898afb7d228df25f49.ctex"]
+dest_files=["res://.godot/imported/statue_right.png-edae7c1f68f03f6c94617822452f3fa0.ctex"]
 
 [params]
 

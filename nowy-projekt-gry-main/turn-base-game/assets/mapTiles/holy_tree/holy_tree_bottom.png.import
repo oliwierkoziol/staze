@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://br3raqlsdy4q2"
-path="res://.godot/imported/holy_tree_bottom.png-e530dc9116ec377f78b91f7ff3ac5157.ctex"
+path="res://.godot/imported/holy_tree_bottom.png-1119ffc89264b297a0c073f2014193b7.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/mapTiles/holy_tree/holy_tree_bottom.png"
-dest_files=["res://.godot/imported/holy_tree_bottom.png-e530dc9116ec377f78b91f7ff3ac5157.ctex"]
+dest_files=["res://.godot/imported/holy_tree_bottom.png-1119ffc89264b297a0c073f2014193b7.ctex"]
 
 [params]
 

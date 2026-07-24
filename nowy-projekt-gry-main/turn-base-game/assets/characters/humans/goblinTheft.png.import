@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cygcd70mt6rvy"
-path="res://.godot/imported/goblinTheft.png-c19b8f070afdafc80b621789f2e56916.ctex"
+path="res://.godot/imported/goblinTheft.png-0fb895eaa80fad0fdaa3fab62733bed0.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/characters/humans/goblinTheft.png"
-dest_files=["res://.godot/imported/goblinTheft.png-c19b8f070afdafc80b621789f2e56916.ctex"]
+dest_files=["res://.godot/imported/goblinTheft.png-0fb895eaa80fad0fdaa3fab62733bed0.ctex"]
 
 [params]
 

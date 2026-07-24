@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://caxdn86440er8"
-path="res://.godot/imported/damage.png-ff1788a83081e68fea86e317c4afb48f.ctex"
+path="res://.godot/imported/damage.png-ad0552e4c4752ca2d47bd0df1acf1cba.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/damage.png"
-dest_files=["res://.godot/imported/damage.png-ff1788a83081e68fea86e317c4afb48f.ctex"]
+dest_files=["res://.godot/imported/damage.png-ad0552e4c4752ca2d47bd0df1acf1cba.ctex"]
 
 [params]
 

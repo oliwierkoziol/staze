@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://w2hltpdcij87"
-path="res://.godot/imported/toxic_cloud.png-e9614ee20606d46626289efe69639f9a.ctex"
+path="res://.godot/imported/toxic_cloud.png-53c51fd816b52855c09bec199ac0d386.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/toxic_cloud.png"
-dest_files=["res://.godot/imported/toxic_cloud.png-e9614ee20606d46626289efe69639f9a.ctex"]
+dest_files=["res://.godot/imported/toxic_cloud.png-53c51fd816b52855c09bec199ac0d386.ctex"]
 
 [params]
 

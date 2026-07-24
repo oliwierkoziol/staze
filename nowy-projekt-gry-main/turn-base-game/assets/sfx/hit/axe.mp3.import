@@ -3,12 +3,12 @@
 importer="mp3"
 type="AudioStreamMP3"
 uid="uid://dvcclxcp6kcsc"
-path="res://.godot/imported/axe.mp3-4d17cd381364147df718d859b5cccc9c.mp3str"
+path="res://.godot/imported/axe.mp3-c4cc68d786363afaabeaaf1b54f15df3.mp3str"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/hit/axe.mp3"
-dest_files=["res://.godot/imported/axe.mp3-4d17cd381364147df718d859b5cccc9c.mp3str"]
+dest_files=["res://.godot/imported/axe.mp3-c4cc68d786363afaabeaaf1b54f15df3.mp3str"]
 
 [params]
 

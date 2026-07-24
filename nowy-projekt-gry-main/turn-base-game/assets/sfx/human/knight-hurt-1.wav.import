@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://cnmqwfxdc0wmx"
-path="res://.godot/imported/knight-hurt-1.wav-c9d37ee251d6a4453cd885da65d2f353.sample"
+path="res://.godot/imported/knight-hurt-1.wav-86dc6bbdadffbf771acd0af5529ac886.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/human/knight-hurt-1.wav"
-dest_files=["res://.godot/imported/knight-hurt-1.wav-c9d37ee251d6a4453cd885da65d2f353.sample"]
+dest_files=["res://.godot/imported/knight-hurt-1.wav-86dc6bbdadffbf771acd0af5529ac886.sample"]
 
 [params]
 

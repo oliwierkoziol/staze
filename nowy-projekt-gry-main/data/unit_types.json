@@ -1,0 +1,33 @@
+{
+  "skill_library_path": "res://turn-base-game/data/skills/skills.json",
+  "factions_path": "res://turn-base-game/data/factions/",
+  "factions": [
+	"humans.json",
+	"orcs.json",
+	"goblins.json",
+	"elves.json",
+	"dwarves.json",
+    "testowa.json"
+  ],
+  "special_units": [
+	{
+	  "id": "human_king",
+	  "name": "Król Aldren",
+	  "short_name": "KRL",
+	  "role": "Boss",
+	  "hp": 350,
+	  "atk": 16,
+	  "dmg_min": 25,
+	  "dmg_max": 35,
+	  "def": 15,
+	  "speed": 3,
+	  "action_points": 2,
+	  "count": 1,
+	  "move_range": 4,
+	  "attack_range": 1,
+	  "resistance": "Brak",
+	  "portrait": "res://turn-base-game/assets/characters/humans/king.png",
+	  "skill_ids": ["odepchniecie_tarcza", "zelazna_kurtyna", "tarcza"]
+	}
+  ]
+}

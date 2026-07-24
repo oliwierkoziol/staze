@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dj24jyhecvdaf"
-path="res://.godot/imported/ability_przebijajacystrzal_3.png-bb5fec144632f92939ed73196dbc7315.ctex"
+path="res://.godot/imported/ability_przebijajacystrzal_3.png-0c94d263790648017dde55475d0edb22.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/ability_icons/ability_przebijajacystrzal_3.png"
-dest_files=["res://.godot/imported/ability_przebijajacystrzal_3.png-bb5fec144632f92939ed73196dbc7315.ctex"]
+dest_files=["res://.godot/imported/ability_przebijajacystrzal_3.png-0c94d263790648017dde55475d0edb22.ctex"]
 
 [params]
 

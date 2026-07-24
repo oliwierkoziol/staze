@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://bksbloy6gpe4h"
-path="res://.godot/imported/dwarf-select-3.wav-264daec6c52f237b68b5641d350bad5f.sample"
+path="res://.godot/imported/dwarf-select-3.wav-0d35711183f7ce8b28ffff710cd25826.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/dwarf/dwarf-select-3.wav"
-dest_files=["res://.godot/imported/dwarf-select-3.wav-264daec6c52f237b68b5641d350bad5f.sample"]
+dest_files=["res://.godot/imported/dwarf-select-3.wav-0d35711183f7ce8b28ffff710cd25826.sample"]
 
 [params]
 

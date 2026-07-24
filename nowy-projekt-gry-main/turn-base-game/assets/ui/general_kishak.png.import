@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dr1an03q325o8"
-path="res://.godot/imported/general_kishak.png-1b3d49f8fab92ffa7df0ac4cf3432dae.ctex"
+path="res://.godot/imported/general_kishak.png-4cb9bb15ece5e92653e3646e83815769.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/general_kishak.png"
-dest_files=["res://.godot/imported/general_kishak.png-1b3d49f8fab92ffa7df0ac4cf3432dae.ctex"]
+dest_files=["res://.godot/imported/general_kishak.png-4cb9bb15ece5e92653e3646e83815769.ctex"]
 
 [params]
 

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bh2m5hsb7eqfb"
-path="res://.godot/imported/elfSwordsman.png-f0cc0eb8c2a83f9183e0f9823c60e434.ctex"
+path="res://.godot/imported/elfSwordsman.png-0c51e6ecfa28c84591b70327fab31f3c.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/characters/humans/elfSwordsman.png"
-dest_files=["res://.godot/imported/elfSwordsman.png-f0cc0eb8c2a83f9183e0f9823c60e434.ctex"]
+dest_files=["res://.godot/imported/elfSwordsman.png-0c51e6ecfa28c84591b70327fab31f3c.ctex"]
 
 [params]
 

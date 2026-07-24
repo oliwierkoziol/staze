@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://dxoaea0rnciwj"
-path="res://.godot/imported/elf-death-2.wav-5480e92da5c1d400ea108f0e820bbe74.sample"
+path="res://.godot/imported/elf-death-2.wav-57f141c7924feef09f5519287838bfcc.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/elf/elf-death-2.wav"
-dest_files=["res://.godot/imported/elf-death-2.wav-5480e92da5c1d400ea108f0e820bbe74.sample"]
+dest_files=["res://.godot/imported/elf-death-2.wav-57f141c7924feef09f5519287838bfcc.sample"]
 
 [params]
 

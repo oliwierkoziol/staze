@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://b1m1a7dyg8xr6"
-path="res://.godot/imported/mage-death-1.wav-e35340781eaff0496dab020b65cde602.sample"
+path="res://.godot/imported/mage-death-1.wav-44b7d501646def8caa9aa20e1fcf2aa8.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/human/mage-death-1.wav"
-dest_files=["res://.godot/imported/mage-death-1.wav-e35340781eaff0496dab020b65cde602.sample"]
+dest_files=["res://.godot/imported/mage-death-1.wav-44b7d501646def8caa9aa20e1fcf2aa8.sample"]
 
 [params]
 

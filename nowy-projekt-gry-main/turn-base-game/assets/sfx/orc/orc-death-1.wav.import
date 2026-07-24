@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://1i66rns4evv4"
-path="res://.godot/imported/orc-death-1.wav-08b4fd587d7d3f9b02d5eb7c634354de.sample"
+path="res://.godot/imported/orc-death-1.wav-261e5a038a1605ac9888ba9817fa36e5.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/orc/orc-death-1.wav"
-dest_files=["res://.godot/imported/orc-death-1.wav-08b4fd587d7d3f9b02d5eb7c634354de.sample"]
+dest_files=["res://.godot/imported/orc-death-1.wav-261e5a038a1605ac9888ba9817fa36e5.sample"]
 
 [params]
 

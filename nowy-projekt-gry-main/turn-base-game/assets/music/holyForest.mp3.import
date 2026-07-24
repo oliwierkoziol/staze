@@ -3,12 +3,12 @@
 importer="mp3"
 type="AudioStreamMP3"
 uid="uid://reb7ney7t42b"
-path="res://.godot/imported/holyForest.mp3-869f9d8dce8280732abd4e04c907e84c.mp3str"
+path="res://.godot/imported/holyForest.mp3-6dce934e145102da42c5ade94e1b0ace.mp3str"
 
 [deps]
 
 source_file="res://turn-base-game/assets/music/holyForest.mp3"
-dest_files=["res://.godot/imported/holyForest.mp3-869f9d8dce8280732abd4e04c907e84c.mp3str"]
+dest_files=["res://.godot/imported/holyForest.mp3-6dce934e145102da42c5ade94e1b0ace.mp3str"]
 
 [params]
 

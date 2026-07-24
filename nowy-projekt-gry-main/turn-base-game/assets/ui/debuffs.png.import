@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dcanmpfyeu8tr"
-path="res://.godot/imported/debuffs.png-d1b1ad39f668a5c0b898724882f17ce0.ctex"
+path="res://.godot/imported/debuffs.png-21e619bbd89f47a151305d7ea126c30a.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/debuffs.png"
-dest_files=["res://.godot/imported/debuffs.png-d1b1ad39f668a5c0b898724882f17ce0.ctex"]
+dest_files=["res://.godot/imported/debuffs.png-21e619bbd89f47a151305d7ea126c30a.ctex"]
 
 [params]
 

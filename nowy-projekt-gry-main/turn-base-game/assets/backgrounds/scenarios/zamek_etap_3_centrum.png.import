@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bivk311x84gt2"
-path="res://.godot/imported/zamek_etap_3_centrum.png-78ed4094207e95e6a2249cfa4809ee08.ctex"
+path="res://.godot/imported/zamek_etap_3_centrum.png-5844c9c65fd2ff3c62e0d912c0a3884b.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/backgrounds/scenarios/zamek_etap_3_centrum.png"
-dest_files=["res://.godot/imported/zamek_etap_3_centrum.png-78ed4094207e95e6a2249cfa4809ee08.ctex"]
+dest_files=["res://.godot/imported/zamek_etap_3_centrum.png-5844c9c65fd2ff3c62e0d912c0a3884b.ctex"]
 
 [params]
 

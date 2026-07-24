@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bsjdvkwa5765j"
-path="res://.godot/imported/meditation.png-c9b1552f3ab651fd57ce640ae761683b.ctex"
+path="res://.godot/imported/meditation.png-474c1bc5972ce6118de8282296c38b43.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/meditation.png"
-dest_files=["res://.godot/imported/meditation.png-c9b1552f3ab651fd57ce640ae761683b.ctex"]
+dest_files=["res://.godot/imported/meditation.png-474c1bc5972ce6118de8282296c38b43.ctex"]
 
 [params]
 

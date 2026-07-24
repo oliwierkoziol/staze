@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://ce4j66bsyrcew"
-path="res://.godot/imported/goblin-hurt-2.wav-ba28d928ba5f6e6c9821401f0829c2d7.sample"
+path="res://.godot/imported/goblin-hurt-2.wav-57b12d67afad62e7e18c7320dd7ad050.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/goblin/goblin-hurt-2.wav"
-dest_files=["res://.godot/imported/goblin-hurt-2.wav-ba28d928ba5f6e6c9821401f0829c2d7.sample"]
+dest_files=["res://.godot/imported/goblin-hurt-2.wav-57b12d67afad62e7e18c7320dd7ad050.sample"]
 
 [params]
 

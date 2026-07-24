@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://ctvgsrboapcwb"
-path="res://.godot/imported/elf-select-1.wav-6879ac78a5585f1beabd2382fbb76f16.sample"
+path="res://.godot/imported/elf-select-1.wav-0c8bb4ffa7bc73e6a93399470638c4a4.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/elf/elf-select-1.wav"
-dest_files=["res://.godot/imported/elf-select-1.wav-6879ac78a5585f1beabd2382fbb76f16.sample"]
+dest_files=["res://.godot/imported/elf-select-1.wav-0c8bb4ffa7bc73e6a93399470638c4a4.sample"]
 
 [params]
 

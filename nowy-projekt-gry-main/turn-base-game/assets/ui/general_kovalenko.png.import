@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bcjkwy2la78hg"
-path="res://.godot/imported/general_kovalenko.png-725358ff74dfc8bd3db7bb62be97d2be.ctex"
+path="res://.godot/imported/general_kovalenko.png-caf777b501205ca26e4812ffab1374c0.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/general_kovalenko.png"
-dest_files=["res://.godot/imported/general_kovalenko.png-725358ff74dfc8bd3db7bb62be97d2be.ctex"]
+dest_files=["res://.godot/imported/general_kovalenko.png-caf777b501205ca26e4812ffab1374c0.ctex"]
 
 [params]
 

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dx78yulj0k2ca"
-path="res://.godot/imported/general_orc_1.png-e5e9b824db60b4393199a2a21ed44350.ctex"
+path="res://.godot/imported/general_orc_1.png-0a4dc0845258172987c6b87bb3e0093f.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/general_orc_1.png"
-dest_files=["res://.godot/imported/general_orc_1.png-e5e9b824db60b4393199a2a21ed44350.ctex"]
+dest_files=["res://.godot/imported/general_orc_1.png-0a4dc0845258172987c6b87bb3e0093f.ctex"]
 
 [params]
 

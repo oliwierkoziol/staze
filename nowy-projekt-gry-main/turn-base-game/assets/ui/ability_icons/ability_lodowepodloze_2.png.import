@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bm1r086tulptp"
-path="res://.godot/imported/ability_lodowepodloze_2.png-76b9ee1e05d05a9892fd571c7ed636bc.ctex"
+path="res://.godot/imported/ability_lodowepodloze_2.png-7cbfc54f7483c83cedf4b21efb7d4c1e.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/ability_icons/ability_lodowepodloze_2.png"
-dest_files=["res://.godot/imported/ability_lodowepodloze_2.png-76b9ee1e05d05a9892fd571c7ed636bc.ctex"]
+dest_files=["res://.godot/imported/ability_lodowepodloze_2.png-7cbfc54f7483c83cedf4b21efb7d4c1e.ctex"]
 
 [params]
 

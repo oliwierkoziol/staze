@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bey7h0qlqvaiw"
-path="res://.godot/imported/general_ability_gradstrzal.png-6beb8c65ad8c538c5e5e89d054190d6f.ctex"
+path="res://.godot/imported/general_ability_gradstrzal.png-f7231abf9ed043f5b6ea6166f5fbfb9d.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/general_ability_icons/general_ability_gradstrzal.png"
-dest_files=["res://.godot/imported/general_ability_gradstrzal.png-6beb8c65ad8c538c5e5e89d054190d6f.ctex"]
+dest_files=["res://.godot/imported/general_ability_gradstrzal.png-f7231abf9ed043f5b6ea6166f5fbfb9d.ctex"]
 
 [params]
 

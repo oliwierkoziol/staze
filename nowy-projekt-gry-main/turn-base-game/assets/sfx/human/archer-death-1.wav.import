@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://k5oyjlwv3lju"
-path="res://.godot/imported/archer-death-1.wav-ae841fb5f12da7c6d50cc37f7b5599a5.sample"
+path="res://.godot/imported/archer-death-1.wav-9737952cfa61065e7b1c6ab57a012408.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/human/archer-death-1.wav"
-dest_files=["res://.godot/imported/archer-death-1.wav-ae841fb5f12da7c6d50cc37f7b5599a5.sample"]
+dest_files=["res://.godot/imported/archer-death-1.wav-9737952cfa61065e7b1c6ab57a012408.sample"]
 
 [params]
 

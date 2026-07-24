@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://bymnigetk661g"
-path="res://.godot/imported/elf-hurt-1.wav-ade07f1e457d2489f87f81248d5c872d.sample"
+path="res://.godot/imported/elf-hurt-1.wav-75df9f3e34fdc40acdc9de7730545a12.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/elf/elf-hurt-1.wav"
-dest_files=["res://.godot/imported/elf-hurt-1.wav-ade07f1e457d2489f87f81248d5c872d.sample"]
+dest_files=["res://.godot/imported/elf-hurt-1.wav-75df9f3e34fdc40acdc9de7730545a12.sample"]
 
 [params]
 

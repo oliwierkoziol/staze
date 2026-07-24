@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://csyrdpm58f0so"
-path="res://.godot/imported/orcShaman.png-fa3c1039ac749381d1dd99d9bd6a7c6b.ctex"
+path="res://.godot/imported/orcShaman.png-3956aa9fbd7edfb475f0b417189299ba.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/characters/humans/orcShaman.png"
-dest_files=["res://.godot/imported/orcShaman.png-fa3c1039ac749381d1dd99d9bd6a7c6b.ctex"]
+dest_files=["res://.godot/imported/orcShaman.png-3956aa9fbd7edfb475f0b417189299ba.ctex"]
 
 [params]
 

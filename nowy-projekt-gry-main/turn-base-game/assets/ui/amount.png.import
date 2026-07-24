@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://r0evuhkoapau"
-path="res://.godot/imported/amount.png-4e1c981d415f08536dd910f9c4a3ccbf.ctex"
+path="res://.godot/imported/amount.png-e5fc3fceeaa710aefa071dd697ffe588.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/amount.png"
-dest_files=["res://.godot/imported/amount.png-4e1c981d415f08536dd910f9c4a3ccbf.ctex"]
+dest_files=["res://.godot/imported/amount.png-e5fc3fceeaa710aefa071dd697ffe588.ctex"]
 
 [params]
 

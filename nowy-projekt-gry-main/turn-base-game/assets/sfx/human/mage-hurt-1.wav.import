@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://cl6hxyc6g8kty"
-path="res://.godot/imported/mage-hurt-1.wav-0a12004e60cc6d87fc13148ed8db19ad.sample"
+path="res://.godot/imported/mage-hurt-1.wav-adc8ca9ab36d7f955a7a7e31a067da32.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/human/mage-hurt-1.wav"
-dest_files=["res://.godot/imported/mage-hurt-1.wav-0a12004e60cc6d87fc13148ed8db19ad.sample"]
+dest_files=["res://.godot/imported/mage-hurt-1.wav-adc8ca9ab36d7f955a7a7e31a067da32.sample"]
 
 [params]
 

@@ -1,0 +1,128 @@
+{
+  "faction_skills": {
+	"elves": ["grad_strzal", "tempo_lowow"],
+	"humans": ["przegrupowanie", "zelazna_dyscyplina"],
+	"dwarves": ["runiczna_opieka", "kamienny_szyk"],
+	"orcs": ["wyzwanie_wodza", "krwawy_szal"],
+	"goblins": ["toksyczny_deszcz", "ryzykowny_plan"]
+  },
+  "general_skills": {
+	"grad_strzal": {
+	  "name": "Grad Strzał",
+	  "description": "Zalej strzałami 19 heksów. Wrogowie tracą 4 PŻ za każdą żywą jednostkę oddziału.",
+	  "effect_type": "area",
+	  "radius": 2,
+	  "damage_per_unit": 4,
+	  "animation": "arrows"
+	},
+	"tempo_lowow": {
+	  "name": "Tempo Łowów",
+	  "description": "Wszyscy sojusznicy: +3 Speed i +1 ruchu przez 2 tury.",
+	  "effect_type": "army_buff",
+	  "effect": {
+		"category": "buff",
+		"remaining_turns": 2,
+		"stat_changes": [
+		  {"stat": "speed", "mode": "flat", "value": 3},
+		  {"stat": "move_range", "mode": "flat", "value": 1}
+		]
+	  }
+	},
+	"przegrupowanie": {
+	  "name": "Przegrupowanie",
+	  "description": "Aktywny sojuszniczy oddział otrzymuje +1 punkt akcji.",
+	  "effect_type": "ally",
+	  "active_only": true,
+	  "action_points": 1
+	},
+	"zelazna_dyscyplina": {
+	  "name": "Równy Krok",
+	  "description": "Wszyscy sojusznicy otrzymują +3 DMG i +1 ruchu przez 2 tury.",
+	  "effect_type": "army_buff",
+	  "effect": {
+		"category": "buff",
+		"remaining_turns": 2,
+		"stat_changes": [
+		  {"stat": "dmg", "mode": "flat", "value": 3},
+		  {"stat": "move_range", "mode": "flat", "value": 1}
+		]
+	  }
+	},
+	"runiczna_opieka": {
+	  "name": "Runiczna Opieka",
+	  "description": "Wybierz sojuszniczy oddział: następny atak wymierzony w niego nie zada obrażeń.",
+	  "effect_type": "ally",
+	  "target_effect": {
+		"category": "buff",
+		"remaining_turns": 2,
+		"block_next_attack": true,
+		"stat_changes": []
+	  }
+	},
+	"kamienny_szyk": {
+	  "name": "Runiczny Rezonans",
+	  "description": "Wybierz sojuszniczy oddział: +3 DMG i -2 Speed przez 2 tury.",
+	  "effect_type": "ally",
+	  "target_effect": {
+		"category": "buff",
+		"remaining_turns": 2,
+		"stat_changes": [
+		  {"stat": "dmg", "mode": "flat", "value": 3},
+		  {"stat": "speed", "mode": "flat", "value": -2}
+		]
+	  }
+	},
+	"wyzwanie_wodza": {
+	  "name": "Wyzwanie Wodza",
+	  "description": "Wybierz wrogi oddział: otrzymuje -4 Speed i -2 ruchu przez 1 turę.",
+	  "effect_type": "enemy",
+	  "target_effect": {
+		"category": "debuff",
+		"remaining_turns": 1,
+		"stat_changes": [
+		  {"stat": "speed", "mode": "flat", "value": -4},
+		  {"stat": "move_range", "mode": "flat", "value": -2}
+		]
+	  }
+	},
+	"krwawy_szal": {
+	  "name": "Krwawy Szał",
+	  "description": "Wszyscy sojusznicy: +3 DMG i -2 Speed przez 2 tury.",
+	  "effect_type": "army_buff",
+	  "effect": {
+		"category": "buff",
+		"remaining_turns": 2,
+		"stat_changes": [
+		  {"stat": "dmg", "mode": "flat", "value": 3},
+		  {"stat": "speed", "mode": "flat", "value": -2}
+		]
+	  }
+	},
+	"toksyczny_deszcz": {
+	  "name": "Toksyczny Deszcz",
+	  "description": "Skaź 7 heksów. Wrogowie tracą 1 PŻ na jednostkę i zostają zatruci na 2 tury.",
+	  "effect_type": "area",
+	  "radius": 1,
+	  "damage_per_unit": 1,
+	  "target_effect": {
+		"category": "debuff",
+		"remaining_turns": 2,
+		"tick_damage": 1,
+		"stat_changes": []
+	  }
+	},
+	"ryzykowny_plan": {
+	  "name": "Plan Ucieczki",
+	  "description": "Wszyscy sojusznicy otrzymują +2 ruchu i +2 Speed przez 2 tury.",
+	  "effect_type": "army_buff",
+	  "effect": {
+		"category": "buff",
+		"remaining_turns": 2,
+		"stat_changes": [
+		  {"stat": "move_range", "mode": "flat", "value": 2},
+		  {"stat": "speed", "mode": "flat", "value": 2}
+		]
+	  }
+	}
+  }
+}

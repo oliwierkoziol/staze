@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dlgp3gyhlhl8d"
-path="res://.godot/imported/buffs.png-885ccc5132ebf6c095061fb83e484fee.ctex"
+path="res://.godot/imported/buffs.png-b6e666ab40a69ec0635ca4749dd39215.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/buffs.png"
-dest_files=["res://.godot/imported/buffs.png-885ccc5132ebf6c095061fb83e484fee.ctex"]
+dest_files=["res://.godot/imported/buffs.png-b6e666ab40a69ec0635ca4749dd39215.ctex"]
 
 [params]
 

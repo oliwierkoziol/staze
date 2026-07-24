@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://difqemal21jbc"
-path="res://.godot/imported/goblin-death-2.wav-0f70b4b05256ad2b88e41ff238a0e621.sample"
+path="res://.godot/imported/goblin-death-2.wav-b2c2c3b2d70c86e51a0185f4da54b2fd.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/goblin/goblin-death-2.wav"
-dest_files=["res://.godot/imported/goblin-death-2.wav-0f70b4b05256ad2b88e41ff238a0e621.sample"]
+dest_files=["res://.godot/imported/goblin-death-2.wav-b2c2c3b2d70c86e51a0185f4da54b2fd.sample"]
 
 [params]
 

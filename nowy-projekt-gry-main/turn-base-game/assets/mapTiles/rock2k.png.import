@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c5k6jeuesdrlb"
-path="res://.godot/imported/rock2k.png-2a449e1ceed9c760a4226d435bc4e892.ctex"
+path="res://.godot/imported/rock2k.png-b13c6b3cfdbb138428817153578fd5b9.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/mapTiles/rock2k.png"
-dest_files=["res://.godot/imported/rock2k.png-2a449e1ceed9c760a4226d435bc4e892.ctex"]
+dest_files=["res://.godot/imported/rock2k.png-b13c6b3cfdbb138428817153578fd5b9.ctex"]
 
 [params]
 

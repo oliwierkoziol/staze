@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://7dtimvnijyth"
-path="res://.godot/imported/general_goblin_2.png-3db8f14df3ddabe2e4a340b0cbda6fef.ctex"
+path="res://.godot/imported/general_goblin_2.png-74bc02e79743eb84011cd94a1fe9ea3f.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/general_goblin_2.png"
-dest_files=["res://.godot/imported/general_goblin_2.png-3db8f14df3ddabe2e4a340b0cbda6fef.ctex"]
+dest_files=["res://.godot/imported/general_goblin_2.png-74bc02e79743eb84011cd94a1fe9ea3f.ctex"]
 
 [params]
 

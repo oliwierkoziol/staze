@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b5uiofb1fyq0"
-path="res://.godot/imported/elfArcher.png-0a06464502cae60cfb780b7671d6ca27.ctex"
+path="res://.godot/imported/elfArcher.png-b9ea19e7ff43ac4e7655aa8ed4071930.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/characters/humans/elfArcher.png"
-dest_files=["res://.godot/imported/elfArcher.png-0a06464502cae60cfb780b7671d6ca27.ctex"]
+dest_files=["res://.godot/imported/elfArcher.png-b9ea19e7ff43ac4e7655aa8ed4071930.ctex"]
 
 [params]
 

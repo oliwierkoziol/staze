@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dgnwhjoxluppy"
-path="res://.godot/imported/dwarfDigger.png-4afce1f0beff82c440701e8e9127e6e1.ctex"
+path="res://.godot/imported/dwarfDigger.png-030d8b29f3f87e3c1e119edc965f6b03.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/characters/humans/dwarfDigger.png"
-dest_files=["res://.godot/imported/dwarfDigger.png-4afce1f0beff82c440701e8e9127e6e1.ctex"]
+dest_files=["res://.godot/imported/dwarfDigger.png-030d8b29f3f87e3c1e119edc965f6b03.ctex"]
 
 [params]
 

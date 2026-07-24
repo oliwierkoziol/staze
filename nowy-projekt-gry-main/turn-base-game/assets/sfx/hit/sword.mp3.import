@@ -3,12 +3,12 @@
 importer="mp3"
 type="AudioStreamMP3"
 uid="uid://bha71hpwmpnct"
-path="res://.godot/imported/sword.mp3-f8de062a31d98202944e80c5bdaa46f1.mp3str"
+path="res://.godot/imported/sword.mp3-d60c0a4df12a15a2a2125cfd6a0aee44.mp3str"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/hit/sword.mp3"
-dest_files=["res://.godot/imported/sword.mp3-f8de062a31d98202944e80c5bdaa46f1.mp3str"]
+dest_files=["res://.godot/imported/sword.mp3-d60c0a4df12a15a2a2125cfd6a0aee44.mp3str"]
 
 [params]
 

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://chbk1x6m3upad"
-path="res://.godot/imported/holeRight.png-437ac84256fa2a4fa135b318133e58ca.ctex"
+path="res://.godot/imported/holeRight.png-6eb8d2691a0825f9ef0528c134e4eca1.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/newAssets/holeRight.png"
-dest_files=["res://.godot/imported/holeRight.png-437ac84256fa2a4fa135b318133e58ca.ctex"]
+dest_files=["res://.godot/imported/holeRight.png-6eb8d2691a0825f9ef0528c134e4eca1.ctex"]
 
 [params]
 

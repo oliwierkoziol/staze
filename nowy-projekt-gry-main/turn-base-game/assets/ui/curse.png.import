@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b78mfnxha8ffi"
-path="res://.godot/imported/curse.png-7916bfd898fbf38343b0c5cda9d8594f.ctex"
+path="res://.godot/imported/curse.png-64ea022811b3d89f826eae03df61fe7b.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/curse.png"
-dest_files=["res://.godot/imported/curse.png-7916bfd898fbf38343b0c5cda9d8594f.ctex"]
+dest_files=["res://.godot/imported/curse.png-64ea022811b3d89f826eae03df61fe7b.ctex"]
 
 [params]
 

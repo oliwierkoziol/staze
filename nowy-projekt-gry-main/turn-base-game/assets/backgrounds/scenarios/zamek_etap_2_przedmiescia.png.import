@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bte76gfmaid7i"
-path="res://.godot/imported/zamek_etap_2_przedmiescia.png-ecaa8d25199d7fc2b0050f0b623db038.ctex"
+path="res://.godot/imported/zamek_etap_2_przedmiescia.png-9d79212733140075d96dbc96941c1e58.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/backgrounds/scenarios/zamek_etap_2_przedmiescia.png"
-dest_files=["res://.godot/imported/zamek_etap_2_przedmiescia.png-ecaa8d25199d7fc2b0050f0b623db038.ctex"]
+dest_files=["res://.godot/imported/zamek_etap_2_przedmiescia.png-9d79212733140075d96dbc96941c1e58.ctex"]
 
 [params]
 

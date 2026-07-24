@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://cpj7y85i84p00"
-path="res://.godot/imported/goblin-select-3.wav-1c44813adb326c76b128fcf42c9cd8db.sample"
+path="res://.godot/imported/goblin-select-3.wav-e3aa22af6ee57764a8b225e5525be95c.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/goblin/goblin-select-3.wav"
-dest_files=["res://.godot/imported/goblin-select-3.wav-1c44813adb326c76b128fcf42c9cd8db.sample"]
+dest_files=["res://.godot/imported/goblin-select-3.wav-e3aa22af6ee57764a8b225e5525be95c.sample"]
 
 [params]
 

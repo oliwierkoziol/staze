@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c7gs1hbgubjpe"
-path="res://.godot/imported/ice_hex_2.png-5883b3ee927d579b8ae0759e12a12b16.ctex"
+path="res://.godot/imported/ice_hex_2.png-b3a7fca481a77ff87fafa8cfda8073b5.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/mapTiles/ice_hex_2.png"
-dest_files=["res://.godot/imported/ice_hex_2.png-5883b3ee927d579b8ae0759e12a12b16.ctex"]
+dest_files=["res://.godot/imported/ice_hex_2.png-b3a7fca481a77ff87fafa8cfda8073b5.ctex"]
 
 [params]
 

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://d13nw1u6j6fim"
-path="res://.godot/imported/holeLeft.png-8794ba27936eb88220a1277c9a2d1285.ctex"
+path="res://.godot/imported/holeLeft.png-b65a3b93dd2fc5adbedc21523f4ed38a.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/newAssets/holeLeft.png"
-dest_files=["res://.godot/imported/holeLeft.png-8794ba27936eb88220a1277c9a2d1285.ctex"]
+dest_files=["res://.godot/imported/holeLeft.png-b65a3b93dd2fc5adbedc21523f4ed38a.ctex"]
 
 [params]
 

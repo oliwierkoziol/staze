@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dcvf832ffwq1v"
-path="res://.godot/imported/ability_zatrutysztylet_1.png-a9b164f6f4c3fb25b7f5388b217423fa.ctex"
+path="res://.godot/imported/ability_zatrutysztylet_1.png-a57357fe3e00c27b8f6393be35cae3f6.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/ability_icons/ability_zatrutysztylet_1.png"
-dest_files=["res://.godot/imported/ability_zatrutysztylet_1.png-a9b164f6f4c3fb25b7f5388b217423fa.ctex"]
+dest_files=["res://.godot/imported/ability_zatrutysztylet_1.png-a57357fe3e00c27b8f6393be35cae3f6.ctex"]
 
 [params]
 

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c5b1ua2vxtgim"
-path="res://.godot/imported/ability_rzutklatwa_2.png-4d7f539aa5d521b8a2d7687b8a1dd788.ctex"
+path="res://.godot/imported/ability_rzutklatwa_2.png-f05e26277aa10433f9d8a7c12f100fc7.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/ability_icons/ability_rzutklatwa_2.png"
-dest_files=["res://.godot/imported/ability_rzutklatwa_2.png-4d7f539aa5d521b8a2d7687b8a1dd788.ctex"]
+dest_files=["res://.godot/imported/ability_rzutklatwa_2.png-f05e26277aa10433f9d8a7c12f100fc7.ctex"]
 
 [params]
 

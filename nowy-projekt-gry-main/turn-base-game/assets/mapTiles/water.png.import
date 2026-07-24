@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cx68yrt7j3l3o"
-path="res://.godot/imported/water.png-177eed30726c101802944e5061759c7f.ctex"
+path="res://.godot/imported/water.png-0cf93b6678227c70dbe5cc5861edd27a.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/mapTiles/water.png"
-dest_files=["res://.godot/imported/water.png-177eed30726c101802944e5061759c7f.ctex"]
+dest_files=["res://.godot/imported/water.png-0cf93b6678227c70dbe5cc5861edd27a.ctex"]
 
 [params]
 

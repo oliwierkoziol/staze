@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dt53knmru654j"
-path="res://.godot/imported/cold.png-17a2923efd8c9beba1f53d473af743c2.ctex"
+path="res://.godot/imported/cold.png-83c4ea2069301c23a447ba4ba247385d.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/cold.png"
-dest_files=["res://.godot/imported/cold.png-17a2923efd8c9beba1f53d473af743c2.ctex"]
+dest_files=["res://.godot/imported/cold.png-83c4ea2069301c23a447ba4ba247385d.ctex"]
 
 [params]
 

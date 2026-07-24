@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b2ruiuwg7gjfi"
-path="res://.godot/imported/resistances.png-af4724a28fc72ae14139a0ccdab5980b.ctex"
+path="res://.godot/imported/resistances.png-632932d56e568645d7bee73af2a1693c.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/resistances.png"
-dest_files=["res://.godot/imported/resistances.png-af4724a28fc72ae14139a0ccdab5980b.ctex"]
+dest_files=["res://.godot/imported/resistances.png-632932d56e568645d7bee73af2a1693c.ctex"]
 
 [params]
 

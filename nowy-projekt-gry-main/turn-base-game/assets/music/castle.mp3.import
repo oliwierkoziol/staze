@@ -3,12 +3,12 @@
 importer="mp3"
 type="AudioStreamMP3"
 uid="uid://bd8sqm6yo38pw"
-path="res://.godot/imported/castle.mp3-864f2e1d45f4bcb3e441237b278759cf.mp3str"
+path="res://.godot/imported/castle.mp3-fd7e394340e9e79e808941ec57b8f87a.mp3str"
 
 [deps]
 
 source_file="res://turn-base-game/assets/music/castle.mp3"
-dest_files=["res://.godot/imported/castle.mp3-864f2e1d45f4bcb3e441237b278759cf.mp3str"]
+dest_files=["res://.godot/imported/castle.mp3-fd7e394340e9e79e808941ec57b8f87a.mp3str"]
 
 [params]
 

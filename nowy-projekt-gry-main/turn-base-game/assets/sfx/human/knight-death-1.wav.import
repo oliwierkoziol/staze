@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://c04i080xm351q"
-path="res://.godot/imported/knight-death-1.wav-4c9a5431e8355f2635a9db80e25ddb47.sample"
+path="res://.godot/imported/knight-death-1.wav-076794fda79cbdc79934ab0ecbd0bf78.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/human/knight-death-1.wav"
-dest_files=["res://.godot/imported/knight-death-1.wav-4c9a5431e8355f2635a9db80e25ddb47.sample"]
+dest_files=["res://.godot/imported/knight-death-1.wav-076794fda79cbdc79934ab0ecbd0bf78.sample"]
 
 [params]
 

@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://cqeera1jh1mfy"
-path="res://.godot/imported/mage-select-1.wav-739fccff7cc145f19a01d5dc862290ca.sample"
+path="res://.godot/imported/mage-select-1.wav-629b76154decadbdf77c9e13168c19e0.sample"
 
 [deps]
 
 source_file="res://turn-base-game/assets/sfx/human/mage-select-1.wav"
-dest_files=["res://.godot/imported/mage-select-1.wav-739fccff7cc145f19a01d5dc862290ca.sample"]
+dest_files=["res://.godot/imported/mage-select-1.wav-629b76154decadbdf77c9e13168c19e0.sample"]
 
 [params]
 

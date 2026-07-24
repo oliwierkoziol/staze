@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cqcokfclq055i"
-path="res://.godot/imported/trap-removebg-preview.png-0ea8141ddb29e632fb30cfb3f7e54379.ctex"
+path="res://.godot/imported/trap-removebg-preview.png-51a8145e93a4b57c60956cea7ab76fc7.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/trap-removebg-preview.png"
-dest_files=["res://.godot/imported/trap-removebg-preview.png-0ea8141ddb29e632fb30cfb3f7e54379.ctex"]
+dest_files=["res://.godot/imported/trap-removebg-preview.png-51a8145e93a4b57c60956cea7ab76fc7.ctex"]
 
 [params]
 

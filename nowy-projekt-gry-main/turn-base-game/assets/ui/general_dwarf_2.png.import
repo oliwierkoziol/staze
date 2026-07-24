@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://8riywhdya6tp"
-path="res://.godot/imported/general_dwarf_2.png-da84a70298a317b36ab9d6fa795c9be7.ctex"
+path="res://.godot/imported/general_dwarf_2.png-24e9cb1167a7c128414d46b29cedf004.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/general_dwarf_2.png"
-dest_files=["res://.godot/imported/general_dwarf_2.png-da84a70298a317b36ab9d6fa795c9be7.ctex"]
+dest_files=["res://.godot/imported/general_dwarf_2.png-24e9cb1167a7c128414d46b29cedf004.ctex"]
 
 [params]
 

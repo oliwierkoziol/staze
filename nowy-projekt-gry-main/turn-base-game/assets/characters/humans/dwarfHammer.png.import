@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bm72afpcuph6l"
-path="res://.godot/imported/dwarfHammer.png-da3e5e7c835d8e4971142c7651605188.ctex"
+path="res://.godot/imported/dwarfHammer.png-597011c4e5875734d0667be2b979bcd1.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/characters/humans/dwarfHammer.png"
-dest_files=["res://.godot/imported/dwarfHammer.png-da3e5e7c835d8e4971142c7651605188.ctex"]
+dest_files=["res://.godot/imported/dwarfHammer.png-597011c4e5875734d0667be2b979bcd1.ctex"]
 
 [params]
 

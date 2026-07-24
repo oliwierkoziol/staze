@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b4ghf4py4frsj"
-path="res://.godot/imported/general_ability_krwawyszal.png-627ce6cdbe19f3ea9880749487d49aab.ctex"
+path="res://.godot/imported/general_ability_krwawyszal.png-eb26fbb62f50b7685d6b6cbd1d723a9a.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/general_ability_icons/general_ability_krwawyszal.png"
-dest_files=["res://.godot/imported/general_ability_krwawyszal.png-627ce6cdbe19f3ea9880749487d49aab.ctex"]
+dest_files=["res://.godot/imported/general_ability_krwawyszal.png-eb26fbb62f50b7685d6b6cbd1d723a9a.ctex"]
 
 [params]
 

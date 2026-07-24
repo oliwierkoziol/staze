@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://biatbrocw4dvy"
-path="res://.godot/imported/poison.png-f122540c636f76ddb4ccc918ea1e6b07.ctex"
+path="res://.godot/imported/poison.png-9e53de41ba160e0ad91d4c9c2750c710.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://turn-base-game/assets/ui/poison.png"
-dest_files=["res://.godot/imported/poison.png-f122540c636f76ddb4ccc918ea1e6b07.ctex"]
+dest_files=["res://.godot/imported/poison.png-9e53de41ba160e0ad91d4c9c2750c710.ctex"]
 
 [params]
 
