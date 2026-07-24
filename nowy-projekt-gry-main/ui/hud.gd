@@ -213,7 +213,8 @@ func _ready():
 
 	tutorial_menu = TutorialMenu.new(self)
 	tutorial_menu.setup_tutorial_window()
-	tutorial_menu.show_tutorial_menu()
+	if not SaveManager.has_save(GameSettings.current_seed):
+		tutorial_menu.show_tutorial_menu()
 
 	admin_menu = AdminMenu.new(self)
 	admin_menu.setup_admin_window()
