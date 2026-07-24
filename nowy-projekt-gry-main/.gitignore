@@ -6,7 +6,6 @@
 # Moduł walki podpięty z ../turn-base-game (junction / hardlink) — źródło prawdy tam.
 /scripts/
 /theme/
-/gra.tscn
 /assets/backgrounds/
 /assets/mapTiles/
 /assets/music/

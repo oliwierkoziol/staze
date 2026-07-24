@@ -11,6 +11,8 @@ extends Control
 # nie trzeba było edytować sceny. Zastępuje dawny "hack" polegający na tym,
 # że seed == 0 automatycznie włączał panel administratora w HUD-zie.
 var debug_checkbox: CheckButton
+var load_button: Button
+var load_dialog: FileDialog
 
 # --- PALETA "DARK FANTASY" (spójna z hud.gd) -------------------------------
 const DF_BG: Color = Color(0.055, 0.05, 0.06, 1.0)
@@ -24,6 +26,7 @@ func _ready() -> void:
 	_apply_emoji_fallback()
 	random_button.pressed.connect(_on_random_button_pressed)
 	seed_button.pressed.connect(_on_seed_button_pressed)
+	_setup_load_controls()
 	_setup_debug_checkbox()
 	_apply_dark_fantasy_style()
 
@@ -49,6 +52,19 @@ func _setup_debug_checkbox() -> void:
 		GameSettings.debug_mode = pressed
 	)
 	vbox.add_child(debug_checkbox)
+
+func _setup_load_controls() -> void:
+	load_button = Button.new()
+	load_button.text = "Wczytaj"
+	load_button.pressed.connect(_on_load_button_pressed)
+	vbox.add_child(load_button)
+	load_dialog = FileDialog.new()
+	load_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	load_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	load_dialog.filters = PackedStringArray(["*.json ; Zapis gry JSON"])
+	load_dialog.file_selected.connect(_on_load_file_selected)
+	add_child(load_dialog)
+	SaveManager.external_load_finished.connect(_on_external_load_finished)
 
 func _apply_dark_fantasy_style() -> void:
 	# Tlo - gleboka, prawie czarna czern zamiast plaskiego szarego fioletu
@@ -83,6 +99,7 @@ func _apply_dark_fantasy_style() -> void:
 	# Przyciski
 	_style_button(random_button, false)
 	_style_button(seed_button, true)
+	_style_button(load_button, false)
 
 	# Checkbox trybu Debug
 	if debug_checkbox:
@@ -138,3 +155,25 @@ func _on_seed_button_pressed() -> void:
 	EconomyManager.reset()
 	SaveManager.pending_battle.clear()
 	get_tree().change_scene_to_file("res://scenes/game_world.tscn")
+
+func _on_load_button_pressed() -> void:
+	if OS.has_feature("web"):
+		SaveManager.open_web_load_dialog()
+	else:
+		load_dialog.popup_centered(Vector2i(900, 600))
+
+func _on_load_file_selected(path: String) -> void:
+	_finish_external_load(SaveManager.import_game(path), SaveManager.last_error)
+
+func _on_external_load_finished(success: bool, message: String) -> void:
+	_finish_external_load(success, message)
+
+func _finish_external_load(success: bool, message: String) -> void:
+	if success:
+		get_tree().call_deferred("change_scene_to_file", "res://scenes/game_world.tscn")
+		return
+	load_button.text = message if message != "" else "Nie udało się wczytać zapisu"
+	get_tree().create_timer(2.0).timeout.connect(func() -> void:
+		if is_instance_valid(load_button):
+			load_button.text = "Wczytaj"
+	)
