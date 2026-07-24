@@ -3,6 +3,7 @@ extends Control
 signal setup_finished(player_faction: String, enemy_faction: String, ai_difficulty: String)
 signal setup_loaded(save_data: Dictionary)
 signal custom_setup_finished(unit_configs: Array[Dictionary], player_faction: String, enemy_faction: String, background_path: String, ai_difficulty: String)
+signal settings_requested
 
 const UnitSelectPanelScene: PackedScene = preload("res://scenes/unit_select_panel.tscn")
 const UnitTypeLibraryScript = preload("res://scripts/unit_type_library.gd")
@@ -121,6 +122,10 @@ func _show_mode_menu() -> void:
 	_load_button = _make_action_button("WCZYTAJ ZAPIS", Vector2(220, 60))
 	_load_button.pressed.connect(_on_load_pressed)
 	column.add_child(_load_button)
+
+	var settings_button := _make_action_button("USTAWIENIA", Vector2(220, 60))
+	settings_button.pressed.connect(func() -> void: settings_requested.emit())
+	column.add_child(settings_button)
 
 	_load_dialog = FileDialog.new()
 	_load_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE

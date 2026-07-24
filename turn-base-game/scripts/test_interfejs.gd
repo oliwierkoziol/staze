@@ -40,6 +40,12 @@ func _uruchom() -> void:
 	gra._on_pause_resume_pressed()
 	_sprawdz(not gra.pause_menu.visible, "Przycisk POWRÓT zamyka menu pauzy")
 	_sprawdz(not gra.get_tree().paused, "Powrót wznawia drzewo sceny")
+	gra._set_help_popup_visible(true)
+	gra.pause_menu.load_requested.emit()
+	await process_frame
+	_sprawdz(gra.load_setup_dialog.visible, "Menu pauzy pozwala wczytać zapis podczas samouczka")
+	gra.load_setup_dialog.hide()
+	gra._set_help_popup_visible(false)
 	gra.help_mode_tutorial = true
 	gra.tutorial_page = 0
 	gra._help_rebuild_content()

@@ -4,9 +4,12 @@ signal resume_requested
 signal save_requested
 signal load_requested
 signal reset_requested
+signal settings_requested
+signal settings_close_requested
 signal exit_requested
 
 var _resume_button: Button
+var settings_open := false
 
 
 func _ready() -> void:
@@ -82,6 +85,10 @@ func _build_ui() -> void:
 	reset_button.pressed.connect(func() -> void: reset_requested.emit())
 	column.add_child(reset_button)
 
+	var settings_button := _make_button("USTAWIENIA")
+	settings_button.pressed.connect(func() -> void: settings_requested.emit())
+	column.add_child(settings_button)
+
 	_resume_button = _make_button("POWRÓT")
 	_resume_button.pressed.connect(func() -> void: resume_requested.emit())
 	column.add_child(_resume_button)
@@ -107,7 +114,10 @@ func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
 	if event.keycode == KEY_ESCAPE:
-		resume_requested.emit()
+		if settings_open:
+			settings_close_requested.emit()
+		else:
+			resume_requested.emit()
 		get_viewport().set_input_as_handled()
 
 

@@ -109,6 +109,9 @@ volume_db = -12.0
 [node name="OdtwarzaczSfxTrafienia" type="AudioStreamPlayer" parent="."]
 volume_db = -12.0
 
+[node name="OdtwarzaczMuzyki" type="AudioStreamPlayer" parent="."]
+volume_db = -24.0
+
 [node name="Background" type="TextureRect" parent="." unique_id=214506001]
 layout_mode = 1
 anchors_preset = 15

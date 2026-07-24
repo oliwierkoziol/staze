@@ -43,6 +43,20 @@ const LOG_COLOR_YELLOW := Color(0.95, 0.82, 0.25, 1.0)
 const LOG_COLOR_PLAYER := Color(0.35, 0.65, 0.95, 1.0)
 const LOG_COLOR_ENEMY := Color(0.92, 0.35, 0.30, 1.0)
 const LOG_COLOR_DAMAGE := Color(0.92, 0.35, 0.30, 1.0)
+const GLOSNOSC_MUZYKI_DB := -24.0
+const GLOSNOSC_WALKI_DB := -12.0
+const GLOSNOSC_DIALOGOW_DB := -10.0
+const MUZYKA_MENU: AudioStream = preload("res://assets/music/menu.mp3")
+const MUZYKA_DLA_TLA: Dictionary = {
+	"orcs_vs_elves_forest": preload("res://assets/music/holyForest.mp3"),
+	"dwarves_vs_goblins_mine": preload("res://assets/music/minesGate.mp3"),
+	"humans_vs_orcs_village": preload("res://assets/music/burnedLand.mp3"),
+	"elves_vs_dwarves_pass": preload("res://assets/music/frozenLands.mp3"),
+	"humans_vs_goblins_desert": preload("res://assets/music/dessert.mp3"),
+	"zamek_etap_1_mury": preload("res://assets/music/castle.mp3"),
+	"zamek_etap_2_przedmiescia": preload("res://assets/music/castle.mp3"),
+	"zamek_etap_3_centrum": preload("res://assets/music/castle.mp3"),
+}
 const SFX_LUDZKICH_JEDNOSTEK: Dictionary = {
 	"human_knights": {
 		"wybor": [
@@ -274,6 +288,7 @@ const OBSTACLE_WINTER_DESCRIPTIONS: Dictionary = {
 @onready var odtwarzacz_sfx_jednostek: AudioStreamPlayer = $OdtwarzaczSfxJednostek
 @onready var odtwarzacz_sfx_broni: AudioStreamPlayer = $OdtwarzaczSfxBroni
 @onready var odtwarzacz_sfx_trafienia: AudioStreamPlayer = $OdtwarzaczSfxTrafienia
+@onready var odtwarzacz_muzyki: AudioStreamPlayer = $OdtwarzaczMuzyki
 
 var units: Array = []
 var obstacles: Array[Dictionary] = []
@@ -347,6 +362,11 @@ var debug_map_event_menu: PopupMenu
 var save_setup_dialog: FileDialog
 var load_setup_dialog: FileDialog
 var losowanie_sfx: RandomNumberGenerator = RandomNumberGenerator.new()
+var ustawienia_layer: CanvasLayer
+var glosnosc_muzyki := 100.0
+var glosnosc_walki := 100.0
+var glosnosc_dialogow := 100.0
+var tween_muzyki: Tween
 
 
 func _ready() -> void:
@@ -357,6 +377,7 @@ func _ready() -> void:
 	_build_victory_overlay()
 	_build_screen_message_label()
 	_build_stage_transition_overlay()
+	_build_settings_menu()
 	_connect_pause_menu_signals()
 	if OS.is_debug_build():
 		_build_debug_map_event_menu()
@@ -401,6 +422,11 @@ func _read_json_text(path: String) -> String:
 
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+
+	if event.keycode == KEY_ESCAPE and ustawienia_layer != null and ustawienia_layer.visible:
+		_close_settings()
+		get_viewport().set_input_as_handled()
 		return
 
 	if event.keycode == KEY_TAB:
@@ -448,6 +474,7 @@ func _unit_type_library_warn() -> void:
 
 
 func _show_team_setup() -> void:
+	_ustaw_muzyke(MUZYKA_MENU)
 	var existing_setup: Control = get_node_or_null("TeamSetup")
 	if existing_setup != null:
 		existing_setup.free()
@@ -457,6 +484,7 @@ func _show_team_setup() -> void:
 	setup.setup_finished.connect(_on_team_setup_finished)
 	setup.setup_loaded.connect(_on_team_setup_loaded)
 	setup.custom_setup_finished.connect(_on_custom_setup_finished)
+	setup.settings_requested.connect(_on_settings_requested)
 	add_child(setup)
 	if hud != null:
 		hud.visible = false
@@ -565,7 +593,46 @@ func _set_battle_background(path: String) -> void:
 	var texture: Resource = load(current_battle_background_path)
 	if texture is Texture2D:
 		battle_background.texture = texture
+	_ustaw_muzyke(MUZYKA_DLA_TLA.get(current_battle_background_path.get_file().get_basename(), MUZYKA_MENU) as AudioStream)
 	_sync_board_map_theme()
+
+
+func _ustaw_muzyke(muzyka: AudioStream) -> void:
+	if odtwarzacz_muzyki.stream == muzyka and odtwarzacz_muzyki.playing:
+		return
+	if muzyka is AudioStreamMP3:
+		muzyka.loop = true
+	if tween_muzyki != null and tween_muzyki.is_valid():
+		tween_muzyki.kill()
+	var docelowa_glosnosc: float = _glosnosc_db(GLOSNOSC_MUZYKI_DB, glosnosc_muzyki)
+	odtwarzacz_muzyki.stream = muzyka
+	odtwarzacz_muzyki.volume_db = minf(-40.0, docelowa_glosnosc)
+	odtwarzacz_muzyki.play()
+	tween_muzyki = create_tween()
+	tween_muzyki.tween_property(odtwarzacz_muzyki, "volume_db", docelowa_glosnosc, 2.0)
+
+
+func _glosnosc_db(bazowa_glosnosc: float, procent: float) -> float:
+	return -80.0 if procent <= 0.0 else bazowa_glosnosc + linear_to_db(clampf(procent, 0.0, 100.0) / 100.0)
+
+
+func _on_glosnosc_muzyki_changed(value: float) -> void:
+	glosnosc_muzyki = value
+	if tween_muzyki != null and tween_muzyki.is_valid():
+		tween_muzyki.kill()
+	odtwarzacz_muzyki.volume_db = _glosnosc_db(GLOSNOSC_MUZYKI_DB, value)
+
+
+func _on_glosnosc_walki_changed(value: float) -> void:
+	glosnosc_walki = value
+	var volume_db: float = _glosnosc_db(GLOSNOSC_WALKI_DB, value)
+	odtwarzacz_sfx_broni.volume_db = volume_db
+	odtwarzacz_sfx_trafienia.volume_db = volume_db
+
+
+func _on_glosnosc_dialogow_changed(value: float) -> void:
+	glosnosc_dialogow = value
+	odtwarzacz_sfx_jednostek.volume_db = _glosnosc_db(GLOSNOSC_DIALOGOW_DB, value)
 
 
 func _sync_board_map_theme() -> void:
@@ -721,7 +788,7 @@ func _on_pause_resume_pressed() -> void:
 func _on_pause_reset_pressed() -> void:
 	pause_menu.close_menu()
 	if current_player_faction == "" or current_enemy_faction == "":
-		_on_reset_battle_pressed()
+		_on_reset_battle_pressed(true)
 		return
 	setup_mode = true
 	help_mode_tutorial = true
@@ -746,7 +813,7 @@ func _on_pause_reset_pressed() -> void:
 
 func _on_pause_exit_pressed() -> void:
 	pause_menu.close_menu()
-	_on_reset_battle_pressed()
+	_on_reset_battle_pressed(true)
 
 
 func _connect_signal_once(source_signal: Signal, callback: Callable) -> void:
@@ -834,8 +901,8 @@ func _on_start_battle_pressed() -> void:
 	_start_next_activation()
 
 
-func _on_save_setup_pressed() -> void:
-	if help_popup != null and help_popup.visible:
+func _on_save_setup_pressed(ignore_tutorial: bool = false) -> void:
+	if help_popup != null and help_popup.visible and not ignore_tutorial:
 		return
 	if OS.has_feature("web"):
 		JavaScriptBridge.download_buffer(
@@ -859,8 +926,8 @@ func _on_save_setup_file_selected(path: String) -> void:
 	_log_event(_color_log_text("Zapisano stan gry.", LOG_COLOR_YELLOW), false)
 
 
-func _on_load_setup_pressed() -> void:
-	if help_popup != null and help_popup.visible:
+func _on_load_setup_pressed(ignore_tutorial: bool = false) -> void:
+	if help_popup != null and help_popup.visible and not ignore_tutorial:
 		return
 	if OS.has_feature("web"):
 		_open_web_load_setup_dialog()
@@ -1022,8 +1089,8 @@ func _typed_int_array(value: Variant) -> Array[int]:
 	return result
 
 
-func _on_reset_battle_pressed() -> void:
-	if help_popup != null and help_popup.visible:
+func _on_reset_battle_pressed(ignore_tutorial: bool = false) -> void:
+	if help_popup != null and help_popup.visible and not ignore_tutorial:
 		return
 	setup_mode = true
 	help_mode_tutorial = true
@@ -5508,10 +5575,113 @@ func _connect_pause_menu_signals() -> void:
 	if pause_menu == null:
 		return
 	pause_menu.resume_requested.connect(_on_pause_resume_pressed)
-	pause_menu.save_requested.connect(_on_save_setup_pressed)
-	pause_menu.load_requested.connect(_on_load_setup_pressed)
+	pause_menu.save_requested.connect(_on_save_setup_pressed.bind(true))
+	pause_menu.load_requested.connect(_on_load_setup_pressed.bind(true))
 	pause_menu.reset_requested.connect(_on_pause_reset_pressed)
+	pause_menu.settings_requested.connect(_on_settings_requested)
+	pause_menu.settings_close_requested.connect(_close_settings)
 	pause_menu.exit_requested.connect(_on_pause_exit_pressed)
+
+
+func _build_settings_menu() -> void:
+	ustawienia_layer = CanvasLayer.new()
+	ustawienia_layer.layer = 3
+	ustawienia_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(ustawienia_layer)
+
+	var blocker := ColorRect.new()
+	blocker.set_anchors_preset(Control.PRESET_FULL_RECT)
+	blocker.color = Color(0.02, 0.02, 0.04, 0.82)
+	blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	ustawienia_layer.add_child(blocker)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ustawienia_layer.add_child(center)
+
+	var panel := NinePatchRect.new()
+	panel.custom_minimum_size = Vector2(560, 520)
+	panel.texture = preload("res://assets/ui/panel.png")
+	panel.patch_margin_left = 8
+	panel.patch_margin_top = 8
+	panel.patch_margin_right = 8
+	panel.patch_margin_bottom = 8
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 36)
+	margin.add_theme_constant_override("margin_top", 32)
+	margin.add_theme_constant_override("margin_right", 36)
+	margin.add_theme_constant_override("margin_bottom", 32)
+	panel.add_child(margin)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 20)
+	margin.add_child(column)
+
+	var title := Label.new()
+	title.text = "USTAWIENIA DŹWIĘKU"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 30)
+	title.add_theme_color_override("font_color", Color(0.86, 0.72, 0.34, 1.0))
+	column.add_child(title)
+
+	_add_volume_slider(column, "MUZYKA", glosnosc_muzyki, _on_glosnosc_muzyki_changed)
+	_add_volume_slider(column, "EFEKTY WALKI", glosnosc_walki, _on_glosnosc_walki_changed)
+	_add_volume_slider(column, "DIALOGI", glosnosc_dialogow, _on_glosnosc_dialogow_changed)
+
+	var close_button := Button.new()
+	close_button.text = "POWRÓT"
+	close_button.custom_minimum_size = Vector2(0, 52)
+	close_button.add_theme_font_size_override("font_size", 20)
+	close_button.pressed.connect(_close_settings)
+	column.add_child(close_button)
+
+	ustawienia_layer.visible = false
+	assert(is_equal_approx(_glosnosc_db(GLOSNOSC_WALKI_DB, 100.0), GLOSNOSC_WALKI_DB) and _glosnosc_db(GLOSNOSC_WALKI_DB, 0.0) == -80.0, "Suwak glosnosci musi zachowac poziom bazowy i umiec wyciszyc dzwiek.")
+
+
+func _add_volume_slider(parent: VBoxContainer, label_text: String, value: float, callback: Callable) -> void:
+	var label := Label.new()
+	label.text = label_text
+	label.add_theme_font_size_override("font_size", 18)
+	parent.add_child(label)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	parent.add_child(row)
+
+	var slider := HSlider.new()
+	slider.min_value = 0.0
+	slider.max_value = 100.0
+	slider.step = 1.0
+	slider.value = value
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.custom_minimum_size = Vector2(360, 36)
+	row.add_child(slider)
+
+	var value_label := Label.new()
+	value_label.text = "%d%%" % int(value)
+	value_label.custom_minimum_size = Vector2(64, 0)
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value_label.add_theme_font_size_override("font_size", 18)
+	row.add_child(value_label)
+
+	slider.value_changed.connect(func(new_value: float) -> void:
+		value_label.text = "%d%%" % int(new_value)
+		callback.call(new_value)
+	)
+
+
+func _on_settings_requested() -> void:
+	pause_menu.settings_open = true
+	ustawienia_layer.visible = true
+
+
+func _close_settings() -> void:
+	ustawienia_layer.visible = false
+	pause_menu.settings_open = false
 
 
 func _build_help_popup() -> void:
