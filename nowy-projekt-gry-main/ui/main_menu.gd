@@ -12,6 +12,7 @@ extends Control
 # że seed == 0 automatycznie włączał panel administratora w HUD-zie.
 var debug_checkbox: CheckButton
 var load_button: Button
+var battle_test_button: Button
 var load_dialog: FileDialog
 
 # --- PALETA "DARK FANTASY" (spójna z hud.gd) -------------------------------
@@ -27,6 +28,7 @@ func _ready() -> void:
 	random_button.pressed.connect(_on_random_button_pressed)
 	seed_button.pressed.connect(_on_seed_button_pressed)
 	_setup_load_controls()
+	_setup_battle_test_button()
 	_setup_debug_checkbox()
 	_apply_dark_fantasy_style()
 
@@ -66,6 +68,16 @@ func _setup_load_controls() -> void:
 	add_child(load_dialog)
 	SaveManager.external_load_finished.connect(_on_external_load_finished)
 
+func _setup_battle_test_button() -> void:
+	battle_test_button = Button.new()
+	battle_test_button.text = "Test walki"
+	battle_test_button.pressed.connect(_on_battle_test_pressed)
+	vbox.add_child(battle_test_button)
+
+func _on_battle_test_pressed() -> void:
+	SaveManager.pending_battle.clear()
+	get_tree().change_scene_to_file("res://turn-base-game/gra.tscn")
+
 func _apply_dark_fantasy_style() -> void:
 	# Tlo - gleboka, prawie czarna czern zamiast plaskiego szarego fioletu
 	background.color = DF_BG
@@ -100,6 +112,7 @@ func _apply_dark_fantasy_style() -> void:
 	_style_button(random_button, false)
 	_style_button(seed_button, true)
 	_style_button(load_button, false)
+	_style_button(battle_test_button, false)
 
 	# Checkbox trybu Debug
 	if debug_checkbox:
