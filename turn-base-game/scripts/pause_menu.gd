@@ -3,12 +3,14 @@ extends CanvasLayer
 signal resume_requested
 signal save_requested
 signal load_requested
-signal reset_requested
 signal settings_requested
 signal settings_close_requested
-signal exit_requested
+signal retreat_requested
 
 var _resume_button: Button
+var _save_button: Button
+var _load_button: Button
+var _retreat_confirmation: ConfirmationDialog
 var settings_open := false
 
 
@@ -73,17 +75,17 @@ func _build_ui() -> void:
 	divider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(divider)
 
-	var save_button := _make_button("ZAPISZ")
-	save_button.pressed.connect(func() -> void: save_requested.emit())
-	column.add_child(save_button)
+	_save_button = _make_button("ZAPISZ")
+	_save_button.pressed.connect(func() -> void: save_requested.emit())
+	column.add_child(_save_button)
 
-	var load_button := _make_button("WCZYTAJ")
-	load_button.pressed.connect(func() -> void: load_requested.emit())
-	column.add_child(load_button)
+	_load_button = _make_button("WCZYTAJ")
+	_load_button.pressed.connect(func() -> void: load_requested.emit())
+	column.add_child(_load_button)
 
-	var reset_button := _make_button("RESET")
-	reset_button.pressed.connect(func() -> void: reset_requested.emit())
-	column.add_child(reset_button)
+	var retreat_button := _make_button("WYCOFAJ SIĘ")
+	retreat_button.pressed.connect(_request_retreat)
+	column.add_child(retreat_button)
 
 	var settings_button := _make_button("USTAWIENIA")
 	settings_button.pressed.connect(func() -> void: settings_requested.emit())
@@ -93,10 +95,13 @@ func _build_ui() -> void:
 	_resume_button.pressed.connect(func() -> void: resume_requested.emit())
 	column.add_child(_resume_button)
 
-	var exit_button := _make_button("WYJDŹ")
-	exit_button.pressed.connect(func() -> void: exit_requested.emit())
-	column.add_child(exit_button)
-
+	_retreat_confirmation = ConfirmationDialog.new()
+	_retreat_confirmation.title = "Wycofanie z walki"
+	_retreat_confirmation.dialog_text = "Czy na pewno chcesz przerwać tę walkę?"
+	_retreat_confirmation.ok_button_text = "WYCOFAJ SIĘ"
+	_retreat_confirmation.cancel_button_text = "WRÓĆ"
+	_retreat_confirmation.confirmed.connect(func() -> void: retreat_requested.emit())
+	add_child(_retreat_confirmation)
 
 func _make_button(text: String) -> Button:
 	var button := Button.new()
@@ -106,6 +111,10 @@ func _make_button(text: String) -> Button:
 	button.add_theme_font_size_override("font_size", 20)
 	button.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78, 1.0))
 	return button
+
+
+func _request_retreat() -> void:
+	_retreat_confirmation.popup_centered(Vector2i(520, 220))
 
 
 func _input(event: InputEvent) -> void:
@@ -131,3 +140,17 @@ func toggle() -> void:
 func close_menu() -> void:
 	visible = false
 	get_tree().paused = false
+
+
+func set_campaign_mode(enabled: bool) -> void:
+	if _save_button != null:
+		_save_button.visible = not enabled
+	if _load_button != null:
+		_load_button.visible = not enabled
+	if _retreat_confirmation != null:
+		_retreat_confirmation.dialog_text = (
+			"Wycofanie zachowa straty z bitwy, usunie dodatkowo 20% ocalałych "
+			+ "i zakończy ruch generała. Kontynuować?"
+			if enabled
+			else "Czy na pewno chcesz przerwać tę walkę?"
+		)

@@ -1,6 +1,3 @@
-class_name HexUtils
-
-
 static func distance(a: Vector2i, b: Vector2i) -> int:
 	var ac: Vector3i = oddr_to_cube(a)
 	var bc: Vector3i = oddr_to_cube(b)

@@ -367,6 +367,12 @@ var stage_transition_title: Label
 var stage_transition_progress: Label
 var unit_details_popup: PopupPanel
 var debug_map_event_menu: PopupMenu
+var campaign_mode := false
+var campaign_request: Dictionary = {}
+var campaign_result_path := ""
+var campaign_outcome := ""
+var campaign_debug_enabled := false
+var campaign_debug_menu: PopupMenu
 
 var save_setup_dialog: FileDialog
 var load_setup_dialog: FileDialog
@@ -394,7 +400,11 @@ func _ready() -> void:
 	add_child(unit_details_popup)
 	_load_terrain_types()
 	_unit_type_library_warn()
-	_show_team_setup()
+	var request: Dictionary = _load_campaign_request()
+	if request.is_empty():
+		_show_team_setup()
+	else:
+		_start_campaign_battle(request)
 	for button in find_children("*", "BaseButton", true, false):
 		_podlacz_sfx_przycisku(button)
 	get_tree().node_added.connect(_podlacz_sfx_przycisku)
@@ -432,6 +442,105 @@ func _read_json_text(path: String) -> String:
 	return ""
 
 
+func _load_campaign_request() -> Dictionary:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--battle-request="):
+			return _read_campaign_request(argument.trim_prefix("--battle-request="))
+	var save_manager := get_node_or_null("/root/SaveManager")
+	if save_manager != null:
+		var pending: Variant = save_manager.get("pending_battle")
+		if typeof(pending) == TYPE_DICTIONARY:
+			var pending_battle: Dictionary = pending
+			return _read_campaign_request(str(pending_battle.get("request_path", "")))
+	return {}
+
+
+func _read_campaign_request(path: String) -> Dictionary:
+	if path == "":
+		return {}
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_error("Nie mozna otworzyc zlecenia walki: %s" % path)
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		push_error("Zlecenie walki musi byc obiektem JSON.")
+		return {}
+	var request: Dictionary = parsed
+	if int(request.get("schema_version", 0)) != 1 or str(request.get("battle_id", "")) == "":
+		push_error("Nieobslugiwana wersja lub brak battle_id w zleceniu walki.")
+		return {}
+	return request
+
+
+func _start_campaign_battle(request: Dictionary) -> void:
+	campaign_mode = true
+	campaign_request = request.duplicate(true)
+	campaign_result_path = str(request.get("result_path", ""))
+	campaign_debug_enabled = bool(request.get("debug_enabled", false))
+	pause_menu.set_campaign_mode(true)
+	current_player_faction = str(request.get("player_faction", "humans"))
+	current_enemy_faction = str(request.get("enemy_faction", "orcs"))
+	ai_difficulty = str(request.get("ai_difficulty", "sredni"))
+	if not PlanerAIScript.PROFILE.has(ai_difficulty):
+		ai_difficulty = "sredni"
+	free_setup_mode = true
+	castle_stage = 0
+	_set_battle_background(str(request.get("background_path", DEFAULT_BATTLE_BACKGROUND_PATH)))
+	skill_library = UnitTypeLibraryScript.get_skill_library()
+	_load_general_skills()
+	if hud != null:
+		hud.visible = true
+	if board != null:
+		board.visible = true
+	_build_campaign_battle_config(request.get("units", []))
+	_setup_battle_scene()
+	if campaign_debug_enabled:
+		_build_campaign_debug_menu()
+	call_deferred("_on_start_battle_pressed")
+
+
+func _build_campaign_battle_config(raw_units: Variant) -> void:
+	unit_configs.clear()
+	if typeof(raw_units) != TYPE_ARRAY:
+		return
+	var player_count := 0
+	var enemy_count := 0
+	for raw_unit in raw_units:
+		if typeof(raw_unit) != TYPE_DICTIONARY:
+			continue
+		if str(raw_unit.get("side", "")) == "player":
+			player_count += 1
+		elif str(raw_unit.get("side", "")) == "enemy":
+			enemy_count += 1
+	var player_positions := _compute_player_positions(player_count)
+	var enemy_positions := _compute_enemy_positions(enemy_count)
+	var player_index := 0
+	var enemy_index := 0
+	for raw_unit in raw_units:
+		if typeof(raw_unit) != TYPE_DICTIONARY:
+			continue
+		var config: Dictionary = raw_unit.duplicate(true)
+		var side := str(config.get("side", ""))
+		var position := Vector2i.ZERO
+		if side == "player":
+			position = player_positions[player_index]
+			player_index += 1
+		elif side == "enemy":
+			position = enemy_positions[enemy_index]
+			enemy_index += 1
+		else:
+			continue
+		config["id"] = int(config.get("id", unit_configs.size() + 1))
+		config["type_id"] = str(config.get("type_id", ""))
+		config["side"] = side
+		config["count"] = maxi(1, int(config.get("count", 1)))
+		config["level"] = maxi(1, int(config.get("level", 1)))
+		config["grid_x"] = int(config.get("grid_x", position.x))
+		config["grid_y"] = int(config.get("grid_y", position.y))
+		unit_configs.append(config)
+
+
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
@@ -454,6 +563,11 @@ func _input(event: InputEvent) -> void:
 	if event.keycode == KEY_D and OS.is_debug_build() and debug_map_event_menu != null and not setup_mode and not is_animating:
 		debug_map_event_menu.position = Vector2i(get_viewport().get_mouse_position())
 		debug_map_event_menu.popup()
+		get_viewport().set_input_as_handled()
+		return
+	if event.keycode == KEY_F10 and campaign_debug_enabled and campaign_debug_menu != null:
+		campaign_debug_menu.position = Vector2i(get_viewport().get_mouse_position())
+		campaign_debug_menu.popup()
 		get_viewport().set_input_as_handled()
 		return
 
@@ -798,34 +912,11 @@ func _on_pause_resume_pressed() -> void:
 	pause_menu.close_menu()
 
 
-func _on_pause_reset_pressed() -> void:
+func _on_pause_retreat_pressed() -> void:
 	pause_menu.close_menu()
-	if current_player_faction == "" or current_enemy_faction == "":
-		_on_reset_battle_pressed(true)
+	if campaign_mode:
+		_finish_campaign_battle("retreat")
 		return
-	setup_mode = true
-	help_mode_tutorial = true
-	tutorial_page = 0
-	tutorial_acknowledged = false
-	selected_unit_id = -1
-	setup_drag_unit_id = -1
-	active_unit_id = -1
-	current_turn = ""
-	pending_skill_id = ""
-	selected_obstacle_cell = Vector2i(-1, -1)
-	is_animating = false
-	turn_queue_index = -1
-	event_log.clear()
-	general_skill_used = false
-	pending_general_skill_id = ""
-	_load_general_skills()
-	_refresh_general_display()
-	_refresh_general_ability_buttons()
-	_enter_setup_mode()
-
-
-func _on_pause_exit_pressed() -> void:
-	pause_menu.close_menu()
 	_on_reset_battle_pressed(true)
 
 
@@ -1252,13 +1343,37 @@ func _prepare_unit(unit: Dictionary) -> Dictionary:
 			if not unit.has("skill_ids"):
 				unit["skill_ids"] = type_skill_ids.duplicate()
 
+	var level := maxi(1, int(unit.get("level", 1)))
+	var level_bonus := level - 1
+	var stat_multiplier := maxf(0.1, float(unit.get("stat_multiplier", 1.0)))
+	if not is_equal_approx(stat_multiplier, 1.0):
+		for stat_name in ["hp", "atk", "dmg_min", "dmg_max", "def"]:
+			unit[stat_name] = roundi(float(unit.get(stat_name, 0)) * stat_multiplier)
+	if level_bonus > 0:
+		unit["hp"] = roundi(float(unit.get("hp", 1)) * (1.0 + 0.1 * level_bonus))
+		for stat_name in ["atk", "dmg_min", "dmg_max", "def"]:
+			unit[stat_name] = int(unit.get(stat_name, 0)) + level_bonus
+	var stat_bonuses: Dictionary = unit.get("stat_bonuses", {})
+	unit["hp"] = int(unit.get("hp", 1)) + int(stat_bonuses.get("hp", 0))
+	unit["dmg_min"] = int(unit.get("dmg_min", unit.get("dmg", 1))) + int(stat_bonuses.get("dmg", 0))
+	unit["dmg_max"] = int(unit.get("dmg_max", unit.get("dmg", 1))) + int(stat_bonuses.get("dmg", 0))
+	unit["def"] = int(unit.get("def", 0)) + int(stat_bonuses.get("def", 0))
+	unit["move_range"] = int(unit.get("move_range", 0)) + int(stat_bonuses.get("move_range", 0))
+
 	for stat_name in ["hp", "atk", "dmg_min", "dmg_max", "def", "speed", "move_range", "attack_range", "action_points", "count"]:
 		if not unit.has(stat_name):
 			unit[stat_name] = 0
 		unit["base_%s" % stat_name] = int(unit.get(stat_name, 0))
-	unit["level"] = maxi(1, int(unit.get("level", 1)))
+	unit["level"] = level
 	unit["max_hp"] = int(unit["base_hp"])
 	MatematykaWalkiScript.ustaw_pelne_hp(unit)
+	var health_ratios: Array = unit.get("member_health_ratios", [])
+	if not health_ratios.is_empty():
+		var total_hp := 0
+		for ratio in health_ratios:
+			total_hp += maxi(1, ceili(float(unit.max_hp) * clampf(float(ratio), 0.0, 1.0)))
+		unit["current_total_hp"] = mini(total_hp, int(unit.max_total_hp))
+		MatematykaWalkiScript.odswiez_stan_hp(unit)
 	unit["remaining_move"] = int(unit.get("move_range", 0))
 	unit["action_points"] = int(unit.get("base_action_points", unit.get("action_points", 1)))
 	unit["active_effects"] = []
@@ -4658,6 +4773,44 @@ func _try_trigger_map_event() -> void:
 	BibliotekaZdarzenMapyScript.wykonaj(self)
 
 
+func _build_campaign_debug_menu() -> void:
+	campaign_debug_menu = PopupMenu.new()
+	campaign_debug_menu.name = "CampaignDebugMenu"
+	campaign_debug_menu.add_item("Ulecz armię gracza", 0)
+	campaign_debug_menu.add_item("Osłab armię wroga o 50%", 1)
+	campaign_debug_menu.add_separator()
+	campaign_debug_menu.add_item("Wymuś zwycięstwo", 2)
+	campaign_debug_menu.add_item("Wymuś porażkę", 3)
+	campaign_debug_menu.add_item("Wycofaj się", 4)
+	campaign_debug_menu.id_pressed.connect(_on_campaign_debug_selected)
+	add_child(campaign_debug_menu)
+	_show_screen_message("DEBUG WALKI: F10", 3.0)
+
+
+func _on_campaign_debug_selected(item_id: int) -> void:
+	match item_id:
+		0:
+			for unit in units:
+				if str(unit.get("side", "")) == "player":
+					MatematykaWalkiScript.ustaw_pelne_hp(unit)
+		1:
+			for unit in units:
+				if str(unit.get("side", "")) == "enemy":
+					unit["current_total_hp"] = maxi(1, int(unit.get("current_total_hp", 1)) / 2)
+					MatematykaWalkiScript.odswiez_stan_hp(unit)
+		2:
+			units = units.filter(func(unit: Dictionary) -> bool: return str(unit.get("side", "")) != "enemy")
+		3:
+			units = units.filter(func(unit: Dictionary) -> bool: return str(unit.get("side", "")) != "player")
+		4:
+			_on_pause_retreat_pressed()
+			return
+	board.set_units(units)
+	board.reset_unit_positions(units)
+	_sync_board()
+	_check_victory()
+
+
 func _build_debug_map_event_menu() -> void:
 	debug_map_event_menu = PopupMenu.new()
 	debug_map_event_menu.name = "DebugMapEventMenu"
@@ -4900,7 +5053,7 @@ func _prepare_map_event_cells() -> void:
 func _apply_or_refresh_effect(unit: Dictionary, effect_data: Dictionary) -> void:
 	var effect_id: String = str(effect_data.get("id", ""))
 	if effect_id != "":
-		effect_data = UnitTypeLibrary.build_active_effect(effect_id, effect_data)
+		effect_data = UnitTypeLibraryScript.build_active_effect(effect_id, effect_data)
 	var effects: Array = unit.get("active_effects", [])
 	var previous_move_range: int = int(unit.get("move_range", 0))
 	for existing in effects:
@@ -5435,7 +5588,7 @@ func _get_terrain_entry_effect(cell: Vector2i) -> Dictionary:
 		return {}
 	if effect_id.is_empty():
 		return {}
-	var effect: Dictionary = UnitTypeLibrary.build_active_effect(effect_id, overrides)
+	var effect: Dictionary = UnitTypeLibraryScript.build_active_effect(effect_id, overrides)
 	if effect.is_empty():
 		push_warning("Brak efektu terenu '%s' w status_effects.json" % effect_id)
 	return effect
@@ -5449,7 +5602,7 @@ func _terrain_hides_unit(cell: Vector2i) -> bool:
 func _get_hiding_effect_at_cell(cell: Vector2i) -> Dictionary:
 	for effect_id in ["mgla", "burza_piaskowa"]:
 		if not _get_terrain_effect_at(cell, effect_id).is_empty():
-			return UnitTypeLibrary.build_active_effect(effect_id)
+			return UnitTypeLibraryScript.build_active_effect(effect_id)
 	var effect: Dictionary = _get_terrain_entry_effect(cell)
 	return effect if bool(effect.get("hides_unit", false)) else {}
 
@@ -5590,10 +5743,9 @@ func _connect_pause_menu_signals() -> void:
 	pause_menu.resume_requested.connect(_on_pause_resume_pressed)
 	pause_menu.save_requested.connect(_on_save_setup_pressed.bind(true))
 	pause_menu.load_requested.connect(_on_load_setup_pressed.bind(true))
-	pause_menu.reset_requested.connect(_on_pause_reset_pressed)
+	pause_menu.retreat_requested.connect(_on_pause_retreat_pressed)
 	pause_menu.settings_requested.connect(_on_settings_requested)
 	pause_menu.settings_close_requested.connect(_close_settings)
-	pause_menu.exit_requested.connect(_on_pause_exit_pressed)
 
 
 func _build_settings_menu() -> void:
@@ -5910,6 +6062,8 @@ func _build_victory_overlay() -> void:
 func _show_victory_overlay(winner_side: String) -> void:
 	if victory_overlay == null:
 		return
+	if campaign_mode:
+		campaign_outcome = "victory" if winner_side == "player" else "defeat"
 	var winner_name := "GRACZ" if winner_side == "player" else "PRZECIWNIK"
 	victory_title_label.text = "ZWYCIĘSTWO: %s" % winner_name
 	victory_overlay.visible = true
@@ -6006,6 +6160,10 @@ func _show_screen_message(text: String, duration := 2.5) -> void:
 func _on_victory_finish_pressed() -> void:
 	if victory_overlay != null:
 		victory_overlay.visible = false
+	if campaign_mode:
+		if not _finish_campaign_battle(campaign_outcome) and victory_overlay != null:
+			victory_overlay.visible = true
+		return
 	setup_mode = true
 	current_player_faction = ""
 	current_enemy_faction = ""
@@ -6028,6 +6186,58 @@ func _on_victory_finish_pressed() -> void:
 	terrain_effects.clear()
 	_clear_selected_unit()
 	_show_team_setup()
+
+
+func _finish_campaign_battle(outcome: String) -> bool:
+	if not _write_campaign_result(outcome):
+		return false
+	get_tree().paused = false
+	var host_scene := "res://scenes/game_world.tscn"
+	if ResourceLoader.exists(host_scene):
+		var change_error := get_tree().change_scene_to_file(host_scene)
+		if change_error == OK:
+			return true
+		push_error("Nie mozna wrocic do glownej sceny: %s" % error_string(change_error))
+	get_tree().quit()
+	return true
+
+
+func _write_campaign_result(outcome: String) -> bool:
+	if campaign_result_path == "":
+		push_error("Brak sciezki wyniku walki.")
+		return false
+	var survivors: Array[Dictionary] = []
+	for unit in units:
+		if str(unit.get("side", "")) != "player":
+			continue
+		var member_uids: Array = unit.get("member_uids", [])
+		var survivor_count := mini(int(unit.get("count", 0)), member_uids.size())
+		var max_hp := maxi(1, int(unit.get("max_hp", unit.get("hp", 1))))
+		var wounded_ratio := clampf(float(unit.get("current_hp", max_hp)) / float(max_hp), 0.0, 1.0)
+		for index in survivor_count:
+			survivors.append({
+				"unit_uid": int(member_uids[index]),
+				"health_ratio": wounded_ratio if index == survivor_count - 1 else 1.0,
+			})
+	var result := {
+		"schema_version": 1,
+		"battle_id": str(campaign_request.get("battle_id", "")),
+		"outcome": outcome,
+		"rounds": round_number,
+		"player_survivors": survivors,
+	}
+	var temporary_path := "%s.tmp" % campaign_result_path
+	var file := FileAccess.open(temporary_path, FileAccess.WRITE)
+	if file == null:
+		push_error("Nie mozna zapisac wyniku walki: %s" % temporary_path)
+		return false
+	file.store_string(JSON.stringify(result, "\t"))
+	file.close()
+	var rename_error := DirAccess.rename_absolute(temporary_path, campaign_result_path)
+	if rename_error != OK:
+		push_error("Nie mozna zatwierdzic wyniku walki: %s" % error_string(rename_error))
+		return false
+	return true
 
 
 func _toggle_help_popup() -> void:
@@ -6061,6 +6271,21 @@ func _validate_static_setup() -> void:
 	var reload_target: Dictionary = _prepare_unit({"type_id": "human_knights", "count": 3})
 	_reapply_runtime_state(reload_target, reload_existing)
 	assert(int(reload_target.count) == 3 and int(reload_target.current_hp) == 5, "Reload nie moze zwiekszac liczebnosci ani leczyc oddzialu.")
+	var campaign_unit: Dictionary = _prepare_unit({
+		"type_id": "human_archers",
+		"count": 2,
+		"level": 2,
+		"skill_ids": ["strzal_w_kolano"],
+		"stat_bonuses": {"hp": 3, "dmg": 2, "def": 1, "move_range": 1},
+		"member_health_ratios": [1.0, 0.5],
+	})
+	assert(
+		int(campaign_unit.max_hp) == 20
+		and int(campaign_unit.current_total_hp) == 30
+		and int(campaign_unit.current_hp) == 10
+		and campaign_unit.skill_ids == ["strzal_w_kolano"],
+		"Kontrakt kampanii musi zachowac poziom, bonusy, rany i odblokowane umiejetnosci."
+	)
 	for unit in unit_configs:
 		assert(unit.grid_x >= 0 and unit.grid_x < GRID_COLUMNS)
 		assert(unit.grid_y >= 0 and unit.grid_y < GRID_ROWS)
@@ -6135,7 +6360,7 @@ func _validate_static_setup() -> void:
 			continue
 		assert(str(UnitTypeLibraryScript.get_status_effect(general_skill_id).get("description", "")) != "", "Buff/debuff generala musi miec opis: %s" % general_skill_id)
 	assert(BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(2, 3) and not BibliotekaZdarzenMapyScript.czy_runda_ostrzezenia(1, 3), "Pola eventu maja byc widoczne tylko runde przed jego aktywacja.")
-	assert(bool(UnitTypeLibrary.build_active_effect("mgla").get("hides_unit", false)), "Mgla musi korzystac z ukrycia jednostek.")
+	assert(bool(UnitTypeLibraryScript.build_active_effect("mgla").get("hides_unit", false)), "Mgla musi korzystac z ukrycia jednostek.")
 	for scenario_id in BibliotekaZdarzenMapyScript.PULE:
 		var event_pool: Array = BibliotekaZdarzenMapyScript.PULE[scenario_id]
 		assert(event_pool.size() == 4, "Kazdy scenariusz musi miec cztery eventy: %s" % scenario_id)

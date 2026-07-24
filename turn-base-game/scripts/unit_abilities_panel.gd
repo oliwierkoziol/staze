@@ -5,6 +5,7 @@ signal skill_pressed(index: int)
 const HEADER_COLOR := Color(0.86, 0.72, 0.34, 1.0)
 const EMPTY_COLOR := Color(0.55, 0.52, 0.48, 1.0)
 const ABILITY_CARD_SCENE: PackedScene = preload("res://scenes/ability_card.tscn")
+const AbilityCardScript = preload("res://scripts/ability_card.gd")
 
 var _divider_tex: Texture2D = preload("res://assets/ui/divider.png")
 var _cards_row: HBoxContainer
@@ -46,7 +47,7 @@ func set_skills(skills: Array) -> void:
 		return
 
 	for index in skills.size():
-		var card: AbilityCard = ABILITY_CARD_SCENE.instantiate()
+		var card: AbilityCardScript = ABILITY_CARD_SCENE.instantiate()
 		_cards_row.add_child(card)
 		card.setup(skills[index], index)
 		card.activated.connect(_on_card_pressed)
