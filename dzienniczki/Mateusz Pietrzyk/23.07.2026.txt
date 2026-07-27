@@ -1,0 +1,1 @@
+Dodaliśmy pierwsze efekty dźwiękowe oraz kwestie głosowe dla jednostek poszczególnych frakcji. Przebudowaliśmy również menu pauzy, poprawiając jego działanie i wyświetlanie nad pozostałymi elementami interfejsu.

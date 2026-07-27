@@ -1,0 +1,1 @@
+Wprowadziliśmy poprawki balansu oraz działania elementów mapy i umiejętności. Usprawniliśmy również widoczność dostępnych akcji, ruchu i ataków, dzięki czemu rozgrywka stała się bardziej czytelna.

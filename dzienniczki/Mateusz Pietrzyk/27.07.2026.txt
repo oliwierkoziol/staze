@@ -1,0 +1,1 @@
+Dopracowaliśmy i ujednoliciliśmy interfejs całej gry, dodając nowe tła, czcionki oraz usprawnione przejścia między scenami. Poprawiliśmy dźwięki, balans frakcji, sztuczną inteligencję i działanie najważniejszych mechanik. Dodaliśmy również zakończenie kampanii wraz z ekranem zwycięstwa oraz przygotowaliśmy finalny eksport projektu.

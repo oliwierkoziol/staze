@@ -1,0 +1,1 @@
+Rozbudowaliśmy oprawę dźwiękową o muzykę, odgłosy walki i pozostałe kwestie głosowe. Utworzyliśmy nowy branch wzajemnie-powiązane-systemy, na którym rozpoczęliśmy łączenie systemu walki z główną częścią gry. Dodaliśmy także obsługę zapisów oraz poprawiliśmy kilka błędów interfejsu i świata gry.
