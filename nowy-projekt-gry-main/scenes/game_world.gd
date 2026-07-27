@@ -3,6 +3,9 @@ extends Node2D
 
 const MAP_SIZE = 50
 const HEX_RADIUS = 80.0
+const CASTLE_SCENARIO_PATH := "res://turn-base-game/data/scenarios/zamek.json"
+const CASTLE_STAGE_1_BG := "res://turn-base-game/assets/backgrounds/scenarios/zamek_etap_1_mury.png"
+const CAMPAIGN_VICTORY_SCENE := "res://ui/campaign_victory.tscn"
 
 var hex_width: float = sqrt(3) * HEX_RADIUS
 var hex_height: float = 2.0 * HEX_RADIUS
@@ -240,7 +243,7 @@ func generate_camps(count: int) -> void:
 		
 		spawned_count += 1
 
-	generate_boss_camp()
+	generate_castle()
 
 # ponytail: debug-only — stały obóz obok startu, bez losowania po całej mapie
 func _spawn_debug_camp_near_player() -> void:
@@ -299,15 +302,14 @@ func get_player_power_level() -> int:
 	var army_factor = EconomyManager.player_army.size() / 6.0
 	return int(ceil(avg_level + army_factor))
 
-# Obozowisko "Ostatecznego Bossa" - stawiane daleko od startu gracza, ze
-# stałą (bardzo silną) armią liczącą ok. 50 wymaxowanych jednostek. Nie
-# podlega bieżącemu skalowaniu ani powolnej ekspansji terytorialnej - to
-# stały, docelowy przeciwnik "końcowy" mapy.
-func generate_boss_camp() -> void:
-	if fraction_data.is_empty(): return
+# Zamek koncowy — stawiany daleko od startu gracza, z trzema etapami walki.
+# Mozna zaatakowac od poczatku gry, ale realna szansa wymaga pelnej armii (~50).
+func generate_castle() -> void:
+	if fraction_data.is_empty():
+		return
 	for c in camps.values():
-		if c.get("is_boss", false):
-			return # boss już istnieje
+		if _is_castle_camp(c):
+			return
 
 	var start_pos = Vector2(MAP_SIZE / 2, MAP_SIZE / 2)
 	var far_positions = []
@@ -322,50 +324,74 @@ func generate_boss_camp() -> void:
 				if not too_close:
 					far_positions.append(pos)
 
-	if far_positions.is_empty(): return
+	if far_positions.is_empty():
+		return
 	far_positions.shuffle()
 	var pos: Vector2 = far_positions[0]
 
-	var faction_keys = fraction_data.keys()
-	var faction_id = faction_keys[randi() % faction_keys.size()]
-	var faction_info = fraction_data[faction_id]
-
-	var army = []
-	if faction_info.has("units") and faction_info["units"].size() > 0:
-		var units = faction_info["units"]
-		var target_size = 50
-		for i in range(target_size):
-			var base_unit = units[randi() % units.size()]
-			var boss_unit = base_unit.duplicate(true)
-			# Jednostki "wymaxowane" - znacznie silniejsze niż standardowe.
-			boss_unit["hp"] = int(boss_unit.get("hp", 10) * 3.0)
-			boss_unit["dmg"] = int(boss_unit.get("dmg", 5) * 3.0)
-			boss_unit["def"] = int(boss_unit.get("def", 2) * 3.0)
-			boss_unit["level"] = 3
-			boss_unit["combat_stat_multiplier"] = 3.0
-			army.append(boss_unit)
-
-	var boss_color = Color(0.05, 0.02, 0.05, 0.4)
+	var castle_color = Color(0.05, 0.02, 0.05, 0.4)
 	var camp_data = {
-		"faction": faction_id,
-		"faction_name": "Ostateczny Władca (" + faction_info.get("name", faction_id) + ")",
-		"army": army,
+		"faction": "humans",
+		"faction_name": "Strażnicy Zamku",
+		"army": _build_castle_display_army(),
 		"resources": {
 			"gold": 5000,
 			"wood": 2000,
 			"iron": 2000
 		},
 		"level": 3,
-		"color": boss_color,
-		"is_boss": true
+		"color": castle_color,
+		"is_castle": true,
 	}
 	camps[pos] = camp_data
-	var building_name = "Obóz " + camp_data["faction_name"]
+	var building_name = "Zamek"
 	map_data[pos]["building"] = building_name
 	map_data[pos]["level"] = 3
 	_update_building_label(pos, building_name, 3)
+	_claim_camp_territory(pos, 3, castle_color)
 
-	_claim_camp_territory(pos, 3, boss_color)
+
+func _is_castle_camp(camp_data: Dictionary) -> bool:
+	return camp_data.get("is_castle", false) or camp_data.get("is_boss", false)
+
+
+func _load_castle_stages() -> Array:
+	var file := FileAccess.open(CASTLE_SCENARIO_PATH, FileAccess.READ)
+	if file == null:
+		return []
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return []
+	return parsed.get("stages", [])
+
+
+func _castle_stage_enemy_count(stage_index: int) -> int:
+	var stages: Array = _load_castle_stages()
+	if stage_index < 0 or stage_index >= stages.size():
+		return 0
+	var total := 0
+	for group in stages[stage_index].get("enemy_units", []):
+		if typeof(group) == TYPE_DICTIONARY:
+			total += int(group.get("count", 0))
+	return total
+
+
+func get_castle_stage_enemy_count(stage_index: int) -> int:
+	return _castle_stage_enemy_count(stage_index)
+
+
+func _build_castle_display_army() -> Array:
+	var army: Array = []
+	var stages: Array = _load_castle_stages()
+	for stage in stages:
+		for group in stage.get("enemy_units", []):
+			if typeof(group) != TYPE_DICTIONARY:
+				continue
+			var unit_id := str(group.get("type_id", ""))
+			var count := int(group.get("count", 0))
+			for i in count:
+				army.append({"id": unit_id, "level": 3, "combat_stat_multiplier": 1.0})
+	return army
 
 func _claim_camp_territory(center_pos: Vector2, level: int, color: Color = Color(0.8, 0.1, 0.1, 0.25)) -> void:
 	var to_claim = [center_pos]
@@ -399,7 +425,7 @@ func _claim_camp_territory(center_pos: Vector2, level: int, color: Color = Color
 func expand_camp_territories() -> void:
 	for camp_pos in camps.keys():
 		var camp_data = camps[camp_pos]
-		if camp_data.get("is_boss", false):
+		if _is_castle_camp(camp_data):
 			continue
 
 		var candidates: Array[Vector2] = []
@@ -434,7 +460,7 @@ func expand_camp_territories() -> void:
 func update_camp_scaling() -> void:
 	for camp_pos in camps.keys():
 		var camp_data: Dictionary = camps[camp_pos]
-		if camp_data.get("is_boss", false) or camp_data.get("army_locked", false):
+		if _is_castle_camp(camp_data) or camp_data.get("army_locked", false):
 			continue
 		_scale_camp_army(camp_pos)
 
@@ -442,7 +468,7 @@ func lock_camp_army(camp_pos: Vector2) -> void:
 	if not camps.has(camp_pos):
 		return
 	var camp_data: Dictionary = camps[camp_pos]
-	if not camp_data.get("is_boss", false):
+	if not _is_castle_camp(camp_data):
 		_scale_camp_army(camp_pos)
 	camp_data["army_locked"] = true
 
@@ -723,9 +749,14 @@ func _update_building_label(pos: Vector2, building_name: String, level: int) -> 
 	else:
 		badge.visible = false
 
+func _show_campaign_victory_screen() -> void:
+	SceneTransition.change_scene(CAMPAIGN_VICTORY_SCENE, "ZWYCIĘSTWO")
+
 func _get_building_icon_texture(building_name: String) -> Texture2D:
 	var path := ""
-	if building_name.begins_with("Obóz"):
+	if building_name == "Zamek":
+		path = "res://assets/tiles/city_center.png"
+	elif building_name.begins_with("Obóz"):
 		path = "res://assets/tiles/barracks.png"
 	else:
 		match building_name:
@@ -747,6 +778,8 @@ func _get_building_icon_texture(building_name: String) -> Texture2D:
 	return null
 
 func _get_building_accent_color(building_name: String) -> Color:
+	if building_name == "Zamek":
+		return Color(0.55, 0.45, 0.15, 0.95)
 	if building_name.begins_with("Obóz"): return Color(0.8, 0.2, 0.2, 0.9)
 	match building_name:
 		"Centrum Miasta": return Color(1.0, 0.85, 0.35, 0.95)
@@ -1200,6 +1233,22 @@ func _get_tile_at_world_pos(world_pos: Vector2) -> Variant:
 		if tile_nodes[pos] == hit_area: return pos
 	return null
 
+func _migrate_legacy_boss_to_castle() -> void:
+	for pos in camps.keys():
+		var camp_data: Dictionary = camps[pos]
+		if not _is_castle_camp(camp_data):
+			continue
+		camp_data["is_castle"] = true
+		camp_data.erase("is_boss")
+		camp_data["faction"] = "humans"
+		camp_data["faction_name"] = "Strażnicy Zamku"
+		if camp_data.get("army", []).is_empty():
+			camp_data["army"] = _build_castle_display_army()
+		if map_data.has(pos) and map_data[pos].get("building", "Brak") != "Zamek":
+			map_data[pos]["building"] = "Zamek"
+			map_data[pos]["level"] = 3
+			_update_building_label(pos, "Zamek", 3)
+
 func _restore_state_from_save() -> void:
 	if not SaveManager.is_loading: return
 	var gw = SaveManager.loaded_gw_data
@@ -1212,6 +1261,7 @@ func _restore_state_from_save() -> void:
 	explored_tiles = gw.get("explored_tiles", {})
 	last_expansion_turn = gw.get("last_expansion_turn", 1)
 	last_camp_expansion_turn = gw.get("last_camp_expansion_turn", 1)
+	_migrate_legacy_boss_to_castle()
 	
 	for pos in map_data:
 		var tile = map_data[pos]
@@ -1362,8 +1412,10 @@ func start_battle(camp_pos: Vector2) -> bool:
 	battle_result_path = exchange_dir.path_join("result_%s.json" % battle_id)
 	battle_camp_pos = camp_pos
 	var camp_data: Dictionary = camps[camp_pos]
+	var is_castle: bool = _is_castle_camp(camp_data)
 	var units: Array[Dictionary] = _build_player_battle_stacks(ready_army)
-	units.append_array(_build_enemy_battle_stacks(camp_data.get("army", []), units.size() + 1))
+	if not is_castle:
+		units.append_array(_build_enemy_battle_stacks(camp_data.get("army", []), units.size() + 1))
 	var request := {
 		"schema_version": 1,
 		"battle_id": battle_id,
@@ -1372,6 +1424,8 @@ func start_battle(camp_pos: Vector2) -> bool:
 		"player_faction": "humans",
 		"enemy_faction": str(camp_data.get("faction", "orcs")),
 		"ai_difficulty": GameSettings.campaign_ai_difficulty,
+		"castle_battle": is_castle,
+		"background_path": CASTLE_STAGE_1_BG if is_castle else "",
 		"units": units,
 	}
 	var temporary_path := "%s.tmp" % request_path
@@ -1509,6 +1563,14 @@ func _apply_battle_result() -> void:
 		_apply_retreat_penalty()
 		if character:
 			character.moves_left = 0
+	elif outcome == "victory" and bool(result.get("castle_victory", false)):
+		if camps.has(battle_camp_pos):
+			var loot: Dictionary = camps[battle_camp_pos].get("resources", {})
+			EconomyManager.resources["Złoto"] += int(loot.get("gold", 0))
+			EconomyManager.resources["Drewno"] += int(loot.get("wood", 0))
+			EconomyManager.resources["Żelazo"] += int(loot.get("iron", 0))
+			destroy_camp(battle_camp_pos)
+		call_deferred("_show_campaign_victory_screen")
 	elif outcome == "victory" and camps.has(battle_camp_pos):
 		var loot: Dictionary = camps[battle_camp_pos].get("resources", {})
 		EconomyManager.resources["Złoto"] += int(loot.get("gold", 0))

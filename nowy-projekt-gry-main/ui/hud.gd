@@ -318,6 +318,11 @@ func _update_battle_button() -> void:
 		return
 		
 	battle_button.visible = true
+	var camp_data: Dictionary = world_ref.camps.get(tile_pos, {})
+	if camp_data.get("is_castle", false) or camp_data.get("is_boss", false):
+		battle_button.text = "🏰 Szturm na Zamek"
+	else:
+		battle_button.text = "⚔️ Rozpocznij walkę"
 	battle_button.position = screen_pos - battle_button.size / 2.0
 
 func setup_battle_button() -> void:
@@ -347,17 +352,36 @@ func _on_battle_button_pressed() -> void:
 	var camp_data: Dictionary = world_ref.camps.get(tile_pos, {})
 	var player_count := int(world_ref.character.get_army_size())
 	var enemy_count := int(camp_data.get("army", []).size())
-	battle_confirm_dialog.dialog_text = (
-		"Obozowisko: %s (poziom %d)\n"
-		+ "Twoje gotowe jednostki: %d\n"
-		+ "Jednostki przeciwnika: %d\n\n"
-		+ "Rozpocząć walkę?"
-	) % [
-		camp_data.get("faction_name", "Nieznana frakcja"),
-		int(camp_data.get("level", 1)),
-		player_count,
-		enemy_count,
-	]
+	var is_castle: bool = bool(camp_data.get("is_castle", false)) or bool(camp_data.get("is_boss", false))
+	if is_castle:
+		var stage1 := 0
+		if world_ref.has_method("get_castle_stage_enemy_count"):
+			stage1 = world_ref.get_castle_stage_enemy_count(0)
+		battle_confirm_dialog.dialog_text = (
+			"🏰 Szturm na Zamek (3 etapy)\n"
+			+ "Twoje gotowe jednostki: %d\n"
+			+ "Obrońcy etapu 1: %d\n"
+			+ "Łącznie ~%d wrogów w trzech falach\n\n"
+			+ "Możesz zaatakować w każdej chwili, ale pełna armia (~%d) daje realną szansę.\n\n"
+			+ "Rozpocząć szturm?"
+		) % [
+			player_count,
+			stage1,
+			stage1 + (world_ref.get_castle_stage_enemy_count(1) if world_ref.has_method("get_castle_stage_enemy_count") else 0) + (world_ref.get_castle_stage_enemy_count(2) if world_ref.has_method("get_castle_stage_enemy_count") else 0),
+			EconomyManager.MAX_ARMY_SIZE,
+		]
+	else:
+		battle_confirm_dialog.dialog_text = (
+			"Obozowisko: %s (poziom %d)\n"
+			+ "Twoje gotowe jednostki: %d\n"
+			+ "Jednostki przeciwnika: %d\n\n"
+			+ "Rozpocząć walkę?"
+		) % [
+			camp_data.get("faction_name", "Nieznana frakcja"),
+			int(camp_data.get("level", 1)),
+			player_count,
+			enemy_count,
+		]
 	battle_confirm_dialog.popup_centered(Vector2i(540, 270))
 
 
@@ -1353,7 +1377,7 @@ func show_context_menu(mouse_pos: Vector2, tile_pos: Vector2, tile_type: String,
 	var show_upgrade = is_owned and has_building and building_name != "Centrum Miasta" and building_level < 3
 	
 	if has_building:
-		if building_name.begins_with("Obóz"):
+		if building_name == "Zamek" or building_name.begins_with("Obóz"):
 			var camp_data = {}
 			if world_ref and world_ref.get("camps") and world_ref.camps.has(active_tile_pos):
 				camp_data = world_ref.camps[active_tile_pos]
@@ -1361,6 +1385,8 @@ func show_context_menu(mouse_pos: Vector2, tile_pos: Vector2, tile_type: String,
 			var army_text = "Brak"
 			if camp_data.has("army") and camp_data["army"].size() > 0:
 				army_text = str(camp_data["army"].size()) + " jednostek"
+			if camp_data.get("is_castle", false) or camp_data.get("is_boss", false):
+				army_text += " (3 etapy walki)"
 				
 			var res_text = ""
 			if camp_data.has("resources"):
@@ -1372,8 +1398,9 @@ func show_context_menu(mouse_pos: Vector2, tile_pos: Vector2, tile_type: String,
 					_resource_icon_bbcode("Żelazo"),
 					camp_data["resources"]["iron"],
 				]
-				
-			info_label.text = "[center]⛺ %s (Lvl %d)\n⚔️ Nacja: %s\n📦 Surowce: %s\n🛡️ Armia: %s[/center]" % [building_name, building_level, camp_data.get("faction_name", "Nieznana"), res_text, army_text]
+			
+			var icon := "🏰" if building_name == "Zamek" else "⛺"
+			info_label.text = "[center]%s %s (Lvl %d)\n⚔️ Nacja: %s\n📦 Surowce: %s\n🛡️ Armia: %s[/center]" % [icon, building_name, building_level, camp_data.get("faction_name", "Nieznana"), res_text, army_text]
 		else:
 			var t_text = ""
 			if building_name == "Centrum Miasta":
@@ -1418,7 +1445,7 @@ func show_context_menu(mouse_pos: Vector2, tile_pos: Vector2, tile_type: String,
 	destroy_button.visible = is_owned and has_building and building_name != "Centrum Miasta"
 	recruit_button.visible = (has_building and building_name == "Baraki" and is_owned)
 	army_button.visible = (has_building and building_name == "Baraki" and is_owned)
-	camp_details_btn.visible = (has_building and building_name.begins_with("Obóz"))
+	camp_details_btn.visible = (has_building and (building_name.begins_with("Obóz") or building_name == "Zamek"))
 	btn_my_potions.visible = (has_building and building_name == "Laboratorium" and is_owned)
 	btn_buy_potions.visible = (has_building and building_name == "Laboratorium" and is_owned)
 	temple_button.visible = (has_building and building_name == "Świątynia" and is_owned)

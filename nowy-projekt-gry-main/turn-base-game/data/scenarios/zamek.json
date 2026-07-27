@@ -1,7 +1,7 @@
 {
   "id": "zamek",
   "name": "Szturm na Zamek",
-  "description": "Orkowie przebijaja sie przez trzy etapy ludzkiej stolicy.",
+  "description": "Trzy etapy obrony zamku. Mozna zaatakowac od poczatku gry, ale realna szansa wymaga pelnej armii.",
   "player_faction": "orcs",
   "enemy_faction": "humans",
   "stages": [
@@ -15,21 +15,21 @@
 		{"type_id": "orc_shieldman", "count": 13}
 	  ],
 	  "enemy_units": [
-		{"type_id": "human_knights", "count": 9, "grid_x": 11, "grid_y": 6},
-		{"type_id": "human_knights", "count": 9, "grid_x": 11, "grid_y": 4},
-		{"type_id": "human_archers", "count": 9, "grid_x": 14, "grid_y": 9},
-		{"type_id": "human_archers", "count": 9, "grid_x": 13, "grid_y": 2}
+		{"type_id": "human_knights", "count": 7, "grid_x": 11, "grid_y": 6},
+		{"type_id": "human_knights", "count": 7, "grid_x": 11, "grid_y": 4},
+		{"type_id": "human_archers", "count": 6, "grid_x": 14, "grid_y": 9},
+		{"type_id": "human_archers", "count": 6, "grid_x": 13, "grid_y": 2}
 	  ],
 	  "obstacles": []
 	},
 	{
-	  "name": "Przedmieścia",
+	  "name": "Przedmiescia",
 	  "background": "res://turn-base-game/assets/backgrounds/scenarios/zamek_etap_2_przedmiescia.png",
 	  "enemy_units": [
-		{"type_id": "human_cavalry", "count": 5, "grid_x": 12, "grid_y": 2},
-		{"type_id": "human_knights", "count": 9, "grid_x": 13, "grid_y": 4},
-		{"type_id": "human_archers", "count": 9, "grid_x": 12, "grid_y": 6},
-		{"type_id": "human_mages", "count": 6, "grid_x": 13, "grid_y": 8}
+		{"type_id": "human_cavalry", "count": 4, "grid_x": 12, "grid_y": 2},
+		{"type_id": "human_knights", "count": 6, "grid_x": 13, "grid_y": 4},
+		{"type_id": "human_archers", "count": 6, "grid_x": 12, "grid_y": 6},
+		{"type_id": "human_mages", "count": 4, "grid_x": 13, "grid_y": 8}
 	  ],
 	  "obstacles": []
 	},
@@ -38,8 +38,8 @@
 	  "background": "res://turn-base-game/assets/backgrounds/scenarios/zamek_etap_3_centrum.png",
 	  "enemy_units": [
 		{"type_id": "human_knights", "count": 4, "grid_x": 12, "grid_y": 3},
-		{"type_id": "human_archers", "count": 5, "grid_x": 13, "grid_y": 7},
-		{"type_id": "human_mages", "count": 4, "grid_x": 12, "grid_y": 6},
+		{"type_id": "human_archers", "count": 4, "grid_x": 13, "grid_y": 7},
+		{"type_id": "human_mages", "count": 3, "grid_x": 12, "grid_y": 6},
 		{"type_id": "human_king", "count": 1, "grid_x": 14, "grid_y": 5}
 	  ],
 	  "obstacles": []

@@ -45,8 +45,8 @@ func show_camp_details_menu(pos: Vector2):
 	var header_hbox = HBoxContainer.new()
 	var title_lbl = Label.new()
 	title_lbl.text = "Obozowisko: " + camp_data.get("faction_name", "Nieznana") + " (Poziom " + str(camp_data.get("level", 1)) + ")"
-	if camp_data.get("is_boss", false):
-		title_lbl.text = "👑 OSTATECZNY BOSS 👑\n" + title_lbl.text
+	if camp_data.get("is_castle", false) or camp_data.get("is_boss", false):
+		title_lbl.text = "🏰 ZAMEK — Cel ostateczny"
 	title_lbl.add_theme_font_size_override("font_size", 24)
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var close_btn = Button.new()
@@ -62,7 +62,10 @@ func show_camp_details_menu(pos: Vector2):
 	
 	var lore_lbl = RichTextLabel.new()
 	var f_id = camp_data.get("faction", "")
-	lore_lbl.text = faction_lore.get(f_id, "Nieznana frakcja, ostrożnie!")
+	if camp_data.get("is_castle", false) or camp_data.get("is_boss", false):
+		lore_lbl.text = "Potężna twierdza na krańcu mapy. Szturm składa się z trzech etapów: Mury, Przedmieścia i Centrum. Możesz zaatakować w każdej chwili, ale pełna armia daje realną szansę na zwycięstwo."
+	else:
+		lore_lbl.text = faction_lore.get(f_id, "Nieznana frakcja, ostrożnie!")
 	lore_lbl.fit_content = true
 	lore_lbl.add_theme_font_size_override("normal_font_size", 16)
 	lore_lbl.add_theme_color_override("default_color", Color(0.8, 0.8, 0.8))

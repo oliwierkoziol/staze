@@ -502,7 +502,8 @@ func _start_campaign_battle(request: Dictionary) -> void:
 	if ai_difficulty == "gracz" or not PlanerAIScript.PROFILE.has(ai_difficulty):
 		ai_difficulty = "sredni"
 	free_setup_mode = false
-	castle_stage = 0
+	var is_castle_battle := bool(request.get("castle_battle", false))
+	castle_stage = 1 if is_castle_battle else 0
 	_set_battle_background(str(request.get("background_path", DEFAULT_BATTLE_BACKGROUND_PATH)))
 	skill_library = UnitTypeLibraryScript.get_skill_library()
 	_load_general_skills()
@@ -510,10 +511,15 @@ func _start_campaign_battle(request: Dictionary) -> void:
 		hud.visible = true
 	if board != null:
 		board.visible = true
-	_build_campaign_battle_config(request.get("units", []))
+	if is_castle_battle:
+		_build_castle_campaign_config(request.get("units", []))
+	else:
+		_build_campaign_battle_config(request.get("units", []))
 	_setup_battle_scene()
 	if campaign_debug_enabled:
 		_build_campaign_debug_menu()
+	if is_castle_battle and castle_stage == 1:
+		_show_castle_stage_intro()
 
 
 func _build_campaign_battle_config(raw_units: Variant) -> void:
@@ -555,6 +561,58 @@ func _build_campaign_battle_config(raw_units: Variant) -> void:
 		config["grid_x"] = int(config.get("grid_x", position.x))
 		config["grid_y"] = int(config.get("grid_y", position.y))
 		unit_configs.append(config)
+
+
+func _build_castle_campaign_config(raw_units: Variant) -> void:
+	unit_configs.clear()
+	var player_units: Array = []
+	if typeof(raw_units) == TYPE_ARRAY:
+		for raw_unit in raw_units:
+			if typeof(raw_unit) == TYPE_DICTIONARY and str(raw_unit.get("side", "")) == "player":
+				player_units.append(raw_unit)
+	var player_positions := _compute_player_positions(player_units.size())
+	var player_index := 0
+	for raw_unit in player_units:
+		var config: Dictionary = raw_unit.duplicate(true)
+		var position := player_positions[player_index]
+		player_index += 1
+		config["id"] = int(config.get("id", unit_configs.size() + 1))
+		config["type_id"] = str(config.get("type_id", ""))
+		config["side"] = "player"
+		config["count"] = maxi(1, int(config.get("count", 1)))
+		config["level"] = maxi(1, int(config.get("level", 1)))
+		config["grid_x"] = int(config.get("grid_x", position.x))
+		config["grid_y"] = int(config.get("grid_y", position.y))
+		unit_configs.append(config)
+	var stages: Array[Dictionary] = _get_castle_stages()
+	if stages.is_empty():
+		return
+	var enemy_configs: Array[Dictionary] = _typed_dictionary_array(stages[0].get("enemy_units", []))
+	for index in enemy_configs.size():
+		var enemy_config: Dictionary = enemy_configs[index]
+		unit_configs.append({
+			"id": 100 + index,
+			"type_id": str(enemy_config.get("type_id", "")),
+			"side": "enemy",
+			"count": int(enemy_config.get("count", 1)),
+			"grid_x": int(enemy_config.get("grid_x", 12)),
+			"grid_y": int(enemy_config.get("grid_y", 5)),
+		})
+
+
+func _show_castle_stage_intro() -> void:
+	is_animating = true
+	var stages: Array[Dictionary] = _get_castle_stages()
+	_set_stage_transition_content(castle_stage, stages)
+	stage_transition_overlay.visible = true
+	var transition: Tween = create_tween()
+	transition.tween_property(stage_transition_overlay, "modulate:a", 1.0, 0.45)
+	transition.tween_interval(2.5)
+	transition.tween_property(stage_transition_overlay, "modulate:a", 0.0, 0.45)
+	transition.finished.connect(func() -> void:
+		stage_transition_overlay.visible = false
+		is_animating = false
+	)
 
 
 func _input(event: InputEvent) -> void:
@@ -2037,6 +2095,24 @@ func _ai_score_skill(caster: Dictionary, target: Dictionary, target_cell: Vector
 	return 0
 
 
+func _is_castle_battle_active() -> bool:
+	return castle_stage > 0 or bool(campaign_request.get("castle_battle", false))
+
+
+func _get_ai_profile() -> Dictionary:
+	var profile: Dictionary = PlanerAIScript.pobierz_profil(ai_difficulty).duplicate(true)
+	if not _is_castle_battle_active():
+		return profile
+	profile["threat_weight"] = float(profile.get("threat_weight", 0.7)) * 0.25
+	profile["hazard_weight"] = float(profile.get("hazard_weight", 0.9)) * 0.45
+	profile["formation_weight"] = float(profile.get("formation_weight", 0.65)) * 0.3
+	profile["casualty_weight"] = int(profile.get("casualty_weight", 75)) + 55
+	profile["kill_bonus"] = int(profile.get("kill_bonus", 400)) + 350
+	profile["coordination_weight"] = float(profile.get("coordination_weight", 0.4)) * 1.5
+	profile["decision_noise"] = float(profile.get("decision_noise", 0.05)) * 0.5
+	return profile
+
+
 func _ai_score_damage(attacker: Dictionary, target: Dictionary, multiplier: float) -> int:
 	if target.is_empty():
 		return 0
@@ -2049,7 +2125,7 @@ func _ai_score_damage(attacker: Dictionary, target: Dictionary, multiplier: floa
 	var base_hp: int = max(1, int(target.get("base_hp", target.get("hp", 1))))
 	var hp_after: int = maxi(0, current_hp - damage)
 	var casualties: int = ceili(float(current_hp) / float(base_hp)) - ceili(float(hp_after) / float(base_hp))
-	var profile: Dictionary = PlanerAIScript.pobierz_profil(ai_difficulty)
+	var profile: Dictionary = _get_ai_profile()
 	var score: int = min(damage, current_hp) * 4
 	score += casualties * int(profile.get("casualty_weight", 75))
 	if damage >= current_hp:
@@ -2162,19 +2238,21 @@ func _ai_score_position(unit: Dictionary, cell: Vector2i) -> int:
 	var threat: int = _ai_expected_threat(unit, cell)
 	if str(unit.get("balance_role", "")) == "obronca":
 		threat = int(ceil(float(threat) / 3.0))
-		var ally_distance: int = 1000
-		for ally in units:
-			if int(ally.id) != int(unit.id) and ally.side == unit.side:
-				ally_distance = min(ally_distance, _hex_distance(cell, Vector2i(int(ally.grid_x), int(ally.grid_y))))
-		if ally_distance < 1000:
-			score -= max(0, ally_distance - 1) * 8
-	score += int(round(float(_ai_score_formation(unit, cell)) * float(PlanerAIScript.pobierz_profil(ai_difficulty).get("formation_weight", 0.65))))
-	score -= int(round(float(threat) * float(PlanerAIScript.pobierz_profil(ai_difficulty).get("threat_weight", 0.5))))
+		if not (_is_castle_battle_active() and str(unit.side) == "enemy"):
+			var ally_distance: int = 1000
+			for ally in units:
+				if int(ally.id) != int(unit.id) and ally.side == unit.side:
+					ally_distance = min(ally_distance, _hex_distance(cell, Vector2i(int(ally.grid_x), int(ally.grid_y))))
+			if ally_distance < 1000:
+				score -= max(0, ally_distance - 1) * 8
+	var ai_profile: Dictionary = _get_ai_profile()
+	score += int(round(float(_ai_score_formation(unit, cell)) * float(ai_profile.get("formation_weight", 0.65))))
+	score -= int(round(float(threat) * float(ai_profile.get("threat_weight", 0.5))))
 	return score
 
 
 func _ai_hazard_penalty(unit: Dictionary, path: Array[Vector2i]) -> int:
-	return int(round(float(_get_path_hazard_penalty(unit, path)) * float(PlanerAIScript.pobierz_profil(ai_difficulty).get("hazard_weight", 1.0))))
+	return int(round(float(_get_path_hazard_penalty(unit, path)) * float(_get_ai_profile().get("hazard_weight", 1.0))))
 
 
 func _ai_score_coordination(attacker: Dictionary, target: Dictionary) -> int:
@@ -2229,6 +2307,9 @@ func _ai_score_approach(unit: Dictionary, cell: Vector2i) -> int:
 		return 0
 	var preferred: int = max(1, int(unit.get("attack_range", 1)))
 	var approach_weight: int = 24 if str(unit.get("balance_role", "")) == "obronca" else 12
+	if _is_castle_battle_active() and str(unit.side) == "enemy":
+		approach_weight = int(round(float(approach_weight) * 2.4))
+		preferred = 1
 	return -abs(best_distance - preferred) * approach_weight
 
 
@@ -6116,15 +6197,23 @@ func _show_victory_overlay(winner_side: String) -> void:
 		return
 	if campaign_mode:
 		campaign_outcome = "victory" if winner_side == "player" else "defeat"
-		victory_title_label.text = "ZWYCIĘSTWO" if winner_side == "player" else "PORAŻKA"
+		var is_final_castle := bool(campaign_request.get("castle_battle", false)) and campaign_outcome == "victory" and castle_stage >= _get_castle_stages().size()
+		if is_final_castle:
+			victory_title_label.text = "ZAMEK ZDOBYTY!"
+		else:
+			victory_title_label.text = "ZWYCIĘSTWO" if winner_side == "player" else "PORAŻKA"
 		victory_restart_button.visible = false
 		victory_finish_button.text = "WRÓĆ DO MAPY"
+		if is_final_castle:
+			victory_summary_label.text = "Przebiłeś się przez wszystkie trzy etapy obrony zamku!"
+		else:
+			victory_summary_label.text = _battle_result_summary()
 	else:
 		var winner_name := "GRACZ" if winner_side == "player" else "PRZECIWNIK"
 		victory_title_label.text = "ZWYCIĘZCA: %s" % winner_name
 		victory_restart_button.visible = true
 		victory_finish_button.text = "MENU POTYCZKI"
-	victory_summary_label.text = _battle_result_summary()
+		victory_summary_label.text = _battle_result_summary()
 	victory_overlay.visible = true
 
 
@@ -6345,6 +6434,7 @@ func _write_campaign_result(outcome: String) -> bool:
 		"outcome": outcome,
 		"rounds": round_number,
 		"player_survivors": survivors,
+		"castle_victory": outcome == "victory" and bool(campaign_request.get("castle_battle", false)) and castle_stage >= _get_castle_stages().size(),
 	}
 	var temporary_path := "%s.tmp" % campaign_result_path
 	var file := FileAccess.open(temporary_path, FileAccess.WRITE)
