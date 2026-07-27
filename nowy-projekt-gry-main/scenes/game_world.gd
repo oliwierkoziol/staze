@@ -657,10 +657,13 @@ func _create_building_badge(area: Area2D) -> PanelContainer:
 	top_row.add_theme_constant_override("separation", 4)
 	vbox.add_child(top_row)
 
-	var icon_lbl = Label.new()
-	icon_lbl.name = "Icon"
-	icon_lbl.add_theme_font_size_override("font_size", 13)
-	top_row.add_child(icon_lbl)
+	var icon_rect = TextureRect.new()
+	icon_rect.name = "Icon"
+	icon_rect.custom_minimum_size = Vector2(16, 16)
+	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_row.add_child(icon_rect)
 
 	var name_lbl = Label.new()
 	name_lbl.name = "NameLabel"
@@ -685,7 +688,7 @@ func _update_building_label(pos: Vector2, building_name: String, level: int) -> 
 	if not label_nodes.has(pos): return
 	var badge: PanelContainer = label_nodes[pos]
 
-	var icon_lbl: Label = badge.get_node("VBox/TopRow/Icon")
+	var icon_rect: TextureRect = badge.get_node("VBox/TopRow/Icon")
 	var name_lbl: Label = badge.get_node("VBox/TopRow/NameLabel")
 	var level_row: HBoxContainer = badge.get_node("VBox/LevelRow")
 
@@ -693,7 +696,9 @@ func _update_building_label(pos: Vector2, building_name: String, level: int) -> 
 		badge.visible = false
 		return
 
-	icon_lbl.text = _get_building_icon(building_name)
+	var icon_texture := _get_building_icon_texture(building_name)
+	icon_rect.texture = icon_texture
+	icon_rect.visible = icon_texture != null
 	name_lbl.text = building_name
 
 	var style: StyleBoxFlat = badge.get_meta("style_box")
@@ -709,14 +714,8 @@ func _update_building_label(pos: Vector2, building_name: String, level: int) -> 
 	else:
 		level_row.visible = true
 		for i in range(max_level):
-			var star = Label.new()
-			star.add_theme_font_size_override("font_size", 10)
-			if i < level:
-				star.text = "★"
-				star.add_theme_color_override("font_color", Color(1.0, 0.82, 0.25))
-			else:
-				star.text = "★"
-				star.add_theme_color_override("font_color", Color(0.4, 0.4, 0.45, 0.5))
+			var star := StarLevelIcon.new()
+			star.filled = i < level
 			level_row.add_child(star)
 
 	if explored_tiles.has(pos):
@@ -724,23 +723,28 @@ func _update_building_label(pos: Vector2, building_name: String, level: int) -> 
 	else:
 		badge.visible = false
 
-func _get_building_icon(building_name: String) -> String:
-	if building_name.begins_with("Obóz"): return "⛺"
-	match building_name:
-		"Centrum Miasta": return "🏛️"
-		"Dom mieszkalny": return "🏠"
-		"Chata Drwala": return "🪓"
-		"Kopalnia Żelaza": return "⛏️"
-		"Kopalnia Węgla": return "🪨"
-		"Farma": return "🌾"
-		"Pastwisko": return "🐄"
-		"Spichlerz": return "📦"
-		"Laboratorium": return "🔬"
-		"Warsztat": return "🔧"
-		"Biblioteka": return "📚"
-		"Świątynia": return "⛩️"
-		"Baraki": return "🏹"
-		_: return "🏗️"
+func _get_building_icon_texture(building_name: String) -> Texture2D:
+	var path := ""
+	if building_name.begins_with("Obóz"):
+		path = "res://assets/tiles/barracks.png"
+	else:
+		match building_name:
+			"Centrum Miasta": path = "res://assets/tiles/city_center.png"
+			"Dom mieszkalny": path = "res://assets/tiles/residential_house.png"
+			"Chata Drwala": path = "res://assets/tiles/sawmill.png"
+			"Kopalnia Żelaza": path = "res://assets/tiles/iron_mine.png"
+			"Kopalnia Węgla": path = "res://assets/tiles/coal_mine.png"
+			"Farma": path = "res://assets/tiles/farm.png"
+			"Pastwisko": path = "res://assets/tiles/pasture.png"
+			"Spichlerz": path = "res://assets/tiles/spichlerz.png"
+			"Laboratorium": path = "res://assets/tiles/lab.png"
+			"Warsztat": path = "res://assets/tiles/workshop.png"
+			"Biblioteka": path = "res://assets/tiles/library.png"
+			"Świątynia": path = "res://assets/tiles/temple.png"
+			"Baraki": path = "res://assets/tiles/barracks.png"
+	if path != "":
+		return load(path) as Texture2D
+	return null
 
 func _get_building_accent_color(building_name: String) -> Color:
 	if building_name.begins_with("Obóz"): return Color(0.8, 0.2, 0.2, 0.9)
@@ -1592,3 +1596,21 @@ func update_fog_of_war() -> void:
 
 		if camp_territory_overlays.has(pos):
 			camp_territory_overlays[pos].visible = is_explored
+
+
+class StarLevelIcon extends Control:
+	var filled: bool = true
+
+	func _ready() -> void:
+		custom_minimum_size = Vector2(10, 10)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var color := Color(1.0, 0.82, 0.25) if filled else Color(0.4, 0.4, 0.45, 0.5)
+		var center := size * 0.5
+		var points := PackedVector2Array()
+		for i in range(10):
+			var angle := -PI / 2.0 + i * PI / 5.0
+			var radius := size.x * 0.46 if i % 2 == 0 else size.x * 0.19
+			points.append(center + Vector2(cos(angle), sin(angle)) * radius)
+		draw_colored_polygon(points, color)

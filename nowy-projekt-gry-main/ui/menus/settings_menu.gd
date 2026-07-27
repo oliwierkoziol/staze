@@ -17,6 +17,7 @@ func _init(_hud: Control):
 func setup_settings_window():
 	settings_window = PanelContainer.new()
 	settings_window.visible = false
+	settings_window.z_index = 10
 	settings_window.custom_minimum_size = Vector2(480, 0)
 
 	settings_window.add_theme_stylebox_override("panel", hud._panel_style(20))
@@ -42,6 +43,7 @@ func setup_settings_window():
 	close_btn.pressed.connect(func():
 		settings_window.visible = false
 		if AudioManager: AudioManager.resume_bg_music()
+		hud._update_menu_backdrop()
 	)
 	hud._style_df_button(close_btn)
 	header_hbox.add_child(title_label)
@@ -111,6 +113,7 @@ func setup_settings_window():
 	resume_btn.pressed.connect(func():
 		settings_window.visible = false
 		if AudioManager: AudioManager.resume_bg_music()
+		hud._update_menu_backdrop()
 	)
 	main_vbox.add_child(resume_btn)
 
@@ -222,6 +225,7 @@ func _on_external_load_finished(success: bool, message: String) -> void:
 func _finish_external_load(success: bool, message: String) -> void:
 	if success:
 		settings_window.visible = false
+		hud._update_menu_backdrop()
 		SceneTransition.change_scene("res://scenes/game_world.tscn", "WCZYTYWANIE KAMPANII")
 		return
 	_show_file_result(
@@ -288,6 +292,8 @@ func show_settings_menu():
 		else:
 			settings_seed_value_label.text = "Seed: Losowy"
 	settings_window.visible = true
+	settings_window.move_to_front()
 	var viewport_size = hud.get_viewport_rect().size
 	settings_window.reset_size()
 	settings_window.position = ((viewport_size - settings_window.size) / 2.0).round()
+	hud._update_menu_backdrop()

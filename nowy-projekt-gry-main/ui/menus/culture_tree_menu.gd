@@ -33,7 +33,10 @@ func setup_culture_tree_ui():
 		culture_tree_window.add_theme_stylebox_override("panel", hud._panel_style())
 		var close_btn = culture_tree_window.get_node_or_null("CloseButton")
 		if close_btn:
-			close_btn.pressed.connect(func(): culture_tree_window.visible = false)
+			close_btn.pressed.connect(func():
+				culture_tree_window.visible = false
+				hud._update_menu_backdrop()
+			)
 			close_btn.text = "X"
 			close_btn.tooltip_text = "Zamknij"
 			close_btn.custom_minimum_size = Vector2(40, 40)
@@ -88,6 +91,7 @@ func setup_culture_tree_ui():
 				culture_tree_window.move_to_front()
 				culture_tree_window.visible = true
 				refresh_culture_tree_view()
+				hud._update_menu_backdrop()
 		)
 
 func _get_tech_node_position(grid_coords: Vector2) -> Vector2:
@@ -136,39 +140,25 @@ func refresh_culture_tree_view():
 		var node_panel = PanelContainer.new()
 		node_panel.position = node_pos
 		node_panel.custom_minimum_size = Vector2(235, 110)
-		var node_style = StyleBoxFlat.new()
-		node_style.bg_color = Color(0.18, 0.16, 0.14)
-		node_style.set_corner_radius_all(32)  
-		node_style.set_border_width_all(2)
-		node_style.border_color = Color(0.45, 0.25, 0.70)
-		node_style.set_content_margin_all(6)
+		var node_style: StyleBoxTexture = hud._panel_style(8).duplicate()
 		node_panel.add_theme_stylebox_override("panel", node_style)
 		var hbox = HBoxContainer.new()
 		hbox.add_theme_constant_override("separation", 8)
 		node_panel.add_child(hbox)
-		var icon_panel = PanelContainer.new()
-		icon_panel.custom_minimum_size = Vector2(46, 46)
-		var icon_style = StyleBoxFlat.new()
-		icon_style.bg_color = Color(0.24, 0.22, 0.18)
-		icon_style.set_corner_radius_all(23) 
-		icon_style.set_border_width_all(1)
-		icon_style.border_color = Color(0.65, 0.45, 0.85)
-		icon_panel.add_theme_stylebox_override("panel", icon_style)
+		var icon_button := Button.new()
+		icon_button.custom_minimum_size = Vector2(46, 46)
+		icon_button.focus_mode = Control.FOCUS_NONE
+		icon_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hud._style_df_button(icon_button)
 		var resource_icon: Texture2D = hud._resource_icon_texture(str(tech["icon"]))
 		if resource_icon:
-			var icon_rect := TextureRect.new()
-			icon_rect.texture = resource_icon
-			icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			icon_panel.add_child(icon_rect)
+			icon_button.icon = resource_icon
+			icon_button.expand_icon = true
+			icon_button.text = ""
 		else:
-			var icon_label := Label.new()
-			icon_label.text = tech["icon"]
-			icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			icon_label.add_theme_font_size_override("font_size", 18)
-			icon_panel.add_child(icon_label)
-		hbox.add_child(icon_panel)
+			icon_button.text = str(tech["icon"])
+			icon_button.add_theme_font_size_override("font_size", 18)
+		hbox.add_child(icon_button)
 		var vbox = VBoxContainer.new()
 		vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		vbox.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -198,13 +188,11 @@ func refresh_culture_tree_view():
 			if not EconomyManager.culture_tree[r]["unlocked"]: reqs_ok = false
 				
 		if tech["unlocked"]:
-			node_style.border_color = Color(0.55, 0.35, 0.9) 
-			node_style.bg_color = Color(0.22, 0.15, 0.35)
+			node_style.modulate_color = Color(0.85, 0.75, 1.0)
 			invisible_button.disabled = true
 			invisible_button.tooltip_text = "Nurt kultury odkryty."
 		elif EconomyManager.current_culture_research == tech_name:
-			node_style.border_color = Color(0.85, 0.45, 1.0) 
-			node_style.bg_color = Color(0.3, 0.2, 0.4)
+			node_style.modulate_color = Color(0.95, 0.8, 1.0)
 			var current_culture = EconomyManager.resources["Kultura"]
 			var progress = tech["research_cost"] - EconomyManager.resources["Kultura"]
 			progress = clamp(progress, 0, tech["research_cost"])
@@ -212,7 +200,7 @@ func refresh_culture_tree_view():
 			invisible_button.disabled = true
 			invisible_button.tooltip_text = "Rozwój w toku. Pozostało %d tur." % EconomyManager.culture_turns_left
 		elif not reqs_ok:
-			node_panel.modulate.a = 0.35 
+			node_panel.modulate = Color(0.42, 0.38, 0.35, 1.0)
 			invisible_button.disabled = true
 			var missing_requirements: Array[String] = []
 			for requirement in tech["req"]:

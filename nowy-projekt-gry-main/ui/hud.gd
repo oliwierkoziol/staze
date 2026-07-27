@@ -27,6 +27,9 @@ const TURN_ACTIONS_MARGIN_RIGHT := 48.0
 const TURN_ACTIONS_MARGIN_BOTTOM := 56.0
 const TURN_ACTIONS_GAP := 12.0
 const TURN_BUTTON_HEIGHT := 48.0
+const RIGHT_PANEL_OFFSET_LEFT := -340.0
+const RIGHT_PANEL_OFFSET_RIGHT := -20.0
+const RIGHT_PANEL_WIDTH := RIGHT_PANEL_OFFSET_RIGHT - RIGHT_PANEL_OFFSET_LEFT
 
 var cat_zasobowe: Button
 var cat_tech: Button
@@ -99,6 +102,7 @@ var battle_confirm_dialog: ConfirmationDialog
 var help_menu: HelpMenu
 
 var settings_menu: SettingsMenu
+var _menu_backdrop: ColorRect
 
 var temple_menu: TempleMenu
 var workshop_menu: WorkshopMenu
@@ -133,6 +137,7 @@ const DF_BLOOD: Color = Color(0.45, 0.08, 0.09, 1.0)
 const DF_BLOOD_BRIGHT: Color = Color(0.62, 0.13, 0.14, 1.0)
 const DF_TEXT: Color = Color(0.92, 0.88, 0.78, 1.0)
 const DF_TEXT_DIM: Color = Color(0.75, 0.68, 0.5, 0.85)
+const MENU_BACKDROP_COLOR: Color = Color(0.02, 0.02, 0.04, 0.78)
 const PANEL_TEXTURE: Texture2D = preload("res://turn-base-game/assets/ui/panel.png")
 
 func _ready():
@@ -207,6 +212,8 @@ func _ready():
 	admin_menu = AdminMenu.new(self)
 	admin_menu.setup_admin_window()
 	setup_admin_button()
+	_setup_menu_backdrop()
+	_apply_modal_z_indices()
 
 	call_deferred("_align_right_column")
 	EconomyManager.notify_change()
@@ -255,6 +262,7 @@ func _process(_delta: float) -> void:
 	if skip_button:
 		skip_button.disabled = menu_open or _turn_button_cooldown
 		skip_button.modulate.a = 0.5 if skip_button.disabled else 1.0
+	_update_menu_backdrop()
 	for button: Button in [quick_army_button, quick_potions_button, quick_help_button, quick_settings_button]:
 		if button != null:
 			button.disabled = menu_open
@@ -373,6 +381,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		):
 			get_viewport().set_input_as_handled()
 			return
+		if _menu_backdrop_active():
+			return
 		if any_menu_visible():
 			hide_all_menus()
 			get_viewport().set_input_as_handled()
@@ -406,6 +416,120 @@ func _panel_style(content_margin := 0.0, top_margin := -1.0) -> StyleBoxTexture:
 	if top_margin >= 0:
 		style.content_margin_top = top_margin
 	return style
+
+
+func _setup_menu_backdrop() -> void:
+	_menu_backdrop = ColorRect.new()
+	_menu_backdrop.name = "MenuBackdrop"
+	_menu_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_menu_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	_menu_backdrop.color = MENU_BACKDROP_COLOR
+	_menu_backdrop.visible = false
+	_menu_backdrop.z_index = 9
+	_menu_backdrop.gui_input.connect(_on_menu_backdrop_gui_input)
+	add_child(_menu_backdrop)
+	move_child(_menu_backdrop, 0)
+
+
+func _add_visible_modal(modals: Array[Control], menu_ref, prop: StringName) -> void:
+	if menu_ref == null:
+		return
+	var window: Control = menu_ref.get(prop)
+	if window and window.visible:
+		modals.append(window)
+
+
+func _raise_active_modals() -> void:
+	if _menu_backdrop:
+		move_child(_menu_backdrop, 0)
+	var modals: Array[Control] = []
+	_add_visible_modal(modals, tech_tree_menu, &"tech_tree_window")
+	_add_visible_modal(modals, culture_tree_menu, &"culture_tree_window")
+	_add_visible_modal(modals, barracks_menu, &"barracks_window")
+	_add_visible_modal(modals, army_menu, &"army_window")
+	_add_visible_modal(modals, help_menu, &"help_window")
+	_add_visible_modal(modals, settings_menu, &"settings_window")
+	_add_visible_modal(modals, tutorial_menu, &"tutorial_window")
+	_add_visible_modal(modals, admin_menu, &"admin_window")
+	if potions_menu:
+		_add_visible_modal(modals, potions_menu, &"my_potions_window")
+		_add_visible_modal(modals, potions_menu, &"buy_potions_window")
+	_add_visible_modal(modals, temple_menu, &"temple_window")
+	_add_visible_modal(modals, workshop_menu, &"workshop_window")
+	_add_visible_modal(modals, library_research_menu, &"library_window")
+	if camp_menu:
+		_add_visible_modal(modals, camp_menu, &"camp_details_window")
+		_add_visible_modal(modals, camp_menu, &"camp_army_window")
+	for modal in modals:
+		modal.move_to_front()
+
+
+func _menu_backdrop_active() -> bool:
+	return (
+		(tech_tree_menu and tech_tree_menu.tech_tree_window and tech_tree_menu.tech_tree_window.visible)
+		or (culture_tree_menu and culture_tree_menu.culture_tree_window and culture_tree_menu.culture_tree_window.visible)
+		or (barracks_menu and barracks_menu.barracks_window and barracks_menu.barracks_window.visible)
+		or (army_menu and army_menu.army_window and army_menu.army_window.visible)
+		or (camp_menu and camp_menu.camp_details_window and camp_menu.camp_details_window.visible)
+		or (camp_menu and camp_menu.camp_army_window and camp_menu.camp_army_window.visible)
+		or (help_menu and help_menu.help_window and help_menu.help_window.visible)
+		or (settings_menu and settings_menu.settings_window and settings_menu.settings_window.visible)
+		or (tutorial_menu and tutorial_menu.tutorial_window and tutorial_menu.tutorial_window.visible)
+		or (admin_menu and admin_menu.admin_window and admin_menu.admin_window.visible)
+		or (potions_menu and potions_menu.my_potions_window and potions_menu.my_potions_window.visible)
+		or (potions_menu and potions_menu.buy_potions_window and potions_menu.buy_potions_window.visible)
+		or (temple_menu and temple_menu.temple_window and temple_menu.temple_window.visible)
+		or (workshop_menu and workshop_menu.workshop_window and workshop_menu.workshop_window.visible)
+		or (library_research_menu and library_research_menu.library_window and library_research_menu.library_window.visible)
+	)
+
+
+func _apply_modal_z_indices() -> void:
+	const MODAL_Z := 10
+	if barracks_menu and barracks_menu.barracks_window:
+		barracks_menu.barracks_window.z_index = MODAL_Z
+	if army_menu and army_menu.army_window:
+		army_menu.army_window.z_index = MODAL_Z
+	if potions_menu:
+		if potions_menu.my_potions_window:
+			potions_menu.my_potions_window.z_index = MODAL_Z
+		if potions_menu.buy_potions_window:
+			potions_menu.buy_potions_window.z_index = MODAL_Z
+	if help_menu and help_menu.help_window:
+		help_menu.help_window.z_index = MODAL_Z
+	if workshop_menu and workshop_menu.workshop_window:
+		workshop_menu.workshop_window.z_index = MODAL_Z
+	if temple_menu and temple_menu.temple_window:
+		temple_menu.temple_window.z_index = MODAL_Z
+	if library_research_menu and library_research_menu.library_window:
+		library_research_menu.library_window.z_index = MODAL_Z
+	if camp_menu:
+		if camp_menu.camp_details_window:
+			camp_menu.camp_details_window.z_index = MODAL_Z
+		if camp_menu.camp_army_window:
+			camp_menu.camp_army_window.z_index = MODAL_Z
+	if admin_menu and admin_menu.admin_window:
+		admin_menu.admin_window.z_index = MODAL_Z
+
+
+func _update_menu_backdrop() -> void:
+	if _menu_backdrop == null:
+		return
+	var active := _menu_backdrop_active()
+	_menu_backdrop.visible = active
+	if active:
+		_raise_active_modals()
+
+
+func _on_menu_backdrop_gui_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
+		return
+	if (
+		(tech_tree_menu and tech_tree_menu.tech_tree_window and tech_tree_menu.tech_tree_window.visible)
+		or (culture_tree_menu and culture_tree_menu.culture_tree_window and culture_tree_menu.culture_tree_window.visible)
+	):
+		return
+	hide_all_menus()
 
 
 func _resource_icon_texture(resource_name: String) -> Texture2D:
@@ -472,8 +596,8 @@ func setup_points_panel():
 	points_panel.anchor_right = 1.0
 	points_panel.anchor_top = 0.0
 	points_panel.anchor_bottom = 0.0
-	points_panel.offset_left = -340
-	points_panel.offset_right = -20
+	points_panel.offset_left = RIGHT_PANEL_OFFSET_LEFT
+	points_panel.offset_right = RIGHT_PANEL_OFFSET_RIGHT
 	points_panel.offset_top = 72
 
 	points_panel.add_theme_stylebox_override("panel", _panel_style(12))
@@ -608,6 +732,9 @@ func _align_right_column() -> void:
 	tile_info_menu.offset_left = points_panel.offset_left
 	tile_info_menu.offset_right = points_panel.offset_right
 	tile_info_menu.offset_top = points_panel.position.y + points_panel.size.y + 12
+	if menu_budowania:
+		menu_budowania.offset_left = points_panel.offset_left
+		menu_budowania.offset_right = points_panel.offset_right
 
 
 func setup_resources_header():
@@ -828,12 +955,12 @@ var build_grid: GridContainer
 
 func setup_custom_popups():
 	var vbox = $MenuBudowania/VBoxContainer
-	menu_budowania.custom_minimum_size = Vector2(355, 420)
+	menu_budowania.custom_minimum_size = Vector2(RIGHT_PANEL_WIDTH, 420)
 	
-	# Anchor bottom right ONCE — nad rzędem przycisków tury
+	# Anchor bottom right ONCE — nad rzędem przycisków tury, w tej samej kolumnie co ROZWÓJ
 	menu_budowania.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	menu_budowania.offset_left = -370
-	menu_budowania.offset_right = -TURN_ACTIONS_MARGIN_RIGHT
+	menu_budowania.offset_left = RIGHT_PANEL_OFFSET_LEFT
+	menu_budowania.offset_right = RIGHT_PANEL_OFFSET_RIGHT
 	menu_budowania.offset_bottom = -(TURN_ACTIONS_MARGIN_BOTTOM + TURN_BUTTON_HEIGHT + 16.0)
 	menu_budowania.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	menu_budowania.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -893,8 +1020,8 @@ func setup_custom_popups():
 	tile_info_menu.visible = false
 	tile_info_menu.anchor_left = 1.0
 	tile_info_menu.anchor_right = 1.0
-	tile_info_menu.offset_left = -340
-	tile_info_menu.offset_right = -20
+	tile_info_menu.offset_left = RIGHT_PANEL_OFFSET_LEFT
+	tile_info_menu.offset_right = RIGHT_PANEL_OFFSET_RIGHT
 	tile_info_menu.offset_top = 348
 	tile_info_menu.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	tile_info_menu.z_index = 5
@@ -1417,6 +1544,7 @@ func hide_all_menus():
 	if library_research_menu and library_research_menu.library_window: library_research_menu.library_window.visible = false
 	if research_unlocked_dialog: research_unlocked_dialog.hide()
 	if AudioManager: AudioManager.resume_bg_music()
+	_update_menu_backdrop()
 
 func any_menu_visible() -> bool:
 	return menu_budowania.visible or (tile_info_menu and tile_info_menu.visible) or (menu_zalozenia_miasta and menu_zalozenia_miasta.visible) or (tech_tree_menu and tech_tree_menu.tech_tree_window and tech_tree_menu.tech_tree_window.visible) or (culture_tree_menu and culture_tree_menu.culture_tree_window and culture_tree_menu.culture_tree_window.visible) or (barracks_menu and barracks_menu.barracks_window and barracks_menu.barracks_window.visible) or (army_menu and army_menu.army_window and army_menu.army_window.visible) or (help_menu and help_menu.help_window and help_menu.help_window.visible) or (camp_menu and camp_menu.camp_details_window and camp_menu.camp_details_window.visible) or (camp_menu and camp_menu.camp_army_window and camp_menu.camp_army_window.visible) or (settings_menu and settings_menu.settings_window and settings_menu.settings_window.visible) or (tutorial_menu and tutorial_menu.tutorial_window and tutorial_menu.tutorial_window.visible) or (admin_menu and admin_menu.admin_window and admin_menu.admin_window.visible) or (temple_menu and temple_menu.temple_window and temple_menu.temple_window.visible) or (workshop_menu and workshop_menu.workshop_window and workshop_menu.workshop_window.visible) or (library_research_menu and library_research_menu.library_window and library_research_menu.library_window.visible) or (potions_menu and ((potions_menu.my_potions_window and potions_menu.my_potions_window.visible) or (potions_menu.buy_potions_window and potions_menu.buy_potions_window.visible))) or (research_unlocked_dialog and research_unlocked_dialog.visible)

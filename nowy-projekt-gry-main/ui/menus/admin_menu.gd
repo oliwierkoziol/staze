@@ -11,7 +11,6 @@ func setup_admin_window():
 	admin_window = PanelContainer.new()
 	admin_window.visible = false
 	admin_window.custom_minimum_size = Vector2(400, 0)
-	admin_window.z_index = 50 # Pół-przezroczysty, na wierzchu
 
 	admin_window.add_theme_stylebox_override("panel", hud._panel_style(20))
 
@@ -125,6 +124,8 @@ func _unlock_all_cultures():
 
 func show_admin_menu():
 	admin_window.visible = true
+	admin_window.move_to_front()
 	var viewport_size = hud.get_viewport_rect().size
 	admin_window.reset_size()
 	admin_window.position = ((viewport_size - admin_window.size) / 2.0).round()
+	hud._update_menu_backdrop()
