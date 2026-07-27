@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://dv3u7m8d30w8n" path="res://turn-base-game/scripts/nine_patch_panel.gd" id="2_npp"]
 [ext_resource type="Texture2D" uid="uid://crjsdxb2h5qqg" path="res://turn-base-game/assets/ui/panel.png" id="3_panel"]
 [ext_resource type="Texture2D" uid="uid://pg2pxu6j3f6q" path="res://turn-base-game/assets/ui/ability1xd.png" id="4_yxmfv"]
+[ext_resource type="Texture2D" path="res://turn-base-game/assets/ui/ability_locked.png" id="5_locked"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_normal"]
 content_margin_left = 0.0
@@ -151,6 +152,21 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.58, 0.5, 1)
 theme_override_font_sizes/font_size = 11
 text = "CD: 1 tura."
+
+[node name="LockedOverlay" type="TextureRect" parent="."]
+unique_name_in_owner = true
+visible = false
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("5_locked")
+expand_mode = 1
+stretch_mode = 6
 
 [node name="HoverFrame" type="Panel" parent="." unique_id=856363228]
 unique_name_in_owner = true

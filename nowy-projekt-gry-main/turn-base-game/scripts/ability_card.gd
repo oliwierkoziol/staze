@@ -19,6 +19,8 @@ const PLACEHOLDER_ICONS: Array[Texture2D] = [
 @onready var _cooldown_label: Label = %CooldownLabel
 @onready var _hover_frame: Panel = %HoverFrame
 @onready var _select_frame: Panel = %SelectFrame
+@onready var _content: NinePatchRect = $Panel
+@onready var _locked_overlay: TextureRect = %LockedOverlay
 
 var _slot: int = -1
 
@@ -32,8 +34,10 @@ func _ready() -> void:
 func setup(skill: Dictionary, slot: int) -> void:
 	_slot = slot
 	var can_use := bool(skill.get("can_use", false))
+	var locked := bool(skill.get("locked", false))
 	disabled = not can_use
-	modulate = Color(0.55, 0.55, 0.55, 1.0) if not can_use else Color.WHITE
+	_content.modulate = Color(0.55, 0.55, 0.55, 1.0) if not can_use else Color.WHITE
+	_locked_overlay.visible = locked
 	tooltip_text = str(skill.get("tooltip", ""))
 
 	var icon_path: String = str(skill.get("icon", ""))
@@ -42,7 +46,8 @@ func setup(skill: Dictionary, slot: int) -> void:
 		if icon_texture is Texture2D:
 			_icon.texture = icon_texture
 	else:
-		_icon.texture = PLACEHOLDER_ICONS[slot % PLACEHOLDER_ICONS.size()]
+		var display_index := int(skill.get("display_index", maxi(slot, 0)))
+		_icon.texture = PLACEHOLDER_ICONS[display_index % PLACEHOLDER_ICONS.size()]
 	_name_label.text = str(skill.get("name", "")).to_upper()
 
 	var description: String = str(skill.get("description", ""))

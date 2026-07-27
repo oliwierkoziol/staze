@@ -222,6 +222,39 @@ func _uruchom() -> void:
 	_sprawdz(int(hover_unit.get("level", 0)) == 1, "Nowa jednostka zaczyna na poziomie 1")
 	gra._render_unit_details(hover_unit)
 	_sprawdz(gra.unit_meta_label.text == "Poziom 1", "Panel jednostki pokazuje poziom z danych")
+	var locked_unit: Dictionary = gra._prepare_unit({"id": 9002, "type_id": "human_knights", "side": "player", "skill_ids": ["odepchniecie_tarcza"]})
+	gra._render_unit_details(locked_unit)
+	await process_frame
+	var ability_cards: Array[Node] = gra.unit_abilities_panel.find_children("AbilityCard", "Button", true, false)
+	_sprawdz(
+		ability_cards.size() == 3
+		and not ability_cards[0].get_node("LockedOverlay").visible
+		and ability_cards[1].get_node("LockedOverlay").visible
+		and ability_cards[2].get_node("LockedOverlay").visible,
+		"Panel pokazuje stale sloty i grafike zablokowanych umiejetnosci"
+	)
+	gra.setup_mode = false
+	gra._update_action_buttons()
+	_sprawdz(gra.end_turn_button.text == "Zakończ turę", "Przycisk kończy turę")
+	gra._start_campaign_battle({
+		"player_faction": "humans",
+		"enemy_faction": "orcs",
+		"ai_difficulty": "sredni",
+		"units": [
+			{"id": 9100, "type_id": "human_knights", "side": "player", "count": 2},
+			{"id": 9101, "type_id": "orc_warrior", "side": "enemy", "count": 2},
+		],
+	})
+	await process_frame
+	var campaign_player: Dictionary = gra._find_unit_by_id(9100)
+	var campaign_enemy: Dictionary = gra._find_unit_by_id(9101)
+	_sprawdz(
+		gra.setup_mode
+		and gra.active_unit_id == -1
+		and not gra._get_setup_placeable_cells(campaign_player).is_empty()
+		and gra._get_setup_placeable_cells(campaign_enemy).is_empty(),
+		"Kampania zaczyna sie od rozstawienia wylacznie jednostek gracza"
+	)
 	gra.units = [hover_unit]
 	gra.setup_mode = false
 	gra.current_turn = "player"

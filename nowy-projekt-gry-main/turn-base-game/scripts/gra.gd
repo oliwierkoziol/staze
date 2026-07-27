@@ -484,7 +484,7 @@ func _start_campaign_battle(request: Dictionary) -> void:
 	ai_difficulty = str(request.get("ai_difficulty", "sredni"))
 	if not PlanerAIScript.PROFILE.has(ai_difficulty):
 		ai_difficulty = "sredni"
-	free_setup_mode = true
+	free_setup_mode = false
 	castle_stage = 0
 	_set_battle_background(str(request.get("background_path", DEFAULT_BATTLE_BACKGROUND_PATH)))
 	skill_library = UnitTypeLibraryScript.get_skill_library()
@@ -497,7 +497,6 @@ func _start_campaign_battle(request: Dictionary) -> void:
 	_setup_battle_scene()
 	if campaign_debug_enabled:
 		_build_campaign_debug_menu()
-	call_deferred("_on_start_battle_pressed")
 
 
 func _build_campaign_battle_config(raw_units: Variant) -> void:
@@ -902,7 +901,7 @@ func _connect_signal_once(source_signal: Signal, callback: Callable) -> void:
 
 
 func _should_skip_tutorial() -> bool:
-	return free_setup_mode
+	return free_setup_mode or campaign_mode
 
 
 func _enter_setup_mode(show_tutorial: bool = true) -> void:
@@ -1511,23 +1510,29 @@ func _build_skill_cards(unit_data: Dictionary) -> Array:
 	var cards: Array = []
 	var cooldowns: Dictionary = unit_data.get("skill_cooldowns", {})
 	var can_act := _can_interact_with_unit_skills(unit_data)
-	var skill_ids: Array = unit_data.get("skill_ids", [])
-	for index in skill_ids.size():
-		var skill_id := str(skill_ids[index])
+	var owned_skill_ids: Array = unit_data.get("skill_ids", [])
+	var type_data: Dictionary = UnitTypeLibraryScript.lookup(str(unit_data.get("type_id", "")))
+	var all_skill_ids: Array = type_data.get("skill_ids", owned_skill_ids)
+	for display_index in all_skill_ids.size():
+		var skill_id := str(all_skill_ids[display_index])
 		var skill: Dictionary = skill_library.get(skill_id, {})
 		if skill.is_empty():
 			continue
+		var owned_index: int = owned_skill_ids.find(skill_id)
+		var locked := owned_index == -1
 		cards.append({
-			"index": index,
+			"index": owned_index,
+			"display_index": display_index,
 			"skill_id": skill_id,
 			"name": str(skill.get("name", skill_id)),
 			"description": str(skill.get("description", "")),
 			"cooldown": int(skill.get("cooldown", 0)),
 			"remaining_cooldown": int(cooldowns.get(skill_id, 0)),
-			"can_use": can_act and MechanikaUmiejetnosciScript.czy_mozna_uzyc(unit_data, skill_id, skill_library),
+			"locked": locked,
+			"can_use": not locked and can_act and MechanikaUmiejetnosciScript.czy_mozna_uzyc(unit_data, skill_id, skill_library),
 			"selected": pending_skill_id == skill_id,
-			"tooltip": _build_skill_tooltip(unit_data, index),
-			"icon": UnitTypeLibraryScript.get_skill_icon_path(skill_id, index),
+			"tooltip": "Zablokowana — odblokuj w Bibliotece." if locked else _build_skill_tooltip(unit_data, owned_index),
+			"icon": UnitTypeLibraryScript.get_skill_icon_path(skill_id, display_index),
 		})
 	return cards
 
@@ -1848,6 +1853,8 @@ func _enemy_take_turn() -> void:
 	if enemy_unit.is_empty() or enemy_unit.side != "enemy":
 		return
 	await get_tree().create_timer(1.0).timeout
+	if odtwarzacz_sfx_jednostek.playing:
+		await odtwarzacz_sfx_jednostek.finished
 	if setup_mode or is_animating or active_unit_id != int(enemy_unit.id) or _find_unit_by_id(int(enemy_unit.id)).is_empty():
 		return
 	await _ai_execute_plan(enemy_unit, _ai_choose_plan(enemy_unit))
@@ -3109,6 +3116,8 @@ func _get_setup_placeable_cells(unit: Dictionary) -> Array[Vector2i]:
 
 func _can_place_setup_unit(unit: Dictionary, cell: Vector2i) -> bool:
 	if cell.x < 0 or cell.x >= GRID_COLUMNS or cell.y < 0 or cell.y >= GRID_ROWS:
+		return false
+	if campaign_mode and str(unit.get("side", "")) != "player":
 		return false
 	if not _is_setup_cell_allowed_for_side(str(unit.side), cell):
 		return false
@@ -6386,13 +6395,26 @@ func _validate_static_setup() -> void:
 
 	for unit in unit_configs:
 		var cards: Array = _build_skill_cards(unit)
-		var expected_skills: Array = unit.get("skill_ids", [])
+		var type_data: Dictionary = UnitTypeLibraryScript.lookup(str(unit.get("type_id", "")))
+		var expected_skills: Array = type_data.get("skill_ids", unit.get("skill_ids", []))
 		assert(cards.size() == expected_skills.size(), "Karty umiejetnosci nie pokrywaja sie ze skill_ids jednostki.")
 		for card in cards:
 			assert(str(card.get("name", "")) != "", "Karta umiejetnosci bez nazwy z biblioteki.")
 			assert(int(card.get("remaining_cooldown", -1)) == 0, "Swiezo wczytana jednostka nie powinna miec aktywnego cooldownu.")
 		var prepared: Dictionary = _prepare_unit(unit.duplicate(true))
 		assert(int(prepared.get("base_action_points", 0)) == int(prepared.get("action_points", 0)), "AP z JSON musi byc startowym AP jednostki.")
+	var locked_cards: Array = _build_skill_cards(_prepare_unit({
+		"type_id": "human_knights",
+		"skill_ids": ["odepchniecie_tarcza", "tarcza"],
+	}))
+	assert(
+		locked_cards.size() == 3
+		and not bool(locked_cards[0].locked)
+		and bool(locked_cards[1].locked)
+		and not bool(locked_cards[2].locked)
+		and int(locked_cards[2].index) == 1,
+		"Zablokowane umiejetnosci musza zachowac sloty i indeksy odblokowanych akcji."
+	)
 
 	assert(MechanikaUmiejetnosciScript.oblicz_obrazenia_okresowe({"count": 4}, 2) == 8, "Obrazenia z debuffa co ture musza skalowac sie liczba jednostek.")
 	assert(_adjust_incoming_damage({"active_effects": [{"incoming_damage_percent": 50}]}, 4) == 6, "Klątwa powinna zwiekszac otrzymywane obrazenia o 50%.")
@@ -7037,7 +7059,7 @@ func _update_action_buttons() -> void:
 	if not selected_unit.is_empty():
 		unit_abilities_panel.set_skills(_build_skill_cards(selected_unit))
 	var active_unit: Dictionary = _get_active_unit()
-	end_turn_button.text = "START" if setup_mode else "ZAKOŃCZ AKTYWACJĘ"
+	end_turn_button.text = "START" if setup_mode else "Zakończ turę"
 	end_turn_button.disabled = is_animating or (not setup_mode and (not _is_manual_turn() or active_unit.is_empty() or not _is_manual_side(str(active_unit.side))))
 	_update_battle_status(active_unit)
 	_refresh_general_ability_buttons()

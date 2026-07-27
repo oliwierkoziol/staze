@@ -49,7 +49,7 @@ func set_skills(skills: Array) -> void:
 	for index in skills.size():
 		var card: AbilityCardScript = ABILITY_CARD_SCENE.instantiate()
 		_cards_row.add_child(card)
-		card.setup(skills[index], index)
+		card.setup(skills[index], int(skills[index].get("index", -1)))
 		card.activated.connect(_on_card_pressed)
 
 

@@ -118,6 +118,29 @@ func _uruchom() -> void:
 		_sprawdz(gra.odtwarzacz_sfx_broni.stream.resource_path.contains(str(sfx_efektow[efekt])), "Umiejetnosc ma przypisany SFX: %s" % efekt)
 	gra._odtworz_sfx_broni("magic")
 	_sprawdz(gra.odtwarzacz_sfx_broni.stream.resource_path.ends_with("magicDefaultAttack.mp3"), "Magiczny atak podstawowy odtwarza wlasny SFX")
+	var dialog_testowy := AudioStreamWAV.new()
+	dialog_testowy.format = AudioStreamWAV.FORMAT_8_BITS
+	dialog_testowy.mix_rate = 1000
+	dialog_testowy.data = PackedByteArray()
+	dialog_testowy.data.resize(60000)
+	dialog_testowy.data.fill(128)
+	var ai_test: Dictionary = gra._prepare_unit({"id": 7300, "type_id": "human_knights", "side": "enemy", "grid_x": 2, "grid_y": 1})
+	var cel_ai: Dictionary = gra._prepare_unit({"id": 7301, "type_id": "human_knights", "side": "player", "grid_x": 1, "grid_y": 1})
+	ai_test["skill_ids"] = []
+	gra.units = [ai_test, cel_ai]
+	gra.active_unit_id = int(ai_test.id)
+	gra.current_turn = "enemy"
+	gra.setup_mode = false
+	var hp_przed_atakiem: int = int(cel_ai.current_total_hp)
+	gra.odtwarzacz_sfx_jednostek.stream = dialog_testowy
+	gra.odtwarzacz_sfx_jednostek.play()
+	gra._enemy_take_turn()
+	await create_timer(1.1).timeout
+	_sprawdz(int(cel_ai.current_total_hp) == hp_przed_atakiem, "AI nie atakuje podczas kwestii dialogowej")
+	gra.odtwarzacz_sfx_jednostek.stop()
+	gra.odtwarzacz_sfx_jednostek.finished.emit()
+	await process_frame
+	_sprawdz(int(cel_ai.current_total_hp) < hp_przed_atakiem, "AI atakuje po zakonczeniu kwestii dialogowej")
 	gra.odtwarzacz_sfx_broni.stream = null
 	gra._execute_self_buff(lucznicy, {"id": "tarcza", "name": "Tarcza", "effect": {"remaining_turns": 2, "stat_changes": []}})
 	_sprawdz(gra.odtwarzacz_sfx_broni.stream.resource_path.contains("shield_shove"), "Umiejetnosc Tarcza korzysta z SFX tarczy")
