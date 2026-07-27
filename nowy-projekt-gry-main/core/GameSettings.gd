@@ -18,9 +18,18 @@ var campaign_ai_difficulty := "sredni"
 
 var _ui_font: Font
 var _player_base_volumes: Dictionary = {}
+var _volume_levels: Dictionary = {
+	&"Master": 100.0,
+	&"Music": 100.0,
+	&"Effects": 100.0,
+	&"Dialogue": 100.0,
+}
+
 
 func _ready() -> void:
 	_ensure_audio_buses()
+	if OS.has_feature("web"):
+		_ensure_web_master_bus_neutral()
 	_load_audio_settings()
 	_ui_font = _build_ui_font()
 	if _ui_font:
@@ -58,6 +67,8 @@ func _apply_root_theme() -> void:
 
 
 func get_audio_volume(bus_name: StringName) -> float:
+	if OS.has_feature("web"):
+		return float(_volume_levels.get(bus_name, 100.0))
 	var bus_index := AudioServer.get_bus_index(bus_name)
 	if bus_index < 0:
 		return 100.0
@@ -69,10 +80,20 @@ func get_audio_volume(bus_name: StringName) -> float:
 func get_player_volume_db(bus_name: StringName, base_db: float) -> float:
 	if not OS.has_feature("web"):
 		return base_db
-	var category_linear := get_audio_volume(bus_name) / 100.0
-	if category_linear <= 0.0:
+	var master_linear := float(_volume_levels.get(&"Master", 100.0)) / 100.0
+	var category_linear := float(_volume_levels.get(bus_name, 100.0)) / 100.0
+	var combined_linear := master_linear * category_linear
+	if combined_linear <= 0.0:
 		return -80.0
-	return base_db + linear_to_db(category_linear)
+	return base_db + linear_to_db(combined_linear)
+
+
+func apply_player_volume(player: AudioStreamPlayer, base_db: float) -> void:
+	if not is_instance_valid(player):
+		return
+	if OS.has_feature("web"):
+		player.playback_type = AudioStreamPlayer.PLAYBACK_TYPE_STREAM
+	player.volume_db = get_player_volume_db(player.bus, base_db)
 
 
 func register_player_volume(player: AudioStreamPlayer, base_db: float) -> void:
@@ -80,8 +101,7 @@ func register_player_volume(player: AudioStreamPlayer, base_db: float) -> void:
 		"player": player,
 		"base_db": base_db,
 	}
-	if OS.has_feature("web"):
-		player.volume_db = get_player_volume_db(player.bus, base_db)
+	apply_player_volume(player, base_db)
 
 
 func unregister_player_volume(player: AudioStreamPlayer) -> void:
@@ -89,28 +109,51 @@ func unregister_player_volume(player: AudioStreamPlayer) -> void:
 
 
 func set_audio_volume(bus_name: StringName, value: float, save := true) -> void:
+	var normalized_value := clampf(value, 0.0, 100.0)
+	if OS.has_feature("web"):
+		_volume_levels[bus_name] = normalized_value
+		_ensure_web_master_bus_neutral()
+		_refresh_all_web_players()
+		if save:
+			_save_audio_settings()
+		audio_volume_changed.emit(bus_name)
+		return
+
 	var bus_index := AudioServer.get_bus_index(bus_name)
 	if bus_index < 0:
 		return
-	var normalized_value := clampf(value, 0.0, 100.0)
 	AudioServer.set_bus_mute(bus_index, normalized_value <= 0.0)
 	if normalized_value > 0.0:
 		AudioServer.set_bus_volume_db(bus_index, linear_to_db(normalized_value / 100.0))
 	if save:
 		_save_audio_settings()
 	audio_volume_changed.emit(bus_name)
-	if OS.has_feature("web"):
-		_apply_web_player_volumes(bus_name)
 
 
-func _apply_web_player_volumes(changed_bus: StringName) -> void:
-	if changed_bus == &"Master":
+func _ensure_web_master_bus_neutral() -> void:
+	var bus_index := AudioServer.get_bus_index(&"Master")
+	if bus_index < 0:
+		return
+	AudioServer.set_bus_mute(bus_index, false)
+	AudioServer.set_bus_volume_db(bus_index, 0.0)
+
+
+func _sync_master_bus(value: float) -> void:
+	var bus_index := AudioServer.get_bus_index(&"Master")
+	if bus_index < 0:
+		return
+	AudioServer.set_bus_mute(bus_index, value <= 0.0)
+	if value > 0.0:
+		AudioServer.set_bus_volume_db(bus_index, linear_to_db(value / 100.0))
+
+
+func _refresh_all_web_players() -> void:
+	if not OS.has_feature("web"):
 		return
 	for entry in _player_base_volumes.values():
 		var player: AudioStreamPlayer = entry.player
-		if not is_instance_valid(player) or player.bus != changed_bus:
-			continue
-		player.volume_db = get_player_volume_db(changed_bus, entry.base_db)
+		if is_instance_valid(player):
+			apply_player_volume(player, entry.base_db)
 
 
 func _ensure_audio_buses() -> void:

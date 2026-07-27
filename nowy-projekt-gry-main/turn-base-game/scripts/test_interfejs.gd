@@ -194,8 +194,8 @@ func _uruchom() -> void:
 	gra.pause_menu.set_campaign_mode(false)
 	_sprawdz(
 		gra.pause_menu._action_confirmation.get_theme_stylebox("panel") is StyleBoxTexture
-		and gra.pause_menu._action_confirmation.get_ok_button().get_theme_stylebox("normal") is StyleBoxFlat,
-		"Popupy akcji Potyczki używają stylu dark fantasy"
+		and not gra.pause_menu._action_confirmation.get_ok_button().has_theme_stylebox_override("normal"),
+		"Popupy akcji Potyczki mają panel dark fantasy i domyślne przyciski"
 	)
 	_sprawdz(
 		gra.pause_menu._save_button.text == "ZAPISZ STAN"

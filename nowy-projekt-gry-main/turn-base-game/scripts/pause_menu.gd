@@ -18,6 +18,7 @@ var _retreat_button: Button
 var _action_confirmation: ConfirmationDialog
 var _pending_action := ""
 var settings_open := false
+const DF_TEXT := Color(0.92, 0.88, 0.78, 1.0)
 
 
 func _ready() -> void:
@@ -121,27 +122,16 @@ func _make_button(text: String) -> Button:
 	button.custom_minimum_size = Vector2(0, 48)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.text = text
-	button.add_theme_font_size_override("font_size", 20)
-	button.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78, 1.0))
 	_style_button(button)
 	return button
 
 
 func _style_button(button: Button) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.1, 0.1, 0.08, 0.96)
-	normal.border_color = Color(0.65, 0.52, 0.2, 0.9)
-	normal.set_border_width_all(2)
-	normal.set_corner_radius_all(6)
-	normal.set_content_margin_all(10)
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.23, 0.19, 0.08, 0.98)
-	hover.border_color = Color(0.88, 0.75, 0.34, 1.0)
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", hover)
-	button.add_theme_stylebox_override("focus", hover)
-	button.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78, 1.0))
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		button.remove_theme_stylebox_override(state)
+	button.remove_theme_color_override("font_hover_color")
+	button.add_theme_color_override("font_color", DF_TEXT)
+	button.add_theme_font_size_override("font_size", 20)
 
 
 func _style_confirmation_dialog(dialog: ConfirmationDialog) -> void:

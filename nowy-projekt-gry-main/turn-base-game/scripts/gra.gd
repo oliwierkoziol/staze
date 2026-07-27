@@ -416,8 +416,11 @@ func _ready() -> void:
 
 
 func _on_audio_volume_changed(bus_name: StringName) -> void:
-	if bus_name == &"Music" and tween_muzyki and tween_muzyki.is_valid():
+	if tween_muzyki and tween_muzyki.is_valid():
 		tween_muzyki.kill()
+		tween_muzyki = null
+	if bus_name in [&"Music", &"Master"] and odtwarzacz_muzyki.playing:
+		GameSettings.apply_player_volume(odtwarzacz_muzyki, GLOSNOSC_MUZYKI_DB)
 
 
 func _load_terrain_types() -> void:
@@ -742,6 +745,7 @@ func _ustaw_muzyke(muzyka: AudioStream) -> void:
 		tween_muzyki.kill()
 	var docelowa_glosnosc: float = GameSettings.get_player_volume_db(&"Music", GLOSNOSC_MUZYKI_DB)
 	odtwarzacz_muzyki.stream = muzyka
+	GameSettings.apply_player_volume(odtwarzacz_muzyki, GLOSNOSC_MUZYKI_DB)
 	odtwarzacz_muzyki.volume_db = minf(-40.0, docelowa_glosnosc)
 	odtwarzacz_muzyki.play()
 	tween_muzyki = create_tween()
@@ -7469,6 +7473,7 @@ func _odtworz_sfx_jednostki(unit: Dictionary, zdarzenie: String) -> void:
 		return
 	odtwarzacz_sfx_jednostek.stop()
 	odtwarzacz_sfx_jednostek.stream = dzwiek
+	GameSettings.apply_player_volume(odtwarzacz_sfx_jednostek, -10.0)
 	odtwarzacz_sfx_jednostek.play()
 
 
@@ -7492,6 +7497,7 @@ func _odtworz_sfx_broni(rodzaj: String) -> void:
 	if dzwiek == null:
 		return
 	odtwarzacz_sfx_broni.stream = dzwiek
+	GameSettings.apply_player_volume(odtwarzacz_sfx_broni, -12.0)
 	odtwarzacz_sfx_broni.play()
 
 
@@ -7503,6 +7509,7 @@ func _odtworz_sfx_klikniecia() -> void:
 	if not is_instance_valid(odtwarzacz_sfx_interfejsu) or not odtwarzacz_sfx_interfejsu.is_inside_tree():
 		return
 	odtwarzacz_sfx_interfejsu.stream = SFX_KLIKNIECIA
+	GameSettings.apply_player_volume(odtwarzacz_sfx_interfejsu, -12.0)
 	odtwarzacz_sfx_interfejsu.play()
 
 

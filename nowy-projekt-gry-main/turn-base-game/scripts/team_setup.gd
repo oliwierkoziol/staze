@@ -624,7 +624,7 @@ func _panel_style() -> StyleBoxTexture:
 
 
 func _style_button(button: Button, _accent: bool) -> void:
-	# jak przyciski w menu pauzy potyczki: domyślny chrome Godota + Georgia/krem
+	# domyślny chrome Godota + Georgia/krem
 	button.custom_minimum_size = Vector2(0, 48)
 	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
 		button.remove_theme_stylebox_override(state)

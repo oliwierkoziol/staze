@@ -1951,7 +1951,7 @@ func _style_alert_dialog(dialog: AcceptDialog) -> void:
 			_style_df_button(cancel_btn)
 
 func _style_df_button(btn: Button) -> void:
-	# jak przyciski w menu pauzy potyczki: domyślny chrome Godota + Georgia/krem
+	# domyślny chrome Godota + Georgia/krem
 	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
 		btn.remove_theme_stylebox_override(state)
 	btn.remove_theme_color_override("font_hover_color")

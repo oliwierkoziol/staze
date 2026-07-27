@@ -1,5 +1,8 @@
 extends Node
 
+const BG_MUSIC_BASE_DB := -30.0
+const SFX_BASE_DB := -25.0
+
 var build_sound: AudioStreamPlayer
 var error_sound: AudioStreamPlayer
 var heal_sound: AudioStreamPlayer
@@ -40,7 +43,6 @@ func _ready() -> void:
 	
 	bg_music = AudioStreamPlayer.new()
 	bg_music.bus = &"Music"
-	bg_music.volume_db = BG_MUSIC_BASE_DB
 	add_child(bg_music)
 	GameSettings.register_player_volume(bg_music, BG_MUSIC_BASE_DB)
 	bg_music.finished.connect(_on_bg_music_finished)
@@ -79,7 +81,6 @@ func _unlock_web_audio() -> void:
 	if is_bg_playing and bg_music and not bg_music.playing:
 		_play_current_bg_track()
 
-const BG_MUSIC_BASE_DB := -30.0
 
 func _create_player(path: String) -> AudioStreamPlayer:
 	var p = AudioStreamPlayer.new()
@@ -87,21 +88,30 @@ func _create_player(path: String) -> AudioStreamPlayer:
 	var stream = load(path)
 	if stream:
 		p.stream = stream
-		p.volume_db = -25.0
 		add_child(p)
-		GameSettings.register_player_volume(p, -25.0)
+		GameSettings.register_player_volume(p, SFX_BASE_DB)
 	else:
 		push_error("AudioManager: Could not load sound from " + path)
 	return p
 
-func play_build() -> void: if build_sound: build_sound.play()
-func play_error() -> void: if error_sound: error_sound.play()
-func play_heal() -> void: if heal_sound: heal_sound.play()
-func play_potions() -> void: if potions_sound: potions_sound.play()
-func play_recruit() -> void: if recruit_sound: recruit_sound.play()
-func play_temple() -> void: if temple_sound: temple_sound.play()
-func play_tree() -> void: if tree_sound: tree_sound.play()
-func play_steps() -> void: if steps_sound and not steps_sound.playing: steps_sound.play()
+
+func _play_sfx(player: AudioStreamPlayer) -> void:
+	if player == null:
+		return
+	GameSettings.apply_player_volume(player, SFX_BASE_DB)
+	player.play()
+
+
+func play_build() -> void: _play_sfx(build_sound)
+func play_error() -> void: _play_sfx(error_sound)
+func play_heal() -> void: _play_sfx(heal_sound)
+func play_potions() -> void: _play_sfx(potions_sound)
+func play_recruit() -> void: _play_sfx(recruit_sound)
+func play_temple() -> void: _play_sfx(temple_sound)
+func play_tree() -> void: _play_sfx(tree_sound)
+func play_steps() -> void:
+	if steps_sound and not steps_sound.playing:
+		_play_sfx(steps_sound)
 func stop_steps() -> void: if steps_sound and steps_sound.playing: steps_sound.stop()
 func play_bg_music() -> void:
 	if not bg_music: return
@@ -137,6 +147,7 @@ func _play_current_bg_track() -> void:
 		elif stream is AudioStreamWAV:
 			stream.loop_mode = AudioStreamWAV.LOOP_DISABLED
 		bg_music.stream = stream
+		GameSettings.apply_player_volume(bg_music, BG_MUSIC_BASE_DB)
 		bg_music.volume_db = -80.0
 		bg_music.play()
 		
@@ -153,9 +164,9 @@ func play_buy() -> void:
 	if buy_sound:
 		buy_play_id += 1
 		var current_id = buy_play_id
-		buy_sound.play()
+		_play_sfx(buy_sound)
 		await get_tree().create_timer(0.5).timeout
 		if buy_play_id == current_id:
 			buy_sound.stop()
-func play_upgrade() -> void: if upgrade_sound: upgrade_sound.play()
-func play_destroyed() -> void: if destroyed_sound: destroyed_sound.play()
+func play_upgrade() -> void: _play_sfx(upgrade_sound)
+func play_destroyed() -> void: _play_sfx(destroyed_sound)

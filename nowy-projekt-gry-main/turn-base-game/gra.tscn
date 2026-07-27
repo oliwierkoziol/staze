@@ -71,18 +71,22 @@ script = ExtResource("1_a1tqk")
 [node name="OdtwarzaczSfxJednostek" type="AudioStreamPlayer" parent="."]
 bus = &"Dialogue"
 volume_db = -10.0
+playback_type = 1
 
 [node name="OdtwarzaczSfxBroni" type="AudioStreamPlayer" parent="."]
 bus = &"Effects"
 volume_db = -12.0
+playback_type = 1
 
 [node name="OdtwarzaczSfxInterfejsu" type="AudioStreamPlayer" parent="."]
 bus = &"Effects"
 volume_db = -12.0
+playback_type = 1
 
 [node name="OdtwarzaczMuzyki" type="AudioStreamPlayer" parent="."]
 bus = &"Music"
 volume_db = -24.0
+playback_type = 1
 
 [node name="Background" type="TextureRect" parent="." unique_id=214506001]
 layout_mode = 1
