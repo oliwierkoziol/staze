@@ -28,6 +28,7 @@ func _ready() -> void:
 	add_theme_constant_override("separation", 16)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	alignment = BoxContainer.ALIGNMENT_CENTER
 	_build_ui()
 
 
@@ -131,7 +132,7 @@ func _rebuild_rows() -> void:
 			var row3 := HBoxContainer.new()
 			row3.name = "Row3"
 			row3.add_theme_constant_override("separation", ROW_H_SEPARATION)
-			row3.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row3.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			row3.alignment = BoxContainer.ALIGNMENT_CENTER
 			_rows_container.add_child(row3)
 			row3.add_child(button)
@@ -175,8 +176,7 @@ func _make_faction_button(faction: String) -> Button:
 	button.add_theme_stylebox_override("pressed", style_pressed)
 
 	var container := CenterContainer.new()
-	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	button.add_child(container)
 
 	var inner := VBoxContainer.new()

@@ -83,8 +83,9 @@ func _uruchom() -> void:
 	_sprawdz(
 		build_scroll is ScrollContainer
 		and campaign_hud.menu_budowania.custom_minimum_size.y == 420
-		and campaign_hud.menu_budowania.offset_left == campaign_hud.turn_button.offset_left
-		and campaign_hud.menu_budowania.offset_right == campaign_hud.skip_button.offset_right,
+		and campaign_hud.menu_budowania.offset_bottom <= campaign_hud.turn_actions_row.offset_top
+		and is_equal_approx(campaign_hud.turn_actions_row.offset_right, -campaign_hud.TURN_ACTIONS_MARGIN_RIGHT)
+		and is_equal_approx(campaign_hud.turn_actions_row.offset_bottom, -campaign_hud.TURN_ACTIONS_MARGIN_BOTTOM),
 		"Menu budowy ma stałą wysokość, scroll i leży nad akcjami tury"
 	)
 	var tech_window: Panel = campaign_hud.tech_tree_menu.tech_tree_window

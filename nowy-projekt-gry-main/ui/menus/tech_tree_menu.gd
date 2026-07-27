@@ -22,17 +22,7 @@ func setup_tech_tree_ui():
 	tech_tree_button = Button.new()
 	tech_tree_button.text = "Drzewo Technologii"
 	tech_tree_button.custom_minimum_size = Vector2(0, 40)
-	var btn_style = StyleBoxFlat.new()
-	btn_style.bg_color = Color(0.1, 0.16, 0.22, 0.95)
-	btn_style.set_border_width_all(1)
-	btn_style.border_color = hud.DF_GOLD
-	btn_style.set_corner_radius_all(4)
-	tech_tree_button.add_theme_stylebox_override("normal", btn_style)
-	var btn_style_hover = btn_style.duplicate() as StyleBoxFlat
-	btn_style_hover.bg_color = Color(0.15, 0.22, 0.3, 0.95)
-	btn_style_hover.border_color = hud.DF_GOLD_BRIGHT
-	tech_tree_button.add_theme_stylebox_override("hover", btn_style_hover)
-	tech_tree_button.add_theme_color_override("font_color", hud.DF_TEXT)
+	hud._style_df_button(tech_tree_button)
 	var vbox = hud.points_panel.get_child(0)
 	vbox.add_child(tech_tree_button)
 	
@@ -60,7 +50,7 @@ func setup_tech_tree_ui():
 			close_btn.offset_right = -10
 			close_btn.offset_bottom = 50
 			if hud.has_method("_style_df_button"):
-				hud._style_df_button(close_btn, true)
+				hud._style_df_button(close_btn)
 			
 			# Przesunięcie na koniec drzewa, by ScrollContainer nie blokował kliknięć
 			close_btn.get_parent().move_child(close_btn, -1)

@@ -179,6 +179,10 @@ func _populate_barracks_units(faction: Dictionary):
 				btn_recruit.tooltip_text += "\n\nNIEDOSTĘPNE: %s" % block_reason
 			btn_recruit.custom_minimum_size = Vector2(150, 40)
 			btn_recruit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			if hud.has_method("_style_df_button"):
+				hud._style_df_button(btn_recruit)
+			if btn_recruit.disabled:
+				btn_recruit.modulate.a = 0.5
 			btn_recruit.pressed.connect(func():
 				if not EconomyManager.can_recruit_unit(unit):
 					if AudioManager: AudioManager.play_error()
@@ -198,13 +202,6 @@ func _populate_barracks_units(faction: Dictionary):
 				if AudioManager: AudioManager.play_recruit()
 				_populate_barracks_units(faction)
 			)
-			if not btn_recruit.disabled:
-				var style_ok = StyleBoxFlat.new()
-				style_ok.bg_color = Color(0.2, 0.6, 0.2)
-				style_ok.set_corner_radius_all(4)
-				btn_recruit.add_theme_stylebox_override("normal", style_ok)
-			else:
-				btn_recruit.modulate.a = 0.5
 			
 			hbox.add_child(btn_recruit)
 			vbox.add_child(panel)

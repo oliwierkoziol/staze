@@ -53,6 +53,8 @@ func show_camp_details_menu(pos: Vector2):
 	close_btn.text = "Zamknij"
 	close_btn.tooltip_text = "Zamknij"
 	close_btn.custom_minimum_size = Vector2(80, 40)
+	if hud.has_method("_style_df_button"):
+		hud._style_df_button(close_btn)
 	close_btn.pressed.connect(func(): camp_details_window.visible = false)
 	header_hbox.add_child(title_lbl)
 	header_hbox.add_child(close_btn)
@@ -131,10 +133,8 @@ func show_camp_details_menu(pos: Vector2):
 	army_btn.text = "⚔️ Pokaż armię"
 	army_btn.custom_minimum_size = Vector2(200, 50)
 	army_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var army_style = StyleBoxFlat.new()
-	army_style.bg_color = Color(0.6, 0.2, 0.2)
-	army_style.set_corner_radius_all(6)
-	army_btn.add_theme_stylebox_override("normal", army_style)
+	if hud.has_method("_style_df_button"):
+		hud._style_df_button(army_btn)
 	army_btn.pressed.connect(func():
 		show_camp_army_menu(camp_data.get("army", []))
 	)
@@ -182,12 +182,16 @@ func show_camp_army_menu(enemy_army_raw: Array):
 	close_btn.text = "Zamknij"
 	close_btn.tooltip_text = "Zamknij"
 	close_btn.custom_minimum_size = Vector2(80, 40)
+	if hud.has_method("_style_df_button"):
+		hud._style_df_button(close_btn)
 	close_btn.pressed.connect(func(): camp_army_window.visible = false)
 	
 	var back_btn = Button.new()
 	back_btn.text = "Wróć"
 	back_btn.custom_minimum_size = Vector2(80, 40)
 	back_btn.tooltip_text = "Wróć do szczegółów obozowiska"
+	if hud.has_method("_style_df_button"):
+		hud._style_df_button(back_btn)
 	back_btn.pressed.connect(func() -> void: show_camp_details_menu(active_camp_pos))
 	
 	header_hbox.add_child(back_btn)

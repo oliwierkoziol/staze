@@ -43,7 +43,7 @@ func setup_culture_tree_ui():
 			close_btn.offset_right = -10
 			close_btn.offset_bottom = 50
 			if hud.has_method("_style_df_button"):
-				hud._style_df_button(close_btn, true)
+				hud._style_df_button(close_btn)
 			
 			# Przesunięcie na koniec drzewa, by ScrollContainer nie blokował kliknięć
 			close_btn.get_parent().move_child(close_btn, -1)

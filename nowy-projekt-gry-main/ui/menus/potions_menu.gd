@@ -371,28 +371,5 @@ func _refresh_buy_potions_list():
 		buy_potions_list.add_child(panel)
 
 func _style_potion_button(btn: Button):
-	var style_btn = StyleBoxFlat.new()
-	style_btn.bg_color = Color(0.28, 0.22, 0.06, 0.95)
-	style_btn.set_border_width_all(2)
-	style_btn.border_color = hud.DF_GOLD
-	style_btn.set_corner_radius_all(6)
-	style_btn.set_content_margin_all(10)
-	
-	var style_btn_hover = style_btn.duplicate() as StyleBoxFlat
-	style_btn_hover.bg_color = Color(0.38, 0.3, 0.1, 0.95)
-	style_btn_hover.border_color = hud.DF_GOLD_BRIGHT
-	
-	var style_btn_disabled = StyleBoxFlat.new()
-	style_btn_disabled.bg_color = Color(0.15, 0.13, 0.11, 0.5)
-	style_btn_disabled.set_border_width_all(2)
-	style_btn_disabled.border_color = Color(0.4, 0.32, 0.16, 0.5)
-	style_btn_disabled.set_corner_radius_all(6)
-	style_btn_disabled.set_content_margin_all(10)
-	
-	btn.add_theme_stylebox_override("normal", style_btn)
-	btn.add_theme_stylebox_override("hover", style_btn_hover)
-	btn.add_theme_stylebox_override("pressed", style_btn_hover)
-	btn.add_theme_stylebox_override("disabled", style_btn_disabled)
-	btn.add_theme_color_override("font_color", hud.DF_GOLD_TEXT)
-	btn.add_theme_color_override("font_hover_color", Color.WHITE)
-	btn.add_theme_color_override("font_disabled_color", Color(0.5, 0.5, 0.5))
+	if hud.has_method("_style_df_button"):
+		hud._style_df_button(btn)

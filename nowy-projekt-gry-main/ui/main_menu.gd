@@ -378,25 +378,11 @@ func _panel_style() -> StyleBoxTexture:
 	return style
 
 
-func _style_button(button: Button, accent: bool) -> void:
-	button.custom_minimum_size = Vector2(0, 46)
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.23, 0.19, 0.08, 0.98) if accent else Color(0.1, 0.1, 0.08, 0.96)
-	normal.set_border_width_all(2)
-	normal.border_color = DF_GOLD
-	normal.set_corner_radius_all(6)
-	normal.set_content_margin_all(10)
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.31, 0.26, 0.11, 0.98) if accent else Color(0.23, 0.19, 0.08, 0.98)
-	hover.border_color = DF_GOLD_BRIGHT
-	var pressed := hover.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color(0.18, 0.14, 0.05, 0.98) if accent else Color(0.07, 0.07, 0.055, 0.98)
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", pressed)
-	var focus := hover.duplicate() as StyleBoxFlat
-	focus.set_border_width_all(3)
-	button.add_theme_stylebox_override("focus", focus)
+func _style_button(button: Button, _accent: bool) -> void:
+	# jak przyciski w menu pauzy potyczki: domyślny chrome Godota + Georgia/krem
+	button.custom_minimum_size = Vector2(0, 48)
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		button.remove_theme_stylebox_override(state)
+	button.remove_theme_color_override("font_hover_color")
 	button.add_theme_color_override("font_color", DF_TEXT)
-	button.add_theme_color_override("font_hover_color", DF_GOLD_TEXT)
-	button.add_theme_font_size_override("font_size", 16)
+	button.add_theme_font_size_override("font_size", 20)

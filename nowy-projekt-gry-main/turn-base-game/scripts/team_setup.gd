@@ -27,6 +27,7 @@ var _sandbox_player_faction: String = ""
 var _sandbox_enemy_faction: String = ""
 var _debug_background_path := ""
 var _ai_difficulty := "sredni"
+var _esc_back: Callable = Callable()
 var _web_file_input: Variant
 var _web_file_reader: Variant
 var _web_file_change_callback: Variant
@@ -43,6 +44,20 @@ func _ready() -> void:
 	if not scenarios.is_empty():
 		_debug_background_path = str(scenarios[0].get("background", ""))
 	_show_mode_menu()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	if event.keycode != KEY_ESCAPE:
+		return
+	if _load_dialog != null and _load_dialog.visible:
+		return
+	if _esc_back.is_valid():
+		_esc_back.call()
+	else:
+		main_menu_requested.emit()
+	get_viewport().set_input_as_handled()
 
 
 func _get_scenarios() -> Array[Dictionary]:
@@ -70,6 +85,7 @@ func _get_scenarios() -> Array[Dictionary]:
 
 
 func _show_mode_menu() -> void:
+	_esc_back = Callable()
 	_clear()
 	_build_background()
 
@@ -170,6 +186,7 @@ func _show_mode_menu() -> void:
 
 
 func _show_scenarios_placeholder() -> void:
+	_esc_back = _show_mode_menu
 	_clear()
 	_build_background()
 
@@ -301,6 +318,7 @@ func _append_scenario_units(unit_configs: Array[Dictionary], raw_units: Variant,
 
 
 func _show_sandbox_faction_select() -> void:
+	_esc_back = _show_mode_menu
 	_clear()
 	_build_background()
 
@@ -400,6 +418,7 @@ func _show_debug_count_config() -> void:
 
 
 func _show_count_config(title_text: String, unit_types: Array[Dictionary], back_callback: Callable, start_callback: Callable, show_map_select: bool = false) -> void:
+	_esc_back = back_callback
 	_clear()
 	_rows.clear()
 	_build_background()
@@ -604,27 +623,14 @@ func _panel_style() -> StyleBoxTexture:
 	return style
 
 
-func _style_button(button: Button, accent: bool) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.23, 0.19, 0.08, 0.98) if accent else Color(0.1, 0.1, 0.08, 0.96)
-	normal.set_border_width_all(2)
-	normal.border_color = DF_GOLD
-	normal.set_corner_radius_all(6)
-	normal.set_content_margin_all(10)
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.31, 0.26, 0.11, 0.98) if accent else Color(0.23, 0.19, 0.08, 0.98)
-	hover.border_color = DF_GOLD_BRIGHT
-	var pressed := hover.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color(0.18, 0.14, 0.05, 0.98) if accent else Color(0.07, 0.07, 0.055, 0.98)
-	var focus := hover.duplicate() as StyleBoxFlat
-	focus.set_border_width_all(3)
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", pressed)
-	button.add_theme_stylebox_override("focus", focus)
+func _style_button(button: Button, _accent: bool) -> void:
+	# jak przyciski w menu pauzy potyczki: domyślny chrome Godota + Georgia/krem
+	button.custom_minimum_size = Vector2(0, 48)
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		button.remove_theme_stylebox_override(state)
+	button.remove_theme_color_override("font_hover_color")
 	button.add_theme_color_override("font_color", DF_TEXT)
-	button.add_theme_color_override("font_hover_color", DF_GOLD_TEXT)
-	button.add_theme_font_size_override("font_size", 16)
+	button.add_theme_font_size_override("font_size", 20)
 
 
 func _make_side_column(title_text: String) -> VBoxContainer:

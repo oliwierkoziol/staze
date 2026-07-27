@@ -58,38 +58,6 @@ font_color = Color(0.76862746, 0.61960787, 0.2901961, 1)
 outline_size = 3
 outline_color = Color(0.11256667, 0.09398364, 0.056831576, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
-content_margin_left = 10.0
-content_margin_top = 10.0
-content_margin_right = 10.0
-content_margin_bottom = 10.0
-bg_color = Color(0.1, 0.1, 0.08, 0.96)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.65, 0.52, 0.2, 0.9)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_pressed"]
-content_margin_left = 10.0
-content_margin_top = 10.0
-content_margin_right = 10.0
-content_margin_bottom = 10.0
-bg_color = Color(0.23, 0.19, 0.08, 0.98)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.88, 0.75, 0.34, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
-
 [node name="Gra" type="Control" unique_id=658525074]
 layout_mode = 3
 anchors_preset = 15
@@ -590,12 +558,10 @@ texture = ExtResource("6_tr5l5")
 
 [node name="ClosePopupButton" type="Button" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=105665221]
 visible = false
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.92, 0.88, 0.78, 1)
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button_pressed")
+theme_override_font_sizes/font_size = 20
 text = "ZAMKNIJ"
 
 [node name="UnitHeader" type="NinePatchRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=1359612349]

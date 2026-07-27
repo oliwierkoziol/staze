@@ -51,6 +51,8 @@ func _populate_army():
 	clear_all_btn.custom_minimum_size = Vector2(120, 40)
 	clear_all_btn.disabled = EconomyManager.player_army.is_empty()
 	clear_all_btn.tooltip_text = "Zwolnij wszystkie jednostki" if not clear_all_btn.disabled else "Armia jest pusta"
+	if hud.has_method("_style_df_button"):
+		hud._style_df_button(clear_all_btn)
 	clear_all_btn.pressed.connect(func():
 		var dialog = ConfirmationDialog.new()
 		dialog.title = "Potwierdzenie"
@@ -220,10 +222,8 @@ func _populate_army():
 		dismiss_btn.text = "Zwolnij" if count == 1 else "Zwolnij 1"
 		dismiss_btn.custom_minimum_size = Vector2(110, 40)
 		dismiss_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var btn_style = StyleBoxFlat.new()
-		btn_style.bg_color = Color(0.6, 0.2, 0.2)
-		btn_style.set_corner_radius_all(4)
-		dismiss_btn.add_theme_stylebox_override("normal", btn_style)
+		if hud.has_method("_style_df_button"):
+			hud._style_df_button(dismiss_btn)
 		dismiss_btn.pressed.connect(func(u=unit):
 			var dialog = ConfirmationDialog.new()
 			dialog.title = "Potwierdzenie"

@@ -64,26 +64,7 @@ func setup_temple_window():
 	activate_button = Button.new()
 	activate_button.text = "🙏 Aktywuj Błogosławieństwo"
 	activate_button.custom_minimum_size = Vector2(0, 46)
-	var style_act = StyleBoxFlat.new()
-	style_act.bg_color = Color(0.28, 0.22, 0.06, 0.95)
-	style_act.set_border_width_all(2)
-	style_act.border_color = hud.DF_GOLD
-	style_act.set_corner_radius_all(6)
-	style_act.set_content_margin_all(10)
-	var style_act_hover = style_act.duplicate() as StyleBoxFlat
-	style_act_hover.bg_color = Color(0.38, 0.3, 0.1, 0.95)
-	style_act_hover.border_color = hud.DF_GOLD_BRIGHT
-	var style_act_disabled = StyleBoxFlat.new()
-	style_act_disabled.bg_color = Color(0.15, 0.13, 0.11, 0.5)
-	style_act_disabled.set_border_width_all(2)
-	style_act_disabled.border_color = Color(0.4, 0.32, 0.16, 0.5)
-	style_act_disabled.set_corner_radius_all(6)
-	style_act_disabled.set_content_margin_all(10)
-	activate_button.add_theme_stylebox_override("normal", style_act)
-	activate_button.add_theme_stylebox_override("hover", style_act_hover)
-	activate_button.add_theme_stylebox_override("disabled", style_act_disabled)
-	activate_button.add_theme_color_override("font_color", hud.DF_TEXT)
-	activate_button.add_theme_color_override("font_disabled_color", Color(0.5, 0.45, 0.35, 0.6))
+	hud._style_df_button(activate_button)
 	activate_button.pressed.connect(_on_activate_pressed)
 	main_vbox.add_child(activate_button)
 

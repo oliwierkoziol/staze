@@ -58,13 +58,6 @@ func setup_help_window():
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.pressed.connect(func(): _show_help_tab(key))
 		hud._style_df_button(btn)
-		var pressed_style = StyleBoxFlat.new()
-		pressed_style.bg_color = Color(0.3, 0.23, 0.1, 0.95)
-		pressed_style.set_corner_radius_all(6)
-		pressed_style.set_border_width_all(1)
-		pressed_style.border_color = hud.DF_GOLD_BRIGHT
-		pressed_style.set_content_margin_all(8)
-		btn.add_theme_stylebox_override("pressed", pressed_style)
 		tabs_hbox.add_child(btn)
 		help_tab_buttons[key] = btn
 	main_vbox.add_child(tabs_hbox)

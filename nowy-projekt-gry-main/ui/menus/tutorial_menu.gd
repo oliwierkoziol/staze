@@ -68,19 +68,7 @@ func setup_tutorial_window():
 	var start_btn = Button.new()
 	start_btn.text = "⚔️ Rozpocznij grę!"
 	start_btn.custom_minimum_size = Vector2(0, 46)
-	var start_style = StyleBoxFlat.new()
-	start_style.bg_color = hud.DF_BLOOD
-	start_style.set_corner_radius_all(6)
-	start_style.set_border_width_all(2)
-	start_style.border_color = hud.DF_GOLD
-	start_style.set_content_margin_all(10)
-	var start_hover = start_style.duplicate() as StyleBoxFlat
-	start_hover.bg_color = hud.DF_BLOOD_BRIGHT
-	start_hover.border_color = hud.DF_GOLD_BRIGHT
-	start_btn.add_theme_stylebox_override("normal", start_style)
-	start_btn.add_theme_stylebox_override("hover", start_hover)
-	start_btn.add_theme_color_override("font_color", hud.DF_TEXT)
-	start_btn.add_theme_font_size_override("font_size", 17)
+	hud._style_df_button(start_btn)
 	start_btn.pressed.connect(func(): tutorial_window.visible = false)
 	main_vbox.add_child(start_btn)
 

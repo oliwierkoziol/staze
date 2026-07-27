@@ -158,17 +158,7 @@ func setup_settings_window():
 	var quit_btn = Button.new()
 	quit_btn.text = "❌ Wyjdź z gry"
 	quit_btn.custom_minimum_size = Vector2(0, 42)
-	var quit_style = StyleBoxFlat.new()
-	quit_style.bg_color = hud.DF_BLOOD
-	quit_style.set_corner_radius_all(6)
-	quit_style.set_border_width_all(1)
-	quit_style.border_color = hud.DF_GOLD
-	quit_style.set_content_margin_all(8)
-	var quit_hover = quit_style.duplicate() as StyleBoxFlat
-	quit_hover.bg_color = hud.DF_BLOOD_BRIGHT
-	quit_btn.add_theme_stylebox_override("normal", quit_style)
-	quit_btn.add_theme_stylebox_override("hover", quit_hover)
-	quit_btn.add_theme_color_override("font_color", hud.DF_TEXT)
+	hud._style_df_button(quit_btn)
 	quit_btn.pressed.connect(func(): hud.get_tree().quit())
 	quit_btn.visible = not OS.has_feature("web")
 	main_vbox.add_child(quit_btn)

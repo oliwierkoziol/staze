@@ -63,26 +63,7 @@ func setup_workshop_window():
 	heal_button = Button.new()
 	heal_button.text = "✚ Lecz jednostki"
 	heal_button.custom_minimum_size = Vector2(0, 46)
-	var style_heal = StyleBoxFlat.new()
-	style_heal.bg_color = Color(0.1, 0.28, 0.14, 0.95)
-	style_heal.set_border_width_all(2)
-	style_heal.border_color = hud.DF_GOLD
-	style_heal.set_corner_radius_all(6)
-	style_heal.set_content_margin_all(10)
-	var style_heal_hover = style_heal.duplicate() as StyleBoxFlat
-	style_heal_hover.bg_color = Color(0.14, 0.38, 0.2, 0.95)
-	style_heal_hover.border_color = hud.DF_GOLD_BRIGHT
-	var style_heal_disabled = StyleBoxFlat.new()
-	style_heal_disabled.bg_color = Color(0.15, 0.13, 0.11, 0.5)
-	style_heal_disabled.set_border_width_all(2)
-	style_heal_disabled.border_color = Color(0.4, 0.32, 0.16, 0.5)
-	style_heal_disabled.set_corner_radius_all(6)
-	style_heal_disabled.set_content_margin_all(10)
-	heal_button.add_theme_stylebox_override("normal", style_heal)
-	heal_button.add_theme_stylebox_override("hover", style_heal_hover)
-	heal_button.add_theme_stylebox_override("disabled", style_heal_disabled)
-	heal_button.add_theme_color_override("font_color", hud.DF_TEXT)
-	heal_button.add_theme_color_override("font_disabled_color", Color(0.5, 0.45, 0.35, 0.6))
+	hud._style_df_button(heal_button)
 	heal_button.pressed.connect(_on_heal_pressed)
 	main_vbox.add_child(heal_button)
 

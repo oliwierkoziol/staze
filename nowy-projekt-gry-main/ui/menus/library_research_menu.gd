@@ -134,10 +134,8 @@ func _populate_list() -> void:
 				if missing_tech > 0:
 					missing.append("%d punktów technologii" % missing_tech)
 				research_btn.tooltip_text = "Brakuje: %s" % ", ".join(missing)
-			var r_style = StyleBoxFlat.new()
-			r_style.bg_color = Color(0.2, 0.6, 0.2) if can_afford else Color(0.2, 0.2, 0.2)
-			r_style.set_corner_radius_all(4)
-			research_btn.add_theme_stylebox_override("normal", r_style)
+			if hud.has_method("_style_df_button"):
+				hud._style_df_button(research_btn)
 			research_btn.pressed.connect(func(sid=skill_id):
 				if EconomyManager.research_skill(sid):
 					AudioManager.play_upgrade()
