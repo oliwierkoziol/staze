@@ -151,3 +151,35 @@ Dzień 16 (22.07.2026)
 - naprawa błedu gdzie klikanie w dowolny guzik przesuwa ekran na samą górę strony
 - dodanie możliwości usuwania folderów i plików
 
+
+Link do gry, o której mówię poniżej https://itch.io/jam/gmtk-jam-2026/rate/4827179
+Dzień 17 (23.07.2026)
+- Rozpoczęcie projektu na konkurs/game jam 
+- Rospisanie głównego zamysłu gry
+- Stworzenie działającego gracza 
+- Stworzenie tilów, po których mogą poruszać się gracz i inne postacie
+- dodanie miejsca, które ukrywa gracza i inne postacie/obiekty
+- dodanie drabiny (która później została usunięta przez zmianę art stylu)
+- dodanie licznika, który odlicza od 10 do 0
+- dodanie prostej muzyki
+- dodanie giganta (teraz złego robota), który pojawia się skończeniu odliczania
+- dodanie systemu dłoni giganta, które zabierają obiekty, które stoją na drodzę
+- dodanie systemu wykrywającego obiekty dla giganta
+- dodanie ciasteczka (teraz baterii), które przyśpiesza gracza, inne postacie oraz samego giganta
+- dodanie systemu podnoszenia i upuszczania
+- dodanie systemu rzucania
+
+
+Dzień 18 (24.07.2026)
+- stworzenie prostego UI pod kontrolki
+- stworzenie npc, który chodzi od ściany do ściany
+- dodanie systemu chowania się npc 
+- dodanie możliwości zjedzenia ciasteczka przez npc
+- dodanie menu śmierci
+- dodanie widocznej reprezentacji rąk giganta
+- dodanie możliwości ogłuszenia npc (teraz zamienione na po prostu podniesienie go)
+- naprawienie błędu, gdzie zrzucenie obiektu w ukryciu usuwa ukrycie
+- dodanie gigantowi możliwości atakowania więcej niż 1 raz
+- dodanie prostych textur (przedtem tylko dłonie giganta miały textury, reszta to były kwadraty)
+
+Resztę rzeczy do gry zrobiłem w weekend
