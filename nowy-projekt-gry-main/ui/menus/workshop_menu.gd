@@ -15,18 +15,7 @@ func setup_workshop_window():
 	workshop_window.visible = false
 	workshop_window.custom_minimum_size = Vector2(420, 0)
 
-	var style_panel = StyleBoxFlat.new()
-	style_panel.bg_color = hud.DF_BG
-	style_panel.set_corner_radius_all(10)
-	style_panel.set_border_width_all(2)
-	style_panel.border_color = hud.DF_GOLD
-	style_panel.content_margin_left = 22
-	style_panel.content_margin_right = 22
-	style_panel.content_margin_top = 18
-	style_panel.content_margin_bottom = 18
-	style_panel.shadow_color = Color(0, 0, 0, 0.55)
-	style_panel.shadow_size = 6
-	workshop_window.add_theme_stylebox_override("panel", style_panel)
+	workshop_window.add_theme_stylebox_override("panel", hud._panel_style(20))
 
 	var main_vbox = VBoxContainer.new()
 	main_vbox.add_theme_constant_override("separation", 14)

@@ -13,18 +13,7 @@ func setup_admin_window():
 	admin_window.custom_minimum_size = Vector2(400, 0)
 	admin_window.z_index = 50 # Pół-przezroczysty, na wierzchu
 
-	var style_panel = StyleBoxFlat.new()
-	style_panel.bg_color = hud.DF_BG
-	style_panel.set_corner_radius_all(10)
-	style_panel.set_border_width_all(2)
-	style_panel.border_color = Color(0.8, 0.2, 0.2, 1.0) # Czerwona ramka wyróżniająca
-	style_panel.content_margin_left = 24
-	style_panel.content_margin_right = 24
-	style_panel.content_margin_top = 18
-	style_panel.content_margin_bottom = 18
-	style_panel.shadow_color = Color(0, 0, 0, 0.6)
-	style_panel.shadow_size = 8
-	admin_window.add_theme_stylebox_override("panel", style_panel)
+	admin_window.add_theme_stylebox_override("panel", hud._panel_style(20))
 
 	var main_vbox = VBoxContainer.new()
 	main_vbox.add_theme_constant_override("separation", 16)

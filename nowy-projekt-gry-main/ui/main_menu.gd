@@ -6,6 +6,7 @@ extends Control
 @onready var title_label: Label = $CenterContainer/MenuPanel/MarginContainer/VBoxContainer/Title
 @onready var subtitle_label: Label = $CenterContainer/MenuPanel/MarginContainer/VBoxContainer/Subtitle
 @onready var continue_button: Button = $CenterContainer/MenuPanel/MarginContainer/VBoxContainer/ContinueButton
+@onready var continue_separator: HSeparator = $CenterContainer/MenuPanel/MarginContainer/VBoxContainer/ContinueSeparator
 @onready var new_game_button: Button = $CenterContainer/MenuPanel/MarginContainer/VBoxContainer/NewGameButton
 @onready var skirmish_button: Button = $CenterContainer/MenuPanel/MarginContainer/VBoxContainer/SkirmishButton
 @onready var load_button: Button = $CenterContainer/MenuPanel/MarginContainer/VBoxContainer/FileLoadButton
@@ -196,8 +197,10 @@ func _add_volume_slider(parent: VBoxContainer, label_text: String, bus_name: Str
 
 func _refresh_continue_button() -> void:
 	latest_save_seed = _find_latest_save_seed()
-	continue_button.visible = latest_save_seed != -1
-	if latest_save_seed != -1:
+	var has_continue := latest_save_seed != -1
+	continue_button.visible = has_continue
+	continue_separator.visible = has_continue
+	if has_continue:
 		continue_button.text = "KONTYNUUJ KAMPANIĘ  •  SEED %d" % latest_save_seed
 
 
@@ -320,15 +323,12 @@ func _show_status(text: String, is_error: bool) -> void:
 
 
 func _apply_emoji_fallback() -> void:
-	var emoji_font = load("res://assets/fonts/WindowsEmoji.ttf")
-	if not emoji_font:
+	var ui_font := GameSettings.get_ui_font()
+	if ui_font == null:
 		return
-	var var_font := FontVariation.new()
-	var_font.base_font = ThemeDB.fallback_font
-	var_font.fallbacks = [emoji_font]
 	if theme == null:
 		theme = Theme.new()
-	theme.default_font = var_font
+	theme.default_font = ui_font
 
 
 func _apply_dark_fantasy_style() -> void:

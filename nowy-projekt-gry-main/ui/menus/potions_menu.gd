@@ -40,16 +40,8 @@ func setup_potions_windows():
 	
 	var my_panel = PanelContainer.new()
 	my_panel.custom_minimum_size = Vector2(800, 500)
-	var my_style = StyleBoxFlat.new()
-	my_style.bg_color = hud.DF_BG
-	my_style.set_border_width_all(2)
-	my_style.border_color = hud.DF_GOLD
-	my_style.set_corner_radius_all(10)
-	my_style.content_margin_left = 20
-	my_style.content_margin_right = 20
-	my_style.content_margin_top = 20
-	my_style.content_margin_bottom = 20
-	my_panel.add_theme_stylebox_override("panel", my_style)
+	var panel_style = hud._panel_style(20)
+	my_panel.add_theme_stylebox_override("panel", panel_style)
 	center_my.add_child(my_panel)
 	
 	var my_vbox = VBoxContainer.new()
@@ -116,7 +108,7 @@ func setup_potions_windows():
 	
 	var buy_panel = PanelContainer.new()
 	buy_panel.custom_minimum_size = Vector2(800, 500)
-	buy_panel.add_theme_stylebox_override("panel", my_style)
+	buy_panel.add_theme_stylebox_override("panel", panel_style)
 	center_buy.add_child(buy_panel)
 	
 	var buy_vbox = VBoxContainer.new()

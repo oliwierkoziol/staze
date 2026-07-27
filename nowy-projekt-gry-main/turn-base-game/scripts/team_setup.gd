@@ -35,7 +35,8 @@ var _web_file_load_callback: Variant
 
 func _ready() -> void:
 	var menu_theme := Theme.new()
-	menu_theme.default_font = ThemeDB.fallback_font
+	var ui_font := GameSettings.get_ui_font()
+	menu_theme.default_font = ui_font if ui_font else ThemeDB.fallback_font
 	theme = menu_theme
 	assert(not _parse_save_text('{"units": []}').is_empty() and _parse_save_text("[]").is_empty(), "Parser zapisu musi przyjmowac tylko obiekt JSON.")
 	var scenarios: Array[Dictionary] = _get_scenarios()

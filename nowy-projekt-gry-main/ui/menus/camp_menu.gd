@@ -16,23 +16,13 @@ func setup_camp_windows():
 	camp_details_window = PanelContainer.new()
 	camp_details_window.visible = false
 	camp_details_window.custom_minimum_size = Vector2(700, 450)
-	var style_panel = StyleBoxFlat.new()
-	style_panel.bg_color = Color(0.13, 0.07, 0.07, 0.96)
-	style_panel.set_corner_radius_all(10)
-	style_panel.set_border_width_all(2)
-	style_panel.border_color = hud.DF_GOLD
-	style_panel.set_content_margin_all(20)
-	style_panel.shadow_color = Color(0, 0, 0, 0.55)
-	style_panel.shadow_size = 6
-	camp_details_window.add_theme_stylebox_override("panel", style_panel)
+	camp_details_window.add_theme_stylebox_override("panel", hud._panel_style(20))
 	hud.add_child(camp_details_window)
 
 	camp_army_window = PanelContainer.new()
 	camp_army_window.visible = false
 	camp_army_window.custom_minimum_size = Vector2(800, 500)
-	var style_army = style_panel.duplicate()
-	style_army.bg_color = Color(0.16, 0.08, 0.08, 0.96)
-	camp_army_window.add_theme_stylebox_override("panel", style_army)
+	camp_army_window.add_theme_stylebox_override("panel", hud._panel_style(20))
 	hud.add_child(camp_army_window)
 
 func show_camp_details_menu(pos: Vector2):

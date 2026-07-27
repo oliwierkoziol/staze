@@ -85,6 +85,10 @@ visible = false
 layout_mode = 2
 text = "KONTYNUUJ KAMPANIĘ"
 
+[node name="ContinueSeparator" type="HSeparator" parent="CenterContainer/MenuPanel/MarginContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+
 [node name="NewGameButton" type="Button" parent="CenterContainer/MenuPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "NOWA KAMPANIA"

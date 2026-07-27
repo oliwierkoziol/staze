@@ -61,7 +61,7 @@ const SEKCJE_POMOCY: Array[Dictionary] = [
 			"START — rozpocznij bitwę po rozstawieniu jednostek.",
 			"ZAPISZ STAN i WCZYTAJ STAN — dostępne w menu pauzy Potyczki.",
 			"RESETUJ WALKĘ — rozpocznij od nowa tę samą Potyczkę.",
-			"MENU POTYCZKI — porzuć bieżącą walkę i wróć do wyboru scenariusza.",
+			"WRÓĆ DO MENU — porzuć bieżącą walkę i wróć do wyboru scenariusza.",
 			"WYCOFAJ SIĘ — zakończ walkę z konsekwencjami kampanii.",
 			"Zakończ turę — kończy działania aktywnej jednostki i przekazuje inicjatywę dalej.",
 			"Umiejętności generała — dwa przyciski w prawym panelu, używalne raz na bitwę.",

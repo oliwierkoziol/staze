@@ -25,18 +25,7 @@ func setup_army_window():
 	var panel = PanelContainer.new()
 	panel.custom_minimum_size = Vector2(800, 500)
 	
-	var style_panel = StyleBoxFlat.new()
-	style_panel.bg_color = hud.DF_BG
-	style_panel.set_corner_radius_all(10)
-	style_panel.set_border_width_all(2)
-	style_panel.border_color = hud.DF_GOLD
-	style_panel.content_margin_left = 20
-	style_panel.content_margin_right = 20
-	style_panel.content_margin_top = 20
-	style_panel.content_margin_bottom = 20
-	style_panel.shadow_color = Color(0, 0, 0, 0.55)
-	style_panel.shadow_size = 6
-	panel.add_theme_stylebox_override("panel", style_panel)
+	panel.add_theme_stylebox_override("panel", hud._panel_style(20))
 	center.add_child(panel)
 	
 	army_content_vbox = VBoxContainer.new()

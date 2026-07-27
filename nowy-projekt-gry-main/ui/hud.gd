@@ -209,18 +209,12 @@ func _ready():
 	EconomyManager.notify_change()
 
 func apply_emoji_fallback() -> void:
-	var emoji_font = load("res://assets/fonts/WindowsEmoji.ttf")
-	if not emoji_font:
+	var ui_font := GameSettings.get_ui_font()
+	if ui_font == null:
 		return
-	
-	var var_font = FontVariation.new()
-	var_font.base_font = ThemeDB.fallback_font
-	var_font.fallbacks = [emoji_font]
-	
 	if not self.theme:
 		self.theme = Theme.new()
-	
-	self.theme.default_font = var_font
+	self.theme.default_font = ui_font
 
 
 func setup_admin_button():

@@ -702,7 +702,7 @@ func _on_custom_setup_finished(custom_units: Array[Dictionary], player_faction: 
 
 
 func _roll_general_variants() -> void:
-	orc_general_is_kishak = current_player_faction == "orcs" and randi_range(1, 10) == 1
+	orc_general_is_kishak = current_player_faction == "orcs" and randi_range(1, 30) == 1
 	human_general_is_kovalenko = current_player_faction == "humans" and randi_range(1, 60) == 1
 
 

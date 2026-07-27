@@ -125,7 +125,7 @@ func _uruchom() -> void:
 		gra.pause_menu._save_button.text == "ZAPISZ STAN"
 		and gra.pause_menu._load_button.text == "WCZYTAJ STAN"
 		and gra.pause_menu._restart_button.text == "RESETUJ WALKĘ"
-		and gra.pause_menu._mode_menu_button.text == "MENU POTYCZKI"
+		and gra.pause_menu._mode_menu_button.text == "WRÓĆ DO MENU"
 		and gra.pause_menu._resume_button.text == "WZNÓW WALKĘ",
 		"Menu Potyczki ma kontekstowe akcje"
 	)

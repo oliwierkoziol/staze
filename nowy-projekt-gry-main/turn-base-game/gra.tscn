@@ -12,7 +12,7 @@
 [ext_resource type="Script" uid="uid://dcm6ghvn3slyt" path="res://turn-base-game/scripts/unit_abilities_panel.gd" id="10_abilities"]
 [ext_resource type="Texture2D" uid="uid://q6isvretb06q" path="res://turn-base-game/assets/ui/general1.png" id="11_general1"]
 [ext_resource type="Texture2D" uid="uid://cymiq2f6b8k8c" path="res://turn-base-game/assets/ui/general_ability1.png" id="12_general_ability1"]
-[ext_resource type="Theme" uid="uid://cna4ihybudjlx" path="res://turn-base-game/theme/georgia_theme.tres" id="13_georgia_theme"]
+[ext_resource type="Theme" uid="uid://cna4ihybudjlx" path="res://theme/georgia_theme.tres" id="13_georgia_theme"]
 
 [ext_resource type="Script" uid="uid://cyck0vsv6yf62" path="res://turn-base-game/scripts/pause_menu.gd" id="14_pause"]
 

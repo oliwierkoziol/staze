@@ -2,6 +2,9 @@ extends Node
 
 const AUDIO_BUSES: Array[StringName] = [&"Master", &"Music", &"Effects", &"Dialogue"]
 const AUDIO_SETTINGS_PATH := "user://audio_settings.cfg"
+const GEORGIA_FONT_PATH := "res://theme/georgia.ttf"
+const EMOJI_FONT_PATH := "res://assets/fonts/WindowsEmoji.ttf"
+const GEORGIA_THEME_PATH := "res://theme/georgia_theme.tres"
 
 var current_seed: int = 0
 var use_custom_seed: bool = false
@@ -11,17 +14,44 @@ var skip_turn_button_delay: bool = false
 var debug_mode: bool = false
 var campaign_ai_difficulty := "sredni"
 
+var _ui_font: Font
+
 func _ready() -> void:
 	_ensure_audio_buses()
 	_load_audio_settings()
-	var emoji_font = load("res://assets/fonts/WindowsEmoji.ttf")
+	_ui_font = _build_ui_font()
+	if _ui_font:
+		ThemeDB.fallback_font = _ui_font
+	call_deferred("_apply_root_theme")
+
+
+func get_ui_font() -> Font:
+	return _ui_font
+
+
+func _build_ui_font() -> Font:
+	var georgia_font := load(GEORGIA_FONT_PATH) as Font
+	if georgia_font == null:
+		push_warning("Nie udało się załadować czcionki Georgia: %s" % GEORGIA_FONT_PATH)
+		return null
+	var emoji_font := load(EMOJI_FONT_PATH) as Font
 	if emoji_font:
-		var default_font = ThemeDB.fallback_font
-		if default_font:
-			var fallbacks = default_font.fallbacks
-			if not emoji_font in fallbacks:
-				fallbacks.append(emoji_font)
-			default_font.fallbacks = fallbacks
+		var fallbacks: Array[Font] = georgia_font.fallbacks.duplicate()
+		if emoji_font not in fallbacks:
+			fallbacks.append(emoji_font)
+		georgia_font.fallbacks = fallbacks
+	return georgia_font
+
+
+func _apply_root_theme() -> void:
+	if _ui_font == null:
+		return
+	var georgia_theme := load(GEORGIA_THEME_PATH) as Theme
+	if georgia_theme == null:
+		return
+	var runtime_theme := georgia_theme.duplicate() as Theme
+	runtime_theme.default_font = _ui_font
+	get_tree().root.theme = runtime_theme
 
 
 func get_audio_volume(bus_name: StringName) -> float:

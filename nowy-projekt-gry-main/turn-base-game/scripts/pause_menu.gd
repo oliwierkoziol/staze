@@ -50,8 +50,8 @@ func _build_ui() -> void:
 	panel.patch_margin_top = 8
 	panel.patch_margin_right = 8
 	panel.patch_margin_bottom = 8
-	panel.axis_stretch_horizontal = NinePatchRect.AXIS_STRETCH_MODE_STRETCH
-	panel.axis_stretch_vertical = NinePatchRect.AXIS_STRETCH_MODE_STRETCH
+	panel.axis_stretch_horizontal = NinePatchRect.AXIS_STRETCH_MODE_TILE
+	panel.axis_stretch_vertical = NinePatchRect.AXIS_STRETCH_MODE_TILE
 	add_child(panel)
 
 	var margin := MarginContainer.new()
@@ -81,21 +81,13 @@ func _build_ui() -> void:
 	divider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(divider)
 
-	_save_button = _make_button("ZAPISZ STAN")
-	_save_button.pressed.connect(func() -> void: save_requested.emit())
-	column.add_child(_save_button)
-
-	_load_button = _make_button("WCZYTAJ STAN")
-	_load_button.pressed.connect(func() -> void: load_requested.emit())
-	column.add_child(_load_button)
+	_resume_button = _make_button("WZNÓW WALKĘ")
+	_resume_button.pressed.connect(func() -> void: resume_requested.emit())
+	column.add_child(_resume_button)
 
 	_restart_button = _make_button("RESETUJ WALKĘ")
 	_restart_button.pressed.connect(_request_action.bind("restart"))
 	column.add_child(_restart_button)
-
-	_mode_menu_button = _make_button("MENU POTYCZKI")
-	_mode_menu_button.pressed.connect(_request_action.bind("mode_menu"))
-	column.add_child(_mode_menu_button)
 
 	_retreat_button = _make_button("WYCOFAJ SIĘ")
 	_retreat_button.pressed.connect(_request_action.bind("retreat"))
@@ -105,9 +97,17 @@ func _build_ui() -> void:
 	settings_button.pressed.connect(func() -> void: settings_requested.emit())
 	column.add_child(settings_button)
 
-	_resume_button = _make_button("WZNÓW WALKĘ")
-	_resume_button.pressed.connect(func() -> void: resume_requested.emit())
-	column.add_child(_resume_button)
+	_save_button = _make_button("ZAPISZ STAN")
+	_save_button.pressed.connect(func() -> void: save_requested.emit())
+	column.add_child(_save_button)
+
+	_load_button = _make_button("WCZYTAJ STAN")
+	_load_button.pressed.connect(func() -> void: load_requested.emit())
+	column.add_child(_load_button)
+
+	_mode_menu_button = _make_button("WRÓĆ DO MENU")
+	_mode_menu_button.pressed.connect(_request_action.bind("mode_menu"))
+	column.add_child(_mode_menu_button)
 
 	_action_confirmation = ConfirmationDialog.new()
 	_action_confirmation.cancel_button_text = "WRÓĆ"
@@ -133,9 +133,9 @@ func _request_action(action: String) -> void:
 			_action_confirmation.dialog_text = "Zresetować bieżącą walkę? Scenariusz i armie zostaną zachowane."
 			_action_confirmation.ok_button_text = "RESETUJ WALKĘ"
 		"mode_menu":
-			_action_confirmation.title = "Powrót do menu Potyczki"
+			_action_confirmation.title = "Powrót do menu"
 			_action_confirmation.dialog_text = "Bieżąca walka zostanie utracona. Kontynuować?"
-			_action_confirmation.ok_button_text = "MENU POTYCZKI"
+			_action_confirmation.ok_button_text = "WRÓĆ DO MENU"
 		"retreat":
 			_action_confirmation.title = "Wycofanie z walki"
 			_action_confirmation.dialog_text = (

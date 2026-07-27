@@ -19,18 +19,7 @@ func setup_settings_window():
 	settings_window.visible = false
 	settings_window.custom_minimum_size = Vector2(480, 0)
 
-	var style_panel = StyleBoxFlat.new()
-	style_panel.bg_color = hud.DF_BG
-	style_panel.set_corner_radius_all(10)
-	style_panel.set_border_width_all(2)
-	style_panel.border_color = hud.DF_GOLD
-	style_panel.content_margin_left = 24
-	style_panel.content_margin_right = 24
-	style_panel.content_margin_top = 18
-	style_panel.content_margin_bottom = 18
-	style_panel.shadow_color = Color(0, 0, 0, 0.6)
-	style_panel.shadow_size = 8
-	settings_window.add_theme_stylebox_override("panel", style_panel)
+	settings_window.add_theme_stylebox_override("panel", hud._panel_style(20))
 	_setup_file_dialogs()
 	SaveManager.external_load_finished.connect(_on_external_load_finished)
 
