@@ -1830,6 +1830,7 @@ func _handle_setup_cell_pressed(cell: Vector2i) -> void:
 
 func _end_current_activation() -> void:
 	var unit := _get_active_unit()
+	var was_enemy_ai := not unit.is_empty() and str(unit.side) == "enemy" and not _is_manual_side("enemy")
 	if not unit.is_empty():
 		_advance_unit_effects(unit)
 		if not active_turn_has_log:
@@ -1845,6 +1846,8 @@ func _end_current_activation() -> void:
 	_update_action_buttons()
 	if setup_mode:
 		return
+	if was_enemy_ai:
+		await get_tree().create_timer(1.0).timeout
 	_start_next_activation()
 
 
