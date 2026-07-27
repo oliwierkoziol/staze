@@ -71,17 +71,17 @@ script = ExtResource("1_a1tqk")
 [node name="OdtwarzaczSfxJednostek" type="AudioStreamPlayer" parent="."]
 bus = &"Dialogue"
 volume_db = -10.0
-playback_type = 1
+playback_type = 2
 
 [node name="OdtwarzaczSfxBroni" type="AudioStreamPlayer" parent="."]
 bus = &"Effects"
 volume_db = -12.0
-playback_type = 1
+playback_type = 2
 
 [node name="OdtwarzaczSfxInterfejsu" type="AudioStreamPlayer" parent="."]
 bus = &"Effects"
 volume_db = -12.0
-playback_type = 1
+playback_type = 2
 
 [node name="OdtwarzaczMuzyki" type="AudioStreamPlayer" parent="."]
 bus = &"Music"

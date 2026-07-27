@@ -47,7 +47,6 @@ func _ready() -> void:
 	GameSettings.register_player_volume(bg_music, BG_MUSIC_BASE_DB)
 	bg_music.finished.connect(_on_bg_music_finished)
 	if OS.has_feature("web"):
-		get_viewport().gui_input.connect(_on_web_gui_input)
 		set_process_input(true)
 	GameSettings.audio_volume_changed.connect(_on_audio_volume_changed)
 
@@ -61,23 +60,15 @@ func _on_audio_volume_changed(bus_name: StringName) -> void:
 func _input(event: InputEvent) -> void:
 	if _web_audio_unlocked:
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		_unlock_web_audio()
-
-
-func _on_web_gui_input(event: InputEvent) -> void:
-	if _web_audio_unlocked:
-		return
 	if (event is InputEventMouseButton and event.pressed) \
-			or (event is InputEventScreenTouch and event.pressed):
+			or (event is InputEventScreenTouch and event.pressed) \
+			or (event is InputEventKey and event.pressed and not event.echo):
 		_unlock_web_audio()
 
 
 func _unlock_web_audio() -> void:
 	_web_audio_unlocked = true
 	set_process_input(false)
-	if get_viewport().gui_input.is_connected(_on_web_gui_input):
-		get_viewport().gui_input.disconnect(_on_web_gui_input)
 	if is_bg_playing and bg_music and not bg_music.playing:
 		_play_current_bg_track()
 

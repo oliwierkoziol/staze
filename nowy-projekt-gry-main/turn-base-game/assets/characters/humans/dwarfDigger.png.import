@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/dwarfDigger.png-030d8b29f3f87e3c1e119edc965f6
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/goblinTheft.png-0fb895eaa80fad0fdaa3fab62733b
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

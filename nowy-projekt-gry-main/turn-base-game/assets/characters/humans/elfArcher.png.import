@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/elfArcher.png-b9ea19e7ff43ac4e7655aa8ed407193
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

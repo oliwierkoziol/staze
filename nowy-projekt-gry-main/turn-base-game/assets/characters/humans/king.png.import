@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/king.png-9c5cbf3da1d37ae4b5052f5814408da3.cte
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

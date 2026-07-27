@@ -5246,6 +5246,16 @@ func _find_path(unit: Dictionary, start: Vector2i, goal: Vector2i, charge_skill:
 	return _odtworz_trase(mapa, start, goal)
 
 
+func _stan_trasy_lepszy(a: Vector3i, b: Vector3i, priority_by_state: Dictionary) -> bool:
+	var priority_a: int = int(priority_by_state[a])
+	var priority_b: int = int(priority_by_state[b])
+	if priority_a != priority_b:
+		return priority_a < priority_b
+	if a.z != b.z:
+		return a.z < b.z
+	return a.y < b.y if a.y != b.y else a.x < b.x
+
+
 func _zbuduj_mape_tras(unit: Dictionary, start: Vector2i, max_distance: int, charge_skill: Dictionary = {}) -> Dictionary:
 	if not _pole_na_planszy(start):
 		return {"came_from": {}, "risk_by_state": {}, "priority_by_state": {}, "best_state_by_cell": {}}
@@ -5259,16 +5269,14 @@ func _zbuduj_mape_tras(unit: Dictionary, start: Vector2i, max_distance: int, cha
 	var best_state_by_cell: Dictionary = {start: start_state}
 
 	while not frontier.is_empty():
-		frontier.sort_custom(func(a: Vector3i, b: Vector3i) -> bool:
-			var priority_a: int = int(priority_by_state[a])
-			var priority_b: int = int(priority_by_state[b])
-			if priority_a != priority_b:
-				return priority_a < priority_b
-			if a.z != b.z:
-				return a.z < b.z
-			return a.y < b.y if a.y != b.y else a.x < b.x
-		)
-		var current_state: Vector3i = frontier.pop_front()
+		var best_idx := 0
+		for i in range(1, frontier.size()):
+			var candidate: Vector3i = frontier[i]
+			var best: Vector3i = frontier[best_idx]
+			if _stan_trasy_lepszy(candidate, best, priority_by_state):
+				best_idx = i
+		var current_state: Vector3i = frontier[best_idx]
+		frontier.remove_at(best_idx)
 		var current := Vector2i(current_state.x, current_state.y)
 		if current != start and _pole_konczy_planowany_ruch(unit, current):
 			continue

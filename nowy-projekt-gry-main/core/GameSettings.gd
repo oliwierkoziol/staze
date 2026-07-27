@@ -92,9 +92,11 @@ func apply_player_volume(player: AudioStreamPlayer, base_db: float) -> void:
 	if not is_instance_valid(player):
 		return
 	if OS.has_feature("web"):
-		# Godot enum dla playback_type bywa różnie wystawiany w GDScript,
-		# a "Stream" odpowiada wartości 1 (Default=0, Stream=1, Sample=2).
-		player.playback_type = 1
+		# Na webie:
+		# - dla muzyki dajemy Stream (lepsza aktualizacja w trakcie grania)
+		# - dla SFX dajemy Sample (mniej problemów/artefaktów bez wątków)
+		# Playback_type: Default=0, Stream=1, Sample=2
+		player.playback_type = 1 if player.bus == &"Music" else 2
 	player.volume_db = get_player_volume_db(player.bus, base_db)
 
 
@@ -115,7 +117,7 @@ func set_audio_volume(bus_name: StringName, value: float, save := true) -> void:
 	if OS.has_feature("web"):
 		_volume_levels[bus_name] = normalized_value
 		_ensure_web_master_bus_neutral()
-		_refresh_all_web_players()
+		_refresh_all_web_players(bus_name)
 		if save:
 			_save_audio_settings()
 		audio_volume_changed.emit(bus_name)
@@ -149,13 +151,26 @@ func _sync_master_bus(value: float) -> void:
 		AudioServer.set_bus_volume_db(bus_index, linear_to_db(value / 100.0))
 
 
-func _refresh_all_web_players() -> void:
+func _refresh_all_web_players(changed_bus: StringName) -> void:
 	if not OS.has_feature("web"):
 		return
 	for entry in _player_base_volumes.values():
 		var player: AudioStreamPlayer = entry.player
-		if is_instance_valid(player):
-			apply_player_volume(player, entry.base_db)
+		if not is_instance_valid(player):
+			continue
+
+		# Przy Master przeliczamy wszystko, przy innych busach tylko to,
+		# co odpowiada wybranemu suwakowi.
+		if changed_bus != &"Master" and player.bus != changed_bus:
+			continue
+
+		apply_player_volume(player, entry.base_db)
+
+		# W trybie Sample Godot może nie zaktualizować głośności dla
+		# już grających odtwarzaczy, więc restartujemy SFX.
+		if OS.has_feature("web") and player.playback_type == 2 and player.playing:
+			player.stop()
+			player.play()
 
 
 func _ensure_audio_buses() -> void:

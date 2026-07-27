@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/humans_vs_goblins_desert.png-22f621dd7570a70f
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
