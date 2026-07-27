@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://main_menu_uid"]
 
 [ext_resource type="Script" path="res://ui/main_menu.gd" id="1_main_menu"]
-[ext_resource type="Texture2D" path="res://turn-base-game/assets/backgrounds/back.png" id="2_background"]
+[ext_resource type="Texture2D" path="res://turn-base-game/assets/backgrounds/mainback.png" id="2_background"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
