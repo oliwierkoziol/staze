@@ -92,7 +92,9 @@ func apply_player_volume(player: AudioStreamPlayer, base_db: float) -> void:
 	if not is_instance_valid(player):
 		return
 	if OS.has_feature("web"):
-		player.playback_type = AudioStreamPlayer.PLAYBACK_TYPE_STREAM
+		# Godot enum dla playback_type bywa różnie wystawiany w GDScript,
+		# a "Stream" odpowiada wartości 1 (Default=0, Stream=1, Sample=2).
+		player.playback_type = 1
 	player.volume_db = get_player_volume_db(player.bus, base_db)
 
 
