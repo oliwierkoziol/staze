@@ -40,7 +40,23 @@ func _panel_style() -> StyleBoxTexture:
 
 func _style_button(button: Button) -> void:
 	button.custom_minimum_size = Vector2(280, 56)
-	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-		button.remove_theme_stylebox_override(state)
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.22, 0.14, 0.035, 0.98)
+	normal.border_color = Color(0.68, 0.52, 0.2, 1.0)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(5)
+	normal.shadow_color = Color(0, 0, 0, 0.65)
+	normal.shadow_size = 4
+	var hover: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.34, 0.23, 0.065, 1.0)
+	hover.border_color = Color(0.9, 0.75, 0.34, 1.0)
+	var pressed: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.12, 0.075, 0.02, 1.0)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("focus", hover)
 	button.add_theme_color_override("font_color", DF_TEXT)
+	button.add_theme_color_override("font_hover_color", DF_GOLD_TEXT)
+	button.add_theme_color_override("font_pressed_color", Color(0.82, 0.7, 0.4, 1.0))
 	button.add_theme_font_size_override("font_size", 20)
