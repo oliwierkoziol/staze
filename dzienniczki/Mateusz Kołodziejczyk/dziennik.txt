@@ -16,3 +16,4 @@
 22.07.2026 - Testowanie drugiej części gry i poszukiwanie błędów w rozgrywce, interfejsie. Naprawa błędów i niespójności w naszej części gry, znalezionych przez drugą grupe testujących m.in. brak opisów budynków, brak opisów kosztów produkcji surowców, drobne błędy ui.
 23.07.2026 - Poprawki ui, poprawa opisów budynków. Wygenerowanie dźwięków i implementacja ich w grze m.in. domyślna muzyka grająca w tle, dźwięki rekrutacji, poruszania się po mapie, ulepszania budynków.
 24.07.2026 - Wygenerowanie nowych dźwięków i dodanie ich do gry oraz wymiana niektórych starych dźwięków. Połączenie obu gier w jedną i poprawki błędów które wystąpiły w związku z tym.
+27.07.2026 - Praca nad ostateczną wersją gry, ujednolicenie i dopracowanie interfejsu. Dodanie brakujących elementów takich jak ekran zwycięstwa. Poprawki dźwięków, ai i balansu. Zakończenie.
