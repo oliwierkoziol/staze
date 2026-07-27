@@ -1,0 +1,7 @@
+# Godot-generated files
+**/.godot/
+*.import
+
+# Local exports
+/turn-base-game/build/
+/nowy-projekt-gry-main/saves/*.json

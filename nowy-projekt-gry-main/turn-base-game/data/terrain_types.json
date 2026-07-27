@@ -1,0 +1,103 @@
+{
+  "terrain_types": {
+	"woda": {
+	  "id": "woda",
+	  "name": "Woda",
+	  "description": "Wejscie do wody zuzywa caly pozostaly ruch w tej turze.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": false,
+	  "entry_effect": "woda"
+	},
+	"ruchome_piaski": {
+	  "id": "ruchome_piaski",
+	  "name": "Ruchome Piaski",
+	  "description": "Wejscie w ruchome piaski zuzywa caly pozostaly ruch w tej turze.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": false,
+	  "entry_effect": "ruchome_piaski"
+	},
+	"kamienie": {
+	  "id": "kamienie",
+	  "name": "Kamienie",
+	  "description": "Przez kamienie nie da sie przejsc.",
+	  "movement_cost": 999,
+	  "blocks_movement": true,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": null
+	},
+	"krzok": {
+	  "id": "krzok",
+	  "name": "Krzak",
+	  "description": "Jednostka w krzaku jest ukryta. Wrog moze ja zobaczyc z sasiedniego pola zapewniajacego ukrycie. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": "krzok"
+	},
+	"zimowy_krzak": {
+	  "id": "zimowy_krzak",
+	  "name": "Zimowy Krzak",
+	  "description": "Jednostka w zimowym krzaku jest ukryta. Wrog moze ja zobaczyc z sasiedniego pola zapewniajacego ukrycie. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": "zimowy_krzak"
+	},
+	"holy_tree": {
+	  "id": "holy_tree",
+	  "name": "Swiete Drzewo",
+	  "description": "Jednostka w Swietym Drzewie jest ukryta. Wrog moze ja zobaczyc z sasiedniego pola zapewniajacego ukrycie. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": "holy_tree"
+	},
+	"cart": {
+	  "id": "cart",
+	  "name": "Woz",
+	  "description": "Jednostka na polu wozu jest ukryta. Wrog moze ja zobaczyc z sasiedniego pola zapewniajacego ukrycie. Atak lub otrzymanie obrazen naklada Wykrycie na 2 tury.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": "cart"
+	},
+	"elf_statue": {
+	  "id": "elf_statue",
+	  "name": "Posag Elfow",
+	  "description": "Przez posag elfow nie da sie przejsc. Sasiadujaca jednostka otrzymuje +2 do obrazen.",
+	  "movement_cost": 999,
+	  "blocks_movement": true,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": null
+	},
+	"hole": {
+	  "id": "hole",
+	  "name": "Dziura",
+	  "description": "Jednostka ktora wpadnie do dziury ginie natychmiast.",
+	  "movement_cost": 1,
+	  "blocks_movement": false,
+	  "blocks_line_of_sight": false,
+	  "entry_effect": "hole"
+	},
+	"detonator": {
+	  "id": "detonator",
+	  "name": "Detonator",
+	  "description": "Jednorazowy detonator. Aktywowany z sasiedniego hexa naciskiem. Przywoluje spadajace kamienie na cztery losowe hexy.",
+	  "movement_cost": 999,
+	  "blocks_movement": true,
+	  "blocks_line_of_sight": false,
+	  "entry_effect": null
+	},
+	"magiczna_bariera": {
+	  "id": "magiczna_bariera",
+	  "name": "Magiczna Bariera",
+	  "description": "Tymczasowa bariera blokuje ruch i linie strzalu.",
+	  "movement_cost": 999,
+	  "blocks_movement": true,
+	  "blocks_line_of_sight": true,
+	  "entry_effect": null
+	}
+  }
+}

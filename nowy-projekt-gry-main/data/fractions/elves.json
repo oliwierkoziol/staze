@@ -1,0 +1,106 @@
+{
+  "faction": {
+    "id": "elves",
+    "name": "Elfy",
+    "units": [
+      {
+        "id": "elf_archer",
+        "name": "Elf Lucznik",
+        "short_name": "ELU",
+        "role": "Elfi lucznik",
+        "hp": 15,
+        "atk": 10,
+        "dmg": 5,
+        "dmg_min": 4,
+        "dmg_max": 6,
+        "def": 4,
+        "speed": 9,
+        "action_points": 1,
+        "count": 12,
+        "move_range": 3,
+        "attack_range": 5,
+        "resistance": "Brak",
+        "portrait": "res://assets/characters/elves/elfArcher.png",
+        "skill_ids": [
+          "deszcz_strzal",
+          "sokole_oko",
+          "przebijajacy_strzal"
+        ]
+      },
+      {
+        "id": "elf_swordsman",
+        "name": "Elf Szermierz",
+        "short_name": "ESZ",
+        "role": "Mobilna jednostka wręcz",
+        "hp": 23,
+        "atk": 11,
+        "dmg": 7,
+        "dmg_min": 6,
+        "dmg_max": 8,
+        "def": 6,
+        "speed": 8,
+        "action_points": 1,
+        "count": 10,
+        "move_range": 4,
+        "attack_range": 1,
+        "resistance": "Brak",
+        "portrait": "res://assets/characters/elves/elfSwordsman.png",
+        "skill_ids": [
+          "runiczna_ochrona",
+          "zaklete_ciecie",
+          "tanczacy_ostrze"
+        ]
+      },
+      {
+        "id": "elf_mage",
+        "name": "Elf Mag",
+        "short_name": "EMA",
+        "role": "Elfi zaklinacz",
+        "hp": 15,
+        "atk": 10,
+        "dmg": 5,
+        "dmg_min": 4,
+        "dmg_max": 6,
+        "def": 4,
+        "speed": 8,
+        "action_points": 1,
+        "count": 8,
+        "move_range": 3,
+        "attack_range": 3,
+        "attack_mode": "ranged",
+        "resistance": "Brak",
+        "portrait": "res://assets/characters/elves/elfMague.png",
+        "skill_ids": [
+          "rzut_klatwa",
+          "lodowe_podloze",
+          "medytacja"
+        ]
+      },
+      {
+        "id": "elf_arcanotechnic",
+        "name": "Elf Arkanotechnik",
+        "short_name": "EAR",
+        "role": "Wsparcie technomagiczne",
+        "hp": 13,
+        "atk": 7,
+        "dmg": 4,
+        "dmg_min": 3,
+        "dmg_max": 5,
+        "def": 5,
+        "speed": 7,
+        "action_points": 1,
+        "count": 8,
+        "move_range": 3,
+        "attack_range": 3,
+        "attack_mode": "ranged",
+        "resistance": "Brak",
+        "portrait": "res://assets/characters/elves/elfArcheMague.png",
+        "skill_ids": [
+          "magiczna_projekcja",
+          "runiczna_ochrona",
+          "przyzwij_pomnik"
+        ]
+      }
+    ]
+  }
+}

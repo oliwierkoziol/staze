@@ -1,0 +1,740 @@
+[gd_scene format=3 uid="uid://bf7bsx7vfi60g"]
+
+[ext_resource type="Script" uid="uid://cg6sg1l7cd6su" path="res://turn-base-game/scripts/gra.gd" id="1_a1tqk"]
+[ext_resource type="Script" uid="uid://7ofr6sym1gat" path="res://turn-base-game/scripts/plansza_walki.gd" id="2_h3x7m"]
+[ext_resource type="Texture2D" uid="uid://dorgbej1rx6pq" path="res://turn-base-game/assets/backgrounds/back.png" id="3_jh8wd"]
+[ext_resource type="Texture2D" uid="uid://crjsdxb2h5qqg" path="res://turn-base-game/assets/ui/panel.png" id="4_panel"]
+[ext_resource type="Script" uid="uid://dv3u7m8d30w8n" path="res://turn-base-game/scripts/nine_patch_panel.gd" id="5_npp"]
+[ext_resource type="Texture2D" uid="uid://bhatt12lhf7ik" path="res://turn-base-game/assets/ui/divider.png" id="6_tr5l5"]
+[ext_resource type="Texture2D" uid="uid://8rrp7aitsb83" path="res://turn-base-game/assets/ui/unit1.png" id="7_unit1"]
+[ext_resource type="Script" uid="uid://s8nsikmcxtmc" path="res://turn-base-game/scripts/unit_stats_display.gd" id="8_stats"]
+[ext_resource type="Script" uid="uid://c7siu6836f4vl" path="res://turn-base-game/scripts/unit_status_panel.gd" id="9_status"]
+[ext_resource type="Script" uid="uid://dcm6ghvn3slyt" path="res://turn-base-game/scripts/unit_abilities_panel.gd" id="10_abilities"]
+[ext_resource type="Texture2D" uid="uid://q6isvretb06q" path="res://turn-base-game/assets/ui/general1.png" id="11_general1"]
+[ext_resource type="Texture2D" uid="uid://cymiq2f6b8k8c" path="res://turn-base-game/assets/ui/general_ability1.png" id="12_general_ability1"]
+[ext_resource type="Theme" uid="uid://cna4ihybudjlx" path="res://theme/georgia_theme.tres" id="13_georgia_theme"]
+
+[ext_resource type="Script" uid="uid://cyck0vsv6yf62" path="res://turn-base-game/scripts/pause_menu.gd" id="14_pause"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_general_ability"]
+texture = ExtResource("4_panel")
+texture_margin_left = 8.0
+texture_margin_top = 8.0
+texture_margin_right = 8.0
+texture_margin_bottom = 8.0
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_general_ability_hover"]
+texture = ExtResource("4_panel")
+texture_margin_left = 8.0
+texture_margin_top = 8.0
+texture_margin_right = 8.0
+texture_margin_bottom = 8.0
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_end_turn"]
+texture = ExtResource("4_panel")
+texture_margin_left = 8.0
+texture_margin_top = 8.0
+texture_margin_right = 8.0
+texture_margin_bottom = 8.0
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_end_turn_hover"]
+texture = ExtResource("4_panel")
+texture_margin_left = 8.0
+texture_margin_top = 8.0
+texture_margin_right = 8.0
+texture_margin_bottom = 8.0
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
+
+[sub_resource type="LabelSettings" id="LabelSettings_6otim"]
+font_size = 22
+font_color = Color(0.76862746, 0.61960787, 0.2901961, 1)
+outline_size = 3
+outline_color = Color(0.11256667, 0.09398364, 0.056831576, 1)
+
+[node name="Gra" type="Control" unique_id=658525074]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("13_georgia_theme")
+script = ExtResource("1_a1tqk")
+
+[node name="OdtwarzaczSfxJednostek" type="AudioStreamPlayer" parent="."]
+bus = &"Dialogue"
+volume_db = -10.0
+
+[node name="OdtwarzaczSfxBroni" type="AudioStreamPlayer" parent="."]
+bus = &"Effects"
+volume_db = -12.0
+
+[node name="OdtwarzaczSfxInterfejsu" type="AudioStreamPlayer" parent="."]
+bus = &"Effects"
+volume_db = -12.0
+
+[node name="OdtwarzaczMuzyki" type="AudioStreamPlayer" parent="."]
+bus = &"Music"
+volume_db = -24.0
+
+[node name="Background" type="TextureRect" parent="." unique_id=214506001]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_jh8wd")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="BattleLayer" type="Node2D" parent="." unique_id=1838734481]
+position = Vector2(433, 220)
+
+[node name="PlanszaWalki" type="Node2D" parent="BattleLayer" unique_id=1820381021]
+script = ExtResource("2_h3x7m")
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=2099237076]
+
+[node name="Overlay" type="Control" parent="HUD" unique_id=558865315]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SetupHint" type="VBoxContainer" parent="HUD/Overlay" unique_id=711220001]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = -76.0
+offset_right = 340.0
+offset_bottom = 22.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="SetupHintTitle" type="Label" parent="HUD/Overlay/SetupHint" unique_id=711220002]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.05, 0.92)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 33
+text = "Tryb rozstawiania jednostek"
+horizontal_alignment = 1
+
+[node name="SetupHintSubtitle" type="Label" parent="HUD/Overlay/SetupHint" unique_id=711220003]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.82, 0.73, 1)
+theme_override_colors/font_outline_color = Color(0.08, 0.07, 0.04, 0.9)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 21
+text = "Kliknij START, aby rozpocząć grę"
+horizontal_alignment = 1
+
+[node name="MoveCostLabel" type="Label" parent="HUD/Overlay" unique_id=711220004]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -270.0
+offset_right = 200.0
+offset_bottom = -240.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DamageTooltip" type="PanelContainer" parent="HUD/Overlay" unique_id=842970808]
+visible = false
+z_index = 100
+layout_mode = 0
+mouse_filter = 2
+
+[node name="Label" type="Label" parent="HUD/Overlay/DamageTooltip" unique_id=176987005]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 20
+text = "Obrażenia: 0"
+
+[node name="TopBar" type="NinePatchRect" parent="HUD/Overlay" unique_id=1348661909]
+oversampling_with_scale = 1
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -389.0
+offset_top = 17.0
+offset_right = 431.0
+offset_bottom = 105.0
+grow_horizontal = 2
+texture = ExtResource("4_panel")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
+
+[node name="TopMargin" type="MarginContainer" parent="HUD/Overlay/TopBar" unique_id=1274170366]
+texture_filter = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 16
+
+[node name="TopQueueScroll" type="ScrollContainer" parent="HUD/Overlay/TopBar/TopMargin" unique_id=1105193033]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 0
+
+[node name="TopQueueList" type="HBoxContainer" parent="HUD/Overlay/TopBar/TopMargin/TopQueueScroll" unique_id=1495193033]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="RightPanel" type="NinePatchRect" parent="HUD/Overlay" unique_id=23082911]
+texture_filter = 1
+custom_minimum_size = Vector2(348, 0)
+clip_contents = true
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -364.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -54.0
+grow_horizontal = 0
+grow_vertical = 2
+texture = ExtResource("4_panel")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="RightMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel" unique_id=82583585]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="RightContent" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin" unique_id=46290738]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="GeneralPanel" type="NinePatchRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=1591106099]
+texture_filter = 1
+layout_mode = 2
+texture = ExtResource("4_panel")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+script = ExtResource("5_npp")
+
+[node name="GeneralPanelMargin" type="MarginContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel" unique_id=804480615]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="GeneralPanelContent" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin" unique_id=1246087797]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="GeneralHeader" type="HBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent" unique_id=760100101]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 15
+
+[node name="GeneralPortrait" type="TextureRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader" unique_id=760100102]
+texture_filter = 1
+custom_minimum_size = Vector2(84, 84)
+layout_mode = 2
+texture = ExtResource("11_general1")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="GeneralHeaderText" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader" unique_id=760100103]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="GeneralName" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText" unique_id=1222497093]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 18
+text = "KAPITAN ALARIC"
+autowrap_mode = 2
+
+[node name="GeneralLevel" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralPanel/GeneralPanelMargin/GeneralPanelContent/GeneralHeader/GeneralHeaderText" unique_id=1925425070]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.44, 0.78, 0.35, 1)
+theme_override_font_sizes/font_size = 14
+text = "Poziom 5"
+
+[node name="GeneralSkillsTitle" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=1550517058]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
+text = "UMIEJĘTNOŚCI GENERAŁA"
+horizontal_alignment = 1
+
+[node name="GeneralSkillsButtons" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=170510001]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="GeneralAbilityButton1" type="Button" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons" unique_id=170510002]
+custom_minimum_size = Vector2(0, 88)
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
+theme_override_styles/normal = SubResource("StyleBoxTexture_general_ability")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_general_ability_hover")
+theme_override_styles/hover = SubResource("StyleBoxTexture_general_ability_hover")
+
+[node name="AbilityContent" type="HBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1" unique_id=170510003]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="AbilityIcon" type="TextureRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent" unique_id=170510004]
+custom_minimum_size = Vector2(55, 55)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("12_general_ability1")
+stretch_mode = 5
+
+[node name="AbilityText" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent" unique_id=170510005]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="AbilityName" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent/AbilityText" unique_id=170510006]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 15
+text = "-"
+
+[node name="AbilityDesc" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent/AbilityText" unique_id=170510007]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+autowrap_mode = 3
+text_overrun_behavior = 3
+max_lines_visible = 2
+
+[node name="AbilityCooldown" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton1/AbilityContent/AbilityText" unique_id=170510014]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.68, 0.5, 1)
+theme_override_font_sizes/font_size = 11
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="GeneralAbilityButton2" type="Button" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons" unique_id=170510008]
+custom_minimum_size = Vector2(0, 88)
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
+theme_override_styles/normal = SubResource("StyleBoxTexture_general_ability")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_general_ability_hover")
+theme_override_styles/hover = SubResource("StyleBoxTexture_general_ability_hover")
+
+[node name="AbilityContent" type="HBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2" unique_id=170510009]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = 11.0
+offset_right = -18.0
+offset_bottom = -11.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="AbilityIcon" type="TextureRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent" unique_id=170510010]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("12_general_ability1")
+stretch_mode = 5
+
+[node name="AbilityText" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent" unique_id=170510011]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="AbilityName" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent/AbilityText" unique_id=170510012]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 15
+text = "-"
+
+[node name="AbilityDesc" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent/AbilityText" unique_id=170510013]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9, 0.87, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+autowrap_mode = 3
+text_overrun_behavior = 3
+max_lines_visible = 2
+
+[node name="AbilityCooldown" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/GeneralSkillsButtons/GeneralAbilityButton2/AbilityContent/AbilityText" unique_id=170510015]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.68, 0.5, 1)
+theme_override_font_sizes/font_size = 11
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="EventLogTitle" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=281413411]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
+text = "PRZEBIEG WALKI"
+horizontal_alignment = 1
+
+[node name="EventLogPanel" type="NinePatchRect" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=726158766]
+texture_filter = 1
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_vertical = 3
+texture = ExtResource("4_panel")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+script = ExtResource("5_npp")
+
+[node name="EventLogScroll" type="ScrollContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel" unique_id=177272283]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 15.0
+offset_top = 15.0
+offset_right = -13.0
+offset_bottom = -15.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="EventLog" type="RichTextLabel" parent="HUD/Overlay/RightPanel/RightMargin/RightContent/EventLogPanel/EventLogScroll" unique_id=2002893563]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.9, 0.87, 0.78, 1)
+text = "-"
+fit_content = true
+scroll_active = false
+
+[node name="EndTurnButton" type="Button" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=760100201]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.88, 0.78, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxTexture_end_turn")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_end_turn_hover")
+theme_override_styles/hover = SubResource("StyleBoxTexture_end_turn_hover")
+text = "Zakończ turę"
+
+[node name="LeftPanel" type="NinePatchRect" parent="HUD/Overlay" unique_id=198121168]
+texture_filter = 1
+custom_minimum_size = Vector2(348, 0)
+clip_contents = true
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 364.0
+offset_bottom = -54.0
+grow_vertical = 2
+texture = ExtResource("4_panel")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="LeftMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel" unique_id=105759845]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="LeftContent" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin" unique_id=254464742]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LeftTitle" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=1226627272]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
+text = "STATYSTYKI JEDNOSTKI"
+label_settings = SubResource("LabelSettings_6otim")
+horizontal_alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=953284804]
+layout_mode = 2
+texture = ExtResource("6_tr5l5")
+
+[node name="ClosePopupButton" type="Button" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=105665221]
+visible = false
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.88, 0.78, 1)
+theme_override_font_sizes/font_size = 20
+text = "ZAMKNIJ"
+
+[node name="UnitHeader" type="NinePatchRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=1359612349]
+texture_filter = 1
+clip_contents = true
+layout_mode = 2
+texture = ExtResource("4_panel")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+script = ExtResource("5_npp")
+
+[node name="UnitHeaderMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader" unique_id=474921516]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 10
+
+[node name="UnitHeaderContent" type="HBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin" unique_id=23956198]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="UnitPortrait" type="TextureRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent" unique_id=1982736401]
+visible = false
+texture_filter = 1
+custom_minimum_size = Vector2(76, 76)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("7_unit1")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="UnitHeaderText" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent" unique_id=-1167122204]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="UnitName" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText" unique_id=1842716353]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 20
+text = "-"
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="UnitMeta" type="Label" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitHeader/UnitHeaderMargin/UnitHeaderContent/UnitHeaderText" unique_id=1418601747]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.44, 0.78, 0.35, 1)
+theme_override_font_sizes/font_size = 16
+text = "-"
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="UnitStatsPanel" type="NinePatchRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=1618589884]
+texture_filter = 1
+layout_mode = 2
+size_flags_vertical = 3
+texture = ExtResource("4_panel")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+script = ExtResource("5_npp")
+
+[node name="UnitStatsMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel" unique_id=1111943316]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 10
+
+[node name="UnitStats" type="VBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatsPanel/UnitStatsMargin" unique_id=1311480050]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("8_stats")
+
+[node name="UnitStatusPanel" type="NinePatchRect" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent" unique_id=1981211681]
+texture_filter = 1
+custom_minimum_size = Vector2(0, 260)
+clip_contents = true
+layout_mode = 2
+texture = ExtResource("4_panel")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+script = ExtResource("5_npp")
+
+[node name="UnitStatusMargin" type="MarginContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatusPanel" unique_id=1981211682]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="UnitStatus" type="HBoxContainer" parent="HUD/Overlay/LeftPanel/LeftMargin/LeftContent/UnitStatusPanel/UnitStatusMargin" unique_id=1981211683]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("9_status")
+
+[node name="UnitAbilitiesPanel" type="NinePatchRect" parent="HUD/Overlay" unique_id=910011001]
+texture_filter = 1
+custom_minimum_size = Vector2(0, 170)
+clip_contents = true
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 368.0
+offset_top = -226.0
+offset_right = -368.0
+offset_bottom = -56.0
+grow_horizontal = 2
+grow_vertical = 0
+texture = ExtResource("4_panel")
+patch_margin_left = 8
+patch_margin_top = 8
+patch_margin_right = 8
+patch_margin_bottom = 8
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+script = ExtResource("5_npp")
+
+[node name="UnitAbilitiesMargin" type="MarginContainer" parent="HUD/Overlay/UnitAbilitiesPanel" unique_id=910011002]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="UnitAbilities" type="VBoxContainer" parent="HUD/Overlay/UnitAbilitiesPanel/UnitAbilitiesMargin" unique_id=910011003]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("10_abilities")
+
+[node name="PauseMenu" type="CanvasLayer" parent="." unique_id=3000000001]
+process_mode = 3
+layer = 2
+visible = false
+script = ExtResource("14_pause")

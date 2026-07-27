@@ -1,0 +1,225 @@
+class_name BarracksMenu
+extends RefCounted
+
+var hud: Control
+var barracks_window: ColorRect
+var barracks_content_vbox: VBoxContainer
+
+func _init(_hud: Control):
+	hud = _hud
+
+func setup_barracks_window():
+	barracks_window = ColorRect.new()
+	barracks_window.visible = false
+	barracks_window.color = Color(0, 0, 0, 0)
+	barracks_window.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	barracks_window.gui_input.connect(func(event):
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			barracks_window.visible = false
+	)
+	
+	var center = CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	barracks_window.add_child(center)
+	
+	var panel = PanelContainer.new()
+	panel.custom_minimum_size = Vector2(800, 500)
+	
+	panel.add_theme_stylebox_override("panel", hud._panel_style(20))
+	center.add_child(panel)
+	
+	barracks_content_vbox = VBoxContainer.new()
+	barracks_content_vbox.add_theme_constant_override("separation", 15)
+	panel.add_child(barracks_content_vbox)
+	
+	hud.add_child(barracks_window)
+
+var active_source_pos: Vector2 = Vector2(-1, -1)
+var active_building_level: int = 1
+
+func show_barracks_menu(building_level: int = 1, source_pos: Vector2 = Vector2(-1, -1)):
+	active_source_pos = source_pos
+	active_building_level = building_level
+	barracks_window.visible = true
+	
+	var target_faction_id = "humans"
+	if building_level == 2:
+		target_faction_id = "humans_lvl2"
+	elif building_level >= 3:
+		target_faction_id = "humans_lvl3"
+	
+	var target_faction = null
+	if hud.unit_data_json.has("factions"):
+		for faction in hud.unit_data_json["factions"]:
+			if faction.get("id") == target_faction_id:
+				target_faction = faction
+				break
+				
+		if target_faction == null:
+			for faction in hud.unit_data_json["factions"]:
+				if faction.get("id") == "humans":
+					target_faction = faction
+					break
+				
+	if target_faction != null:
+		_populate_barracks_units(target_faction)
+
+func _populate_barracks_units(faction: Dictionary):
+	for child in barracks_content_vbox.get_children():
+		child.queue_free()
+		
+	var header_hbox = HBoxContainer.new()
+	header_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	
+	var title_label = Label.new()
+	title_label.text = "Jednostki: " + faction["name"]
+	title_label.add_theme_font_size_override("font_size", 24)
+	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	
+	var close_btn = Button.new()
+	close_btn.text = "X"
+	close_btn.tooltip_text = "Zamknij"
+	close_btn.custom_minimum_size = Vector2(40, 40)
+	close_btn.pressed.connect(func(): barracks_window.visible = false)
+	if hud.has_method("_style_df_button"):
+		hud._style_df_button(close_btn)
+	
+	var spacer_left = Control.new()
+	spacer_left.custom_minimum_size = Vector2(40, 40)
+	
+	header_hbox.add_child(spacer_left)
+	header_hbox.add_child(title_label)
+	header_hbox.add_child(close_btn)
+	barracks_content_vbox.add_child(header_hbox)
+	
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	barracks_content_vbox.add_child(scroll)
+	
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(vbox)
+	
+	if faction.has("units"):
+		for unit in faction["units"]:
+			var panel = PanelContainer.new()
+			var p_style = StyleBoxFlat.new()
+			p_style.bg_color = Color(0.2, 0.2, 0.25)
+			p_style.set_content_margin_all(10)
+			panel.add_theme_stylebox_override("panel", p_style)
+			
+			var hbox = HBoxContainer.new()
+			hbox.add_theme_constant_override("separation", 15)
+			panel.add_child(hbox)
+			
+			var img_rect = TextureRect.new()
+			var tex = load(unit["portrait"]) if unit.has("portrait") else null
+			if tex: img_rect.texture = tex
+			img_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			img_rect.custom_minimum_size = Vector2(64, 64)
+			img_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			hbox.add_child(img_rect)
+			
+			var info_vbox = VBoxContainer.new()
+			info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			info_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+			hbox.add_child(info_vbox)
+			
+			var name_lbl = Label.new()
+			name_lbl.text = unit["name"] + " (" + unit.get("role", "") + ")"
+			name_lbl.add_theme_font_size_override("font_size", 18)
+			info_vbox.add_child(name_lbl)
+			
+			var stats_lbl = Label.new()
+			var base_hp = unit.get("hp", 0)
+			var base_dmg = unit.get("dmg", 0)
+			var base_def = unit.get("def", 0)
+			var b_hp = EconomyManager.potion_bonus_hp
+			var b_dmg = EconomyManager.potion_bonus_dmg
+			var b_def = EconomyManager.potion_bonus_def
+			var base_speed = unit.get("move_range", 0)
+			var b_speed = EconomyManager.potion_bonus_speed
+			
+			var hp_text = str(base_hp) if b_hp == 0 else "%d(+%d)" % [base_hp + b_hp, b_hp]
+			var dmg_text = str(base_dmg) if b_dmg == 0 else "%d(+%d)" % [base_dmg + b_dmg, b_dmg]
+			var def_text = str(base_def) if b_def == 0 else "%d(+%d)" % [base_def + b_def, b_def]
+			var speed_text = str(base_speed) if b_speed == 0 else "%d(+%d)" % [base_speed + b_speed, b_speed]
+			
+			stats_lbl.text = "HP: %s | DMG: %s | DEF: %s | RUCH: %s" % [hp_text, dmg_text, def_text, speed_text]
+			stats_lbl.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+			info_vbox.add_child(stats_lbl)
+			
+			var btn_recruit = Button.new()
+			var cost = EconomyManager.calculate_unit_cost(unit)
+			var training_turns := EconomyManager.calculate_recruitment_turns(unit)
+			var cost_label := Label.new()
+			cost_label.text = "Koszt: %d złota, %d żelaza, %d jedzenia, %d populacji • Szkolenie: %d tur" % [
+				cost.get("Złoto", 0),
+				cost.get("Żelazo", 0),
+				cost.get("Jedzenie", 0),
+				cost.get("Populacja", 0),
+				training_turns,
+			]
+			cost_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			cost_label.add_theme_font_size_override("font_size", 12)
+			cost_label.add_theme_color_override("font_color", Color(0.85, 0.75, 0.4))
+			info_vbox.add_child(cost_label)
+
+			btn_recruit.text = "Zwerbuj"
+			var block_reason := _recruit_block_reason(unit, cost)
+			btn_recruit.disabled = block_reason != ""
+			btn_recruit.tooltip_text = (
+				"Koszt:\n%d złota\n%d żelaza\n%d jedzenia\n%d populacji\nCzas szkolenia: %d tur"
+				% [cost.get("Złoto", 0), cost.get("Żelazo", 0), cost.get("Jedzenie", 0), cost.get("Populacja", 0), training_turns]
+			)
+			if block_reason != "":
+				btn_recruit.tooltip_text += "\n\nNIEDOSTĘPNE: %s" % block_reason
+			btn_recruit.custom_minimum_size = Vector2(150, 40)
+			btn_recruit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			if hud.has_method("_style_df_button"):
+				hud._style_df_button(btn_recruit)
+			if btn_recruit.disabled:
+				btn_recruit.modulate.a = 0.5
+			btn_recruit.pressed.connect(func():
+				if not EconomyManager.can_recruit_unit(unit):
+					if AudioManager: AudioManager.play_error()
+					return
+					
+				var unit_name = unit.get("name", "")
+				if "Konnica" in unit_name and EconomyManager.technology_tree.has("Konnica") and not EconomyManager.technology_tree["Konnica"]["unlocked"]:
+					hud.tech_warning_dialog.dialog_text = "Aby zwerbować tę jednostkę, musisz najpierw odkryć technologię:\nKonnica"
+					hud.tech_warning_dialog.popup_centered()
+					return
+				elif "Magowie" in unit_name and EconomyManager.technology_tree.has("Mag") and not EconomyManager.technology_tree["Mag"]["unlocked"]:
+					hud.tech_warning_dialog.dialog_text = "Aby zwerbować tę jednostkę, musisz najpierw odkryć technologię:\nMag"
+					hud.tech_warning_dialog.popup_centered()
+					return
+
+				EconomyManager.recruit_unit(unit, active_source_pos)
+				if AudioManager: AudioManager.play_recruit()
+				_populate_barracks_units(faction)
+			)
+			
+			hbox.add_child(btn_recruit)
+			vbox.add_child(panel)
+
+
+func _recruit_block_reason(unit: Dictionary, cost: Dictionary) -> String:
+	if EconomyManager.is_army_full():
+		return "limit armii %d/%d" % [EconomyManager.player_army.size(), EconomyManager.MAX_ARMY_SIZE]
+	var unit_name := str(unit.get("name", ""))
+	if "Konnica" in unit_name and EconomyManager.technology_tree.has("Konnica") and not EconomyManager.technology_tree["Konnica"]["unlocked"]:
+		return "wymagana technologia „Konnica”"
+	if "Magowie" in unit_name and EconomyManager.technology_tree.has("Mag") and not EconomyManager.technology_tree["Mag"]["unlocked"]:
+		return "wymagana technologia „Mag”"
+	if EconomyManager.resources.get("Populacja", 0) - cost.get("Populacja", 0) < 1:
+		return "musisz zachować co najmniej 1 mieszkańca"
+	var missing: Array[String] = []
+	for resource_name in cost:
+		var shortage := int(cost[resource_name]) - int(EconomyManager.resources.get(resource_name, 0))
+		if shortage > 0:
+			missing.append("%d %s" % [shortage, resource_name])
+	return "" if missing.is_empty() else "brakuje: %s" % ", ".join(missing)

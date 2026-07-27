@@ -1,0 +1,105 @@
+{
+  "faction": {
+    "id": "orcs",
+    "name": "Orkowie",
+    "units": [
+      {
+        "id": "orc_warrior",
+        "name": "Ork Wojownik",
+        "short_name": "OWO",
+        "role": "Uniwersalny waleczny ork",
+        "hp": 32,
+        "atk": 9,
+        "dmg": 8,
+        "dmg_min": 6,
+        "dmg_max": 8,
+        "def": 7,
+        "speed": 5,
+        "action_points": 1,
+        "count": 10,
+        "move_range": 4,
+        "attack_range": 1,
+        "resistance": "Brak",
+        "portrait": "res://assets/characters/orcs/orcWarrior.png",
+        "skill_ids": [
+          "rzut_toporem",
+          "rzut_hakiem",
+          "berserk"
+        ]
+      },
+      {
+        "id": "orc_berserker",
+        "name": "Ork Berserker",
+        "short_name": "OBE",
+        "role": "Kruchy zabojca",
+        "hp": 20,
+        "atk": 12,
+        "dmg": 8,
+        "dmg_min": 7,
+        "dmg_max": 9,
+        "def": 4,
+        "speed": 7,
+        "action_points": 1,
+        "count": 8,
+        "move_range": 5,
+        "attack_range": 1,
+        "resistance": "Brak",
+        "portrait": "res://assets/characters/orcs/orcBerserker.png",
+        "skill_ids": [
+          "rozszarpanie",
+          "berserk",
+          "zadza_krwi"
+        ]
+      },
+      {
+        "id": "orc_shaman",
+        "name": "Ork Szaman",
+        "short_name": "OSZ",
+        "role": "Wsparcie i kontrola",
+        "hp": 15,
+        "atk": 8,
+        "dmg": 5,
+        "dmg_min": 4,
+        "dmg_max": 6,
+        "def": 5,
+        "speed": 6,
+        "action_points": 1,
+        "count": 8,
+        "move_range": 4,
+        "attack_range": 4,
+        "attack_mode": "ranged",
+        "resistance": "Brak",
+        "portrait": "res://assets/characters/orcs/orcShaman.png",
+        "skill_ids": [
+          "chmura_toksyczna",
+          "medytacja",
+          "pnacza"
+        ]
+      },
+      {
+        "id": "orc_shieldman",
+        "name": "Ork Tarczownik",
+        "short_name": "OTA",
+        "role": "Defensywna sciana",
+        "hp": 35,
+        "atk": 6,
+        "dmg": 4,
+        "dmg_min": 3,
+        "dmg_max": 5,
+        "def": 8,
+        "speed": 3,
+        "action_points": 1,
+        "count": 8,
+        "move_range": 3,
+        "attack_range": 1,
+        "resistance": "Brak",
+        "portrait": "res://assets/characters/orcs/OrcShieldman.png",
+        "skill_ids": [
+          "prowokacja",
+          "tarcza",
+          "zelazna_kurtyna"
+        ]
+      }
+    ]
+  }
+}
