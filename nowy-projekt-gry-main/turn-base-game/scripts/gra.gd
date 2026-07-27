@@ -1936,7 +1936,7 @@ func _enemy_take_turn() -> void:
 	var enemy_unit := _get_active_unit()
 	if enemy_unit.is_empty() or enemy_unit.side != "enemy":
 		return
-	await get_tree().create_timer(1.0).timeout
+	await get_tree().create_timer(0.35).timeout
 	if setup_mode or active_unit_id != enemy_id:
 		return
 	enemy_unit = _find_unit_by_id(enemy_id)
@@ -1959,6 +1959,7 @@ func _ai_choose_plan(unit: Dictionary) -> Dictionary:
 func _ai_generate_action_plans(unit: Dictionary, path: Array[Vector2i]) -> Array[Dictionary]:
 	var plans: Array[Dictionary] = []
 	var unit_cell := Vector2i(int(unit.grid_x), int(unit.grid_y))
+	var position_score: int = _ai_score_position(unit, unit_cell)
 	if _can_unit_attack(unit):
 		for target in units:
 			if target.side == unit.side or not _can_see_target(unit, target):
@@ -1969,7 +1970,7 @@ func _ai_generate_action_plans(unit: Dictionary, path: Array[Vector2i]) -> Array
 					"kind": "basic_attack",
 					"target_id": int(target.id),
 					"path": path,
-					"score": _ai_score_damage(unit, target, 1.0) + _ai_score_position(unit, unit_cell),
+					"score": _ai_score_damage(unit, target, 1.0) + position_score,
 				})
 	for raw_skill_id in unit.get("skill_ids", []):
 		var skill_id: String = str(raw_skill_id)
@@ -1987,30 +1988,28 @@ func _ai_generate_action_plans(unit: Dictionary, path: Array[Vector2i]) -> Array
 		if target_type == "self":
 			var self_score: int = _ai_score_skill(unit, unit, unit_cell, skill)
 			if self_score > 0:
-				plans.append({"kind": "skill", "skill_id": skill_id, "target_id": int(unit.id), "target_cell": unit_cell, "path": path, "score": self_score + _ai_score_position(unit, unit_cell)})
+				plans.append({"kind": "skill", "skill_id": skill_id, "target_id": int(unit.id), "target_cell": unit_cell, "path": path, "score": self_score + position_score})
 		elif target_type == "enemy_unit":
 			for target in units:
 				if _can_target_enemy_with_skill(unit, target, skill):
 					var target_cell := Vector2i(int(target.grid_x), int(target.grid_y))
-					plans.append({"kind": "skill", "skill_id": skill_id, "target_id": int(target.id), "target_cell": target_cell, "path": path, "score": _ai_score_skill(unit, target, target_cell, skill) + _ai_score_position(unit, unit_cell)})
+					plans.append({"kind": "skill", "skill_id": skill_id, "target_id": int(target.id), "target_cell": target_cell, "path": path, "score": _ai_score_skill(unit, target, target_cell, skill) + position_score})
 		elif target_type == "ally_unit":
 			for target in units:
 				if _can_target_ally_with_skill(unit, target, skill):
 					var ally_score: int = _ai_score_skill(unit, target, Vector2i(int(target.grid_x), int(target.grid_y)), skill)
 					if ally_score > 0:
-						plans.append({"kind": "skill", "skill_id": skill_id, "target_id": int(target.id), "target_cell": Vector2i(int(target.grid_x), int(target.grid_y)), "path": path, "score": ally_score + _ai_score_position(unit, unit_cell)})
+						plans.append({"kind": "skill", "skill_id": skill_id, "target_id": int(target.id), "target_cell": Vector2i(int(target.grid_x), int(target.grid_y)), "path": path, "score": ally_score + position_score})
 		elif target_type == "cell":
 			var best_cell := Vector2i(-1, -1)
 			var best_score := 0
 			for cell in _get_skill_target_cells(unit, skill_id):
-				if not _can_target_cell_with_skill(unit, cell, skill):
-					continue
 				var cell_score: int = _ai_score_skill(unit, {}, cell, skill)
 				if cell_score > best_score:
 					best_score = cell_score
 					best_cell = cell
 			if best_cell != Vector2i(-1, -1):
-				plans.append({"kind": "skill", "skill_id": skill_id, "target_id": -1, "target_cell": best_cell, "path": path, "score": best_score + _ai_score_position(unit, unit_cell)})
+				plans.append({"kind": "skill", "skill_id": skill_id, "target_id": -1, "target_cell": best_cell, "path": path, "score": best_score + position_score})
 	return plans
 
 
@@ -2272,10 +2271,10 @@ func _ai_score_coordination(attacker: Dictionary, target: Dictionary) -> int:
 
 
 func _ai_score_formation(unit: Dictionary, cell: Vector2i) -> int:
-	# ponytail: O(n²) jest celowo proste dla kilku oddzialow; indeks przestrzenny dopiero przy duzych armiach.
 	var role: String = str(unit.get("balance_role", ""))
 	var nearest_ally := 1000
 	var nearest_enemy := 1000
+	var nearest_enemy_cell := Vector2i(-1, -1)
 	var allies_in_front := 0
 	for other in units:
 		if int(other.id) == int(unit.id):
@@ -2287,13 +2286,16 @@ func _ai_score_formation(unit: Dictionary, cell: Vector2i) -> int:
 			if not _can_see_target(unit, other):
 				continue
 			var distance: int = _hex_distance(cell, other_cell)
-			nearest_enemy = min(nearest_enemy, distance)
-			for ally in units:
-				if ally.side == unit.side and int(ally.id) != int(unit.id) and _hex_distance(Vector2i(int(ally.grid_x), int(ally.grid_y)), other_cell) < distance:
-					allies_in_front += 1
+			if distance < nearest_enemy:
+				nearest_enemy = distance
+				nearest_enemy_cell = other_cell
 	if role == "wsparcie_kontrola" and nearest_ally < 1000:
 		return -abs(nearest_ally - 2) * 18
 	if role == "dystansowa":
+		if nearest_enemy < 1000:
+			for ally in units:
+				if ally.side == unit.side and int(ally.id) != int(unit.id) and _hex_distance(Vector2i(int(ally.grid_x), int(ally.grid_y)), nearest_enemy_cell) < nearest_enemy:
+					allies_in_front += 1
 		return allies_in_front * 18 - max(0, int(unit.get("attack_range", 1)) - nearest_enemy) * 20
 	return 0
 
@@ -2326,7 +2328,7 @@ func _ai_expected_threat(unit: Dictionary, cell: Vector2i) -> int:
 			threat += _calculate_expected_damage(attacker, unit)
 	unit.grid_x = original.x
 	unit.grid_y = original.y
-	return threat * 3
+	return threat
 
 
 func _ai_will_kill(attacker: Dictionary, target: Dictionary, multiplier: float) -> bool:
@@ -3113,20 +3115,7 @@ func _get_cell_skill_preview_cells(skill: Dictionary, center: Vector2i, caster: 
 
 
 func _can_target_cell_with_skill(caster: Dictionary, cell: Vector2i, skill: Dictionary) -> bool:
-	if not _get_skill_target_cells(caster, str(skill.get("id", ""))).has(cell):
-		return false
-	var effect_type := str(skill.get("effect_type", ""))
-	if effect_type == "bear_trap":
-		return _find_unit_at_cell(cell).is_empty() and _get_terrain_effect_at(cell, "bear_trap").is_empty()
-	if effect_type == "goblin_trap":
-		return _find_unit_at_cell(cell).is_empty() and _get_terrain_effect_at(cell, "goblin_trap").is_empty()
-	if effect_type == "magic_projection":
-		return _can_place_magic_projection_at(caster, cell)
-	if effect_type == "ice_ground":
-		return _get_ice_ground_cells(cell).size() == 3
-	if effect_type == "summon_statue":
-		return _can_place_summoned_statue_at(cell)
-	return true
+	return _get_skill_target_cells(caster, str(skill.get("id", ""))).has(cell)
 
 
 func _can_target_enemy_with_skill(caster: Dictionary, target: Dictionary, skill: Dictionary) -> bool:
@@ -3280,7 +3269,9 @@ func _get_skill_target_cells(unit: Dictionary, skill_id: String) -> Array[Vector
 	var skill: Dictionary = skill_library.get(skill_id, {})
 	if skill.is_empty():
 		return []
-	if str(skill.get("target_type", "")) == "self":
+	var target_type: String = str(skill.get("target_type", ""))
+	var effect_type: String = str(skill.get("effect_type", ""))
+	if target_type == "self":
 		return [Vector2i(unit.grid_x, unit.grid_y)]
 
 	var origin := Vector2i(unit.grid_x, unit.grid_y)
@@ -3295,11 +3286,17 @@ func _get_skill_target_cells(unit: Dictionary, skill_id: String) -> Array[Vector
 				continue
 			if _is_attack_blocked(unit, cell):
 				continue
-			if str(skill.get("target_type", "")) == "cell" and _blocks_cell_skill_target(cell):
+			if target_type == "cell" and _blocks_cell_skill_target(cell):
 				continue
-			if str(skill.get("effect_type", "")) == "magic_projection" and not _can_place_magic_projection_at(unit, cell):
+			if effect_type == "magic_projection" and not _can_place_magic_projection_at(unit, cell):
 				continue
-			if str(skill.get("effect_type", "")) == "summon_statue" and not _can_place_summoned_statue_at(cell):
+			if effect_type == "ice_ground" and _get_ice_ground_cells(cell).size() != 3:
+				continue
+			if effect_type == "summon_statue" and not _can_place_summoned_statue_at(cell):
+				continue
+			if effect_type == "bear_trap" and (not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, "bear_trap").is_empty()):
+				continue
+			if effect_type == "goblin_trap" and (not _find_unit_at_cell(cell).is_empty() or not _get_terrain_effect_at(cell, "goblin_trap").is_empty()):
 				continue
 			cells.append(cell)
 	return cells
@@ -6137,11 +6134,20 @@ func _build_victory_overlay() -> void:
 	victory_overlay.visible = false
 	victory_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	victory_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	victory_overlay.color = Color(0.02, 0.02, 0.04, 0.78)
+	victory_overlay.color = Color(0.02, 0.015, 0.01, 0.88)
 	hud.add_child(victory_overlay)
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(520, 0)
+	var panel_style := StyleBoxTexture.new()
+	panel_style.texture = preload("res://turn-base-game/assets/ui/panel.png")
+	panel_style.texture_margin_left = 8
+	panel_style.texture_margin_top = 8
+	panel_style.texture_margin_right = 8
+	panel_style.texture_margin_bottom = 8
+	panel_style.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	panel_style.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	panel.add_theme_stylebox_override("panel", panel_style)
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.offset_left = -260
 	panel.offset_top = -160
@@ -6163,6 +6169,9 @@ func _build_victory_overlay() -> void:
 	victory_title_label = Label.new()
 	victory_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	victory_title_label.add_theme_font_size_override("font_size", 30)
+	victory_title_label.add_theme_color_override("font_color", Color(0.86, 0.72, 0.34, 1.0))
+	victory_title_label.add_theme_color_override("font_outline_color", Color(0.03, 0.015, 0.005, 1.0))
+	victory_title_label.add_theme_constant_override("outline_size", 5)
 	column.add_child(victory_title_label)
 
 	victory_summary_label = Label.new()
@@ -6181,6 +6190,7 @@ func _build_victory_overlay() -> void:
 	victory_restart_button.text = "POWTÓRZ WALKĘ"
 	victory_restart_button.custom_minimum_size = Vector2(210, 52)
 	victory_restart_button.add_theme_font_size_override("font_size", 20)
+	_style_victory_button(victory_restart_button, false)
 	victory_restart_button.pressed.connect(_on_victory_restart_pressed)
 	actions.add_child(victory_restart_button)
 
@@ -6188,13 +6198,37 @@ func _build_victory_overlay() -> void:
 	victory_finish_button.text = "MENU POTYCZKI"
 	victory_finish_button.custom_minimum_size = Vector2(210, 52)
 	victory_finish_button.add_theme_font_size_override("font_size", 20)
+	_style_victory_button(victory_finish_button, true)
 	victory_finish_button.pressed.connect(_on_victory_finish_pressed)
 	actions.add_child(victory_finish_button)
+
+
+func _style_victory_button(button: Button, primary: bool) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.22, 0.14, 0.035, 0.98) if primary else Color(0.18, 0.045, 0.04, 0.98)
+	normal.border_color = Color(0.68, 0.52, 0.2, 1.0)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(5)
+	normal.shadow_color = Color(0, 0, 0, 0.65)
+	normal.shadow_size = 4
+	var hover: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.34, 0.23, 0.065, 1.0) if primary else Color(0.31, 0.075, 0.065, 1.0)
+	hover.border_color = Color(0.9, 0.75, 0.34, 1.0)
+	var pressed: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.12, 0.075, 0.02, 1.0) if primary else Color(0.11, 0.025, 0.025, 1.0)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("focus", hover)
+	button.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78, 1.0))
+	button.add_theme_color_override("font_hover_color", Color(1.0, 0.9, 0.55, 1.0))
+	button.add_theme_color_override("font_pressed_color", Color(0.82, 0.7, 0.4, 1.0))
 
 
 func _show_victory_overlay(winner_side: String) -> void:
 	if victory_overlay == null:
 		return
+	victory_title_label.add_theme_color_override("font_color", Color(0.86, 0.72, 0.34, 1.0) if winner_side == "player" else Color(0.78, 0.2, 0.18, 1.0))
 	if campaign_mode:
 		campaign_outcome = "victory" if winner_side == "player" else "defeat"
 		var is_final_castle := bool(campaign_request.get("castle_battle", false)) and campaign_outcome == "victory" and castle_stage >= _get_castle_stages().size()
@@ -6883,6 +6917,18 @@ func _validate_runtime_setup() -> void:
 	var ai_plan: Dictionary = _ai_choose_plan(ai_archer)
 	assert(str(ai_plan.get("kind", "")) == "basic_attack" and int(ai_plan.get("target_id", -1)) == int(ai_target.id), "AI musi wybrac dostepny atak zamiast bezcelowego ruchu.")
 	assert(Vector2i(int(ai_archer.grid_x), int(ai_archer.grid_y)) == ai_origin, "Planowanie AI nie moze zmieniac stanu jednostki.")
+	var mage_ai: Dictionary = ai_archer.duplicate(true)
+	mage_ai["type_id"] = "human_mages"
+	mage_ai["skill_ids"] = ["kula_ognia", "lodowe_podloze", "medytacja"]
+	mage_ai["skill_cooldowns"] = {}
+	mage_ai["dmg_min"] = 4
+	mage_ai["dmg_max"] = 6
+	mage_ai["count"] = 8
+	units = [mage_ai, ai_target]
+	var mage_plan: Dictionary = _ai_choose_plan(mage_ai)
+	assert(not mage_plan.is_empty(), "AI maga musi zaplanowac ture bez bledu ani zawieszenia.")
+	assert(Vector2i(int(mage_ai.grid_x), int(mage_ai.grid_y)) == ai_origin, "Planowanie AI maga nie moze zmieniac stanu jednostki.")
+	units = [ai_archer, ai_target]
 	var weak_target: Dictionary = ai_target.duplicate(true)
 	weak_target["id"] = 1008
 	weak_target["grid_x"] = 4
