@@ -22,6 +22,7 @@ var buy_sound: AudioStreamPlayer
 var upgrade_sound: AudioStreamPlayer
 var destroyed_sound: AudioStreamPlayer
 var buy_play_id: int = 0
+var _web_audio_unlocked: bool = not OS.has_feature("web")
 
 func _ready() -> void:
 	build_sound = _create_player("res://assets/sounds/builded.mp3")
@@ -42,6 +43,33 @@ func _ready() -> void:
 	bg_music.volume_db = -30.0
 	add_child(bg_music)
 	bg_music.finished.connect(_on_bg_music_finished)
+	if OS.has_feature("web"):
+		get_viewport().gui_input.connect(_on_web_gui_input)
+		set_process_input(true)
+
+
+func _input(event: InputEvent) -> void:
+	if _web_audio_unlocked:
+		return
+	if event is InputEventKey and event.pressed and not event.echo:
+		_unlock_web_audio()
+
+
+func _on_web_gui_input(event: InputEvent) -> void:
+	if _web_audio_unlocked:
+		return
+	if (event is InputEventMouseButton and event.pressed) \
+			or (event is InputEventScreenTouch and event.pressed):
+		_unlock_web_audio()
+
+
+func _unlock_web_audio() -> void:
+	_web_audio_unlocked = true
+	set_process_input(false)
+	if get_viewport().gui_input.is_connected(_on_web_gui_input):
+		get_viewport().gui_input.disconnect(_on_web_gui_input)
+	if is_bg_playing and bg_music and not bg_music.playing:
+		_play_current_bg_track()
 
 func _create_player(path: String) -> AudioStreamPlayer:
 	var p = AudioStreamPlayer.new()
