@@ -79,7 +79,7 @@ func _ensure_audio_buses() -> void:
 	for bus_name in AUDIO_BUSES:
 		if AudioServer.get_bus_index(bus_name) >= 0:
 			continue
-		AudioServer.add_bus()
+		AudioServer.add_bus(AudioServer.bus_count)
 		var bus_index := AudioServer.bus_count - 1
 		AudioServer.set_bus_name(bus_index, bus_name)
 		AudioServer.set_bus_send(bus_index, &"Master")

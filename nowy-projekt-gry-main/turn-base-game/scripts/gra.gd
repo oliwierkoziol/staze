@@ -718,7 +718,8 @@ func _set_battle_background(path: String) -> void:
 	var texture: Resource = load(current_battle_background_path)
 	if texture is Texture2D:
 		battle_background.texture = texture
-	_ustaw_muzyke(MUZYKA_DLA_TLA.get(current_battle_background_path.get_file().get_basename(), MUZYKA_MENU) as AudioStream)
+	var muzyka: AudioStream = (MUZYKA_DLA_TLA.values().pick_random() if campaign_mode else MUZYKA_DLA_TLA.get(current_battle_background_path.get_file().get_basename(), MUZYKA_MENU)) as AudioStream
+	_ustaw_muzyke(muzyka)
 	_sync_board_map_theme()
 
 

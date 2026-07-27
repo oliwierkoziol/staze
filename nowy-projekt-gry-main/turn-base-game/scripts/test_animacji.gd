@@ -161,6 +161,9 @@ func _uruchom() -> void:
 	for bus_name in [&"Master", &"Music", &"Effects", &"Dialogue"]:
 		_sprawdz(AudioServer.get_bus_index(bus_name) >= 0, "Magistrala audio istnieje: %s" % bus_name)
 	_sprawdz(gra.odtwarzacz_muzyki.bus == &"Music", "Muzyka walki korzysta z magistrali Music")
+	gra.campaign_mode = true
+	gra._set_battle_background(gra.DEFAULT_BATTLE_BACKGROUND_PATH)
+	_sprawdz(gra.MUZYKA_DLA_TLA.values().has(gra.odtwarzacz_muzyki.stream), "Kampania losuje muzyke ze scenariuszy")
 	_sprawdz(gra.odtwarzacz_sfx_broni.bus == &"Effects" and gra.odtwarzacz_sfx_interfejsu.bus == &"Effects", "Efekty walki korzystaja z magistrali Effects")
 	_sprawdz(gra.odtwarzacz_sfx_jednostek.bus == &"Dialogue", "Kwestie jednostek korzystaja z magistrali Dialogue")
 	_sprawdz(audio_manager.bg_music.bus == &"Music" and audio_manager.build_sound.bus == &"Effects", "Dzwieki kampanii korzystaja z odpowiednich magistral")
