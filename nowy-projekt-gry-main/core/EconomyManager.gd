@@ -1157,6 +1157,65 @@ func can_recruit_unit(unit: Dictionary) -> bool:
 func is_army_full() -> bool:
 	return player_army.size() >= MAX_ARMY_SIZE
 
+func _army_group_key(unit: Dictionary) -> String:
+	var type_id := str(unit.get("type_id", _canonical_type_id(str(unit.get("id", "")))))
+	var level := maxi(1, int(unit.get("level", _level_from_id(str(unit.get("id", ""))))))
+	var skill_ids: Array[String] = []
+	var raw_skills: Array = unit.get("skill_ids", [])
+	for index in raw_skills.size():
+		var skill_id := str(raw_skills[index])
+		if index == 0 or is_skill_unlocked(skill_id):
+			skill_ids.append(skill_id)
+	return "%s|%d|%s" % [type_id, level, ",".join(skill_ids)]
+
+
+func _append_army_clone(prototype: Dictionary) -> void:
+	var new_unit: Dictionary = prototype.duplicate()
+	new_unit.erase("count")
+	new_unit["unit_uid"] = next_unit_uid
+	next_unit_uid += 1
+	new_unit["type_id"] = _canonical_type_id(str(new_unit.get("id", "")))
+	new_unit["level"] = _level_from_id(str(new_unit.get("id", "")))
+	new_unit["turns_to_recruit"] = 0
+	new_unit["turns_in_recruitment"] = 0
+	new_unit["current_hp"] = new_unit.get("hp", 1)
+	player_army.append(new_unit)
+
+
+func debug_recruit_units_per_type(unit_templates: Array, count_per_type: int = 10) -> void:
+	var groups_by_key: Dictionary = {}
+	for unit in player_army:
+		var key := _army_group_key(unit)
+		if not groups_by_key.has(key):
+			groups_by_key[key] = unit
+
+	var templates_by_type_id: Dictionary = {}
+	for unit_template in unit_templates:
+		if typeof(unit_template) != TYPE_DICTIONARY:
+			continue
+		var type_id := _canonical_type_id(str(unit_template.get("id", "")))
+		if type_id.is_empty() or templates_by_type_id.has(type_id):
+			continue
+		templates_by_type_id[type_id] = unit_template
+
+	var handled_type_ids: Dictionary = {}
+	for unit in groups_by_key.values():
+		var type_id := str(unit.get("type_id", _canonical_type_id(str(unit.get("id", "")))))
+		if not templates_by_type_id.has(type_id):
+			continue
+		for _i in count_per_type:
+			_append_army_clone(unit)
+		handled_type_ids[type_id] = true
+
+	for type_id in templates_by_type_id:
+		if handled_type_ids.has(type_id):
+			continue
+		var prototype: Dictionary = templates_by_type_id[type_id]
+		for _i in count_per_type:
+			_append_army_clone(prototype)
+	notify_change()
+
+
 func recruit_unit(unit: Dictionary, source_pos: Vector2 = Vector2(-1, -1)) -> void:
 	if can_recruit_unit(unit):
 		var cost = calculate_unit_cost(unit)

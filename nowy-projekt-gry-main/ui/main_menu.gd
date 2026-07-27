@@ -45,6 +45,7 @@ func _ready() -> void:
 	_setup_campaign_difficulty()
 	_apply_dark_fantasy_style()
 	_refresh_continue_button()
+	subtitle_label.text = "Lepsze niż CoTaczka" if randi_range(1, 100) == 1 else "Strategia turowa"
 	debug_checkbox.visible = OS.is_debug_build()
 	debug_checkbox.button_pressed = GameSettings.debug_mode and OS.is_debug_build()
 	quit_button.visible = not OS.has_feature("web")
@@ -95,9 +96,9 @@ func _setup_overwrite_dialog() -> void:
 func _setup_campaign_difficulty() -> void:
 	selected_campaign_difficulty = GameSettings.campaign_ai_difficulty
 	for difficulty in [
-		{"id": "latwy", "label": "ŁATWY — MNIEJ PRZEWIDUJĄCE AI"},
-		{"id": "sredni", "label": "ŚREDNI — STANDARDOWE AI"},
-		{"id": "trudny", "label": "TRUDNY — TAKTYCZNE AI"},
+		{"id": "latwy", "label": "ŁATWY"},
+		{"id": "sredni", "label": "ŚREDNI"},
+		{"id": "trudny", "label": "TRUDNY"},
 	]:
 		campaign_difficulty.add_item(str(difficulty.label))
 		campaign_difficulty.set_item_metadata(campaign_difficulty.item_count - 1, str(difficulty.id))
@@ -105,6 +106,7 @@ func _setup_campaign_difficulty() -> void:
 			campaign_difficulty.select(campaign_difficulty.item_count - 1)
 	campaign_difficulty.item_selected.connect(func(index: int) -> void:
 		selected_campaign_difficulty = str(campaign_difficulty.get_item_metadata(index))
+		GameSettings.campaign_ai_difficulty = selected_campaign_difficulty
 	)
 
 

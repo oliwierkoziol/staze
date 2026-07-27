@@ -114,7 +114,7 @@ layout_mode = 2
 
 [node name="CampaignDifficultyLabel" type="Label" parent="CenterContainer/MenuPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "TRUDNOŚĆ WALK NOWEJ KAMPANII"
+text = "TRUDNOŚĆ GRY"
 horizontal_alignment = 1
 
 [node name="CampaignDifficulty" type="OptionButton" parent="CenterContainer/MenuPanel/MarginContainer/VBoxContainer"]

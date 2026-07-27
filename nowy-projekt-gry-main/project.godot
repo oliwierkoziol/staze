@@ -16,10 +16,6 @@ run/main_scene="res://ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
-[audio]
-
-general/default_playback_type.web=1
-
 [autoload]
 
 EconomyManager="*res://core/EconomyManager.gd"

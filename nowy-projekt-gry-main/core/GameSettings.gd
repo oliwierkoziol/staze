@@ -14,6 +14,7 @@ var use_custom_seed: bool = false
 var skip_turn_button_delay: bool = false
 
 var debug_mode: bool = false
+var infinite_general_movement: bool = false
 var campaign_ai_difficulty := "sredni"
 
 var _ui_font: Font

@@ -1332,7 +1332,9 @@ func get_world_path_to(target_pos: Vector2) -> Array[Vector2]:
 	if not cell_to_id.has(start_pos) or not cell_to_id.has(target_pos): return []
 	var id_path: PackedInt64Array = astar.get_id_path(cell_to_id[start_pos], cell_to_id[target_pos])
 	if id_path.is_empty(): return []
-	var max_steps: int = mini(id_path.size(), character.moves_left + 1)
+	var max_steps: int = id_path.size()
+	if not GameSettings.infinite_general_movement:
+		max_steps = mini(id_path.size(), character.moves_left + 1)
 	var world_path: Array[Vector2] = []
 	for i in range(max_steps): world_path.append(astar.get_point_position(id_path[i]))
 	return world_path
@@ -1553,6 +1555,18 @@ func _process(_delta: float) -> void:
 		draw_path_line(get_world_path_to(hovered_pos))
 	else:
 		path_line.clear_points()
+
+func reveal_entire_map() -> void:
+	for pos in tile_nodes:
+		explored_tiles[pos] = true
+		var fog = fog_overlays.get(pos)
+		if fog:
+			fog.visible = false
+		if label_nodes.has(pos) and map_data.has(pos) and map_data[pos].get("building", "Brak") != "Brak":
+			label_nodes[pos].visible = true
+		if camp_territory_overlays.has(pos):
+			camp_territory_overlays[pos].visible = true
+
 
 func update_fog_of_war() -> void:
 	if not character: return

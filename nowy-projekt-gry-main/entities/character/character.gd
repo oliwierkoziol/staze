@@ -123,7 +123,8 @@ func _physics_process(_delta: float) -> void:
 		# momencie kliknięcia docelowego pola na mapie. Dzięki temu np.
 		# przerwanie ruchu w połowie ścieżki nie zabiera punktów, których
 		# postać nigdy nie wykorzystała.
-		moves_left = max(0, moves_left - 1)
+		if not GameSettings.infinite_general_movement:
+			moves_left = max(0, moves_left - 1)
 		if get_parent() and get_parent().has_method("update_fog_of_war"):
 			get_parent().update_fog_of_war()
 		if path.is_empty():

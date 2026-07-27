@@ -890,7 +890,10 @@ func _update_movement_label() -> void:
 		maximum += 1
 	if EconomyManager.culture_tree["Ruch generała III"]["unlocked"]:
 		maximum += 1
-	movement_label.text = "Ruch generała: %d/%d" % [int(general.moves_left), maximum]
+	if GameSettings.infinite_general_movement:
+		movement_label.text = "Ruch generała: ∞"
+	else:
+		movement_label.text = "Ruch generała: %d/%d" % [int(general.moves_left), maximum]
 
 
 func _center_camera_on_general() -> void:

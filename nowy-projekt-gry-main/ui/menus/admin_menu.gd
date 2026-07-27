@@ -84,6 +84,28 @@ func setup_admin_window():
 	sep3.add_theme_color_override("separator", Color(0.8, 0.2, 0.2, 1.0))
 	main_vbox.add_child(sep3)
 
+	var map_label = Label.new()
+	map_label.text = "Mapa i generał"
+	map_label.add_theme_color_override("font_color", hud.DF_GOLD_TEXT)
+	main_vbox.add_child(map_label)
+
+	_add_cheat_button(main_vbox, "Odkryj całą mapę", _reveal_entire_map)
+
+	var infinite_move_check = CheckButton.new()
+	infinite_move_check.text = "Nieskończona ilość ruchu generała"
+	infinite_move_check.button_pressed = GameSettings.infinite_general_movement
+	infinite_move_check.add_theme_color_override("font_color", hud.DF_TEXT)
+	infinite_move_check.toggled.connect(func(pressed: bool):
+		GameSettings.infinite_general_movement = pressed
+	)
+	main_vbox.add_child(infinite_move_check)
+
+	_add_cheat_button(main_vbox, "Zrekrutuj po 10 każdej jednostki", _recruit_debug_units)
+
+	var sep4 = HSeparator.new()
+	sep4.add_theme_color_override("separator", Color(0.8, 0.2, 0.2, 1.0))
+	main_vbox.add_child(sep4)
+
 	# Przełącznik pozwalający wyłączyć krótkie opóźnienie (cooldown)
 	# przycisku „Następna tura” — przydatne przy testowaniu, gdy trzeba
 	# szybko przeklikać wiele tur pod rząd.
@@ -121,6 +143,21 @@ func _unlock_all_cultures():
 	for cult in EconomyManager.culture_tree:
 		EconomyManager.culture_tree[cult]["unlocked"] = true
 	EconomyManager.notify_change()
+
+
+func _reveal_entire_map() -> void:
+	if hud.world_ref and hud.world_ref.has_method("reveal_entire_map"):
+		hud.world_ref.reveal_entire_map()
+
+
+func _recruit_debug_units() -> void:
+	var templates: Array = []
+	for faction in hud.unit_data_json.get("factions", []):
+		if str(faction.get("id", "")) == "humans":
+			templates = faction.get("units", [])
+			break
+	EconomyManager.debug_recruit_units_per_type(templates, 10)
+
 
 func show_admin_menu():
 	admin_window.visible = true

@@ -381,6 +381,7 @@ var tween_muzyki: Tween
 
 
 func _ready() -> void:
+	get_tree().paused = false
 	losowanie_sfx.randomize()
 	GameSettings.register_player_volume(odtwarzacz_sfx_jednostek, -10.0)
 	GameSettings.register_player_volume(odtwarzacz_sfx_broni, -12.0)
@@ -399,6 +400,8 @@ func _ready() -> void:
 	_build_stage_transition_overlay()
 	_build_settings_menu()
 	_connect_pause_menu_signals()
+	if pause_menu != null:
+		pause_menu.close_menu()
 	if OS.is_debug_build():
 		_build_debug_map_event_menu()
 	unit_details_popup = UnitDetailsPopupScript.new()
@@ -487,6 +490,7 @@ func _read_campaign_request(path: String) -> Dictionary:
 
 
 func _start_campaign_battle(request: Dictionary) -> void:
+	get_tree().paused = false
 	campaign_mode = true
 	campaign_request = request.duplicate(true)
 	campaign_result_path = str(request.get("result_path", ""))
@@ -495,7 +499,7 @@ func _start_campaign_battle(request: Dictionary) -> void:
 	current_player_faction = str(request.get("player_faction", "humans"))
 	current_enemy_faction = str(request.get("enemy_faction", "orcs"))
 	ai_difficulty = str(request.get("ai_difficulty", "sredni"))
-	if not PlanerAIScript.PROFILE.has(ai_difficulty):
+	if ai_difficulty == "gracz" or not PlanerAIScript.PROFILE.has(ai_difficulty):
 		ai_difficulty = "sredni"
 	free_setup_mode = false
 	castle_stage = 0
@@ -974,6 +978,9 @@ func _on_start_battle_pressed() -> void:
 	if not _has_units_on_side("enemy"):
 		_show_screen_message("Armia wroga jest pusta!", 2.5)
 		return
+	get_tree().paused = false
+	if pause_menu != null:
+		pause_menu.close_menu()
 	setup_mode = false
 	_update_setup_hint_visibility()
 	selected_unit_id = -1
@@ -1863,17 +1870,26 @@ func _end_current_activation() -> void:
 		return
 	if was_enemy_ai:
 		await get_tree().create_timer(1.0).timeout
-	_start_next_activation()
+	call_deferred("_start_next_activation")
 
 
 func _enemy_take_turn() -> void:
+	var enemy_id := active_unit_id
 	var enemy_unit := _get_active_unit()
 	if enemy_unit.is_empty() or enemy_unit.side != "enemy":
 		return
 	await get_tree().create_timer(1.0).timeout
-	if odtwarzacz_sfx_jednostek.playing:
-		await odtwarzacz_sfx_jednostek.finished
-	if setup_mode or is_animating or active_unit_id != int(enemy_unit.id) or _find_unit_by_id(int(enemy_unit.id)).is_empty():
+	if setup_mode or active_unit_id != enemy_id:
+		return
+	enemy_unit = _find_unit_by_id(enemy_id)
+	if enemy_unit.is_empty():
+		await _end_current_activation()
+		return
+	if is_animating:
+		await board.animation_finished
+	if is_animating:
+		is_animating = false
+	if active_unit_id != enemy_id:
 		return
 	await _ai_execute_plan(enemy_unit, _ai_choose_plan(enemy_unit))
 
@@ -2252,9 +2268,9 @@ func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
 	if path.is_empty() and not ambush_defender_in_plan.is_empty() and _hex_distance(Vector2i(int(unit.grid_x), int(unit.grid_y)), ambush_cell_in_plan) == 1 and not _is_immobilized(unit):
 		_try_trigger_bush_ambush(unit, ambush_defender_in_plan)
 		if _find_unit_by_id(int(unit.id)).is_empty():
-			_end_current_activation()
+			await _end_current_activation()
 			return
-		_end_current_activation()
+		await _end_current_activation()
 		return
 	if not path.is_empty() and not _is_immobilized(unit):
 		var destination: Vector2i = path[path.size() - 1]
@@ -2274,11 +2290,11 @@ func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
 		_log_event("%s porusza się." % _unit_name_log_text(unit))
 		_try_trigger_bush_ambush(unit, ambush_defender_in_plan)
 		if _find_unit_by_id(int(unit.id)).is_empty():
-			_end_current_activation()
+			await _end_current_activation()
 			return
 		_apply_terrain_effects_to_unit(unit)
 		if _find_unit_by_id(int(unit.id)).is_empty():
-			_end_current_activation()
+			await _end_current_activation()
 			return
 		_stop_unit_on_terrain(unit)
 		_try_trigger_agility(unit)
@@ -2307,7 +2323,7 @@ func _ai_execute_plan(unit: Dictionary, plan: Dictionary) -> void:
 			await _execute_skill(unit, target, skill, target_cell)
 	if active_unit_id != int(unit.id):
 		return
-	_end_current_activation()
+	await _end_current_activation()
 
 
 func _find_unit_by_id(unit_id: int) -> Dictionary:
@@ -6603,6 +6619,9 @@ func _validate_runtime_setup() -> void:
 		assert(debug_map_event_menu != null and debug_map_event_menu.item_count == BibliotekaZdarzenMapyScript.DANE.size(), "Menu debug musi udostepniac eventy ze wszystkich map.")
 	ai_difficulty = "gracz"
 	assert(_is_manual_side("enemy"), "Tryb lokalny musi oddawac przeciwnika drugiemu graczowi.")
+	campaign_mode = true
+	assert(not _is_manual_side("enemy"), "Kampania nigdy nie oddaje przeciwnika drugiemu graczowi.")
+	campaign_mode = false
 	ai_difficulty = "sredni"
 	assert(not _is_manual_side("enemy"), "Tryb AI nie moze oddawac przeciwnika graczowi.")
 	ai_difficulty = previous_ai_difficulty
@@ -7540,6 +7559,8 @@ func _is_manual_turn() -> bool:
 
 
 func _is_manual_side(side: String) -> bool:
+	if campaign_mode and side == "enemy":
+		return false
 	return side == "player" or (side == "enemy" and ai_difficulty == "gracz")
 
 

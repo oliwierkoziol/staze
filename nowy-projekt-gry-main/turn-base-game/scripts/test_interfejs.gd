@@ -50,7 +50,11 @@ func _uruchom() -> void:
 	)
 	main_menu.campaign_difficulty.select(2)
 	main_menu.campaign_difficulty.item_selected.emit(2)
-	_sprawdz(main_menu.selected_campaign_difficulty == "trudny", "Wybór trudności aktualizuje profil AI kampanii")
+	_sprawdz(
+		main_menu.selected_campaign_difficulty == "trudny"
+		and GameSettings.campaign_ai_difficulty == "trudny",
+		"Wybór trudności aktualizuje profil AI kampanii"
+	)
 	main_menu.queue_free()
 	await process_frame
 	var campaign_world = load("res://scenes/game_world.tscn").instantiate()
@@ -331,6 +335,46 @@ func _uruchom() -> void:
 		and gra._get_setup_placeable_cells(campaign_enemy).is_empty(),
 		"Kampania zaczyna sie od rozstawienia wylacznie jednostek gracza"
 	)
+	gra.ai_difficulty = "gracz"
+	_sprawdz(
+		not gra._is_manual_side("enemy"),
+		"Kampania zawsze steruje przeciwnikiem przez AI"
+	)
+	gra.ai_difficulty = "sredni"
+	gra.campaign_mode = true
+	gra.setup_mode = false
+	gra._load_skill_library()
+	var campaign_ai_player: Dictionary = gra._prepare_unit({
+		"id": 9200,
+		"type_id": "human_knights",
+		"side": "player",
+		"count": 3,
+		"grid_x": 2,
+		"grid_y": 5,
+		"level": 1,
+	})
+	var campaign_ai_enemy: Dictionary = gra._prepare_unit({
+		"id": 9201,
+		"type_id": "orc_warrior",
+		"side": "enemy",
+		"count": 3,
+		"grid_x": 12,
+		"grid_y": 5,
+		"level": 1,
+	})
+	gra.units = [campaign_ai_player, campaign_ai_enemy]
+	gra.board.set_units(gra.units)
+	gra.board.reset_unit_positions(gra.units)
+	gra.turn_queue = [9200, 9201]
+	gra.turn_queue_index = 1
+	gra.active_unit_id = 9201
+	gra.current_turn = "enemy"
+	gra.round_number = 1
+	gra.is_animating = false
+	gra._enemy_take_turn()
+	for _enemy_turn_frame in range(180):
+		await process_frame
+	_sprawdz(gra.active_unit_id != 9201, "Tura wroga w kampanii musi sie zakonczyc")
 	gra.units = [hover_unit]
 	gra.setup_mode = false
 	gra.current_turn = "player"
