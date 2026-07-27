@@ -4,6 +4,7 @@ extends RefCounted
 var hud: Control
 var camp_details_window: PanelContainer
 var camp_army_window: PanelContainer
+var active_camp_pos: Vector2 = Vector2(-1, -1)
 
 var faction_lore: Dictionary = {}
 
@@ -35,7 +36,9 @@ func setup_camp_windows():
 	hud.add_child(camp_army_window)
 
 func show_camp_details_menu(pos: Vector2):
+	active_camp_pos = pos
 	camp_details_window.visible = true
+	camp_army_window.visible = false
 	if hud.world_ref and hud.world_ref.has_method("lock_camp_army"):
 		hud.world_ref.lock_camp_army(pos)
 	var viewport_size = hud.get_viewport_rect().size
@@ -58,6 +61,7 @@ func show_camp_details_menu(pos: Vector2):
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var close_btn = Button.new()
 	close_btn.text = "Zamknij"
+	close_btn.tooltip_text = "Zamknij"
 	close_btn.custom_minimum_size = Vector2(80, 40)
 	close_btn.pressed.connect(func(): camp_details_window.visible = false)
 	header_hbox.add_child(title_lbl)
@@ -176,13 +180,17 @@ func show_camp_army_menu(enemy_army_raw: Array):
 	
 	var close_btn = Button.new()
 	close_btn.text = "Zamknij"
+	close_btn.tooltip_text = "Zamknij"
 	close_btn.custom_minimum_size = Vector2(80, 40)
 	close_btn.pressed.connect(func(): camp_army_window.visible = false)
 	
-	var spacer = Control.new()
-	spacer.custom_minimum_size = Vector2(80, 40)
+	var back_btn = Button.new()
+	back_btn.text = "Wróć"
+	back_btn.custom_minimum_size = Vector2(80, 40)
+	back_btn.tooltip_text = "Wróć do szczegółów obozowiska"
+	back_btn.pressed.connect(func() -> void: show_camp_details_menu(active_camp_pos))
 	
-	header_hbox.add_child(spacer)
+	header_hbox.add_child(back_btn)
 	header_hbox.add_child(title_lbl)
 	header_hbox.add_child(close_btn)
 	vbox.add_child(header_hbox)

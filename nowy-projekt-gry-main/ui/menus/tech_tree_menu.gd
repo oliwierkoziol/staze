@@ -6,10 +6,11 @@ var tech_tree_button: Button
 var tech_tree_window: Panel
 var tech_tree_map: Control
 var insufficient_points_dialog: AcceptDialog
+var tree_status_label: Label
 
-const X_SPACING: float = 280.0
-const Y_SPACING: float = 95.0
-const OFFSET_POS: Vector2 = Vector2(80, -70)
+const X_SPACING: float = 300.0
+const Y_SPACING: float = 125.0
+const OFFSET_POS: Vector2 = Vector2(80, 30)
 
 func _init(_hud: Control):
 	hud = _hud
@@ -38,16 +39,20 @@ func setup_tech_tree_ui():
 	if tech_tree_window:
 		tech_tree_window.visible = false
 		tech_tree_window.z_index = 10
-		var style_tree = StyleBoxFlat.new()
-		style_tree.bg_color = hud.DF_BG
-		style_tree.set_border_width_all(3)
-		style_tree.border_color = hud.DF_GOLD
-		style_tree.set_corner_radius_all(4)
-		tech_tree_window.add_theme_stylebox_override("panel", style_tree)
+		tech_tree_window.anchor_left = 0.05
+		tech_tree_window.anchor_top = 0.08
+		tech_tree_window.anchor_right = 0.95
+		tech_tree_window.anchor_bottom = 0.92
+		tech_tree_window.offset_left = 0
+		tech_tree_window.offset_top = 0
+		tech_tree_window.offset_right = 0
+		tech_tree_window.offset_bottom = 0
+		tech_tree_window.add_theme_stylebox_override("panel", hud._panel_style())
 		var close_btn = tech_tree_window.get_node_or_null("CloseButton")
 		if close_btn: 
 			close_btn.pressed.connect(func(): tech_tree_window.visible = false)
 			close_btn.text = "X"
+			close_btn.tooltip_text = "Zamknij"
 			close_btn.custom_minimum_size = Vector2(35, 35)
 			close_btn.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 			close_btn.offset_left = -45
@@ -61,16 +66,21 @@ func setup_tech_tree_ui():
 			close_btn.get_parent().move_child(close_btn, -1)
 		var scroll = tech_tree_window.get_node_or_null("ScrollContainer")
 		if scroll:
-			scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
-			scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
-			scroll.offset_left = 10
-			scroll.offset_right = -10
-			scroll.offset_bottom = -20
-			
-			if not scroll.gui_input.is_connected(_on_scroll_gui_input.bind(scroll, scroll)):
-				scroll.gui_input.connect(_on_scroll_gui_input.bind(scroll, scroll))
-			if tech_tree_map and not tech_tree_map.gui_input.is_connected(_on_scroll_gui_input.bind(tech_tree_map, scroll)):
-				tech_tree_map.gui_input.connect(_on_scroll_gui_input.bind(tech_tree_map, scroll))
+			scroll.offset_left = 14
+			scroll.offset_top = 58
+			scroll.offset_right = -14
+			scroll.offset_bottom = -14
+			hud.bind_tree_panning(scroll, tech_tree_map)
+		tree_status_label = Label.new()
+		tree_status_label.anchor_right = 1.0
+		tree_status_label.offset_left = 22
+		tree_status_label.offset_top = 14
+		tree_status_label.offset_right = -60
+		tree_status_label.offset_bottom = 44
+		tree_status_label.add_theme_font_size_override("font_size", 13)
+		tree_status_label.add_theme_color_override("font_color", hud.DF_TEXT)
+		tree_status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tech_tree_window.add_child(tree_status_label)
 	if tech_tree_map: tech_tree_map.draw.connect(_draw_tech_connections)
 
 	# Dialog pokazywany, gdy kliknięcie węzła technologii nie mogło
@@ -88,10 +98,6 @@ func setup_tech_tree_ui():
 		hud.hide_all_menus()
 		if tech_tree_window:
 			tech_tree_window.visible = true
-			tech_tree_window.custom_minimum_size = Vector2(900, 600)
-			tech_tree_window.size = Vector2(900, 600)
-			var screen_center = hud.get_viewport_rect().size / 2
-			tech_tree_window.global_position = screen_center - (tech_tree_window.size / 2)
 			refresh_technology_tree_view()
 	)
 
@@ -104,11 +110,11 @@ func _get_tech_node_position(grid_coords: Vector2) -> Vector2:
 func _draw_tech_connections():
 	for tech_name in EconomyManager.technology_tree:
 		var tech = EconomyManager.technology_tree[tech_name]
-		var start_pos = _get_tech_node_position(tech["grid_coords"]) + Vector2(210, 32) 
+		var start_pos = _get_tech_node_position(tech["grid_coords"]) + Vector2(235, 55)
 		for req_name in tech["req"]:
 			if EconomyManager.technology_tree.has(req_name):
 				var req_tech = EconomyManager.technology_tree[req_name]
-				var end_pos = _get_tech_node_position(req_tech["grid_coords"]) + Vector2(0, 32) 
+				var end_pos = _get_tech_node_position(req_tech["grid_coords"]) + Vector2(0, 55)
 				var line_color = Color(0.25, 0.22, 0.18, 1.0) 
 				var line_width = 2.5
 				if req_tech["unlocked"] and tech["unlocked"]:
@@ -123,6 +129,12 @@ func _draw_tech_connections():
 
 func refresh_technology_tree_view():
 	if not tech_tree_map: return
+	if tree_status_label:
+		tree_status_label.text = (
+			"DRZEWO TECHNOLOGII  •  Badanie: %s  •  pozostało %d tur" % [EconomyManager.current_research, EconomyManager.research_turns_left]
+			if EconomyManager.current_research != ""
+			else "DRZEWO TECHNOLOGII  •  zielony: odkryta  •  złoty: w trakcie  •  jasny: dostępna  •  przygaszony: zablokowana"
+		)
 	for child in tech_tree_map.get_children(): child.queue_free()
 	tech_tree_map.queue_redraw()
 	var max_size := Vector2.ZERO
@@ -134,7 +146,7 @@ func refresh_technology_tree_view():
 		max_size.y = max(max_size.y, node_end.y)
 		var node_panel = PanelContainer.new()
 		node_panel.position = node_pos
-		node_panel.custom_minimum_size = Vector2(210, 64)
+		node_panel.custom_minimum_size = Vector2(235, 110)
 		var node_style = StyleBoxFlat.new()
 		node_style.bg_color = Color(0.18, 0.16, 0.14)
 		node_style.set_corner_radius_all(32)  
@@ -166,13 +178,14 @@ func refresh_technology_tree_view():
 		hbox.add_child(vbox)
 		var lbl_title = Label.new()
 		lbl_title.text = tech_name
-		lbl_title.add_theme_font_size_override("font_size", 12)
+		lbl_title.add_theme_font_size_override("font_size", 14)
 		lbl_title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.75))
 		vbox.add_child(lbl_title)
 		var lbl_desc = Label.new()
 		var current_cost = EconomyManager.get_tech_cost(tech_name)
 		lbl_desc.text = "%s\n💎 Koszt: %d pkt" % [tech["desc"], current_cost]
-		lbl_desc.add_theme_font_size_override("font_size", 9)
+		lbl_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lbl_desc.add_theme_font_size_override("font_size", 11)
 		lbl_desc.add_theme_color_override("font_color", Color(0.75, 0.65, 0.85))
 		vbox.add_child(lbl_desc)
 
@@ -189,6 +202,7 @@ func refresh_technology_tree_view():
 			node_style.border_color = Color(0.3, 0.75, 0.45) 
 			node_style.bg_color = Color(0.12, 0.22, 0.15)
 			invisible_button.disabled = true
+			invisible_button.tooltip_text = "Technologia odkryta."
 		elif EconomyManager.current_research == tech_name:
 			node_style.border_color = Color(0.85, 0.64, 0.22) 
 			node_style.bg_color = Color(0.24, 0.2, 0.14)
@@ -197,10 +211,18 @@ func refresh_technology_tree_view():
 			progress = clamp(progress, 0, EconomyManager.get_tech_cost(tech_name))
 			lbl_title.text = "%s (%d tur)" % [tech_name, EconomyManager.research_turns_left]
 			invisible_button.disabled = true
+			invisible_button.tooltip_text = "Badanie w toku. Pozostało %d tur." % EconomyManager.research_turns_left
 		elif not reqs_ok:
 			node_panel.modulate.a = 0.35 
 			invisible_button.disabled = true
+			var missing_requirements: Array[String] = []
+			for requirement in tech["req"]:
+				if not EconomyManager.technology_tree[requirement]["unlocked"]:
+					missing_requirements.append(str(requirement))
+			invisible_button.tooltip_text = "Wymagane: %s" % ", ".join(missing_requirements)
 		else:
+			lbl_desc.text += "\nBADAJ"
+			invisible_button.tooltip_text = "Rozpocznij badanie za %d punktów Nauki." % current_cost
 			invisible_button.pressed.connect(func():
 				if EconomyManager.current_research != "":
 					insufficient_points_dialog.title = "Trwają badania"
@@ -215,18 +237,3 @@ func refresh_technology_tree_view():
 			)
 		tech_tree_map.add_child(node_panel)
 	tech_tree_map.custom_minimum_size = max_size
-
-func _on_scroll_gui_input(event: InputEvent, node: Control, scroll: ScrollContainer):
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			if event.shift_pressed:
-				scroll.scroll_horizontal -= 60
-			else:
-				scroll.scroll_vertical -= 60
-			node.accept_event()
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			if event.shift_pressed:
-				scroll.scroll_horizontal += 60
-			else:
-				scroll.scroll_vertical += 60
-			node.accept_event()

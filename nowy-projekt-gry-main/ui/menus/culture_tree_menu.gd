@@ -6,10 +6,11 @@ var culture_tree_button: Button
 var culture_tree_window: Panel
 var culture_tree_map: Control
 var insufficient_points_dialog: AcceptDialog
+var tree_status_label: Label
 
-const X_SPACING: float = 280.0
-const Y_SPACING: float = 90.0
-const OFFSET_POS: Vector2 = Vector2(80, -55)
+const X_SPACING: float = 300.0
+const Y_SPACING: float = 125.0
+const OFFSET_POS: Vector2 = Vector2(80, 30)
 
 func _init(_hud: Control):
 	hud = _hud
@@ -21,16 +22,20 @@ func setup_culture_tree_ui():
 	if culture_tree_window:
 		culture_tree_window.visible = false
 		culture_tree_window.z_index = 10
-		var style_tree = StyleBoxFlat.new()
-		style_tree.bg_color = hud.DF_BG
-		style_tree.set_border_width_all(3)
-		style_tree.border_color = hud.DF_GOLD
-		style_tree.set_corner_radius_all(4)
-		culture_tree_window.add_theme_stylebox_override("panel", style_tree)
+		culture_tree_window.anchor_left = 0.05
+		culture_tree_window.anchor_top = 0.08
+		culture_tree_window.anchor_right = 0.95
+		culture_tree_window.anchor_bottom = 0.92
+		culture_tree_window.offset_left = 0
+		culture_tree_window.offset_top = 0
+		culture_tree_window.offset_right = 0
+		culture_tree_window.offset_bottom = 0
+		culture_tree_window.add_theme_stylebox_override("panel", hud._panel_style())
 		var close_btn = culture_tree_window.get_node_or_null("CloseButton")
 		if close_btn:
 			close_btn.pressed.connect(func(): culture_tree_window.visible = false)
 			close_btn.text = "X"
+			close_btn.tooltip_text = "Zamknij"
 			close_btn.custom_minimum_size = Vector2(35, 35)
 			close_btn.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 			close_btn.offset_left = -45
@@ -44,16 +49,21 @@ func setup_culture_tree_ui():
 			close_btn.get_parent().move_child(close_btn, -1)
 		var scroll = culture_tree_window.get_node_or_null("ScrollContainer")
 		if scroll:
-			scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
-			scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
-			scroll.offset_left = 10
-			scroll.offset_right = -10
-			scroll.offset_bottom = -20
-			
-			if not scroll.gui_input.is_connected(_on_scroll_gui_input.bind(scroll, scroll)):
-				scroll.gui_input.connect(_on_scroll_gui_input.bind(scroll, scroll))
-			if culture_tree_map and not culture_tree_map.gui_input.is_connected(_on_scroll_gui_input.bind(culture_tree_map, scroll)):
-				culture_tree_map.gui_input.connect(_on_scroll_gui_input.bind(culture_tree_map, scroll))
+			scroll.offset_left = 14
+			scroll.offset_top = 58
+			scroll.offset_right = -14
+			scroll.offset_bottom = -14
+			hud.bind_tree_panning(scroll, culture_tree_map)
+		tree_status_label = Label.new()
+		tree_status_label.anchor_right = 1.0
+		tree_status_label.offset_left = 22
+		tree_status_label.offset_top = 14
+		tree_status_label.offset_right = -60
+		tree_status_label.offset_bottom = 44
+		tree_status_label.add_theme_font_size_override("font_size", 13)
+		tree_status_label.add_theme_color_override("font_color", hud.DF_TEXT)
+		tree_status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		culture_tree_window.add_child(tree_status_label)
 
 	if culture_tree_map:
 		culture_tree_map.draw.connect(_draw_culture_connections)
@@ -76,10 +86,6 @@ func setup_culture_tree_ui():
 			hud.hide_all_menus()
 			if culture_tree_window:
 				culture_tree_window.visible = true
-				culture_tree_window.custom_minimum_size = Vector2(900,600)
-				culture_tree_window.size = Vector2(900,600)
-				var center = hud.get_viewport_rect().size / 2
-				culture_tree_window.global_position = center - culture_tree_window.size / 2
 				refresh_culture_tree_view()
 		)
 
@@ -92,11 +98,11 @@ func _get_tech_node_position(grid_coords: Vector2) -> Vector2:
 func _draw_culture_connections():
 	for tech_name in EconomyManager.culture_tree:
 		var tech = EconomyManager.culture_tree[tech_name]
-		var start_pos = _get_tech_node_position(tech["grid_coords"]) + Vector2(210, 32)
+		var start_pos = _get_tech_node_position(tech["grid_coords"]) + Vector2(235, 55)
 		for req_name in tech["req"]:
 			if EconomyManager.culture_tree.has(req_name):
 				var req_tech = EconomyManager.culture_tree[req_name]
-				var end_pos = _get_tech_node_position(req_tech["grid_coords"]) + Vector2(0, 32)
+				var end_pos = _get_tech_node_position(req_tech["grid_coords"]) + Vector2(0, 55)
 				var line_color = Color(0.25, 0.22, 0.18, 1.0)
 				var line_width = 2.5
 				if req_tech["unlocked"] and tech["unlocked"]:
@@ -111,6 +117,12 @@ func _draw_culture_connections():
 
 func refresh_culture_tree_view():
 	if not culture_tree_map: return
+	if tree_status_label:
+		tree_status_label.text = (
+			"DRZEWO KULTURY  •  rozwój: %s  •  pozostało %d tur" % [EconomyManager.current_culture_research, EconomyManager.culture_turns_left]
+			if EconomyManager.current_culture_research != ""
+			else "DRZEWO KULTURY  •  fioletowy: odkryty  •  złoty: w trakcie  •  jasny: dostępny  •  przygaszony: zablokowany"
+		)
 	for child in culture_tree_map.get_children(): child.queue_free()
 	culture_tree_map.queue_redraw()
 	var max_size := Vector2.ZERO
@@ -122,7 +134,7 @@ func refresh_culture_tree_view():
 		max_size.y = max(max_size.y, node_end.y)
 		var node_panel = PanelContainer.new()
 		node_panel.position = node_pos
-		node_panel.custom_minimum_size = Vector2(210, 64)
+		node_panel.custom_minimum_size = Vector2(235, 110)
 		var node_style = StyleBoxFlat.new()
 		node_style.bg_color = Color(0.18, 0.16, 0.14)
 		node_style.set_corner_radius_all(32)  
@@ -154,12 +166,13 @@ func refresh_culture_tree_view():
 		hbox.add_child(vbox)
 		var lbl_title = Label.new()
 		lbl_title.text = tech_name
-		lbl_title.add_theme_font_size_override("font_size", 12)
+		lbl_title.add_theme_font_size_override("font_size", 14)
 		lbl_title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.75))
 		vbox.add_child(lbl_title)
 		var lbl_desc = Label.new()
 		lbl_desc.text = "%s\n💎 Koszt: %d pkt" % [tech["desc"], tech["research_cost"]]
-		lbl_desc.add_theme_font_size_override("font_size", 9)
+		lbl_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lbl_desc.add_theme_font_size_override("font_size", 11)
 		lbl_desc.add_theme_color_override("font_color", Color(0.75, 0.65, 0.85))
 		vbox.add_child(lbl_desc)
 
@@ -176,6 +189,7 @@ func refresh_culture_tree_view():
 			node_style.border_color = Color(0.55, 0.35, 0.9) 
 			node_style.bg_color = Color(0.22, 0.15, 0.35)
 			invisible_button.disabled = true
+			invisible_button.tooltip_text = "Nurt kultury odkryty."
 		elif EconomyManager.current_culture_research == tech_name:
 			node_style.border_color = Color(0.85, 0.45, 1.0) 
 			node_style.bg_color = Color(0.3, 0.2, 0.4)
@@ -184,10 +198,18 @@ func refresh_culture_tree_view():
 			progress = clamp(progress, 0, tech["research_cost"])
 			lbl_title.text = "%s (%d tur)" % [tech_name, EconomyManager.culture_turns_left]
 			invisible_button.disabled = true
+			invisible_button.tooltip_text = "Rozwój w toku. Pozostało %d tur." % EconomyManager.culture_turns_left
 		elif not reqs_ok:
 			node_panel.modulate.a = 0.35 
 			invisible_button.disabled = true
+			var missing_requirements: Array[String] = []
+			for requirement in tech["req"]:
+				if not EconomyManager.culture_tree[requirement]["unlocked"]:
+					missing_requirements.append(str(requirement))
+			invisible_button.tooltip_text = "Wymagane: %s" % ", ".join(missing_requirements)
 		else:
+			lbl_desc.text += "\nBADAJ"
+			invisible_button.tooltip_text = "Rozpocznij rozwój za %d punktów Kultury." % int(tech["research_cost"])
 			invisible_button.pressed.connect(func():
 				if EconomyManager.current_culture_research != "":
 					insufficient_points_dialog.title = "Trwają badania"
@@ -202,12 +224,3 @@ func refresh_culture_tree_view():
 			)
 		culture_tree_map.add_child(node_panel)
 	culture_tree_map.custom_minimum_size = max_size
-
-func _on_scroll_gui_input(event: InputEvent, node: Control, scroll: ScrollContainer):
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			scroll.scroll_horizontal -= 60
-			node.accept_event()
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			scroll.scroll_horizontal += 60
-			node.accept_event()

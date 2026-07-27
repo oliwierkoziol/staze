@@ -38,12 +38,14 @@ func _ready() -> void:
 	destroyed_sound = _create_player("res://assets/sounds/destroyed.mp3")
 	
 	bg_music = AudioStreamPlayer.new()
+	bg_music.bus = &"Music"
 	bg_music.volume_db = -30.0
 	add_child(bg_music)
 	bg_music.finished.connect(_on_bg_music_finished)
 
 func _create_player(path: String) -> AudioStreamPlayer:
 	var p = AudioStreamPlayer.new()
+	p.bus = &"Effects"
 	var stream = load(path)
 	if stream:
 		p.stream = stream

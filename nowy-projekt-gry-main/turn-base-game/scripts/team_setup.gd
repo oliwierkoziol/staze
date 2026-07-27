@@ -3,7 +3,7 @@ extends Control
 signal setup_finished(player_faction: String, enemy_faction: String, ai_difficulty: String)
 signal setup_loaded(save_data: Dictionary)
 signal custom_setup_finished(unit_configs: Array[Dictionary], player_faction: String, enemy_faction: String, background_path: String, ai_difficulty: String)
-signal settings_requested
+signal main_menu_requested
 
 const UnitSelectPanelScene: PackedScene = preload("res://turn-base-game/scenes/unit_select_panel.tscn")
 const UnitTypeLibraryScript = preload("res://turn-base-game/scripts/unit_type_library.gd")
@@ -11,6 +11,11 @@ const UnitSelectPanelClass = preload("res://turn-base-game/scripts/unit_select_p
 const BATTLE_BACKGROUND: Texture2D = preload("res://turn-base-game/assets/backgrounds/back.png")
 const SCENARIOS_PATH := "res://turn-base-game/data/scenarios/scenarios.json"
 const CASTLE_SCENARIO_PATH := "res://turn-base-game/data/scenarios/zamek.json"
+const DF_GOLD := Color(0.65, 0.52, 0.2, 0.9)
+const DF_GOLD_BRIGHT := Color(0.88, 0.75, 0.34, 1.0)
+const DF_GOLD_TEXT := Color(0.86, 0.72, 0.34, 1.0)
+const DF_TEXT := Color(0.92, 0.88, 0.78, 1.0)
+const PANEL_TEXTURE: Texture2D = preload("res://turn-base-game/assets/ui/panel.png")
 
 var _player_panel: UnitSelectPanelClass
 var _enemy_panel: UnitSelectPanelClass
@@ -29,6 +34,9 @@ var _web_file_load_callback: Variant
 
 
 func _ready() -> void:
+	var menu_theme := Theme.new()
+	menu_theme.default_font = ThemeDB.fallback_font
+	theme = menu_theme
 	assert(not _parse_save_text('{"units": []}').is_empty() and _parse_save_text("[]").is_empty(), "Parser zapisu musi przyjmowac tylko obiekt JSON.")
 	var scenarios: Array[Dictionary] = _get_scenarios()
 	if not scenarios.is_empty():
@@ -66,39 +74,61 @@ func _show_mode_menu() -> void:
 
 	var build_info := Label.new()
 	build_info.name = "BuildInfo"
-	build_info.text = "BUILD %s • %s" % [
-		ProjectSettings.get_setting("application/config/version", "0.0.0"),
-		ProjectSettings.get_setting("application/config/build_date", "brak daty"),
-	]
-	build_info.offset_left = 20
-	build_info.offset_top = 14
-	build_info.offset_right = 360
-	build_info.offset_bottom = 42
+	build_info.text = "WERSJA %s" % ProjectSettings.get_setting("application/config/version", "0.1.0")
+	build_info.anchor_top = 1.0
+	build_info.anchor_bottom = 1.0
+	build_info.offset_left = 18
+	build_info.offset_top = -38
+	build_info.offset_right = 440
+	build_info.offset_bottom = -14
 	build_info.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	build_info.add_theme_font_size_override("font_size", 14)
-	build_info.add_theme_color_override("font_color", Color(0.62, 0.58, 0.5, 1.0))
+	build_info.add_theme_font_size_override("font_size", 13)
+	build_info.add_theme_color_override("font_color", Color(DF_TEXT.r, DF_TEXT.g, DF_TEXT.b, 0.55))
 	add_child(build_info)
 
-	var main := _make_main_container(80, 80)
+	var main := _make_centered_panel(Vector2(760, 0), 32)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 28)
+	column.add_theme_constant_override("separation", 18)
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main.add_child(column)
 
 	var title := Label.new()
-	title.text = "WYBIERZ TRYB GRY"
+	title.text = "POTYCZKA"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 42)
-	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
+	title.add_theme_font_size_override("font_size", 38)
+	title.add_theme_color_override("font_color", DF_GOLD_TEXT)
+	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	title.add_theme_constant_override("shadow_offset_y", 2)
 	column.add_child(title)
+
+	var subtitle := Label.new()
+	subtitle.text = "Wybierz rodzaj bitwy"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 15)
+	subtitle.add_theme_color_override("font_color", Color(DF_TEXT.r, DF_TEXT.g, DF_TEXT.b, 0.72))
+	column.add_child(subtitle)
+
+	column.add_child(HSeparator.new())
+
+	var difficulty_group := VBoxContainer.new()
+	difficulty_group.alignment = BoxContainer.ALIGNMENT_CENTER
+	difficulty_group.add_theme_constant_override("separation", 6)
+	column.add_child(difficulty_group)
+
+	var difficulty_label := Label.new()
+	difficulty_label.text = "STEROWANIE PRZECIWNIKIEM"
+	difficulty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	difficulty_label.add_theme_font_size_override("font_size", 16)
+	difficulty_label.add_theme_color_override("font_color", Color(0.75, 0.72, 0.62, 1.0))
+	difficulty_group.add_child(difficulty_label)
 
 	var difficulty_select := OptionButton.new()
 	difficulty_select.custom_minimum_size = Vector2(340, 44)
+	difficulty_select.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	for difficulty in [
-		{"id": "latwy", "label": "LATWY — NIEDOSWIADCZONY DOWODCA"},
-		{"id": "sredni", "label": "SREDNI — DOWODCA POLOWY"},
+		{"id": "latwy", "label": "ŁATWY — NIEDOŚWIADCZONY DOWÓDCA"},
+		{"id": "sredni", "label": "ŚREDNI — DOWÓDCA POLOWY"},
 		{"id": "trudny", "label": "TRUDNY — TAKTYK"},
 		{"id": "gracz", "label": "DRUGI GRACZ — TRYB LOKALNY"},
 	]:
@@ -107,7 +137,9 @@ func _show_mode_menu() -> void:
 		if str(difficulty.id) == _ai_difficulty:
 			difficulty_select.select(difficulty_select.item_count - 1)
 	difficulty_select.item_selected.connect(func(index: int) -> void: _ai_difficulty = str(difficulty_select.get_item_metadata(index)))
-	column.add_child(difficulty_select)
+	_style_button(difficulty_select, false)
+	difficulty_select.custom_minimum_size = Vector2(340, 44)
+	difficulty_group.add_child(difficulty_select)
 
 	var cards := HBoxContainer.new()
 	cards.add_theme_constant_override("separation", 24)
@@ -115,17 +147,18 @@ func _show_mode_menu() -> void:
 	cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(cards)
 
-	cards.add_child(_make_mode_card("GOTOWE SCENARIUSZE", "Wybor przygotowanej bitwy.", _show_scenarios_placeholder))
-	cards.add_child(_make_mode_card("SANDBOX", "Armie i liczebnosc oddzialow.", _show_sandbox_faction_select))
-	cards.add_child(_make_mode_card("DEBUG", "Dowolne jednostki testowe.", _show_debug_count_config))
+	cards.add_child(_make_mode_card("GOTOWE SCENARIUSZE", "Wybór przygotowanej bitwy.", _show_scenarios_placeholder))
+	cards.add_child(_make_mode_card("WŁASNA BITWA", "Wybierz frakcje i liczebność oddziałów.", _show_sandbox_faction_select))
+	if OS.is_debug_build():
+		cards.add_child(_make_mode_card("DEBUG", "Dowolne jednostki testowe.", _show_debug_count_config))
 
-	_load_button = _make_action_button("WCZYTAJ ZAPIS", Vector2(220, 60))
+	_load_button = _make_action_button("WCZYTAJ STAN WALKI", Vector2(240, 60))
 	_load_button.pressed.connect(_on_load_pressed)
 	column.add_child(_load_button)
 
-	var settings_button := _make_action_button("USTAWIENIA", Vector2(220, 60))
-	settings_button.pressed.connect(func() -> void: settings_requested.emit())
-	column.add_child(settings_button)
+	var main_menu_button := _make_action_button("MENU GŁÓWNE", Vector2(220, 60))
+	main_menu_button.pressed.connect(func() -> void: main_menu_requested.emit())
+	column.add_child(main_menu_button)
 
 	_load_dialog = FileDialog.new()
 	_load_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
@@ -182,13 +215,14 @@ func _show_scenarios_placeholder() -> void:
 	bottom_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(bottom_spacer)
 
-	var back_button := _make_action_button("WROC", Vector2(180, 52))
+	var back_button := _make_action_button("WRÓĆ", Vector2(180, 52))
 	back_button.pressed.connect(_show_mode_menu)
 	column.add_child(back_button)
 
 
 func _make_scenario_card(scenario: Dictionary) -> Button:
 	var button := Button.new()
+	_style_button(button, false)
 	button.custom_minimum_size = Vector2(290, 250)
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.pressed.connect(_start_scenario.bind(scenario))
@@ -278,7 +312,7 @@ func _show_sandbox_faction_select() -> void:
 	main.add_child(column)
 
 	var title := Label.new()
-	title.text = "SANDBOX"
+	title.text = "WŁASNA BITWA"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 40)
 	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
@@ -328,14 +362,14 @@ func _show_sandbox_faction_select() -> void:
 	panels_row.add_child(right_spacer)
 
 	_player_panel.setup("player", faction_ids, default_faction)
-	_enemy_panel.setup("enemy", faction_ids, _random_faction())
+	_enemy_panel.setup("enemy", faction_ids, _random_faction(), _ai_difficulty == "gracz")
 
 	var actions_row := HBoxContainer.new()
 	actions_row.add_theme_constant_override("separation", 16)
 	actions_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	column.add_child(actions_row)
 
-	var back_button := _make_action_button("WROC", Vector2(160, 60))
+	var back_button := _make_action_button("WRÓĆ", Vector2(160, 60))
 	back_button.pressed.connect(_show_mode_menu)
 	actions_row.add_child(back_button)
 
@@ -357,7 +391,7 @@ func _show_sandbox_count_config() -> void:
 		var copy: Dictionary = unit.duplicate(true)
 		copy["side"] = "enemy"
 		units.append(copy)
-	_show_count_config("SANDBOX - LICZEBNOSC", units, _show_sandbox_faction_select, _on_start_sandbox_pressed)
+	_show_count_config("WŁASNA BITWA — LICZEBNOŚĆ", units, _show_sandbox_faction_select, _on_start_sandbox_pressed)
 
 
 func _show_debug_count_config() -> void:
@@ -402,7 +436,7 @@ func _show_count_config(title_text: String, unit_types: Array[Dictionary], back_
 	scroll.add_child(sides)
 
 	var player_column := _make_side_column("GRACZ")
-	var enemy_column := _make_side_column("PRZECIWNIK")
+	var enemy_column := _make_side_column("GRACZ 2" if _ai_difficulty == "gracz" else "PRZECIWNIK")
 	sides.add_child(player_column)
 	sides.add_child(enemy_column)
 
@@ -417,7 +451,7 @@ func _show_count_config(title_text: String, unit_types: Array[Dictionary], back_
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_child(actions)
 
-	var back_button := _make_action_button("WROC", Vector2(180, 52))
+	var back_button := _make_action_button("WRÓĆ", Vector2(180, 52))
 	back_button.pressed.connect(back_callback)
 	actions.add_child(back_button)
 
@@ -458,6 +492,7 @@ func _emit_custom_setup(player_faction: String, enemy_faction: String, backgroun
 		})
 		next_id += 1
 	if player_count == 0 or enemy_count == 0:
+		_show_error("Obie armie muszą zawierać przynajmniej jeden oddział.")
 		return
 	custom_setup_finished.emit(unit_configs, player_faction, enemy_faction, background_path, _ai_difficulty)
 
@@ -469,12 +504,13 @@ func _build_background() -> void:
 	background.anchor_right = 1.0
 	background.anchor_bottom = 1.0
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	background.modulate = Color(0.58, 0.52, 0.46, 1.0)
 	add_child(background)
 
 	var overlay := ColorRect.new()
 	overlay.name = "Overlay"
-	overlay.color = Color(0.02, 0.02, 0.04, 0.78)
+	overlay.color = Color(0.02, 0.02, 0.04, 0.72)
 	overlay.anchor_right = 1.0
 	overlay.anchor_bottom = 1.0
 	add_child(overlay)
@@ -493,9 +529,27 @@ func _make_main_container(margin_x: int, margin_y: int) -> MarginContainer:
 	return main
 
 
+func _make_centered_panel(minimum_size: Vector2, margin_size: int) -> MarginContainer:
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = minimum_size
+	panel.add_theme_stylebox_override("panel", _panel_style())
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
+		margin.add_theme_constant_override(side, margin_size)
+	panel.add_child(margin)
+	return margin
+
+
 func _make_mode_card(title: String, subtitle: String, callback: Callable) -> Button:
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(300, 220)
+	_style_button(button, false)
+	button.custom_minimum_size = Vector2(300, 190)
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.pressed.connect(callback)
 
@@ -530,10 +584,46 @@ func _make_mode_card(title: String, subtitle: String, callback: Callable) -> But
 func _make_action_button(text: String, min_size: Vector2) -> Button:
 	var button := Button.new()
 	button.text = text
+	_style_button(button, false)
 	button.custom_minimum_size = min_size
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	button.add_theme_font_size_override("font_size", 22)
+	button.add_theme_font_size_override("font_size", 18)
 	return button
+
+
+func _panel_style() -> StyleBoxTexture:
+	var style := StyleBoxTexture.new()
+	style.texture = PANEL_TEXTURE
+	style.texture_margin_left = 8
+	style.texture_margin_top = 8
+	style.texture_margin_right = 8
+	style.texture_margin_bottom = 8
+	style.axis_stretch_horizontal = 2
+	style.axis_stretch_vertical = 2
+	return style
+
+
+func _style_button(button: Button, accent: bool) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.23, 0.19, 0.08, 0.98) if accent else Color(0.1, 0.1, 0.08, 0.96)
+	normal.set_border_width_all(2)
+	normal.border_color = DF_GOLD
+	normal.set_corner_radius_all(6)
+	normal.set_content_margin_all(10)
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.31, 0.26, 0.11, 0.98) if accent else Color(0.23, 0.19, 0.08, 0.98)
+	hover.border_color = DF_GOLD_BRIGHT
+	var pressed := hover.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.18, 0.14, 0.05, 0.98) if accent else Color(0.07, 0.07, 0.055, 0.98)
+	var focus := hover.duplicate() as StyleBoxFlat
+	focus.set_border_width_all(3)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("focus", focus)
+	button.add_theme_color_override("font_color", DF_TEXT)
+	button.add_theme_color_override("font_hover_color", DF_GOLD_TEXT)
+	button.add_theme_font_size_override("font_size", 16)
 
 
 func _make_side_column(title_text: String) -> VBoxContainer:
@@ -623,6 +713,7 @@ func _on_load_pressed() -> void:
 func _on_load_file_selected(path: String) -> void:
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
+		_show_error("Nie udało się odczytać pliku zapisu.")
 		return
 	_emit_loaded_save(file.get_as_text())
 
@@ -655,6 +746,19 @@ func _emit_loaded_save(text: String) -> void:
 	var data: Dictionary = _parse_save_text(text)
 	if not data.is_empty():
 		setup_loaded.emit(data)
+	else:
+		_show_error("Plik nie zawiera prawidłowego stanu walki.")
+
+
+func _show_error(message: String) -> void:
+	var dialog := AcceptDialog.new()
+	dialog.title = "Nie można kontynuować"
+	dialog.dialog_text = message
+	dialog.ok_button_text = "WRÓĆ"
+	dialog.canceled.connect(dialog.queue_free)
+	dialog.confirmed.connect(dialog.queue_free)
+	add_child(dialog)
+	dialog.popup_centered(Vector2i(520, 190))
 
 
 static func _parse_save_text(text: String) -> Dictionary:

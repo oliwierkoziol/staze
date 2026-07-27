@@ -40,6 +40,7 @@ func setup_library_window():
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var close_btn = Button.new()
 	close_btn.text = "X"
+	close_btn.tooltip_text = "Zamknij"
 	close_btn.custom_minimum_size = Vector2(30, 30)
 	close_btn.pressed.connect(func(): library_window.visible = false)
 	hud._style_df_button(close_btn)
@@ -127,6 +128,15 @@ func _populate_list() -> void:
 			research_btn.text = "Badaj"
 			var can_afford = EconomyManager.can_research_skill(skill_id)
 			research_btn.disabled = not can_afford
+			if not can_afford:
+				var missing: Array[String] = []
+				var missing_gold := int(skill["cost_gold"]) - int(EconomyManager.resources.get("Złoto", 0))
+				var missing_tech := int(skill["cost_tech"]) - int(EconomyManager.resources.get("Nauka", 0))
+				if missing_gold > 0:
+					missing.append("%d złota" % missing_gold)
+				if missing_tech > 0:
+					missing.append("%d punktów technologii" % missing_tech)
+				research_btn.tooltip_text = "Brakuje: %s" % ", ".join(missing)
 			var r_style = StyleBoxFlat.new()
 			r_style.bg_color = Color(0.2, 0.6, 0.2) if can_afford else Color(0.2, 0.2, 0.2)
 			r_style.set_corner_radius_all(4)

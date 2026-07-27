@@ -101,15 +101,19 @@ theme = ExtResource("13_georgia_theme")
 script = ExtResource("1_a1tqk")
 
 [node name="OdtwarzaczSfxJednostek" type="AudioStreamPlayer" parent="."]
+bus = &"Dialogue"
 volume_db = -10.0
 
 [node name="OdtwarzaczSfxBroni" type="AudioStreamPlayer" parent="."]
+bus = &"Effects"
 volume_db = -12.0
 
 [node name="OdtwarzaczSfxInterfejsu" type="AudioStreamPlayer" parent="."]
+bus = &"Effects"
 volume_db = -12.0
 
 [node name="OdtwarzaczMuzyki" type="AudioStreamPlayer" parent="."]
+bus = &"Music"
 volume_db = -24.0
 
 [node name="Background" type="TextureRect" parent="." unique_id=214506001]
@@ -172,7 +176,7 @@ theme_override_colors/font_color = Color(0.86, 0.82, 0.73, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.07, 0.04, 0.9)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 21
-text = "Kliknij START aby rozpoczac gre"
+text = "Kliknij START, aby rozpocząć grę"
 horizontal_alignment = 1
 
 [node name="MoveCostLabel" type="Label" parent="HUD/Overlay" unique_id=711220004]
@@ -354,7 +358,7 @@ text = "Poziom 5"
 [node name="GeneralSkillsTitle" type="Label" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=1550517058]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.86, 0.72, 0.34, 1)
-text = "UMIEJETNOSCI GENERALA"
+text = "UMIEJĘTNOŚCI GENERAŁA"
 horizontal_alignment = 1
 
 [node name="GeneralSkillsButtons" type="VBoxContainer" parent="HUD/Overlay/RightPanel/RightMargin/RightContent" unique_id=170510001]
@@ -535,7 +539,7 @@ theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("StyleBoxTexture_end_turn")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_end_turn_hover")
 theme_override_styles/hover = SubResource("StyleBoxTexture_end_turn_hover")
-text = "ZAKOŃCZ TURĘ"
+text = "ZAKOŃCZ AKTYWACJĘ"
 
 [node name="LeftPanel" type="NinePatchRect" parent="HUD/Overlay" unique_id=198121168]
 texture_filter = 1

@@ -1365,7 +1365,7 @@ func start_battle(camp_pos: Vector2) -> bool:
 		"debug_enabled": GameSettings.debug_mode,
 		"player_faction": "humans",
 		"enemy_faction": str(camp_data.get("faction", "orcs")),
-		"ai_difficulty": "sredni",
+		"ai_difficulty": GameSettings.campaign_ai_difficulty,
 		"units": units,
 	}
 	var temporary_path := "%s.tmp" % request_path
@@ -1462,7 +1462,7 @@ func _open_battle_scene() -> bool:
 		battle_error_message = "Brak sceny walki."
 		push_error("Brak sceny walki: %s" % BATTLE_SCENE)
 		return false
-	var change_error := get_tree().change_scene_to_file(BATTLE_SCENE)
+	var change_error := SceneTransition.change_scene(BATTLE_SCENE, "PRZYGOTOWYWANIE BITWY")
 	if change_error != OK:
 		battle_error_message = "Nie udało się otworzyć sceny walki."
 		push_error("Nie można otworzyć sceny walki: %s" % error_string(change_error))

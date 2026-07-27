@@ -43,6 +43,7 @@ func setup_help_window():
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var close_btn = Button.new()
 	close_btn.text = "X"
+	close_btn.tooltip_text = "Zamknij"
 	close_btn.custom_minimum_size = Vector2(30, 30)
 	close_btn.pressed.connect(func(): help_window.visible = false)
 	hud._style_df_button(close_btn)
@@ -100,7 +101,9 @@ func _help_tab_text(key: String) -> String:
 		"sterowanie":
 			return "[b][color=#8fdc8f]Poruszanie się po mapie[/color][/b]\n" \
 				+ "• [b]Przeciągnij lewym przyciskiem myszy (LPM)[/b] po mapie, aby przesunąć kamerę.\n" \
-				+ "• [b]Kółko myszy[/b] — przybliżanie / oddalanie widoku mapy.\n\n" \
+				+ "• [b]Strzałki[/b] również przesuwają kamerę.\n" \
+				+ "• [b]Kółko myszy[/b] lub przyciski [b]+/−[/b] — przybliżanie / oddalanie widoku mapy.\n" \
+				+ "• Przycisk [b]Generał[/b] wyśrodkowuje kamerę na Twojej postaci.\n\n" \
 				+ "[b][color=#8fdc8f]Postać / jednostka gracza[/color][/b]\n" \
 				+ "• Kliknij [b]LPM[/b] na swoją postać, aby ją [b]zaznaczyć[/b] (zaznaczenie można zdjąć ponownym kliknięciem).\n" \
 				+ "• Gdy postać jest zaznaczona, kliknij [b]LPM[/b] na docelowe pole w zasięgu ruchu — postać przemieści się tam najkrótszą dostępną ścieżką.\n\n" \
@@ -138,7 +141,7 @@ func _help_tab_text(key: String) -> String:
 				+ "• Kliknij [b]PPM[/b] na pole z barakami i wybierz [b]„⚔️ Rekrutuj”[/b], aby otworzyć listę dostępnych jednostek do zwerbowania. Koszt rekrutacji poznasz po najechaniu kursorem na przycisk rekrutacji wybranej jednostki.\n" \
 				+ "• Rekrutacja trwa określoną liczbę tur — postęp widać na ikonie jednostki w oknie „Moja Armia”.\n\n" \
 				+ "[b][color=#8fdc8f]Zarządzanie armią[/color][/b]\n" \
-				+ "• Otwórz [b]„🛡️ Moja Armia”[/b] z menu kontekstowego pola, aby zobaczyć wszystkie zwerbowane jednostki, ich statystyki oraz usunąć wybraną jednostkę lub całą armię.\n\n" \
+				+ "• Otwórz [b]„Armia”[/b] ze stałego panelu po lewej stronie, aby zobaczyć wszystkie zwerbowane jednostki, ich statystyki oraz usunąć wybraną jednostkę lub całą armię.\n\n" \
 				+ "[b][color=#8fdc8f]Ruch jednostki[/color][/b]\n" \
 				+ "• Zaznacz swoją postać kliknięciem [b]LPM[/b], a następnie kliknij [b]LPM[/b] na pole docelowe w jej zasięgu ruchu."
 		"rozwoj":

@@ -60,6 +60,8 @@ func _populate_army():
 	var clear_all_btn = Button.new()
 	clear_all_btn.text = "Zwolnij armię"
 	clear_all_btn.custom_minimum_size = Vector2(120, 40)
+	clear_all_btn.disabled = EconomyManager.player_army.is_empty()
+	clear_all_btn.tooltip_text = "Zwolnij wszystkie jednostki" if not clear_all_btn.disabled else "Armia jest pusta"
 	clear_all_btn.pressed.connect(func():
 		var dialog = ConfirmationDialog.new()
 		dialog.title = "Potwierdzenie"
@@ -92,6 +94,7 @@ func _populate_army():
 	
 	var close_btn = Button.new()
 	close_btn.text = "X"
+	close_btn.tooltip_text = "Zamknij"
 	close_btn.custom_minimum_size = Vector2(40, 40)
 	close_btn.pressed.connect(func(): army_window.visible = false)
 	if hud.has_method("_style_df_button"):
@@ -101,6 +104,21 @@ func _populate_army():
 	header_hbox.add_child(title_label)
 	header_hbox.add_child(close_btn)
 	army_content_vbox.add_child(header_hbox)
+
+	var ready_count := 0
+	for unit in EconomyManager.player_army:
+		if int(unit.get("turns_in_recruitment", 0)) >= int(unit.get("turns_to_recruit", 0)):
+			ready_count += 1
+	var summary := Label.new()
+	summary.text = "Gotowe: %d • W szkoleniu: %d • Armia: %d/%d" % [
+		ready_count,
+		EconomyManager.player_army.size() - ready_count,
+		EconomyManager.player_army.size(),
+		EconomyManager.MAX_ARMY_SIZE,
+	]
+	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	summary.add_theme_color_override("font_color", hud.DF_GOLD_TEXT)
+	army_content_vbox.add_child(summary)
 	
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -202,7 +220,7 @@ func _populate_army():
 
 		var status_lbl = Label.new()
 		if group["is_ready"]:
-			status_lbl.text = "✅ Gotowa — przypisana do generała"
+			status_lbl.text = "✅ Gotowa do walki"
 			status_lbl.add_theme_color_override("font_color", Color(0.55, 0.85, 0.55))
 		else:
 			status_lbl.text = "⏳ W trakcie rekrutacji (jeszcze %d tur)" % group["turns_left"]

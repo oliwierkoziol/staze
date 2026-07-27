@@ -10,7 +10,8 @@ config_version=5
 
 [application]
 
-config/name="Nowy projekt gry"
+config/name="Królestwa Heksów"
+config/version="0.1.0"
 run/main_scene="res://ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
@@ -21,6 +22,7 @@ EconomyManager="*res://core/EconomyManager.gd"
 GameSettings="*res://core/GameSettings.gd"
 SaveManager="*res://core/SaveManager.gd"
 AudioManager="*res://core/AudioManager.gd"
+SceneTransition="*res://core/SceneTransition.gd"
 
 [display]
 

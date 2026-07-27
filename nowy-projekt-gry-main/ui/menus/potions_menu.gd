@@ -6,6 +6,7 @@ var my_potions_window: ColorRect
 var buy_potions_window: ColorRect
 var my_potions_list: VBoxContainer
 var buy_potions_list: VBoxContainer
+var my_shop_button: Button
 
 const POTION_IMAGES: Dictionary = {
 	"potka_sily_1": preload("res://assets/potions/cropped_Potion_of_Strength.png"),
@@ -58,7 +59,7 @@ func setup_potions_windows():
 	var header_hbox_my = HBoxContainer.new()
 	
 	var my_header = Label.new()
-	my_header.text = "🧪 Moje Potki"
+	my_header.text = "🧪 Moje mikstury"
 	my_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	my_header.add_theme_font_size_override("font_size", 24)
 	my_header.add_theme_color_override("font_color", Color(0.9, 0.7, 0.2))
@@ -66,12 +67,22 @@ func setup_potions_windows():
 	
 	var btn_close_my = Button.new()
 	btn_close_my.text = "X"
+	btn_close_my.tooltip_text = "Zamknij"
 	btn_close_my.custom_minimum_size = Vector2(40, 40)
 	btn_close_my.pressed.connect(func(): my_potions_window.visible = false)
 	if hud.has_method("_style_df_button"):
 		hud._style_df_button(btn_close_my)
 	
+	my_shop_button = Button.new()
+	my_shop_button.text = "Sklep"
+	my_shop_button.tooltip_text = "Kup mikstury w Laboratorium"
+	my_shop_button.custom_minimum_size = Vector2(90, 40)
+	my_shop_button.pressed.connect(show_buy_potions)
+	if hud.has_method("_style_df_button"):
+		hud._style_df_button(my_shop_button)
+
 	header_hbox_my.add_child(my_header)
+	header_hbox_my.add_child(my_shop_button)
 	header_hbox_my.add_child(btn_close_my)
 	my_vbox.add_child(header_hbox_my)
 	
@@ -115,7 +126,7 @@ func setup_potions_windows():
 	var header_hbox_buy = HBoxContainer.new()
 	
 	var buy_header = Label.new()
-	buy_header.text = "💰 Kup Potki"
+	buy_header.text = "💰 Sklep z miksturami"
 	buy_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	buy_header.add_theme_font_size_override("font_size", 24)
 	buy_header.add_theme_color_override("font_color", Color(0.9, 0.7, 0.2))
@@ -123,12 +134,22 @@ func setup_potions_windows():
 	
 	var btn_close_buy = Button.new()
 	btn_close_buy.text = "X"
+	btn_close_buy.tooltip_text = "Zamknij"
 	btn_close_buy.custom_minimum_size = Vector2(40, 40)
 	btn_close_buy.pressed.connect(func(): buy_potions_window.visible = false)
 	if hud.has_method("_style_df_button"):
 		hud._style_df_button(btn_close_buy)
 	
+	var btn_inventory := Button.new()
+	btn_inventory.text = "Moje"
+	btn_inventory.tooltip_text = "Wróć do posiadanych mikstur"
+	btn_inventory.custom_minimum_size = Vector2(90, 40)
+	btn_inventory.pressed.connect(func() -> void: show_my_potions(true))
+	if hud.has_method("_style_df_button"):
+		hud._style_df_button(btn_inventory)
+
 	header_hbox_buy.add_child(buy_header)
+	header_hbox_buy.add_child(btn_inventory)
 	header_hbox_buy.add_child(btn_close_buy)
 	buy_vbox.add_child(header_hbox_buy)
 	
@@ -145,12 +166,15 @@ func setup_potions_windows():
 	
 	hud.add_child(buy_potions_window)
 
-func show_my_potions():
+func show_my_potions(shop_available: bool = false):
+	buy_potions_window.visible = false
 	my_potions_window.visible = true
+	my_shop_button.visible = shop_available
 	my_potions_window.move_to_front()
 	_refresh_my_potions_list()
 
 func show_buy_potions():
+	my_potions_window.visible = false
 	buy_potions_window.visible = true
 	buy_potions_window.move_to_front()
 	_refresh_buy_potions_list()
@@ -162,9 +186,14 @@ func _refresh_my_potions_list():
 	var owned = EconomyManager.owned_potions
 	var active = EconomyManager.active_potions
 	
-	if owned.is_empty():
+	var has_owned := false
+	for amount in owned.values():
+		if int(amount) > 0:
+			has_owned = true
+			break
+	if not has_owned and active.is_empty():
 		var lbl = Label.new()
-		lbl.text = "Nie posiadasz żadnych potek."
+		lbl.text = "Nie posiadasz żadnych mikstur."
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 		my_potions_list.add_child(lbl)
@@ -257,7 +286,7 @@ func _refresh_my_potions_list():
 		
 		btn_use.disabled = has_active_of_type
 		if has_active_of_type:
-			btn_use.tooltip_text = "Masz już aktywną potkę tego typu."
+			btn_use.tooltip_text = "Masz już aktywną miksturę tego typu."
 			
 		btn_use.pressed.connect(func():
 			if EconomyManager.use_potion(p_id):
@@ -331,6 +360,13 @@ func _refresh_buy_potions_list():
 				break
 				
 		btn_buy.disabled = not can_afford
+		if not can_afford:
+			var missing: Array[String] = []
+			for res in p_data["cost"]:
+				var shortage := int(p_data["cost"][res]) - int(EconomyManager.resources.get(res, 0))
+				if shortage > 0:
+					missing.append("%d %s" % [shortage, res])
+			btn_buy.tooltip_text = "Brakuje: %s" % ", ".join(missing)
 		btn_buy.pressed.connect(func():
 			if EconomyManager.buy_potion(p_id):
 				if AudioManager: AudioManager.play_buy()

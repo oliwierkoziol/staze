@@ -325,10 +325,6 @@ var terrain_effects: Array[Dictionary] = []
 var setup_mode := true
 var setup_drag_unit_id := -1
 var last_battle_config_source := ""
-var setup_controls: HBoxContainer
-var save_setup_button: Button
-var reset_battle_button: Button
-var load_setup_button: Button
 @onready var pause_menu: CanvasLayer = $PauseMenu
 var _web_load_input: Variant
 var _web_load_reader: Variant
@@ -352,12 +348,17 @@ var help_mode_tutorial := true
 var tutorial_page := 0
 var victory_overlay: Control
 var victory_title_label: Label
+var victory_restart_button: Button
+var victory_finish_button: Button
+var victory_summary_label: Label
 var tutorial_acknowledged := false
 var displayed_path_cost := -1
 var selected_obstacle_cell := Vector2i(-1, -1)
 var detonator_activated := false
 var screen_message_label: Label
 var screen_message_tween: Tween
+var battle_round_label: Label
+var battle_objective_label: Label
 var last_hover_warning_cell := Vector2i(-2, -2)
 var last_hover_warning_text := ""
 var stage_transition_overlay: ColorRect
@@ -389,6 +390,7 @@ func _ready() -> void:
 	_build_help_popup()
 	_build_victory_overlay()
 	_build_screen_message_label()
+	_build_battle_hud_controls()
 	_build_stage_transition_overlay()
 	_build_settings_menu()
 	_connect_pause_menu_signals()
@@ -475,7 +477,7 @@ func _start_campaign_battle(request: Dictionary) -> void:
 	campaign_mode = true
 	campaign_request = request.duplicate(true)
 	campaign_result_path = str(request.get("result_path", ""))
-	campaign_debug_enabled = bool(request.get("debug_enabled", false))
+	campaign_debug_enabled = OS.is_debug_build() and bool(request.get("debug_enabled", false))
 	pause_menu.set_campaign_mode(true)
 	current_player_faction = str(request.get("player_faction", "humans"))
 	current_enemy_faction = str(request.get("enemy_faction", "orcs"))
@@ -608,7 +610,7 @@ func _show_team_setup() -> void:
 	setup.setup_finished.connect(_on_team_setup_finished)
 	setup.setup_loaded.connect(_on_team_setup_loaded)
 	setup.custom_setup_finished.connect(_on_custom_setup_finished)
-	setup.settings_requested.connect(_on_settings_requested)
+	setup.main_menu_requested.connect(_return_to_main_menu)
 	add_child(setup)
 	if hud != null:
 		hud.visible = false
@@ -736,22 +738,6 @@ func _ustaw_muzyke(muzyka: AudioStream) -> void:
 	tween_muzyki.tween_property(odtwarzacz_muzyki, "volume_db", docelowa_glosnosc, 2.0)
 
 
-func _pobierz_glosnosc_glowna() -> float:
-	var bus_index: int = AudioServer.get_bus_index("Master")
-	if bus_index < 0 or AudioServer.is_bus_mute(bus_index):
-		return 0.0
-	return clampf(db_to_linear(AudioServer.get_bus_volume_db(bus_index)) * 100.0, 0.0, 100.0)
-
-
-func _on_glosnosc_glowna_changed(value: float) -> void:
-	var bus_index: int = AudioServer.get_bus_index("Master")
-	if bus_index < 0:
-		return
-	AudioServer.set_bus_mute(bus_index, value <= 0.0)
-	if value > 0.0:
-		AudioServer.set_bus_volume_db(bus_index, linear_to_db(value / 100.0))
-
-
 func _sync_board_map_theme() -> void:
 	if not is_node_ready() or board == null:
 		return
@@ -834,7 +820,7 @@ func _compute_enemy_positions(count: int) -> Array[Vector2i]:
 
 
 func _setup_battle_scene() -> void:
-	_build_setup_controls()
+	_build_save_load_dialogs()
 	_connect_signal_once(board.cell_clicked, _on_cell_clicked)
 	_connect_signal_once(board.cell_double_clicked, _on_cell_double_clicked)
 	_connect_signal_once(board.cell_left_released, _on_cell_left_released)
@@ -858,25 +844,9 @@ func _load_skill_library() -> void:
 	skill_library = UnitTypeLibraryScript.get_skill_library()
 
 
-func _build_setup_controls() -> void:
-	if is_instance_valid(setup_controls):
+func _build_save_load_dialogs() -> void:
+	if is_instance_valid(save_setup_dialog):
 		return
-	setup_controls = HBoxContainer.new()
-	setup_controls.add_theme_constant_override("separation", 8)
-	setup_controls.visible = false
-	add_child(setup_controls)
-
-	save_setup_button = _make_setup_button("ZAPISZ")
-	save_setup_button.pressed.connect(_on_save_setup_pressed)
-	setup_controls.add_child(save_setup_button)
-
-	reset_battle_button = _make_setup_button("RESET")
-	reset_battle_button.pressed.connect(_on_reset_battle_pressed)
-	setup_controls.add_child(reset_battle_button)
-
-	load_setup_button = _make_setup_button("WCZYTAJ")
-	load_setup_button.pressed.connect(_on_load_setup_pressed)
-	setup_controls.add_child(load_setup_button)
 
 	save_setup_dialog = FileDialog.new()
 	save_setup_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
@@ -903,12 +873,27 @@ func _on_pause_resume_pressed() -> void:
 	pause_menu.close_menu()
 
 
-func _on_pause_retreat_pressed() -> void:
+func _on_pause_restart_pressed() -> void:
 	pause_menu.close_menu()
+	_enter_setup_mode(false)
+
+
+func _on_pause_mode_menu_pressed() -> void:
+	pause_menu.close_menu()
+	_return_to_skirmish_menu()
+
+
+func _return_to_main_menu() -> void:
+	get_tree().paused = false
+	var audio_manager: Node = get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method("stop_bg_music"):
+		audio_manager.call("stop_bg_music")
+	SceneTransition.change_scene("res://ui/main_menu.tscn", "POWRÓT DO MENU")
+
+
+func _on_pause_retreat_pressed() -> void:
 	if campaign_mode:
 		_finish_campaign_battle("retreat")
-		return
-	_on_reset_battle_pressed(true)
 
 
 func _connect_signal_once(source_signal: Signal, callback: Callable) -> void:
@@ -916,23 +901,15 @@ func _connect_signal_once(source_signal: Signal, callback: Callable) -> void:
 		source_signal.connect(callback)
 
 
-func _make_setup_button(text: String) -> Button:
-	var button := Button.new()
-	button.custom_minimum_size = Vector2(0, 36)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.text = text
-	return button
-
-
 func _should_skip_tutorial() -> bool:
 	return free_setup_mode
 
 
-func _enter_setup_mode() -> void:
+func _enter_setup_mode(show_tutorial: bool = true) -> void:
 	setup_mode = true
 	help_mode_tutorial = true
 	tutorial_page = 0
-	tutorial_acknowledged = _should_skip_tutorial()
+	tutorial_acknowledged = _should_skip_tutorial() or not show_tutorial
 	_update_setup_hint_visibility()
 	units = unit_configs.map(func(unit: Dictionary) -> Dictionary: return _prepare_unit(unit.duplicate(true)))
 	obstacles = _generate_obstacles()
@@ -942,14 +919,20 @@ func _enter_setup_mode() -> void:
 	active_unit_id = -1
 	current_turn = ""
 	pending_skill_id = ""
+	pending_general_skill_id = ""
+	general_skill_used = false
 	is_animating = false
+	active_turn_has_log = false
+	detonator_activated = false
 	round_number = 1
+	next_map_event_round = 0
 	next_map_event_id = ""
 	map_event_cells.clear()
 	board.set_detonator_warning_cells([])
 	board.clear_falling_rock_cells()
 	_schedule_next_map_event(0)
 	turn_queue_index = -1
+	turn_queue.clear()
 	event_log.clear()
 	board.set_selected_unit(-1)
 	board.set_hovered_move_path([])
@@ -960,9 +943,10 @@ func _enter_setup_mode() -> void:
 	selected_obstacle_cell = Vector2i(-1, -1)
 	_log_event(_color_log_text("Tryb przygotowania: ustaw jednostki i kliknij START po prawej.", LOG_COLOR_YELLOW))
 	_update_action_buttons()
+	_refresh_general_ability_buttons()
 	_sync_board()
-	if help_popup != null and hud.visible and not _should_skip_tutorial():
-		_set_help_popup_visible(true)
+	if help_popup != null:
+		_set_help_popup_visible(show_tutorial and hud.visible and not _should_skip_tutorial())
 
 
 func _on_start_battle_pressed() -> void:
@@ -1184,9 +1168,7 @@ func _typed_int_array(value: Variant) -> Array[int]:
 	return result
 
 
-func _on_reset_battle_pressed(ignore_tutorial: bool = false) -> void:
-	if help_popup != null and help_popup.visible and not ignore_tutorial:
-		return
+func _return_to_skirmish_menu() -> void:
 	setup_mode = true
 	help_mode_tutorial = true
 	tutorial_page = 0
@@ -1202,9 +1184,11 @@ func _on_reset_battle_pressed(ignore_tutorial: bool = false) -> void:
 	active_unit_id = -1
 	current_turn = ""
 	pending_skill_id = ""
+	pending_general_skill_id = ""
 	selected_obstacle_cell = Vector2i(-1, -1)
 	is_animating = false
 	turn_queue_index = -1
+	turn_queue.clear()
 	event_log.clear()
 	unit_configs.clear()
 	units.clear()
@@ -5734,6 +5718,8 @@ func _connect_pause_menu_signals() -> void:
 	pause_menu.resume_requested.connect(_on_pause_resume_pressed)
 	pause_menu.save_requested.connect(_on_save_setup_pressed.bind(true))
 	pause_menu.load_requested.connect(_on_load_setup_pressed.bind(true))
+	pause_menu.restart_requested.connect(_on_pause_restart_pressed)
+	pause_menu.mode_menu_requested.connect(_on_pause_mode_menu_pressed)
 	pause_menu.retreat_requested.connect(_on_pause_retreat_pressed)
 	pause_menu.settings_requested.connect(_on_settings_requested)
 	pause_menu.settings_close_requested.connect(_close_settings)
@@ -5783,7 +5769,10 @@ func _build_settings_menu() -> void:
 	title.add_theme_color_override("font_color", Color(0.86, 0.72, 0.34, 1.0))
 	column.add_child(title)
 
-	_add_volume_slider(column, "GŁOŚNOŚĆ", _pobierz_glosnosc_glowna(), _on_glosnosc_glowna_changed)
+	_add_volume_slider(column, "GŁOŚNOŚĆ GŁÓWNA (WSZYSTKO)", &"Master")
+	_add_volume_slider(column, "EFEKTY", &"Effects")
+	_add_volume_slider(column, "DIALOGI", &"Dialogue")
+	_add_volume_slider(column, "MUZYKA", &"Music")
 
 	var close_button := Button.new()
 	close_button.text = "POWRÓT"
@@ -5793,30 +5782,35 @@ func _build_settings_menu() -> void:
 	column.add_child(close_button)
 
 	ustawienia_layer.visible = false
-	assert(AudioServer.get_bus_index("Master") >= 0, "Wspolna magistrala Master musi byc dostepna.")
+	for bus_name in GameSettings.AUDIO_BUSES:
+		assert(AudioServer.get_bus_index(bus_name) >= 0, "Magistrala audio %s musi być dostępna." % bus_name)
 
 
-func _add_volume_slider(parent: VBoxContainer, label_text: String, value: float, callback: Callable) -> void:
+func _add_volume_slider(parent: VBoxContainer, label_text: String, bus_name: StringName) -> void:
+	var group := VBoxContainer.new()
+	group.add_theme_constant_override("separation", 4)
+	parent.add_child(group)
+
 	var label := Label.new()
 	label.text = label_text
 	label.add_theme_font_size_override("font_size", 18)
-	parent.add_child(label)
+	group.add_child(label)
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
-	parent.add_child(row)
+	group.add_child(row)
 
 	var slider := HSlider.new()
 	slider.min_value = 0.0
 	slider.max_value = 100.0
 	slider.step = 1.0
-	slider.value = value
+	slider.value = GameSettings.get_audio_volume(bus_name)
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	slider.custom_minimum_size = Vector2(360, 36)
 	row.add_child(slider)
 
 	var value_label := Label.new()
-	value_label.text = "%d%%" % int(value)
+	value_label.text = "%d%%" % int(slider.value)
 	value_label.custom_minimum_size = Vector2(64, 0)
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	value_label.add_theme_font_size_override("font_size", 18)
@@ -5824,7 +5818,7 @@ func _add_volume_slider(parent: VBoxContainer, label_text: String, value: float,
 
 	slider.value_changed.connect(func(new_value: float) -> void:
 		value_label.text = "%d%%" % int(new_value)
-		callback.call(new_value)
+		GameSettings.set_audio_volume(bus_name, new_value)
 	)
 
 
@@ -6015,12 +6009,12 @@ func _build_victory_overlay() -> void:
 	hud.add_child(victory_overlay)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(460, 0)
+	panel.custom_minimum_size = Vector2(520, 0)
 	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.offset_left = -230
-	panel.offset_top = -120
-	panel.offset_right = 230
-	panel.offset_bottom = 120
+	panel.offset_left = -260
+	panel.offset_top = -160
+	panel.offset_right = 260
+	panel.offset_bottom = 160
 	victory_overlay.add_child(panel)
 
 	var margin := MarginContainer.new()
@@ -6039,13 +6033,31 @@ func _build_victory_overlay() -> void:
 	victory_title_label.add_theme_font_size_override("font_size", 30)
 	column.add_child(victory_title_label)
 
-	var finish_button := Button.new()
-	finish_button.text = "ZAKOŃCZ"
-	finish_button.custom_minimum_size = Vector2(220, 52)
-	finish_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	finish_button.add_theme_font_size_override("font_size", 22)
-	finish_button.pressed.connect(_on_victory_finish_pressed)
-	column.add_child(finish_button)
+	victory_summary_label = Label.new()
+	victory_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	victory_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	victory_summary_label.add_theme_font_size_override("font_size", 17)
+	victory_summary_label.add_theme_color_override("font_color", Color(0.84, 0.8, 0.7, 1.0))
+	column.add_child(victory_summary_label)
+
+	var actions := HBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.add_theme_constant_override("separation", 14)
+	column.add_child(actions)
+
+	victory_restart_button = Button.new()
+	victory_restart_button.text = "POWTÓRZ WALKĘ"
+	victory_restart_button.custom_minimum_size = Vector2(210, 52)
+	victory_restart_button.add_theme_font_size_override("font_size", 20)
+	victory_restart_button.pressed.connect(_on_victory_restart_pressed)
+	actions.add_child(victory_restart_button)
+
+	victory_finish_button = Button.new()
+	victory_finish_button.text = "MENU POTYCZKI"
+	victory_finish_button.custom_minimum_size = Vector2(210, 52)
+	victory_finish_button.add_theme_font_size_override("font_size", 20)
+	victory_finish_button.pressed.connect(_on_victory_finish_pressed)
+	actions.add_child(victory_finish_button)
 
 
 func _show_victory_overlay(winner_side: String) -> void:
@@ -6053,9 +6065,44 @@ func _show_victory_overlay(winner_side: String) -> void:
 		return
 	if campaign_mode:
 		campaign_outcome = "victory" if winner_side == "player" else "defeat"
-	var winner_name := "GRACZ" if winner_side == "player" else "PRZECIWNIK"
-	victory_title_label.text = "ZWYCIĘSTWO: %s" % winner_name
+		victory_title_label.text = "ZWYCIĘSTWO" if winner_side == "player" else "PORAŻKA"
+		victory_restart_button.visible = false
+		victory_finish_button.text = "WRÓĆ DO MAPY"
+	else:
+		var winner_name := "GRACZ" if winner_side == "player" else "PRZECIWNIK"
+		victory_title_label.text = "ZWYCIĘZCA: %s" % winner_name
+		victory_restart_button.visible = true
+		victory_finish_button.text = "MENU POTYCZKI"
+	victory_summary_label.text = _battle_result_summary()
 	victory_overlay.visible = true
+
+
+func _battle_result_summary() -> String:
+	var initial_player := 0
+	var initial_enemy := 0
+	for unit in unit_configs:
+		if str(unit.get("side", "")) == "player":
+			initial_player += int(unit.get("count", 1))
+		elif str(unit.get("side", "")) == "enemy":
+			initial_enemy += int(unit.get("count", 1))
+	var player_survivors := 0
+	var enemy_survivors := 0
+	for unit in units:
+		if str(unit.get("side", "")) == "player":
+			player_survivors += int(unit.get("count", 0))
+		elif str(unit.get("side", "")) == "enemy":
+			enemy_survivors += int(unit.get("count", 0))
+	return (
+		"Rundy: %d\n"
+		+ "Gracz — ocalali: %d, straty: %d\n"
+		+ "Przeciwnik — ocalali: %d, straty: %d"
+	) % [
+		round_number,
+		player_survivors,
+		maxi(0, initial_player - player_survivors),
+		enemy_survivors,
+		maxi(0, initial_enemy - enemy_survivors),
+	]
 
 
 func _build_screen_message_label() -> void:
@@ -6074,6 +6121,54 @@ func _build_screen_message_label() -> void:
 	screen_message_label.add_theme_color_override("font_outline_color", Color(0.08, 0.02, 0.02, 1.0))
 	screen_message_label.add_theme_constant_override("outline_size", 6)
 	hud.add_child(screen_message_label)
+
+
+func _build_battle_hud_controls() -> void:
+	var status_row := HBoxContainer.new()
+	status_row.name = "BattleStatusRow"
+	status_row.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	status_row.offset_left = -250
+	status_row.offset_top = 112
+	status_row.offset_right = 250
+	status_row.offset_bottom = 154
+	status_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	status_row.add_theme_constant_override("separation", 12)
+	hud.add_child(status_row)
+
+	var help_button := Button.new()
+	help_button.text = "POMOC"
+	help_button.tooltip_text = "Pomoc (Tab)"
+	help_button.custom_minimum_size = Vector2(80, 38)
+	help_button.pressed.connect(_toggle_help_popup)
+	status_row.add_child(help_button)
+
+	battle_round_label = Label.new()
+	battle_round_label.text = "ROZSTAWIENIE"
+	battle_round_label.custom_minimum_size = Vector2(300, 38)
+	battle_round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	battle_round_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	battle_round_label.add_theme_font_size_override("font_size", 18)
+	battle_round_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.78, 1.0))
+	status_row.add_child(battle_round_label)
+
+	var menu_button := Button.new()
+	menu_button.text = "MENU"
+	menu_button.tooltip_text = "Menu pauzy (Esc)"
+	menu_button.custom_minimum_size = Vector2(80, 38)
+	menu_button.pressed.connect(_toggle_pause_menu)
+	status_row.add_child(menu_button)
+
+	battle_objective_label = Label.new()
+	battle_objective_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	battle_objective_label.offset_left = -250
+	battle_objective_label.offset_top = 156
+	battle_objective_label.offset_right = 250
+	battle_objective_label.offset_bottom = 180
+	battle_objective_label.text = "CEL: POKONAJ WSZYSTKIE WROGIE ODDZIAŁY"
+	battle_objective_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	battle_objective_label.add_theme_font_size_override("font_size", 13)
+	battle_objective_label.add_theme_color_override("font_color", Color(0.72, 0.63, 0.45, 1.0))
+	hud.add_child(battle_objective_label)
 
 
 func _show_hover_warning(text: String, cell: Vector2i) -> void:
@@ -6146,6 +6241,12 @@ func _show_screen_message(text: String, duration := 2.5) -> void:
 	)
 
 
+func _on_victory_restart_pressed() -> void:
+	if victory_overlay != null:
+		victory_overlay.visible = false
+	_enter_setup_mode(false)
+
+
 func _on_victory_finish_pressed() -> void:
 	if victory_overlay != null:
 		victory_overlay.visible = false
@@ -6153,28 +6254,7 @@ func _on_victory_finish_pressed() -> void:
 		if not _finish_campaign_battle(campaign_outcome) and victory_overlay != null:
 			victory_overlay.visible = true
 		return
-	setup_mode = true
-	current_player_faction = ""
-	current_enemy_faction = ""
-	free_setup_mode = false
-	castle_stage = 0
-	_set_battle_background(DEFAULT_BATTLE_BACKGROUND_PATH)
-	selected_unit_id = -1
-	setup_drag_unit_id = -1
-	active_unit_id = -1
-	current_turn = ""
-	pending_skill_id = ""
-	selected_obstacle_cell = Vector2i(-1, -1)
-	is_animating = false
-	turn_queue_index = -1
-	turn_queue.clear()
-	event_log.clear()
-	unit_configs.clear()
-	units.clear()
-	obstacles.clear()
-	terrain_effects.clear()
-	_clear_selected_unit()
-	_show_team_setup()
+	_return_to_skirmish_menu()
 
 
 func _finish_campaign_battle(outcome: String) -> bool:
@@ -6183,7 +6263,7 @@ func _finish_campaign_battle(outcome: String) -> bool:
 	get_tree().paused = false
 	var host_scene := "res://scenes/game_world.tscn"
 	if ResourceLoader.exists(host_scene):
-		var change_error := get_tree().change_scene_to_file(host_scene)
+		var change_error := SceneTransition.change_scene(host_scene, "POWRÓT DO MAPY")
 		if change_error == OK:
 			return true
 		push_error("Nie mozna wrocic do glownej sceny: %s" % error_string(change_error))
@@ -6529,6 +6609,7 @@ func _validate_runtime_setup() -> void:
 	_apply_terrain_effects_to_unit(bush_unit)
 	assert(_has_effect(bush_unit, "zatrucie"), "Toksyczna chmura musi dzialac na jednostke stojaca w krzaku.")
 	var hidden_enemy := {"side": "enemy", "grid_x": 5, "grid_y": 5, "is_hidden": true, "active_effects": []}
+	units = [hidden_enemy]
 	assert(not _can_see_target({"side": "player", "grid_x": 0, "grid_y": 0}, hidden_enemy), "Ukryty cel w krzaku nie moze byc widoczny z daleka.")
 	assert(_find_visible_unit_at_cell(Vector2i(5, 5), {"side": "player", "grid_x": 0, "grid_y": 0}).is_empty(), "Tooltip obrazen nie moze celowac w ukrytego wroga z daleka.")
 	assert(_can_see_target({"side": "player", "grid_x": 6, "grid_y": 5}, hidden_enemy), "Gracz obok krzaka musi widziec ukrytego wroga.")
@@ -6579,9 +6660,9 @@ func _validate_runtime_setup() -> void:
 	bush_unit.grid_y = 4
 	units = [bush_unit, ambush_enemy]
 	_apply_terrain_effects_to_unit(ambush_enemy)
-	obstacles[2]["type"] = "holy_tree"
+	obstacles[3]["type"] = "holy_tree"
 	assert(not _is_ambush_cell_for_unit(bush_unit, Vector2i(5, 5)), "Ukrycie poza krzakiem nie moze wykonac zasadzki.")
-	obstacles[2]["type"] = "krzok"
+	obstacles[3]["type"] = "krzok"
 	assert(_is_ambush_cell_for_unit(bush_unit, Vector2i(5, 5)), "Ukryty wrog w krzaku musi byc polem zasadzki.")
 	assert(_get_blocked_cells(int(bush_unit.id)).has(Vector2i(5, 5)), "Ukryty wrog musi blokowac wejscie w krzak.")
 	var ambush_path: Array[Vector2i] = _find_path(bush_unit, Vector2i(5, 4), Vector2i(5, 5), {}, 1)
@@ -6956,9 +7037,25 @@ func _update_action_buttons() -> void:
 	if not selected_unit.is_empty():
 		unit_abilities_panel.set_skills(_build_skill_cards(selected_unit))
 	var active_unit: Dictionary = _get_active_unit()
-	end_turn_button.text = "START" if setup_mode else "ZAKOŃCZ TURĘ"
+	end_turn_button.text = "START" if setup_mode else "ZAKOŃCZ AKTYWACJĘ"
 	end_turn_button.disabled = is_animating or (not setup_mode and (not _is_manual_turn() or active_unit.is_empty() or not _is_manual_side(str(active_unit.side))))
+	_update_battle_status(active_unit)
 	_refresh_general_ability_buttons()
+
+
+func _update_battle_status(active_unit: Dictionary) -> void:
+	if battle_round_label == null:
+		return
+	if setup_mode:
+		battle_round_label.text = "ROZSTAWIENIE"
+		return
+	if active_unit.is_empty():
+		battle_round_label.text = "RUNDA %d" % round_number
+		return
+	var side_name := "GRACZ"
+	if str(active_unit.get("side", "")) == "enemy":
+		side_name = "GRACZ 2" if ai_difficulty == "gracz" else "PRZECIWNIK"
+	battle_round_label.text = "RUNDA %d • %s • %s" % [round_number, side_name, str(active_unit.get("name", "")).to_upper()]
 
 
 func _on_end_turn_button_pressed() -> void:

@@ -19,6 +19,8 @@ func _sprawdz(warunek: bool, opis: String) -> void:
 
 
 func _uruchom() -> void:
+	var game_settings: Node = root.get_node("GameSettings")
+	var audio_manager: Node = root.get_node("AudioManager")
 	for projectile_kind in ["arrows", "spell", "fireball", "dynamite", "throwing_axe"]:
 		_sprawdz(ZasobyAnimacjiWalkiScript.pobierz_pocisk(projectile_kind) != null, "Zasob pocisku istnieje: %s" % projectile_kind)
 	_sprawdz(ZasobyAnimacjiWalkiScript.pobierz_pocisk("nieznany") == null, "Nieznany pocisk nie tworzy zasobu")
@@ -28,7 +30,7 @@ func _uruchom() -> void:
 	gra.board._spawn_projectile(Vector2.ZERO, Vector2(100.0, 0.0), "spell")
 	_sprawdz(gra.board.active_projectiles.size() == 1, "Pocisk jest dodawany do warstwy animacji")
 	_sprawdz(is_zero_approx(float(gra.board.active_projectiles[0].rotation)), "Pocisk zachowuje kierunek w lokalnym ukladzie planszy")
-	await create_timer(0.2).timeout
+	await create_timer(0.3).timeout
 	_sprawdz(gra.board.active_projectiles.is_empty(), "Pocisk jest usuwany po zakonczeniu tweenu")
 	gra._connect_signal_once(gra.board.animation_finished, gra._on_board_animation_finished)
 	gra._connect_signal_once(gra.board.unit_step, gra._on_board_unit_step)
@@ -133,12 +135,17 @@ func _uruchom() -> void:
 	_sprawdz(nowy_przycisk.pressed.is_connected(gra._odtworz_sfx_klikniecia), "Nowe przyciski automatycznie otrzymuja SFX klikniecia")
 	_sprawdz(is_equal_approx(gra.odtwarzacz_sfx_broni.volume_db, -12.0), "SFX broni ma stonowana glosnosc")
 	_sprawdz(is_equal_approx(gra.odtwarzacz_sfx_interfejsu.volume_db, -12.0), "SFX interfejsu ma stonowana glosnosc")
-	var master_bus_index: int = AudioServer.get_bus_index("Master")
-	var poprzednie_wyciszenie: bool = AudioServer.is_bus_mute(master_bus_index)
-	var poprzednia_glosnosc: float = AudioServer.get_bus_volume_db(master_bus_index)
-	gra._on_glosnosc_glowna_changed(35.0)
-	_sprawdz(is_equal_approx(gra._pobierz_glosnosc_glowna(), 35.0), "Walka korzysta ze wspolnej glosnosci Master")
-	AudioServer.set_bus_volume_db(master_bus_index, poprzednia_glosnosc)
-	AudioServer.set_bus_mute(master_bus_index, poprzednie_wyciszenie)
+	for bus_name in [&"Master", &"Music", &"Effects", &"Dialogue"]:
+		_sprawdz(AudioServer.get_bus_index(bus_name) >= 0, "Magistrala audio istnieje: %s" % bus_name)
+	_sprawdz(gra.odtwarzacz_muzyki.bus == &"Music", "Muzyka walki korzysta z magistrali Music")
+	_sprawdz(gra.odtwarzacz_sfx_broni.bus == &"Effects" and gra.odtwarzacz_sfx_interfejsu.bus == &"Effects", "Efekty walki korzystaja z magistrali Effects")
+	_sprawdz(gra.odtwarzacz_sfx_jednostek.bus == &"Dialogue", "Kwestie jednostek korzystaja z magistrali Dialogue")
+	_sprawdz(audio_manager.bg_music.bus == &"Music" and audio_manager.build_sound.bus == &"Effects", "Dzwieki kampanii korzystaja z odpowiednich magistral")
+	var previous_effects_volume: float = game_settings.get_audio_volume(&"Effects")
+	var previous_master_volume: float = game_settings.get_audio_volume(&"Master")
+	game_settings.set_audio_volume(&"Effects", 35.0, false)
+	_sprawdz(is_equal_approx(game_settings.get_audio_volume(&"Effects"), 35.0), "Glosnosc efektow zmienia sie niezaleznie")
+	_sprawdz(is_equal_approx(game_settings.get_audio_volume(&"Master"), previous_master_volume), "Zmiana efektow nie zmienia Master")
+	game_settings.set_audio_volume(&"Effects", previous_effects_volume, false)
 	print("ANIMATION_TEST_FAILURES=", bledy.size())
 	quit(bledy.size())

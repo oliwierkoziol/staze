@@ -42,6 +42,7 @@ func setup_workshop_window():
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var close_btn = Button.new()
 	close_btn.text = "X"
+	close_btn.tooltip_text = "Zamknij"
 	close_btn.custom_minimum_size = Vector2(30, 30)
 	close_btn.pressed.connect(func(): workshop_window.visible = false)
 	hud._style_df_button(close_btn)
@@ -108,23 +109,35 @@ func _general_with_army_on_tile() -> bool:
 	return gen_tile == _current_tile_pos
 
 func _on_heal_pressed() -> void:
-	if not _general_with_army_on_tile():
+	if not _general_with_army_on_tile() or not _has_wounded_units():
 		return
 	EconomyManager.heal_army_units()
 	if AudioManager: AudioManager.play_heal()
 	_refresh_status()
 
 func _refresh_status() -> void:
-	var can_heal = _general_with_army_on_tile()
+	var general_present := _general_with_army_on_tile()
+	var has_wounded := _has_wounded_units()
+	var can_heal := general_present and has_wounded
 	if can_heal:
 		status_label.text = "✅ Generał z armią stoi na tym polu — możesz leczyć jednostki."
 		status_label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.55))
+	elif general_present:
+		status_label.text = "Armia nie ma rannych jednostek."
+		status_label.add_theme_color_override("font_color", Color(0.75, 0.72, 0.62))
 	else:
 		status_label.text = "⚠️ Aby leczyć, generał z przypisaną armią musi stać dokładnie na tym polu."
 		status_label.add_theme_color_override("font_color", Color(0.85, 0.55, 0.4))
 
 	heal_button.disabled = not can_heal
 	heal_button.modulate.a = 1.0 if can_heal else 0.5
+
+
+func _has_wounded_units() -> bool:
+	for unit in EconomyManager.player_army:
+		if int(unit.get("current_hp", unit.get("hp", 0))) < int(unit.get("hp", 0)):
+			return true
+	return false
 
 func show_workshop_menu(tile_pos: Vector2) -> void:
 	_current_tile_pos = tile_pos

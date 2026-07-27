@@ -42,6 +42,7 @@ func setup_temple_window():
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var close_btn = Button.new()
 	close_btn.text = "X"
+	close_btn.tooltip_text = "Zamknij"
 	close_btn.custom_minimum_size = Vector2(30, 30)
 	close_btn.pressed.connect(func(): temple_window.visible = false)
 	hud._style_df_button(close_btn)

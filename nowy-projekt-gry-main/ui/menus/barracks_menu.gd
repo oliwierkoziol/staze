@@ -90,6 +90,7 @@ func _populate_barracks_units(faction: Dictionary):
 	
 	var close_btn = Button.new()
 	close_btn.text = "X"
+	close_btn.tooltip_text = "Zamknij"
 	close_btn.custom_minimum_size = Vector2(40, 40)
 	close_btn.pressed.connect(func(): barracks_window.visible = false)
 	if hud.has_method("_style_df_button"):
@@ -164,11 +165,29 @@ func _populate_barracks_units(faction: Dictionary):
 			
 			var btn_recruit = Button.new()
 			var cost = EconomyManager.calculate_unit_cost(unit)
+			var training_turns := EconomyManager.calculate_recruitment_turns(unit)
+			var cost_label := Label.new()
+			cost_label.text = "Koszt: %d złota, %d żelaza, %d jedzenia, %d populacji • Szkolenie: %d tur" % [
+				cost.get("Złoto", 0),
+				cost.get("Żelazo", 0),
+				cost.get("Jedzenie", 0),
+				cost.get("Populacja", 0),
+				training_turns,
+			]
+			cost_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			cost_label.add_theme_font_size_override("font_size", 12)
+			cost_label.add_theme_color_override("font_color", Color(0.85, 0.75, 0.4))
+			info_vbox.add_child(cost_label)
+
 			btn_recruit.text = "Zwerbuj"
-			if EconomyManager.is_army_full():
-				btn_recruit.tooltip_text = "Osiągnięto maksymalną liczbę jednostek w armii (%d/%d)." % [EconomyManager.player_army.size(), EconomyManager.MAX_ARMY_SIZE]
-			else:
-				btn_recruit.tooltip_text = "Koszt:\n%d Złota\n%d Żelaza\n%d Jedzenia\n%d Populacji" % [cost.get("Złoto", 0), cost.get("Żelazo", 0), cost.get("Jedzenie", 0), cost.get("Populacja", 0)]
+			var block_reason := _recruit_block_reason(unit, cost)
+			btn_recruit.disabled = block_reason != ""
+			btn_recruit.tooltip_text = (
+				"Koszt:\n%d złota\n%d żelaza\n%d jedzenia\n%d populacji\nCzas szkolenia: %d tur"
+				% [cost.get("Złoto", 0), cost.get("Żelazo", 0), cost.get("Jedzenie", 0), cost.get("Populacja", 0), training_turns]
+			)
+			if block_reason != "":
+				btn_recruit.tooltip_text += "\n\nNIEDOSTĘPNE: %s" % block_reason
 			btn_recruit.custom_minimum_size = Vector2(150, 40)
 			btn_recruit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			btn_recruit.pressed.connect(func():
@@ -190,7 +209,7 @@ func _populate_barracks_units(faction: Dictionary):
 				if AudioManager: AudioManager.play_recruit()
 				_populate_barracks_units(faction)
 			)
-			if EconomyManager.can_recruit_unit(unit):
+			if not btn_recruit.disabled:
 				var style_ok = StyleBoxFlat.new()
 				style_ok.bg_color = Color(0.2, 0.6, 0.2)
 				style_ok.set_corner_radius_all(4)
@@ -200,3 +219,21 @@ func _populate_barracks_units(faction: Dictionary):
 			
 			hbox.add_child(btn_recruit)
 			vbox.add_child(panel)
+
+
+func _recruit_block_reason(unit: Dictionary, cost: Dictionary) -> String:
+	if EconomyManager.is_army_full():
+		return "limit armii %d/%d" % [EconomyManager.player_army.size(), EconomyManager.MAX_ARMY_SIZE]
+	var unit_name := str(unit.get("name", ""))
+	if "Konnica" in unit_name and EconomyManager.technology_tree.has("Konnica") and not EconomyManager.technology_tree["Konnica"]["unlocked"]:
+		return "wymagana technologia „Konnica”"
+	if "Magowie" in unit_name and EconomyManager.technology_tree.has("Mag") and not EconomyManager.technology_tree["Mag"]["unlocked"]:
+		return "wymagana technologia „Mag”"
+	if EconomyManager.resources.get("Populacja", 0) - cost.get("Populacja", 0) < 1:
+		return "musisz zachować co najmniej 1 mieszkańca"
+	var missing: Array[String] = []
+	for resource_name in cost:
+		var shortage := int(cost[resource_name]) - int(EconomyManager.resources.get(resource_name, 0))
+		if shortage > 0:
+			missing.append("%d %s" % [shortage, resource_name])
+	return "" if missing.is_empty() else "brakuje: %s" % ", ".join(missing)

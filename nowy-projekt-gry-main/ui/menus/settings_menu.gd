@@ -5,11 +5,11 @@ var hud: Control
 var settings_window: PanelContainer
 var settings_seed_value_label: Label
 var settings_copy_button: Button
-var settings_volume_slider: HSlider
 var save_button: Button
 var load_button: Button
 var save_dialog: FileDialog
 var load_dialog: FileDialog
+var reset_confirmation: ConfirmationDialog
 
 func _init(_hud: Control):
 	hud = _hud
@@ -17,7 +17,7 @@ func _init(_hud: Control):
 func setup_settings_window():
 	settings_window = PanelContainer.new()
 	settings_window.visible = false
-	settings_window.custom_minimum_size = Vector2(440, 0)
+	settings_window.custom_minimum_size = Vector2(480, 0)
 
 	var style_panel = StyleBoxFlat.new()
 	style_panel.bg_color = hud.DF_BG
@@ -41,13 +41,14 @@ func setup_settings_window():
 	# HEADER
 	var header_hbox = HBoxContainer.new()
 	var title_label = Label.new()
-	title_label.text = "⚙️ Ustawienia"
+	title_label.text = "⚙️ Menu gry"
 	title_label.add_theme_font_size_override("font_size", 22)
 	title_label.add_theme_color_override("font_color", hud.DF_GOLD_TEXT)
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var close_btn = Button.new()
 	close_btn.text = "X"
+	close_btn.tooltip_text = "Zamknij"
 	close_btn.custom_minimum_size = Vector2(30, 30)
 	close_btn.pressed.connect(func():
 		settings_window.visible = false
@@ -103,19 +104,10 @@ func setup_settings_window():
 	sound_title.add_theme_color_override("font_color", hud.DF_GOLD_TEXT)
 	sound_section.add_child(sound_title)
 
-	settings_volume_slider = HSlider.new()
-	settings_volume_slider.min_value = 0
-	settings_volume_slider.max_value = 100
-	settings_volume_slider.step = 1
-	var master_idx = AudioServer.get_bus_index("Master")
-	if master_idx >= 0:
-		var current_db = AudioServer.get_bus_volume_db(master_idx)
-		settings_volume_slider.value = 0 if AudioServer.is_bus_mute(master_idx) else clamp(db_to_linear(current_db) * 100.0, 0, 100)
-	else:
-		settings_volume_slider.value = 100
-	settings_volume_slider.custom_minimum_size = Vector2(0, 24)
-	settings_volume_slider.value_changed.connect(_on_volume_changed)
-	sound_section.add_child(settings_volume_slider)
+	_add_volume_slider(sound_section, "Głośność główna (wszystko)", &"Master")
+	_add_volume_slider(sound_section, "Efekty", &"Effects")
+	_add_volume_slider(sound_section, "Dialogi", &"Dialogue")
+	_add_volume_slider(sound_section, "Muzyka", &"Music")
 	main_vbox.add_child(sound_section)
 
 	var sep3 = HSeparator.new()
@@ -151,12 +143,18 @@ func setup_settings_window():
 	reset_btn.text = "🔄 Zresetuj Grę (Ten sam seed)"
 	reset_btn.custom_minimum_size = Vector2(0, 42)
 	hud._style_df_button(reset_btn)
-	reset_btn.pressed.connect(func():
-		SaveManager.delete_save(GameSettings.current_seed)
-		EconomyManager.reset()
-		hud.get_tree().change_scene_to_file("res://scenes/game_world.tscn")
-	)
+	reset_btn.pressed.connect(func() -> void: reset_confirmation.popup_centered(Vector2i(560, 230)))
 	main_vbox.add_child(reset_btn)
+
+	reset_confirmation = ConfirmationDialog.new()
+	reset_confirmation.title = "Reset kampanii"
+	reset_confirmation.dialog_text = "Usunąć bieżący zapis i rozpocząć tę kampanię od początku z tym samym seedem?"
+	reset_confirmation.ok_button_text = "USUŃ ZAPIS I ZRESETUJ"
+	reset_confirmation.cancel_button_text = "ANULUJ"
+	reset_confirmation.confirmed.connect(_reset_campaign)
+	if hud.has_method("_style_alert_dialog"):
+		hud._style_alert_dialog(reset_confirmation)
+	hud.add_child(reset_confirmation)
 
 	var menu_btn = Button.new()
 	menu_btn.text = "🏠 Wróć do menu głównego"
@@ -164,7 +162,7 @@ func setup_settings_window():
 	hud._style_df_button(menu_btn)
 	menu_btn.pressed.connect(func():
 		if AudioManager: AudioManager.stop_bg_music()
-		hud.get_tree().change_scene_to_file("res://ui/main_menu.tscn")
+		SceneTransition.change_scene("res://ui/main_menu.tscn", "POWRÓT DO MENU")
 	)
 	main_vbox.add_child(menu_btn)
 
@@ -183,9 +181,16 @@ func setup_settings_window():
 	quit_btn.add_theme_stylebox_override("hover", quit_hover)
 	quit_btn.add_theme_color_override("font_color", hud.DF_TEXT)
 	quit_btn.pressed.connect(func(): hud.get_tree().quit())
+	quit_btn.visible = not OS.has_feature("web")
 	main_vbox.add_child(quit_btn)
 
 	hud.add_child(settings_window)
+
+
+func _reset_campaign() -> void:
+	SaveManager.delete_save(GameSettings.current_seed)
+	EconomyManager.reset()
+	SceneTransition.change_scene("res://scenes/game_world.tscn", "TWORZENIE ŚWIATA")
 
 func _setup_file_dialogs() -> void:
 	save_dialog = FileDialog.new()
@@ -238,7 +243,7 @@ func _on_external_load_finished(success: bool, message: String) -> void:
 func _finish_external_load(success: bool, message: String) -> void:
 	if success:
 		settings_window.visible = false
-		hud.get_tree().call_deferred("change_scene_to_file", "res://scenes/game_world.tscn")
+		SceneTransition.change_scene("res://scenes/game_world.tscn", "WCZYTYWANIE KAMPANII")
 		return
 	_show_file_result(
 		load_button,
@@ -255,14 +260,38 @@ func _show_file_result(button: Button, success: bool, success_text: String, erro
 			button.text = default_text
 	)
 
-func _on_volume_changed(value: float) -> void:
-	var master_idx = AudioServer.get_bus_index("Master")
-	if master_idx >= 0:
-		if value <= 0.0:
-			AudioServer.set_bus_mute(master_idx, true)
-		else:
-			AudioServer.set_bus_mute(master_idx, false)
-			AudioServer.set_bus_volume_db(master_idx, linear_to_db(value / 100.0))
+func _add_volume_slider(parent: VBoxContainer, label_text: String, bus_name: StringName) -> void:
+	var group := VBoxContainer.new()
+	group.add_theme_constant_override("separation", 2)
+	parent.add_child(group)
+
+	var header := HBoxContainer.new()
+	group.add_child(header)
+
+	var label := Label.new()
+	label.text = label_text
+	label.add_theme_color_override("font_color", hud.DF_TEXT)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(label)
+
+	var value_label := Label.new()
+	var current_value: float = GameSettings.get_audio_volume(bus_name)
+	value_label.text = "%d%%" % int(current_value)
+	value_label.custom_minimum_size = Vector2(52, 0)
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	header.add_child(value_label)
+
+	var slider := HSlider.new()
+	slider.min_value = 0.0
+	slider.max_value = 100.0
+	slider.step = 1.0
+	slider.value = current_value
+	slider.custom_minimum_size = Vector2(0, 24)
+	slider.value_changed.connect(func(value: float) -> void:
+		value_label.text = "%d%%" % int(value)
+		GameSettings.set_audio_volume(bus_name, value)
+	)
+	group.add_child(slider)
 
 func _on_copy_seed_pressed() -> void:
 	var seed_str = str(GameSettings.current_seed) if GameSettings.use_custom_seed else "Losowy"

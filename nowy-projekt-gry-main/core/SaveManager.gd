@@ -124,6 +124,7 @@ func _make_save_data(seed_val: int, game_world: Node2D) -> Dictionary:
 		"next_unit_uid": EconomyManager.next_unit_uid,
 	}
 	save_data["debug_mode"] = GameSettings.debug_mode
+	save_data["campaign_ai_difficulty"] = GameSettings.campaign_ai_difficulty
 	save_data["pending_battle"] = pending_battle
 	
 	var unlocked_tech: Array = []
@@ -222,6 +223,9 @@ func _apply_save_data(save_data: Dictionary, fallback_seed: int) -> bool:
 	GameSettings.current_seed = int(save_data.get("seed", fallback_seed))
 	GameSettings.use_custom_seed = bool(save_data.get("use_custom_seed", true))
 	GameSettings.debug_mode = bool(save_data.get("debug_mode", false))
+	GameSettings.campaign_ai_difficulty = str(save_data.get("campaign_ai_difficulty", "sredni"))
+	if GameSettings.campaign_ai_difficulty not in ["latwy", "sredni", "trudny"]:
+		GameSettings.campaign_ai_difficulty = "sredni"
 	pending_battle = save_data.get("pending_battle", {})
 	loaded_gw_data = save_data.get("game_world", {})
 	is_loading = true

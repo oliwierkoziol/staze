@@ -50,6 +50,7 @@ var turn_warning_dialog: AcceptDialog
 var research_unlocked_dialog: AcceptDialog
 var _last_unlocked_tree_type: String = ""
 var pending_building: String = ""
+var _tree_pan_active := false
 
 var active_building_name: String = ""
 var active_building_level: int = 0
@@ -79,6 +80,15 @@ var tech_bar: ProgressBar
 var tech_research_ready_label: Label
 
 var hunger_label: Label
+var quick_actions_panel: PanelContainer
+var movement_label: Label
+var quick_army_button: Button
+var quick_potions_button: Button
+var quick_help_button: Button
+var quick_settings_button: Button
+var center_general_button: Button
+var skip_confirm_dialog: ConfirmationDialog
+var battle_confirm_dialog: ConfirmationDialog
 
 var help_menu: HelpMenu
 
@@ -108,16 +118,16 @@ var _turn_button_cooldown: bool = false
 # Wspólne kolory używane w całym HUD-zie, żeby całość wyglądała spójnie:
 # głębokie, prawie czarne tła z chłodnym odcieniem, postarzałe złoto jako
 # główny akcent oraz krwista czerwień dla akcji bojowych/niebezpiecznych.
-const DF_BG: Color = Color(0.071, 0.063, 0.078, 0.97)
-const DF_BG_LIGHT: Color = Color(0.11, 0.095, 0.09, 0.96)
-const DF_BG_PARCHMENT: Color = Color(0.22, 0.18, 0.13, 0.97)
-const DF_GOLD: Color = Color(0.62, 0.49, 0.24, 1.0)
-const DF_GOLD_BRIGHT: Color = Color(0.85, 0.7, 0.36, 1.0)
-const DF_GOLD_TEXT: Color = Color(0.86, 0.72, 0.4, 1.0)
+const DF_BG: Color = Color(0.06, 0.05, 0.025, 0.97)
+const DF_BG_LIGHT: Color = Color(0.105, 0.065, 0.025, 0.96)
+const DF_GOLD: Color = Color(0.65, 0.52, 0.2, 0.9)
+const DF_GOLD_BRIGHT: Color = Color(0.88, 0.75, 0.34, 1.0)
+const DF_GOLD_TEXT: Color = Color(0.86, 0.72, 0.34, 1.0)
 const DF_BLOOD: Color = Color(0.45, 0.08, 0.09, 1.0)
 const DF_BLOOD_BRIGHT: Color = Color(0.62, 0.13, 0.14, 1.0)
-const DF_TEXT: Color = Color(0.85, 0.8, 0.7, 1.0)
-const DF_TEXT_DIM: Color = Color(0.6, 0.56, 0.5, 0.85)
+const DF_TEXT: Color = Color(0.92, 0.88, 0.78, 1.0)
+const DF_TEXT_DIM: Color = Color(0.75, 0.68, 0.5, 0.85)
+const PANEL_TEXTURE: Texture2D = preload("res://turn-base-game/assets/ui/panel.png")
 
 func _ready():
 	apply_emoji_fallback()
@@ -133,16 +143,7 @@ func _ready():
 	turn_button.pressed.connect(_on_turn_pressed)
 	
 	skip_button = Button.new()
-	skip_button.text = "Przemiń 5 Tur >>"
-	var skip_style = StyleBoxFlat.new()
-	skip_style.bg_color = DF_BLOOD
-	skip_style.set_corner_radius_all(12)
-	skip_style.set_border_width_all(2)
-	skip_style.border_color = DF_GOLD
-	skip_button.add_theme_stylebox_override("normal", skip_style)
-	skip_button.add_theme_stylebox_override("hover", skip_style)
-	skip_button.add_theme_font_size_override("font_size", 16)
-	skip_button.add_theme_color_override("font_color", DF_GOLD_TEXT)
+	skip_button.text = "POMIŃ 5 TUR"
 	skip_button.custom_minimum_size = Vector2(160, 54)
 	skip_button.anchor_left = 1.0
 	skip_button.anchor_right = 1.0
@@ -152,25 +153,7 @@ func _ready():
 	skip_button.offset_right = -15
 	skip_button.offset_top = -78
 	skip_button.offset_bottom = -24
-	skip_button.pressed.connect(func():
-		if skip_button.disabled: return
-		hide_all_menus()
-		for i in range(5):
-			if world_ref and world_ref.has_method("get_active_buildings_list"):
-				var buildings = world_ref.get_active_buildings_list()
-				EconomyManager.next_turn(buildings)
-		if EconomyManager.turn_warnings.size() > 0:
-			var warning_text = ""
-			for w in EconomyManager.turn_warnings:
-				warning_text += w + "\n"
-			turn_warning_dialog.dialog_text = warning_text.strip_edges()
-			turn_warning_dialog.popup_centered()
-		
-		if not GameSettings.skip_turn_button_delay:
-			_turn_button_cooldown = true
-			await get_tree().create_timer(TURN_BUTTON_DELAY).timeout
-			_turn_button_cooldown = false
-	)
+	skip_button.pressed.connect(_show_skip_confirmation)
 	var parent = turn_button.get_parent()
 	parent.add_child(skip_button)
 	parent.move_child.call_deferred(skip_button, turn_button.get_index() + 1)
@@ -182,7 +165,9 @@ func _ready():
 	setup_points_panel()
 	setup_resources_header()
 	setup_hunger_label()
+	setup_quick_actions()
 	setup_custom_popups()
+	setup_skip_confirmation()
 	tech_tree_menu = TechTreeMenu.new(self)
 	tech_tree_menu.setup_tech_tree_ui()
 	culture_tree_menu = CultureTreeMenu.new(self)
@@ -220,6 +205,7 @@ func _ready():
 	admin_menu.setup_admin_window()
 	setup_admin_button()
 
+	call_deferred("_align_right_column")
 	EconomyManager.notify_change()
 
 func apply_emoji_fallback() -> void:
@@ -242,7 +228,7 @@ func setup_admin_button():
 	# jako custom seed). Teraz zależy jawnie od GameSettings.debug_mode,
 	# ustawianego checkboxem "Tryb Debug" w menu głównym — seed 0 jest więc
 	# normalnym, poprawnym seedem świata.
-	if GameSettings.debug_mode:
+	if OS.is_debug_build() and GameSettings.debug_mode:
 		admin_button = Button.new()
 		admin_button.text = "🛠️ Admin"
 		var style = StyleBoxFlat.new()
@@ -259,12 +245,13 @@ func setup_admin_button():
 		admin_button.anchor_left = 0.0
 		admin_button.anchor_top = 0.0
 		admin_button.offset_left = 20
-		admin_button.offset_top = 60
+		admin_button.offset_top = 178
 		admin_button.custom_minimum_size = Vector2(100, 40)
 		add_child(admin_button)
 
 func _process(_delta: float) -> void:
 	_update_battle_button()
+	_update_movement_label()
 	
 	var menu_open = any_menu_visible()
 	if tech_tree_menu and tech_tree_menu.tech_tree_button:
@@ -277,6 +264,9 @@ func _process(_delta: float) -> void:
 	if skip_button:
 		skip_button.disabled = menu_open or _turn_button_cooldown
 		skip_button.modulate.a = 0.5 if skip_button.disabled else 1.0
+	for button: Button in [quick_army_button, quick_potions_button, quick_help_button, quick_settings_button]:
+		if button != null:
+			button.disabled = menu_open
 	# POPRAWKA: Przyciski kategorii (Surowce/Kultura/Technologia/Wojskowe) są
 	# dziećmi menu_budowania, więc nie wolno ich blokować na podstawie
 	# any_menu_visible() — menu_budowania samo w sobie powoduje, że ta
@@ -357,7 +347,36 @@ func setup_battle_button() -> void:
 	battle_button.pressed.connect(_on_battle_button_pressed)
 	add_child(battle_button)
 
+	battle_confirm_dialog = ConfirmationDialog.new()
+	battle_confirm_dialog.title = "Rozpoczęcie walki"
+	battle_confirm_dialog.ok_button_text = "ROZPOCZNIJ WALKĘ"
+	battle_confirm_dialog.cancel_button_text = "ANULUJ"
+	battle_confirm_dialog.confirmed.connect(_start_battle_now)
+	_style_alert_dialog(battle_confirm_dialog)
+	add_child(battle_confirm_dialog)
+
 func _on_battle_button_pressed() -> void:
+	if world_ref == null or not world_ref.get("character") or not world_ref.get("camps"):
+		return
+	var tile_pos = world_ref.world_to_nearest_cell(world_ref.character.global_position)
+	var camp_data: Dictionary = world_ref.camps.get(tile_pos, {})
+	var player_count := int(world_ref.character.get_army_size())
+	var enemy_count := int(camp_data.get("army", []).size())
+	battle_confirm_dialog.dialog_text = (
+		"Obozowisko: %s (poziom %d)\n"
+		+ "Twoje gotowe jednostki: %d\n"
+		+ "Jednostki przeciwnika: %d\n\n"
+		+ "Rozpocząć walkę?"
+	) % [
+		camp_data.get("faction_name", "Nieznana frakcja"),
+		int(camp_data.get("level", 1)),
+		player_count,
+		enemy_count,
+	]
+	battle_confirm_dialog.popup_centered(Vector2i(540, 270))
+
+
+func _start_battle_now() -> void:
 	if not world_ref or not world_ref.has_method("start_battle"):
 		return
 	var tile_pos = world_ref.world_to_nearest_cell(world_ref.character.global_position)
@@ -393,32 +412,83 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			settings_menu.show_settings_menu()
 			if AudioManager: AudioManager.pause_bg_music()
 
+func _panel_style(content_margin := 0.0, top_margin := -1.0) -> StyleBoxTexture:
+	var style := StyleBoxTexture.new()
+	style.texture = PANEL_TEXTURE
+	style.texture_margin_left = 8
+	style.texture_margin_top = 8
+	style.texture_margin_right = 8
+	style.texture_margin_bottom = 8
+	style.axis_stretch_horizontal = 2
+	style.axis_stretch_vertical = 2
+	style.set_content_margin_all(content_margin)
+	if top_margin >= 0:
+		style.content_margin_top = top_margin
+	return style
+
+
+func bind_tree_panning(scroll: ScrollContainer, canvas: Control) -> void:
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
+	for input_area: Control in [scroll, canvas]:
+		input_area.mouse_default_cursor_shape = Control.CURSOR_DRAG
+		var callback := _on_tree_pan_input.bind(input_area, scroll)
+		if not input_area.gui_input.is_connected(callback):
+			input_area.gui_input.connect(callback)
+
+
+func _on_tree_pan_input(event: InputEvent, input_area: Control, scroll: ScrollContainer) -> void:
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			_tree_pan_active = event.pressed
+			input_area.accept_event()
+		elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			if event.shift_pressed:
+				scroll.scroll_horizontal -= 60
+			else:
+				scroll.scroll_vertical -= 60
+			input_area.accept_event()
+		elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			if event.shift_pressed:
+				scroll.scroll_horizontal += 60
+			else:
+				scroll.scroll_vertical += 60
+			input_area.accept_event()
+	elif event is InputEventMouseMotion and _tree_pan_active:
+		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			_tree_pan_active = false
+			return
+		_apply_tree_pan(scroll, event.relative)
+		input_area.accept_event()
+
+
+func _apply_tree_pan(scroll: ScrollContainer, relative: Vector2) -> void:
+	scroll.scroll_horizontal -= roundi(relative.x)
+	scroll.scroll_vertical -= roundi(relative.y)
+
+
 func setup_points_panel():
 	points_panel = PanelContainer.new()
 	points_panel.anchor_left = 1.0
 	points_panel.anchor_right = 1.0
 	points_panel.anchor_top = 0.0
 	points_panel.anchor_bottom = 0.0
-	points_panel.offset_left = -320
+	points_panel.offset_left = -340
 	points_panel.offset_right = -20
-	points_panel.offset_top = 60
+	points_panel.offset_top = 72
 
-	var style_panel = StyleBoxFlat.new()
-	style_panel.bg_color = DF_BG
-	style_panel.set_corner_radius_all(10)
-	style_panel.set_border_width_all(2)
-	style_panel.border_color = DF_GOLD
-	style_panel.content_margin_left = 12
-	style_panel.content_margin_right = 12
-	style_panel.content_margin_top = 12
-	style_panel.content_margin_bottom = 12
-	style_panel.shadow_color = Color(0, 0, 0, 0.5)
-	style_panel.shadow_size = 4
-	points_panel.add_theme_stylebox_override("panel", style_panel)
+	points_panel.add_theme_stylebox_override("panel", _panel_style(12))
 	
 	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 15)
+	vbox.add_theme_constant_override("separation", 10)
 	points_panel.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "ROZWÓJ"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", DF_GOLD_TEXT)
+	vbox.add_child(title)
 	
 	var culture_vbox = VBoxContainer.new()
 	culture_vbox.add_theme_constant_override("separation", 5)
@@ -542,13 +612,22 @@ func setup_points_panel():
 	
 	add_child(points_panel)
 
+
+func _align_right_column() -> void:
+	if points_panel == null or tile_info_menu == null:
+		return
+	tile_info_menu.offset_left = points_panel.offset_left
+	tile_info_menu.offset_right = points_panel.offset_right
+	tile_info_menu.offset_top = points_panel.position.y + points_panel.size.y + 12
+
+
 func setup_resources_header():
 	resources_label.visible = false
 	
 	resources_container = HBoxContainer.new()
 	resources_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	resources_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	resources_container.add_theme_constant_override("separation", 25)
+	resources_container.add_theme_constant_override("separation", 12)
 	$Panel.add_child(resources_container)
 	
 	var default_icon = null
@@ -578,7 +657,7 @@ func setup_resources_header():
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		
 		var lbl = Label.new()
-		lbl.add_theme_font_size_override("font_size", 16)
+		lbl.add_theme_font_size_override("font_size", 14)
 		lbl.add_theme_color_override("font_color", Color(0.9, 0.88, 0.8))
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		lbl.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -614,16 +693,174 @@ func setup_hunger_label():
 	hunger_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	add_child(hunger_label)
 
+
+func setup_quick_actions() -> void:
+	quick_actions_panel = PanelContainer.new()
+	quick_actions_panel.name = "QuickActionsPanel"
+	quick_actions_panel.anchor_left = 0.0
+	quick_actions_panel.anchor_top = 0.0
+	quick_actions_panel.offset_left = 20
+	quick_actions_panel.offset_top = 72
+	quick_actions_panel.offset_right = 230
+	quick_actions_panel.add_theme_stylebox_override("panel", _panel_style(10))
+
+	var column := VBoxContainer.new()
+	column.name = "CommandColumn"
+	column.add_theme_constant_override("separation", 8)
+	quick_actions_panel.add_child(column)
+
+	var title := Label.new()
+	title.text = "DOWODZENIE"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", DF_GOLD_TEXT)
+	column.add_child(title)
+
+	movement_label = Label.new()
+	movement_label.text = "Ruch generała: 0/0"
+	movement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	movement_label.add_theme_color_override("font_color", DF_GOLD_TEXT)
+	movement_label.add_theme_font_size_override("font_size", 14)
+	column.add_child(movement_label)
+
+	var actions := VBoxContainer.new()
+	actions.name = "CommandButtons"
+	actions.add_theme_constant_override("separation", 6)
+	column.add_child(actions)
+
+	quick_army_button = _make_quick_button("Armia", "Otwórz zarządzanie armią")
+	quick_army_button.pressed.connect(func() -> void:
+		hide_all_menus()
+		army_menu.show_army_menu()
+	)
+	actions.add_child(quick_army_button)
+
+	center_general_button = _make_quick_button("Generał", "Wyśrodkuj kamerę na generale")
+	center_general_button.pressed.connect(_center_camera_on_general)
+	actions.add_child(center_general_button)
+
+	quick_potions_button = _make_quick_button("Mikstury", "Pokaż posiadane i aktywne mikstury")
+	quick_potions_button.pressed.connect(func() -> void:
+		hide_all_menus()
+		potions_menu.show_my_potions(false)
+	)
+	actions.add_child(quick_potions_button)
+
+	quick_help_button = _make_quick_button("Pomoc", "Pomoc (Tab)")
+	quick_help_button.pressed.connect(func() -> void:
+		hide_all_menus()
+		help_menu.show_help_menu()
+	)
+	actions.add_child(quick_help_button)
+
+	quick_settings_button = _make_quick_button("Menu", "Menu gry i ustawienia (Esc)")
+	quick_settings_button.pressed.connect(func() -> void:
+		hide_all_menus()
+		settings_menu.show_settings_menu()
+		if AudioManager:
+			AudioManager.pause_bg_music()
+	)
+	actions.add_child(quick_settings_button)
+	add_child(quick_actions_panel)
+
+
+func _make_quick_button(text: String, tooltip: String) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.tooltip_text = tooltip
+	button.custom_minimum_size = Vector2(180, 38)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_df_button(button)
+	var transparent := StyleBoxEmpty.new()
+	transparent.set_content_margin_all(8)
+	button.add_theme_stylebox_override("normal", transparent)
+	button.add_theme_stylebox_override("disabled", transparent)
+	return button
+
+
+func _update_movement_label() -> void:
+	if movement_label == null or world_ref == null or not world_ref.get("character"):
+		return
+	var general = world_ref.character
+	var maximum := int(general.move_range)
+	if EconomyManager.culture_tree["Ruch generała I"]["unlocked"]:
+		maximum += 1
+	if EconomyManager.culture_tree["Ruch generała II"]["unlocked"]:
+		maximum += 1
+	if EconomyManager.culture_tree["Ruch generała III"]["unlocked"]:
+		maximum += 1
+	movement_label.text = "Ruch generała: %d/%d" % [int(general.moves_left), maximum]
+
+
+func _center_camera_on_general() -> void:
+	if world_ref == null or not world_ref.get("character"):
+		return
+	var camera := world_ref.get_node_or_null("StrategyCamera") as Camera2D
+	if camera != null:
+		camera.global_position = world_ref.character.global_position
+
+
+func setup_skip_confirmation() -> void:
+	skip_confirm_dialog = ConfirmationDialog.new()
+	skip_confirm_dialog.title = "Przeminięcie 5 tur"
+	skip_confirm_dialog.ok_button_text = "PRZEMIŃ 5 TUR"
+	skip_confirm_dialog.cancel_button_text = "ANULUJ"
+	skip_confirm_dialog.confirmed.connect(_advance_five_turns)
+	_style_alert_dialog(skip_confirm_dialog)
+	add_child(skip_confirm_dialog)
+
+
+func _show_skip_confirmation() -> void:
+	if skip_button.disabled:
+		return
+	var buildings: Array = []
+	if world_ref != null and world_ref.has_method("get_active_buildings_list"):
+		buildings = world_ref.get_active_buildings_list()
+	var preview := EconomyManager.get_turn_preview(buildings)
+	var lines: Array[String] = [
+		"Tura %d → %d" % [EconomyManager.current_turn, EconomyManager.current_turn + 5],
+		"Szacowana zmiana zasobów przy obecnej produkcji:",
+	]
+	for resource_name: String in ["Drewno", "Żelazo", "Węgiel", "Jedzenie", "Złoto"]:
+		var delta := int(preview.get(resource_name, {}).get("balance", 0)) * 5
+		lines.append("• %s: %s" % [resource_name, _format_delta(delta)])
+	var expected_food: int = int(EconomyManager.resources.get("Jedzenie", 0)) + int(preview.get("Jedzenie", {}).get("balance", 0)) * 5
+	if expected_food <= 0:
+		lines.append("\nUWAGA: prognoza wskazuje głód.")
+	lines.append("\nPrognoza może zmienić się po ukończeniu badań lub szkolenia.")
+	skip_confirm_dialog.dialog_text = "\n".join(lines)
+	skip_confirm_dialog.popup_centered(Vector2i(560, 390))
+
+
+func _advance_five_turns() -> void:
+	hide_all_menus()
+	for _index in range(5):
+		if world_ref != null and world_ref.has_method("get_active_buildings_list"):
+			EconomyManager.next_turn(world_ref.get_active_buildings_list())
+	_show_turn_warnings()
+	if not GameSettings.skip_turn_button_delay:
+		_turn_button_cooldown = true
+		await get_tree().create_timer(TURN_BUTTON_DELAY).timeout
+		_turn_button_cooldown = false
+
+
+func _show_turn_warnings() -> void:
+	if EconomyManager.turn_warnings.is_empty():
+		return
+	turn_warning_dialog.dialog_text = "\n".join(EconomyManager.turn_warnings)
+	turn_warning_dialog.popup_centered()
+
 var build_grid: GridContainer
 
 func setup_custom_popups():
 	var vbox = $MenuBudowania/VBoxContainer
-	menu_budowania.custom_minimum_size = Vector2(360, 0) # Wymuszenie stałej szerokości
+	menu_budowania.custom_minimum_size = Vector2(355, 420)
 	
 	# Anchor bottom right ONCE
 	menu_budowania.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	menu_budowania.offset_right = -20
-	menu_budowania.offset_bottom = -20
+	menu_budowania.offset_left = -370
+	menu_budowania.offset_right = -15
+	menu_budowania.offset_bottom = -92
 	menu_budowania.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	menu_budowania.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	
@@ -680,15 +917,14 @@ func setup_custom_popups():
 	# 3. KUP POLE BUTTON AND TILE INFO MENU SEPARATION
 	tile_info_menu = PanelContainer.new()
 	tile_info_menu.visible = false
-	var tile_info_style = StyleBoxFlat.new()
-	tile_info_style.bg_color = DF_BG
-	tile_info_style.set_border_width_all(2) 
-	tile_info_style.border_color = DF_GOLD
-	tile_info_style.set_corner_radius_all(10)
-	tile_info_style.set_content_margin_all(8)
-	tile_info_style.shadow_color = Color(0, 0, 0, 0.5)
-	tile_info_style.shadow_size = 4
-	tile_info_menu.add_theme_stylebox_override("panel", tile_info_style)
+	tile_info_menu.anchor_left = 1.0
+	tile_info_menu.anchor_right = 1.0
+	tile_info_menu.offset_left = -340
+	tile_info_menu.offset_right = -20
+	tile_info_menu.offset_top = 348
+	tile_info_menu.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	tile_info_menu.z_index = 5
+	tile_info_menu.add_theme_stylebox_override("panel", _panel_style(8))
 	
 	var tile_info_vbox = VBoxContainer.new()
 	tile_info_vbox.add_theme_constant_override("separation", 6)
@@ -789,17 +1025,17 @@ func setup_custom_popups():
 	tile_info_vbox.add_child(recruit_button)
 	
 	btn_my_potions = Button.new()
-	btn_my_potions.text = "🧪 Moje Potki"
+	btn_my_potions.text = "🧪 Moje mikstury"
 	btn_my_potions.add_theme_stylebox_override("normal", style_army)
 	btn_my_potions.add_theme_color_override("font_color", DF_TEXT)
 	btn_my_potions.pressed.connect(func():
 		hide_all_menus()
-		potions_menu.show_my_potions()
+		potions_menu.show_my_potions(true)
 	)
 	tile_info_vbox.add_child(btn_my_potions)
 	
 	btn_buy_potions = Button.new()
-	btn_buy_potions.text = "💰 Kup Potki"
+	btn_buy_potions.text = "💰 Kup mikstury"
 	var style_buy_potions = style_army.duplicate()
 	style_buy_potions.bg_color = Color(0.45, 0.2, 0.55, 0.95) # Wyróżniający się, "magiczny" fioletowy kolor
 	style_buy_potions.border_color = DF_GOLD_BRIGHT
@@ -898,15 +1134,24 @@ func setup_custom_popups():
 	
 	add_child(tile_info_menu)
 	
-	# 4. GRID CONTAINER FOR BUTTONS
+	# 4. SCROLLABLE GRID FOR BUILDING BUTTONS
+	var build_scroll := ScrollContainer.new()
+	build_scroll.name = "BuildScroll"
+	build_scroll.custom_minimum_size = Vector2(0, 250)
+	build_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	build_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	build_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	build_scroll.follow_focus = true
+	vbox.add_child(build_scroll)
+	vbox.move_child(build_scroll, 2)
+
 	build_grid = GridContainer.new()
 	build_grid.columns = 3
-	build_grid.custom_minimum_size = Vector2(320, 210) # Miejsce na 3 kolumny po 100px i stała wysokość na 2 rzędy
+	build_grid.custom_minimum_size = Vector2(320, 210)
 	build_grid.add_theme_constant_override("h_separation", 10)
 	build_grid.add_theme_constant_override("v_separation", 10)
 	build_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	vbox.add_child(build_grid)
-	vbox.move_child(build_grid, 2)
+	build_scroll.add_child(build_grid)
 	
 	# 5. BUTTONS (Reparent and create new ones)
 	build_chata.reparent(build_grid)
@@ -951,13 +1196,7 @@ func setup_custom_popups():
 	# 7. ZALOZ MIASTO MENU
 	menu_zalozenia_miasta = PopupPanel.new()
 	menu_zalozenia_miasta.visible = false
-	var mz_style = StyleBoxFlat.new()
-	mz_style.bg_color = DF_BG
-	mz_style.set_border_width_all(2) 
-	mz_style.border_color = DF_GOLD
-	mz_style.set_corner_radius_all(10)
-	mz_style.set_content_margin_all(8)
-	menu_zalozenia_miasta.add_theme_stylebox_override("panel", mz_style)
+	menu_zalozenia_miasta.add_theme_stylebox_override("panel", _panel_style(8))
 	
 	var margin_container = MarginContainer.new()
 	margin_container.add_theme_constant_override("margin_left", 4)
@@ -1122,8 +1361,12 @@ func show_context_menu(mouse_pos: Vector2, tile_pos: Vector2, tile_type: String,
 		
 		if is_camp_territory:
 			kup_pole_button.tooltip_text = "To pole należy do wrogiego obozowiska!"
+		elif not borders_owned:
+			kup_pole_button.tooltip_text = "Możesz kupić tylko pole sąsiadujące z własnym terytorium."
+		elif not can_afford:
+			kup_pole_button.tooltip_text = "Brakuje %d złota." % (EconomyManager.TILE_PURCHASE_GOLD_COST - EconomyManager.resources["Złoto"])
 		else:
-			kup_pole_button.tooltip_text = ""
+			kup_pole_button.tooltip_text = "Dołącz pole do swojego terytorium."
 
 	upgrade_button.visible = show_upgrade
 	destroy_button.visible = is_owned and has_building and building_name != "Centrum Miasta"
@@ -1136,12 +1379,17 @@ func show_context_menu(mouse_pos: Vector2, tile_pos: Vector2, tile_type: String,
 	workshop_button.visible = (has_building and building_name == "Warsztat" and is_owned)
 	library_research_button.visible = (has_building and building_name == "Biblioteka" and is_owned)
 	if show_upgrade:
-		var can_upgrade = EconomyManager.can_afford_upgrade(building_name, building_level)
-		upgrade_button.disabled = false
+		var missing_upgrade_tech := EconomyManager.get_missing_tech_for_upgrade(building_name, building_level + 1)
+		var can_upgrade = missing_upgrade_tech == "" and EconomyManager.can_afford_upgrade(building_name, building_level)
+		upgrade_button.disabled = not can_upgrade
 		upgrade_button.modulate.a = 1.0 if can_upgrade else 0.5
 		var up_cost = EconomyManager.get_upgrade_cost(building_name, building_level)
 		var effect_desc = EconomyManager.get_building_effect_description(building_name)
 		var tooltip = "Koszt ulepszenia:\n%s" % _format_cost_dict(up_cost)
+		if missing_upgrade_tech != "":
+			tooltip = "Wymagana technologia: %s\n\n%s" % [missing_upgrade_tech, tooltip]
+		elif not can_upgrade:
+			tooltip = "%s\n\nBrakuje: %s" % [tooltip, _missing_resources_text(up_cost)]
 		if effect_desc != "":
 			tooltip += "\n\nEfekt:\n%s" % _wrap_text(effect_desc, 60)
 			
@@ -1191,31 +1439,32 @@ func show_context_menu(mouse_pos: Vector2, tile_pos: Vector2, tile_type: String,
 		
 		_show_building_category("zasobowe")
 		
-	_reposition_menu(tile_info_menu, mouse_pos)
+	tile_info_menu.reset_size()
+	call_deferred("_align_right_column")
 
 func _is_building_researched(b_name: String) -> bool:
 	return EconomyManager.get_missing_tech_for_building(b_name) == ""
 
 func _show_building_category(category: String):
 	var is_zasobowe = (category == "zasobowe")
-	build_chata.visible = is_zasobowe and _is_building_researched("Chata Drwala")
-	build_iron.visible = is_zasobowe and _is_building_researched("Kopalnia Żelaza")
-	build_coal.visible = is_zasobowe and _is_building_researched("Kopalnia Węgla")
-	build_farma.visible = is_zasobowe and _is_building_researched("Farma")
-	build_pastwisko.visible = is_zasobowe and _is_building_researched("Pastwisko")
-	build_dom.visible = is_zasobowe and _is_building_researched("Dom mieszkalny")
-	build_spichlerz.visible = is_zasobowe and _is_building_researched("Spichlerz")
+	build_chata.visible = is_zasobowe
+	build_iron.visible = is_zasobowe
+	build_coal.visible = is_zasobowe
+	build_farma.visible = is_zasobowe
+	build_pastwisko.visible = is_zasobowe
+	build_dom.visible = is_zasobowe
+	build_spichlerz.visible = is_zasobowe
 
 	var is_tech = (category == "tech")
-	btn_tech_1.visible = is_tech and _is_building_researched("Laboratorium")
-	btn_tech_2.visible = is_tech and _is_building_researched("Warsztat")
+	btn_tech_1.visible = is_tech
+	btn_tech_2.visible = is_tech
 
 	var is_naukowe = (category == "naukowe")
-	btn_naukowy_1.visible = is_naukowe and _is_building_researched("Biblioteka")
-	btn_naukowy_2.visible = is_naukowe and _is_building_researched("Świątynia")
+	btn_naukowy_1.visible = is_naukowe
+	btn_naukowy_2.visible = is_naukowe
 
 	var is_wojskowe = (category == "wojskowe")
-	build_baraki.visible = is_wojskowe and _is_building_researched("Baraki")
+	build_baraki.visible = is_wojskowe
 	
 	var selected_color = Color(0.75, 0.65, 0.5)
 	var unselected_color = Color(0.65, 0.55, 0.4)
@@ -1268,53 +1517,53 @@ func hide_all_menus():
 func any_menu_visible() -> bool:
 	return menu_budowania.visible or (tile_info_menu and tile_info_menu.visible) or (menu_zalozenia_miasta and menu_zalozenia_miasta.visible) or (tech_tree_menu and tech_tree_menu.tech_tree_window and tech_tree_menu.tech_tree_window.visible) or (culture_tree_menu and culture_tree_menu.culture_tree_window and culture_tree_menu.culture_tree_window.visible) or (barracks_menu and barracks_menu.barracks_window and barracks_menu.barracks_window.visible) or (army_menu and army_menu.army_window and army_menu.army_window.visible) or (help_menu and help_menu.help_window and help_menu.help_window.visible) or (camp_menu and camp_menu.camp_details_window and camp_menu.camp_details_window.visible) or (camp_menu and camp_menu.camp_army_window and camp_menu.camp_army_window.visible) or (settings_menu and settings_menu.settings_window and settings_menu.settings_window.visible) or (tutorial_menu and tutorial_menu.tutorial_window and tutorial_menu.tutorial_window.visible) or (admin_menu and admin_menu.admin_window and admin_menu.admin_window.visible) or (temple_menu and temple_menu.temple_window and temple_menu.temple_window.visible) or (workshop_menu and workshop_menu.workshop_window and workshop_menu.workshop_window.visible) or (library_research_menu and library_research_menu.library_window and library_research_menu.library_window.visible) or (potions_menu and ((potions_menu.my_potions_window and potions_menu.my_potions_window.visible) or (potions_menu.buy_potions_window and potions_menu.buy_potions_window.visible))) or (research_unlocked_dialog and research_unlocked_dialog.visible)
 
-func _reposition_menu(menu: Control, base_pos: Vector2):
-	var vbox = menu.get_node_or_null("VBoxContainer") as VBoxContainer
-	if vbox:
-		vbox.queue_sort()
-		menu.size = vbox.get_combined_minimum_size() + Vector2(24, 24)
-	else: menu.reset_size()
-		
-	var screen_size = get_viewport_rect().size
-	var menu_size = menu.size
-	var final_x = base_pos.x + 10
-	var final_y = base_pos.y + 10
-	
-	if final_x + menu_size.x > screen_size.x: final_x = base_pos.x - menu_size.x - 10
-	if final_y + menu_size.y > screen_size.y: final_y = base_pos.y - menu_size.y - 10
-		
-	menu.global_position = Vector2(final_x, final_y)
-	
-	if menu == tile_info_menu and menu_budowania.visible:
-		var build_menu_size = menu_budowania.get_combined_minimum_size()
-		# Upewniamy się, że rozmiar menu jest użyty poprawnie, nawet jeśli layout jeszcze nie został w pełni zaktualizowany
-		if build_menu_size.x < menu_budowania.size.x:
-			build_menu_size.x = menu_budowania.size.x
-		if build_menu_size.y < menu_budowania.size.y:
-			build_menu_size.y = menu_budowania.size.y
-			
-		var build_menu_pos = Vector2(screen_size.x - 20 - build_menu_size.x, screen_size.y - 20 - build_menu_size.y)
-		var build_menu_rect = Rect2(build_menu_pos, build_menu_size)
-		var menu_rect = Rect2(menu.global_position, menu_size)
-		
-		if menu_rect.intersects(build_menu_rect):
-			final_x = base_pos.x - menu_size.x - 10
-			if final_x < 0:
-				final_x = 10
-			menu.global_position = Vector2(final_x, final_y)
-
 func update_button_state(btn: Button, b_name: String, tile_type: String):
-	var can_place = EconomyManager.can_afford_and_place(b_name, tile_type)
+	var reason := _building_block_reason(b_name, tile_type)
+	var can_place := reason == ""
+	btn.disabled = not can_place
 	btn.modulate.a = 1.0 if can_place else 0.35
+	var base_tooltip := str(btn.get_meta("base_tooltip", btn.tooltip_text))
+	btn.tooltip_text = base_tooltip if can_place else "%s\n\nNIEDOSTĘPNE: %s" % [base_tooltip, reason]
+	var name_label := btn.get_node_or_null("VBoxContainer/NameLabel") as Label
+	if name_label != null:
+		name_label.text = b_name if EconomyManager.get_missing_tech_for_building(b_name) == "" else "🔒 %s" % b_name
+
+
+func _building_block_reason(building_name: String, tile_type: String) -> String:
+	var missing_tech := EconomyManager.get_missing_tech_for_building(building_name)
+	if missing_tech != "":
+		return "wymagana technologia „%s”" % missing_tech
+	var required_terrain := {
+		"Chata Drwala": "Drewno",
+		"Kopalnia Żelaza": "Żelazo",
+		"Kopalnia Węgla": "Węgiel",
+		"Farma": "Pszenica",
+		"Pastwisko": "Bydło",
+	}
+	if required_terrain.has(building_name) and tile_type != required_terrain[building_name]:
+		return "wymagane pole: %s" % required_terrain[building_name]
+	if building_name in ["Laboratorium", "Warsztat", "Biblioteka", "Świątynia"]:
+		if world_ref != null and world_ref.has_method("get_building_count") and world_ref.get_building_count(building_name) >= 3:
+			return "osiągnięto limit 3 budynków tego typu"
+	var missing := _missing_resources_text(EconomyManager.get_modified_building_costs(building_name))
+	return "" if missing == "" else "brakuje: %s" % missing
+
+
+func _missing_resources_text(cost: Dictionary) -> String:
+	var missing: Array[String] = []
+	for resource_name in cost:
+		var shortage := int(cost[resource_name]) - int(EconomyManager.resources.get(resource_name, 0))
+		if shortage > 0:
+			missing.append("%d %s" % [shortage, resource_name])
+	return ", ".join(missing)
 
 func execute_build(building_name: String) -> void:
-	if not EconomyManager.can_afford_and_place(building_name, active_tile_type):
-		if AudioManager: AudioManager.play_error()
-		return
-
-	var missing_tech = EconomyManager.get_missing_tech_for_building(building_name)
-	if missing_tech != "":
-		tech_warning_dialog.dialog_text = "Aby postawić ten budynek, musisz najpierw odkryć technologię:\n" + missing_tech
+	var block_reason := _building_block_reason(building_name, active_tile_type)
+	if block_reason != "":
+		if AudioManager:
+			AudioManager.play_error()
+		tech_warning_dialog.title = "Nie można wybudować"
+		tech_warning_dialog.dialog_text = "%s: %s." % [building_name, block_reason]
 		tech_warning_dialog.popup_centered()
 		hide_all_menus()
 		return
@@ -1397,15 +1646,15 @@ func _on_economy_updated(balances: Dictionary, turn: int, _selected_build: Strin
 		return ""
 
 	if resources_container:
-		resource_labels["Drewno"].text = "Drewno: %d" % [balances["Drewno"]]
+		resource_labels["Drewno"].text = "Drewno: %d (%s)" % [balances["Drewno"], _format_delta(get_balance.call("Drewno"))]
 		resource_labels["Drewno"].tooltip_text = setup_tooltip.call("Drewno")
-		resource_labels["Żelazo"].text = "Żelazo: %d" % [balances["Żelazo"]]
+		resource_labels["Żelazo"].text = "Żelazo: %d (%s)" % [balances["Żelazo"], _format_delta(get_balance.call("Żelazo"))]
 		resource_labels["Żelazo"].tooltip_text = setup_tooltip.call("Żelazo")
-		resource_labels["Węgiel"].text = "Węgiel: %d" % [balances["Węgiel"]]
+		resource_labels["Węgiel"].text = "Węgiel: %d (%s)" % [balances["Węgiel"], _format_delta(get_balance.call("Węgiel"))]
 		resource_labels["Węgiel"].tooltip_text = setup_tooltip.call("Węgiel")
-		resource_labels["Jedzenie"].text = "Jedzenie: %d/%d" % [balances["Jedzenie"], balances.get("Maks_Jedzenie", 20)]
+		resource_labels["Jedzenie"].text = "Jedzenie: %d/%d (%s)" % [balances["Jedzenie"], balances.get("Maks_Jedzenie", 20), _format_delta(get_balance.call("Jedzenie"))]
 		resource_labels["Jedzenie"].tooltip_text = setup_tooltip.call("Jedzenie")
-		resource_labels["Złoto"].text = "Złoto: %d" % [balances["Złoto"]]
+		resource_labels["Złoto"].text = "Złoto: %d (%s)" % [balances["Złoto"], _format_delta(get_balance.call("Złoto"))]
 		resource_labels["Złoto"].tooltip_text = setup_tooltip.call("Złoto")
 		resource_labels["Populacja"].text = "Pop: %d/%d" % [balances.get("Populacja", 1), balances.get("Maks_Populacja", 5)]
 		resource_labels["Populacja"].tooltip_text = "Twoja obecna populacja.\nJedzenie na turę: -%d" % [balances.get("Populacja", 1) * 1]
@@ -1413,7 +1662,7 @@ func _on_economy_updated(balances: Dictionary, turn: int, _selected_build: Strin
 		resources_label.text = "🪵 Drewno: %d      ⛓️ Żelazo: %d      🌋 Węgiel: %d      🌾 Jedzenie: %d/%d      🪙 Złoto: %d      👥 Pop: %d/%d" % [
 			balances["Drewno"], balances["Żelazo"], balances["Węgiel"], balances["Jedzenie"], balances.get("Maks_Jedzenie", 20), balances["Złoto"], balances.get("Populacja", 1), balances.get("Maks_Populacja", 5)
 		]
-	turn_button.text = "Następna tura (%d)" % turn
+	turn_button.text = "NASTĘPNA TURA (%d)" % turn
 
 	if hunger_label:
 		hunger_label.visible = balances.get("Głoduje", false)
@@ -1447,13 +1696,7 @@ func _on_turn_pressed():
 	if world_ref and world_ref.has_method("get_active_buildings_list"):
 		var buildings = world_ref.get_active_buildings_list()
 		EconomyManager.next_turn(buildings)
-		
-		if EconomyManager.turn_warnings.size() > 0:
-			var warning_text = ""
-			for w in EconomyManager.turn_warnings:
-				warning_text += w + "\n"
-			turn_warning_dialog.dialog_text = warning_text.strip_edges()
-			turn_warning_dialog.popup_centered()
+		_show_turn_warnings()
 
 	if not GameSettings.skip_turn_button_delay:
 		_turn_button_cooldown = true
@@ -1471,18 +1714,7 @@ func style_main_hud_elements():
 	top_panel.offset_top = 5
 	top_panel.offset_bottom = 50
 	
-	var style_top = StyleBoxFlat.new()
-	style_top.bg_color = DF_BG
-	style_top.border_width_bottom = 3
-	style_top.border_width_left = 3
-	style_top.border_width_right = 3
-	style_top.border_width_top = 3
-	style_top.border_color = DF_GOLD
-	style_top.set_corner_radius_all(10)
-	style_top.shadow_color = Color(0, 0, 0, 0.65)
-	style_top.shadow_size = 4
-	style_top.shadow_offset = Vector2(0, 3)
-	top_panel.add_theme_stylebox_override("panel", style_top)
+	top_panel.add_theme_stylebox_override("panel", _panel_style())
 	
 	resources_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	resources_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1491,30 +1723,41 @@ func style_main_hud_elements():
 	resources_label.add_theme_color_override("font_color", DF_TEXT)
 	
 	var style_turn = StyleBoxFlat.new()
-	style_turn.bg_color = DF_BLOOD
+	style_turn.bg_color = Color(0.1, 0.1, 0.08, 0.96)
 	style_turn.set_corner_radius_all(12)
 	style_turn.set_border_width_all(2)
 	style_turn.border_color = DF_GOLD
 	style_turn.border_width_bottom = 4
 	
 	var style_turn_hover = style_turn.duplicate() as StyleBoxFlat
-	style_turn_hover.bg_color = DF_BLOOD_BRIGHT
+	style_turn_hover.bg_color = Color(0.23, 0.19, 0.08, 0.98)
 	style_turn_hover.border_color = DF_GOLD_BRIGHT
-	
-	turn_button.add_theme_stylebox_override("normal", style_turn)
-	turn_button.add_theme_stylebox_override("hover", style_turn_hover)
-	turn_button.add_theme_color_override("font_color", DF_TEXT)
+	var style_turn_pressed := style_turn.duplicate() as StyleBoxFlat
+	style_turn_pressed.bg_color = Color(0.16, 0.13, 0.055, 0.98)
+	var style_turn_focus := style_turn_hover.duplicate() as StyleBoxFlat
+	style_turn_focus.set_border_width_all(3)
+
+	turn_button.text = "NASTĘPNA TURA"
+	turn_button.anchor_left = 1.0
+	turn_button.anchor_right = 1.0
+	turn_button.anchor_top = 1.0
+	turn_button.anchor_bottom = 1.0
+	turn_button.offset_left = -370
+	turn_button.offset_right = -190
+	turn_button.offset_top = -78
+	turn_button.offset_bottom = -24
+
+	for action_button: Button in [turn_button, skip_button]:
+		action_button.add_theme_stylebox_override("normal", style_turn.duplicate())
+		action_button.add_theme_stylebox_override("hover", style_turn_hover.duplicate())
+		action_button.add_theme_stylebox_override("pressed", style_turn_pressed.duplicate())
+		action_button.add_theme_stylebox_override("focus", style_turn_focus.duplicate())
+		action_button.add_theme_color_override("font_color", DF_TEXT)
+		action_button.add_theme_color_override("font_hover_color", DF_GOLD_TEXT)
+		action_button.add_theme_font_size_override("font_size", 16)
 
 func style_context_popup():
-	var style_box = StyleBoxFlat.new()
-	style_box.bg_color = DF_BG_PARCHMENT # Postarzały, przygaszony pergamin zamiast jasnego papieru
-	style_box.set_border_width_all(3) 
-	style_box.border_color = DF_GOLD # Złota, "kuta" ramka
-	style_box.set_corner_radius_all(8)
-	style_box.set_content_margin_all(10)
-	style_box.shadow_color = Color(0, 0, 0, 0.55)
-	style_box.shadow_size = 6
-	menu_budowania.add_theme_stylebox_override("panel", style_box)
+	menu_budowania.add_theme_stylebox_override("panel", _panel_style(10))
 	$MenuBudowania/VBoxContainer.add_theme_constant_override("separation", 8)
 	
 	var tab_style = StyleBoxFlat.new()
@@ -1563,6 +1806,7 @@ func style_single_button(btn: Button, display_name: String, building_name := "")
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
 	var lbl = Label.new()
+	lbl.name = "NameLabel"
 	lbl.text = display_name
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
@@ -1572,8 +1816,8 @@ func style_single_button(btn: Button, display_name: String, building_name := "")
 	vbox.add_child(icon)
 	vbox.add_child(lbl)
 	
-	var base_color = Color(0.2, 0.17, 0.13, 0.95)
-	var hover_color = Color(0.28, 0.23, 0.16, 0.95)
+	var base_color = Color(0.1, 0.1, 0.08, 0.96)
+	var hover_color = Color(0.23, 0.19, 0.08, 0.98)
 	
 	var normal = StyleBoxFlat.new()
 	normal.bg_color = base_color
@@ -1587,7 +1831,7 @@ func style_single_button(btn: Button, display_name: String, building_name := "")
 	hover.border_color = DF_GOLD_BRIGHT
 	
 	var disabled = StyleBoxFlat.new()
-	disabled.bg_color = Color(0.15, 0.13, 0.11, 0.5)
+	disabled.bg_color = Color(0.07, 0.07, 0.055, 0.5)
 	disabled.set_corner_radius_all(6)
 	disabled.set_border_width_all(2)
 	disabled.border_color = Color(0.4, 0.32, 0.16, 0.5)
@@ -1595,6 +1839,7 @@ func style_single_button(btn: Button, display_name: String, building_name := "")
 	
 	btn.add_theme_stylebox_override("normal", normal)
 	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("focus", hover)
 	btn.add_theme_stylebox_override("disabled", disabled)
 	btn.add_theme_color_override("font_color", DF_GOLD_TEXT)
 	btn.add_theme_color_override("font_disabled_color", Color(0.5, 0.45, 0.35, 0.6))
@@ -1606,6 +1851,7 @@ func style_single_button(btn: Button, display_name: String, building_name := "")
 		for line in lines:
 			final_tooltip += _wrap_text(line, 60) + "\n"
 		btn.tooltip_text = final_tooltip.strip_edges()
+		btn.set_meta("base_tooltip", btn.tooltip_text)
 
 func _get_icon_for_building(b_name: String) -> Texture2D:
 	var path = ""
@@ -1652,18 +1898,8 @@ func _style_alert_dialog(dialog: AcceptDialog) -> void:
 	# Wspólne ostylowanie alertów (AcceptDialog / ConfirmationDialog) w
 	# klimacie "dark fantasy" spójnym z resztą HUD-u — domyślny, jasny
 	# systemowy wygląd Godota mocno odstawał od reszty interfejsu.
-	var style = StyleBoxFlat.new()
-	style.bg_color = DF_BG
-	style.set_corner_radius_all(12)
-	style.set_border_width_all(2)
-	style.border_color = DF_GOLD
-	style.set_content_margin_all(24)
-	style.content_margin_top = 70 # Miejsce na własny tytuł i przycisk X
-	style.shadow_color = Color(0, 0, 0, 0.7)
-	style.shadow_size = 12
-
 	dialog.transparent_bg = true
-	dialog.add_theme_stylebox_override("panel", style)
+	dialog.add_theme_stylebox_override("panel", _panel_style(24, 70))
 	dialog.add_theme_stylebox_override("embedded_border", StyleBoxEmpty.new())
 	dialog.add_theme_stylebox_override("embedded_unfocused_border", StyleBoxEmpty.new())
 	dialog.set_flag(Window.FLAG_BORDERLESS, true)
@@ -1738,13 +1974,15 @@ func _style_df_button(btn: Button) -> void:
 	normal.content_margin_bottom = 10
 
 	var hover = normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.18, 0.15, 0.12, 0.96)
+	hover.bg_color = Color(0.23, 0.19, 0.08, 0.98)
 	hover.border_color = DF_GOLD_BRIGHT
 
 	btn.add_theme_stylebox_override("normal", normal)
 	btn.add_theme_stylebox_override("hover", hover)
 	btn.add_theme_stylebox_override("pressed", hover)
-	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	var focus := hover.duplicate() as StyleBoxFlat
+	focus.set_border_width_all(3)
+	btn.add_theme_stylebox_override("focus", focus)
 	btn.add_theme_color_override("font_color", DF_TEXT)
 	btn.add_theme_color_override("font_hover_color", DF_GOLD_TEXT)
 
