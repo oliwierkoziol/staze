@@ -11,7 +11,7 @@ extends Camera2D
 
 # --- ZMIENNE DLA PRZYBLIŻANIA (ZOOM) ---
 @export var ZOOM_SPEED: float = 0.1
-@export var MIN_ZOOM: float = 0.15  
+@export var MIN_ZOOM: float = 0.25
 @export var MAX_ZOOM: float = 4.0  
 
 # --- ZMIENNE DLA PRZESUWANIA MYSZKĄ (LPM) ---

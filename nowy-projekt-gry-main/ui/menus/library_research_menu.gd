@@ -97,14 +97,22 @@ func _populate_list() -> void:
 		desc_lbl.add_theme_color_override("font_color", Color(0.75, 0.7, 0.65))
 		info_vbox.add_child(desc_lbl)
 
-		var cost_lbl = Label.new()
+		var cost_lbl := RichTextLabel.new()
+		cost_lbl.bbcode_enabled = true
+		cost_lbl.fit_content = true
+		cost_lbl.scroll_active = false
 		if skill["unlocked"]:
 			cost_lbl.text = "✅ Odkryta"
-			cost_lbl.add_theme_color_override("font_color", Color(0.55, 0.85, 0.55))
+			cost_lbl.add_theme_color_override("default_color", Color(0.55, 0.85, 0.55))
 		else:
-			cost_lbl.text = "Koszt: 🪙 %d Złota, 🔬 %d punktów technologii" % [skill["cost_gold"], skill["cost_tech"]]
-			cost_lbl.add_theme_color_override("font_color", Color(0.85, 0.75, 0.4))
-		cost_lbl.add_theme_font_size_override("font_size", 12)
+			cost_lbl.text = "Koszt: %s %d Złota, %s %d punktów technologii" % [
+				hud._resource_icon_bbcode("Złoto"),
+				skill["cost_gold"],
+				hud._resource_icon_bbcode("Nauka"),
+				skill["cost_tech"],
+			]
+			cost_lbl.add_theme_color_override("default_color", Color(0.85, 0.75, 0.4))
+		cost_lbl.add_theme_font_size_override("normal_font_size", 12)
 		info_vbox.add_child(cost_lbl)
 
 		var research_btn = Button.new()

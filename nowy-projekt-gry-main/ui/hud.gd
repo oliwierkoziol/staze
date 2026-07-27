@@ -384,6 +384,12 @@ func _start_battle_now() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if (
+			(tech_tree_menu and tech_tree_menu.tech_tree_window and tech_tree_menu.tech_tree_window.visible)
+			or (culture_tree_menu and culture_tree_menu.culture_tree_window and culture_tree_menu.culture_tree_window.visible)
+		):
+			get_viewport().set_input_as_handled()
+			return
 		if any_menu_visible():
 			hide_all_menus()
 			get_viewport().set_input_as_handled()
@@ -398,11 +404,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			help_menu.show_help_menu()
 	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		get_viewport().set_input_as_handled()
-		if settings_menu and settings_menu.settings_window and settings_menu.settings_window.visible:
-			settings_menu.settings_window.visible = false
-			if AudioManager: AudioManager.resume_bg_music()
-		else:
-			hide_all_menus()
+		var menu_was_visible := any_menu_visible()
+		hide_all_menus()
+		if not menu_was_visible:
 			settings_menu.show_settings_menu()
 			if AudioManager: AudioManager.pause_bg_music()
 
@@ -419,6 +423,24 @@ func _panel_style(content_margin := 0.0, top_margin := -1.0) -> StyleBoxTexture:
 	if top_margin >= 0:
 		style.content_margin_top = top_margin
 	return style
+
+
+func _resource_icon_texture(resource_name: String) -> Texture2D:
+	match resource_name:
+		"Drewno", "🪵": return preload("res://assets/resources/wood.png")
+		"Żelazo", "⛏", "⛏️", "⛓️": return preload("res://assets/resources/iron.png")
+		"Węgiel", "🌋": return preload("res://assets/resources/coal.png")
+		"Jedzenie", "🌾": return preload("res://assets/resources/food.png")
+		"Złoto", "💰", "🪙": return preload("res://assets/resources/gold.png")
+		"Populacja", "👥": return preload("res://assets/resources/population.png")
+		"Nauka", "Technologia", "🔬": return preload("res://assets/resources/technology.png")
+		"Kultura": return preload("res://assets/resources/cultural.png")
+	return null
+
+
+func _resource_icon_bbcode(resource_name: String, size: int = 18) -> String:
+	var texture := _resource_icon_texture(resource_name)
+	return "[img=%dx%d]%s[/img]" % [size, size, texture.resource_path] if texture else ""
 
 
 func bind_tree_panning(scroll: ScrollContainer, canvas: Control) -> void:
@@ -624,28 +646,13 @@ func setup_resources_header():
 	resources_container.add_theme_constant_override("separation", 12)
 	$Panel.add_child(resources_container)
 	
-	var default_icon = null
-	
 	var resources_list = ["Drewno", "Żelazo", "Węgiel", "Jedzenie", "Złoto", "Populacja"]
 	for res_name in resources_list:
 		var hbox = HBoxContainer.new()
 		hbox.add_theme_constant_override("separation", 5)
 		
 		var icon = TextureRect.new()
-		if res_name == "Złoto":
-			icon.texture = preload("res://assets/resources/gold.png")
-		elif res_name == "Jedzenie":
-			icon.texture = preload("res://assets/resources/food.png")
-		elif res_name == "Drewno":
-			icon.texture = preload("res://assets/resources/wood.png")
-		elif res_name == "Żelazo":
-			icon.texture = preload("res://assets/resources/iron.png")
-		elif res_name == "Węgiel":
-			icon.texture = preload("res://assets/resources/coal.png")
-		elif res_name == "Populacja":
-			icon.texture = preload("res://assets/resources/population.png")
-		else:
-			icon.texture = default_icon
+		icon.texture = _resource_icon_texture(res_name)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.custom_minimum_size = Vector2(24, 24)
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -1029,7 +1036,10 @@ func setup_custom_popups():
 	tile_info_vbox.add_child(btn_my_potions)
 	
 	btn_buy_potions = Button.new()
-	btn_buy_potions.text = "💰 Kup mikstury"
+	btn_buy_potions.text = "Kup mikstury"
+	btn_buy_potions.icon = _resource_icon_texture("Złoto")
+	btn_buy_potions.expand_icon = true
+	btn_buy_potions.add_theme_constant_override("icon_max_width", 24)
 	var style_buy_potions = style_army.duplicate()
 	style_buy_potions.bg_color = Color(0.45, 0.2, 0.55, 0.95) # Wyróżniający się, "magiczny" fioletowy kolor
 	style_buy_potions.border_color = DF_GOLD_BRIGHT
@@ -1108,7 +1118,10 @@ func setup_custom_popups():
 	kup_pole_button = Button.new()
 	# POPRAWKA: cena pobierana z EconomyManager zamiast zaszytej na sztywno
 	# liczby — przyszła zmiana ceny w ekonomii nie rozjedzie już UI.
-	kup_pole_button.text = "🪙 Kup to pole (%d złota)" % EconomyManager.TILE_PURCHASE_GOLD_COST
+	kup_pole_button.text = "Kup to pole (%d złota)" % EconomyManager.TILE_PURCHASE_GOLD_COST
+	kup_pole_button.icon = _resource_icon_texture("Złoto")
+	kup_pole_button.expand_icon = true
+	kup_pole_button.add_theme_constant_override("icon_max_width", 24)
 	kup_pole_button.custom_minimum_size = Vector2(180, 35)
 	var style_buy = StyleBoxFlat.new()
 	style_buy.bg_color = Color(0.14, 0.13, 0.08, 0.95)
@@ -1319,7 +1332,14 @@ func show_context_menu(mouse_pos: Vector2, tile_pos: Vector2, tile_type: String,
 				
 			var res_text = ""
 			if camp_data.has("resources"):
-				res_text = "🪙 %d | 🪵 %d | ⛏️ %d" % [camp_data["resources"]["gold"], camp_data["resources"]["wood"], camp_data["resources"]["iron"]]
+				res_text = "%s %d | %s %d | %s %d" % [
+					_resource_icon_bbcode("Złoto"),
+					camp_data["resources"]["gold"],
+					_resource_icon_bbcode("Drewno"),
+					camp_data["resources"]["wood"],
+					_resource_icon_bbcode("Żelazo"),
+					camp_data["resources"]["iron"],
+				]
 				
 			info_label.text = "[center]⛺ %s (Lvl %d)\n⚔️ Nacja: %s\n📦 Surowce: %s\n🛡️ Armia: %s[/center]" % [building_name, building_level, camp_data.get("faction_name", "Nieznana"), res_text, army_text]
 		else:
@@ -1653,7 +1673,7 @@ func _on_economy_updated(balances: Dictionary, turn: int, _selected_build: Strin
 		resource_labels["Populacja"].text = "Pop: %d/%d" % [balances.get("Populacja", 1), balances.get("Maks_Populacja", 5)]
 		resource_labels["Populacja"].tooltip_text = "Twoja obecna populacja.\nJedzenie na turę: -%d" % [balances.get("Populacja", 1) * 1]
 	else:
-		resources_label.text = "🪵 Drewno: %d      ⛓️ Żelazo: %d      🌋 Węgiel: %d      🌾 Jedzenie: %d/%d      🪙 Złoto: %d      👥 Pop: %d/%d" % [
+		resources_label.text = "Drewno: %d      Żelazo: %d      Węgiel: %d      Jedzenie: %d/%d      Złoto: %d      Pop: %d/%d" % [
 			balances["Drewno"], balances["Żelazo"], balances["Węgiel"], balances["Jedzenie"], balances.get("Maks_Jedzenie", 20), balances["Złoto"], balances.get("Populacja", 1), balances.get("Maks_Populacja", 5)
 		]
 	turn_button.text = "NASTĘPNA TURA (%d)" % turn
@@ -1956,16 +1976,16 @@ func _style_alert_dialog(dialog: AcceptDialog) -> void:
 		if cancel_btn:
 			_style_df_button(cancel_btn)
 
-func _style_df_button(btn: Button) -> void:
+func _style_df_button(btn: Button, compact: bool = false) -> void:
 	var normal = StyleBoxFlat.new()
 	normal.bg_color = DF_BG_LIGHT
 	normal.set_corner_radius_all(8)
 	normal.set_border_width_all(2)
 	normal.border_color = DF_GOLD
-	normal.content_margin_left = 24
-	normal.content_margin_right = 24
-	normal.content_margin_top = 10
-	normal.content_margin_bottom = 10
+	normal.content_margin_left = 8 if compact else 24
+	normal.content_margin_right = 8 if compact else 24
+	normal.content_margin_top = 6 if compact else 10
+	normal.content_margin_bottom = 6 if compact else 10
 
 	var hover = normal.duplicate() as StyleBoxFlat
 	hover.bg_color = Color(0.23, 0.19, 0.08, 0.98)

@@ -117,11 +117,13 @@ func setup_potions_windows():
 	
 	var header_hbox_buy = HBoxContainer.new()
 	
-	var buy_header = Label.new()
-	buy_header.text = "💰 Sklep z miksturami"
-	buy_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	buy_header.add_theme_font_size_override("font_size", 24)
-	buy_header.add_theme_color_override("font_color", Color(0.9, 0.7, 0.2))
+	var buy_header := RichTextLabel.new()
+	buy_header.bbcode_enabled = true
+	buy_header.fit_content = true
+	buy_header.scroll_active = false
+	buy_header.text = "[center]%s Sklep z miksturami[/center]" % hud._resource_icon_bbcode("Złoto", 24)
+	buy_header.add_theme_font_size_override("normal_font_size", 24)
+	buy_header.add_theme_color_override("default_color", Color(0.9, 0.7, 0.2))
 	buy_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	
 	var btn_close_buy = Button.new()

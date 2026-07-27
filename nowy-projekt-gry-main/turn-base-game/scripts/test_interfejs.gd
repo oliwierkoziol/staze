@@ -96,13 +96,83 @@ func _uruchom() -> void:
 		and tech_scroll.vertical_scroll_mode == ScrollContainer.SCROLL_MODE_SHOW_ALWAYS,
 		"Drzewko technologii jest responsywnym przewijanym overlayem"
 	)
-	tech_window.visible = true
-	campaign_hud.tech_tree_menu.refresh_technology_tree_view()
+	campaign_hud.tech_tree_menu.tech_tree_button.pressed.emit()
 	await process_frame
+	var resource_icon_count := 0
+	for icon: TextureRect in tech_window.find_children("*", "TextureRect", true, false):
+		if icon.texture != null and icon.texture.resource_path.begins_with("res://assets/resources/"):
+			resource_icon_count += 1
+	_sprawdz(
+		campaign_hud.kup_pole_button.icon.resource_path == "res://assets/resources/gold.png"
+		and resource_icon_count > 0,
+		"Kampania używa tekstur zasobów zamiast ich emoji"
+	)
 	tech_scroll.scroll_horizontal = 0
 	var previous_scroll := tech_scroll.scroll_horizontal
 	campaign_hud._apply_tree_pan(tech_scroll, Vector2(-40, 0))
 	_sprawdz(tech_scroll.scroll_horizontal > previous_scroll, "Przeciąganie przesuwa zawartość drzewka")
+	var tech_close_button: Button = tech_window.get_node("CloseButton")
+	var hover_event := InputEventMouseMotion.new()
+	hover_event.position = tech_close_button.get_global_rect().get_center()
+	hover_event.global_position = hover_event.position
+	root.push_input(hover_event, true)
+	await process_frame
+	_sprawdz(
+		tech_close_button.size == Vector2(40, 40)
+		and root.gui_get_hovered_control() == tech_close_button,
+		"Grafika i obszar kliknięcia X technologii pokrywają się"
+	)
+	var close_click := InputEventMouseButton.new()
+	close_click.button_index = MOUSE_BUTTON_LEFT
+	close_click.position = tech_close_button.get_global_rect().get_center()
+	close_click.global_position = close_click.position
+	close_click.pressed = true
+	root.push_input(close_click, true)
+	await process_frame
+	close_click.pressed = false
+	root.push_input(close_click, true)
+	await process_frame
+	_sprawdz(not tech_window.visible, "Przycisk X zamyka drzewko technologii")
+	var culture_window: Panel = campaign_hud.culture_tree_menu.culture_tree_window
+	campaign_hud.culture_tree_button.pressed.emit()
+	var culture_close_button: Button = culture_window.get_node("CloseButton")
+	var outside_click := InputEventMouseButton.new()
+	outside_click.button_index = MOUSE_BUTTON_LEFT
+	outside_click.pressed = true
+	campaign_hud._unhandled_input(outside_click)
+	_sprawdz(culture_window.visible, "Klik poza drzewkiem nie tworzy niewidzialnego przycisku zamknięcia")
+	hover_event.position = culture_close_button.get_global_rect().get_center()
+	hover_event.global_position = hover_event.position
+	root.push_input(hover_event, true)
+	await process_frame
+	_sprawdz(
+		culture_close_button.size == Vector2(40, 40)
+		and root.gui_get_hovered_control() == culture_close_button,
+		"Grafika i obszar kliknięcia X kultury pokrywają się"
+	)
+	culture_close_button.pressed.emit()
+	_sprawdz(not culture_window.visible, "Przycisk X zamyka drzewko kultury")
+	var strategy_camera: Camera2D = campaign_world.get_node("StrategyCamera")
+	for zoom_step in range(30):
+		strategy_camera.change_zoom(-strategy_camera.ZOOM_SPEED)
+	_sprawdz(
+		is_equal_approx(strategy_camera.zoom.x, 0.25)
+		and is_equal_approx(strategy_camera.zoom.y, 0.25),
+		"Oddalenie kampanii zatrzymuje się przed renderowaniem całej mapy"
+	)
+	var escape_event := InputEventKey.new()
+	escape_event.pressed = true
+	escape_event.keycode = KEY_ESCAPE
+	tech_window.visible = true
+	campaign_hud._unhandled_key_input(escape_event)
+	_sprawdz(
+		not tech_window.visible and not campaign_hud.settings_menu.settings_window.visible,
+		"ESC zamyka drzewko bez otwierania menu gry"
+	)
+	campaign_hud._unhandled_key_input(escape_event)
+	_sprawdz(campaign_hud.settings_menu.settings_window.visible, "ESC bez popupu otwiera menu gry")
+	campaign_hud._unhandled_key_input(escape_event)
+	_sprawdz(not campaign_hud.settings_menu.settings_window.visible, "ESC zamyka menu gry")
 	campaign_world.queue_free()
 	await process_frame
 	var gra: Control = load("res://turn-base-game/gra.tscn").instantiate()
@@ -121,6 +191,11 @@ func _uruchom() -> void:
 	gra._build_save_load_dialogs()
 	_sprawdz(gra.pause_menu != null, "Menu pauzy istnieje")
 	gra.pause_menu.set_campaign_mode(false)
+	_sprawdz(
+		gra.pause_menu._action_confirmation.get_theme_stylebox("panel") is StyleBoxTexture
+		and gra.pause_menu._action_confirmation.get_ok_button().get_theme_stylebox("normal") is StyleBoxFlat,
+		"Popupy akcji Potyczki używają stylu dark fantasy"
+	)
 	_sprawdz(
 		gra.pause_menu._save_button.text == "ZAPISZ STAN"
 		and gra.pause_menu._load_button.text == "WCZYTAJ STAN"

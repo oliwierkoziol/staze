@@ -120,7 +120,7 @@ func _help_tab_text(key: String) -> String:
 				+ "• Kliknij [b]PPM[/b] na odpowiednie pole i wybierz [b]„👑 Załóż Miasto tutaj”[/b], aby założyć nowe miasto na tym polu.\n\n" \
 				+ "[b][color=#8fdc8f]Kupowanie pól[/color][/b]\n" \
 				+ "• Aby powiększyć terytorium, kliknij [b]PPM[/b] na pole [b]sąsiadujące[/b] z polem, które już posiadasz.\n" \
-				+ "• Wybierz [b]„🪙 Kup to pole (50 złota)”[/b] — pole zostanie dołączone do Twojego terytorium, jeśli masz wystarczająco złota.\n\n" \
+				+ "• Wybierz [b]„Kup to pole (50 złota)”[/b] — pole zostanie dołączone do Twojego terytorium, jeśli masz wystarczająco złota.\n\n" \
 				+ "[color=#a0a0a0]Tylko pola graniczące z posiadanym terenem mogą zostać zakupione lub zabudowane.[/color]\n\n" \
 				+ "[b][color=#8fdc8f]Mgła wojny[/color][/b]\n" \
 				+ "• Pola w zasięgu Twojego generała lub terytorium są w pełni widoczne. Pole, które choć raz odkryjesz, pozostaje odsłonięte na stałe — nie wraca do niego szary cień, nawet gdy oddalisz się z tego rejonu."

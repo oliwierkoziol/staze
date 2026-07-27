@@ -69,9 +69,19 @@ func show_camp_details_menu(pos: Vector2):
 	var res_hbox = HBoxContainer.new()
 	res_hbox.add_theme_constant_override("separation", 20)
 	var r = camp_data.get("resources", {})
-	var r_lbl = Label.new()
-	r_lbl.text = "Zgromadzone surowce:\n💰 Złoto: %d\n🪵 Drewno: %d\n⛏️ Żelazo: %d" % [r.get("gold", 0), r.get("wood", 0), r.get("iron", 0)]
-	r_lbl.add_theme_color_override("font_color", Color(0.9, 0.85, 0.4))
+	var r_lbl := RichTextLabel.new()
+	r_lbl.bbcode_enabled = true
+	r_lbl.fit_content = true
+	r_lbl.scroll_active = false
+	r_lbl.text = "Zgromadzone surowce:\n%s Złoto: %d\n%s Drewno: %d\n%s Żelazo: %d" % [
+		hud._resource_icon_bbcode("Złoto"),
+		r.get("gold", 0),
+		hud._resource_icon_bbcode("Drewno"),
+		r.get("wood", 0),
+		hud._resource_icon_bbcode("Żelazo"),
+		r.get("iron", 0),
+	]
+	r_lbl.add_theme_color_override("default_color", Color(0.9, 0.85, 0.4))
 	r_lbl.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	r_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	res_hbox.add_child(r_lbl)

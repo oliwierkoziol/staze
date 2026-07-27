@@ -36,14 +36,14 @@ func setup_culture_tree_ui():
 			close_btn.pressed.connect(func(): culture_tree_window.visible = false)
 			close_btn.text = "X"
 			close_btn.tooltip_text = "Zamknij"
-			close_btn.custom_minimum_size = Vector2(35, 35)
+			close_btn.custom_minimum_size = Vector2(40, 40)
 			close_btn.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-			close_btn.offset_left = -45
+			close_btn.offset_left = -50
 			close_btn.offset_top = 10
 			close_btn.offset_right = -10
-			close_btn.offset_bottom = 45
+			close_btn.offset_bottom = 50
 			if hud.has_method("_style_df_button"):
-				hud._style_df_button(close_btn)
+				hud._style_df_button(close_btn, true)
 			
 			# Przesunięcie na koniec drzewa, by ScrollContainer nie blokował kliknięć
 			close_btn.get_parent().move_child(close_btn, -1)
@@ -85,6 +85,7 @@ func setup_culture_tree_ui():
 		hud.culture_tree_button.pressed.connect(func():
 			hud.hide_all_menus()
 			if culture_tree_window:
+				culture_tree_window.move_to_front()
 				culture_tree_window.visible = true
 				refresh_culture_tree_view()
 		)
@@ -153,12 +154,20 @@ func refresh_culture_tree_view():
 		icon_style.set_border_width_all(1)
 		icon_style.border_color = Color(0.65, 0.45, 0.85)
 		icon_panel.add_theme_stylebox_override("panel", icon_style)
-		var icon_label = Label.new()
-		icon_label.text = tech["icon"]
-		icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		icon_label.add_theme_font_size_override("font_size", 18)
-		icon_panel.add_child(icon_label)
+		var resource_icon: Texture2D = hud._resource_icon_texture(str(tech["icon"]))
+		if resource_icon:
+			var icon_rect := TextureRect.new()
+			icon_rect.texture = resource_icon
+			icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon_panel.add_child(icon_rect)
+		else:
+			var icon_label := Label.new()
+			icon_label.text = tech["icon"]
+			icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			icon_label.add_theme_font_size_override("font_size", 18)
+			icon_panel.add_child(icon_label)
 		hbox.add_child(icon_panel)
 		var vbox = VBoxContainer.new()
 		vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -169,11 +178,14 @@ func refresh_culture_tree_view():
 		lbl_title.add_theme_font_size_override("font_size", 14)
 		lbl_title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.75))
 		vbox.add_child(lbl_title)
-		var lbl_desc = Label.new()
-		lbl_desc.text = "%s\n💎 Koszt: %d pkt" % [tech["desc"], tech["research_cost"]]
+		var lbl_desc := RichTextLabel.new()
+		lbl_desc.bbcode_enabled = true
+		lbl_desc.fit_content = true
+		lbl_desc.scroll_active = false
+		lbl_desc.text = "%s\n%s Koszt: %d pkt" % [tech["desc"], hud._resource_icon_bbcode("Kultura"), tech["research_cost"]]
 		lbl_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		lbl_desc.add_theme_font_size_override("font_size", 11)
-		lbl_desc.add_theme_color_override("font_color", Color(0.75, 0.65, 0.85))
+		lbl_desc.add_theme_font_size_override("normal_font_size", 11)
+		lbl_desc.add_theme_color_override("default_color", Color(0.75, 0.65, 0.85))
 		vbox.add_child(lbl_desc)
 
 		var invisible_button = Button.new()

@@ -112,6 +112,7 @@ func _build_ui() -> void:
 	_action_confirmation = ConfirmationDialog.new()
 	_action_confirmation.cancel_button_text = "WRÓĆ"
 	_action_confirmation.confirmed.connect(_confirm_action)
+	_style_confirmation_dialog(_action_confirmation)
 	add_child(_action_confirmation)
 	set_campaign_mode(false)
 
@@ -122,7 +123,47 @@ func _make_button(text: String) -> Button:
 	button.text = text
 	button.add_theme_font_size_override("font_size", 20)
 	button.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78, 1.0))
+	_style_button(button)
 	return button
+
+
+func _style_button(button: Button) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.1, 0.1, 0.08, 0.96)
+	normal.border_color = Color(0.65, 0.52, 0.2, 0.9)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(6)
+	normal.set_content_margin_all(10)
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.23, 0.19, 0.08, 0.98)
+	hover.border_color = Color(0.88, 0.75, 0.34, 1.0)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", hover)
+	button.add_theme_stylebox_override("focus", hover)
+	button.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78, 1.0))
+
+
+func _style_confirmation_dialog(dialog: ConfirmationDialog) -> void:
+	var panel := StyleBoxTexture.new()
+	panel.texture = preload("res://turn-base-game/assets/ui/panel.png")
+	panel.texture_margin_left = 8
+	panel.texture_margin_top = 8
+	panel.texture_margin_right = 8
+	panel.texture_margin_bottom = 8
+	panel.axis_stretch_horizontal = 2
+	panel.axis_stretch_vertical = 2
+	panel.set_content_margin_all(22)
+	dialog.transparent_bg = true
+	dialog.add_theme_stylebox_override("panel", panel)
+	dialog.add_theme_stylebox_override("embedded_border", panel.duplicate())
+	dialog.add_theme_stylebox_override("embedded_unfocused_border", panel.duplicate())
+	dialog.min_size = Vector2i(520, 220)
+	dialog.get_label().add_theme_color_override("font_color", Color(0.92, 0.88, 0.78, 1.0))
+	dialog.get_label().add_theme_font_size_override("font_size", 17)
+	dialog.get_label().horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	for button: Button in [dialog.get_ok_button(), dialog.get_cancel_button()]:
+		_style_button(button)
 
 
 func _request_action(action: String) -> void:
