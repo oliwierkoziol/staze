@@ -155,3 +155,37 @@ Ustaliliśmy sposób zaznaczania jednostek oraz wyświetlania ich statystyk
     Zebrano propozycje poprawek od testerów.
 
     Rozpoczęto wdrażanie sugerowanych zmian.
+
+23 lipca
+
+Dodano pierwsze efekty dźwiękowe oraz kwestie głosowe dla jednostek różnych frakcji.
+
+Dodano muzykę do gry
+
+Przebudowano menu pauzy, poprawiając jego działanie oraz sposób wyświetlania nad interfejsem.
+
+24 lipca
+
+Rozbudowano oprawę dźwiękową o muzykę, odgłosy walki i dodatkowe kwestie głosowe.
+
+Utworzono branch „wzajemnie-powiązane-systemy”.
+
+Rozpoczęto integrację systemu walki z główną częścią gry.
+
+Dodano obsługę zapisów.
+
+Poprawiono błędy interfejsu oraz świata gry.
+
+27 lipca
+
+Ujednolicono i dopracowano interfejs całej gry.
+
+Dodano nowe tła, czcionki oraz ulepszone przejścia między scenami.
+
+Poprawiono dźwięki, balans frakcji oraz sztuczną inteligencję.
+
+Usprawniono działanie kluczowych mechanik.
+
+Dodano zakończenie kampanii wraz z ekranem zwycięstwa.
+
+Przygotowano finalny eksport projektu.
