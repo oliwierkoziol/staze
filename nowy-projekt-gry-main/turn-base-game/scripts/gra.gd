@@ -382,6 +382,11 @@ var tween_muzyki: Tween
 
 func _ready() -> void:
 	losowanie_sfx.randomize()
+	GameSettings.register_player_volume(odtwarzacz_sfx_jednostek, -10.0)
+	GameSettings.register_player_volume(odtwarzacz_sfx_broni, -12.0)
+	GameSettings.register_player_volume(odtwarzacz_sfx_interfejsu, -12.0)
+	GameSettings.register_player_volume(odtwarzacz_muzyki, GLOSNOSC_MUZYKI_DB)
+	GameSettings.audio_volume_changed.connect(_on_audio_volume_changed)
 	var audio_manager: Node = get_node_or_null("/root/AudioManager")
 	if audio_manager != null and audio_manager.has_method("pause_bg_music"):
 		audio_manager.call("pause_bg_music")
@@ -408,6 +413,11 @@ func _ready() -> void:
 	for button in find_children("*", "BaseButton", true, false):
 		_podlacz_sfx_przycisku(button)
 	get_tree().node_added.connect(_podlacz_sfx_przycisku)
+
+
+func _on_audio_volume_changed(bus_name: StringName) -> void:
+	if bus_name == &"Music" and tween_muzyki and tween_muzyki.is_valid():
+		tween_muzyki.kill()
 
 
 func _load_terrain_types() -> void:
@@ -730,7 +740,7 @@ func _ustaw_muzyke(muzyka: AudioStream) -> void:
 		muzyka.loop = true
 	if tween_muzyki != null and tween_muzyki.is_valid():
 		tween_muzyki.kill()
-	var docelowa_glosnosc: float = GLOSNOSC_MUZYKI_DB
+	var docelowa_glosnosc: float = GameSettings.get_player_volume_db(&"Music", GLOSNOSC_MUZYKI_DB)
 	odtwarzacz_muzyki.stream = muzyka
 	odtwarzacz_muzyki.volume_db = minf(-40.0, docelowa_glosnosc)
 	odtwarzacz_muzyki.play()

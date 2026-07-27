@@ -1,5 +1,7 @@
 extends Node
 
+signal audio_volume_changed(bus_name: StringName)
+
 const AUDIO_BUSES: Array[StringName] = [&"Master", &"Music", &"Effects", &"Dialogue"]
 const AUDIO_SETTINGS_PATH := "user://audio_settings.cfg"
 const GEORGIA_FONT_PATH := "res://theme/georgia.ttf"
@@ -15,6 +17,7 @@ var debug_mode: bool = false
 var campaign_ai_difficulty := "sredni"
 
 var _ui_font: Font
+var _player_base_volumes: Dictionary = {}
 
 func _ready() -> void:
 	_ensure_audio_buses()
@@ -63,6 +66,28 @@ func get_audio_volume(bus_name: StringName) -> float:
 	return clampf(db_to_linear(AudioServer.get_bus_volume_db(bus_index)) * 100.0, 0.0, 100.0)
 
 
+func get_player_volume_db(bus_name: StringName, base_db: float) -> float:
+	if not OS.has_feature("web"):
+		return base_db
+	var category_linear := get_audio_volume(bus_name) / 100.0
+	if category_linear <= 0.0:
+		return -80.0
+	return base_db + linear_to_db(category_linear)
+
+
+func register_player_volume(player: AudioStreamPlayer, base_db: float) -> void:
+	_player_base_volumes[player.get_instance_id()] = {
+		"player": player,
+		"base_db": base_db,
+	}
+	if OS.has_feature("web"):
+		player.volume_db = get_player_volume_db(player.bus, base_db)
+
+
+func unregister_player_volume(player: AudioStreamPlayer) -> void:
+	_player_base_volumes.erase(player.get_instance_id())
+
+
 func set_audio_volume(bus_name: StringName, value: float, save := true) -> void:
 	var bus_index := AudioServer.get_bus_index(bus_name)
 	if bus_index < 0:
@@ -73,6 +98,19 @@ func set_audio_volume(bus_name: StringName, value: float, save := true) -> void:
 		AudioServer.set_bus_volume_db(bus_index, linear_to_db(normalized_value / 100.0))
 	if save:
 		_save_audio_settings()
+	audio_volume_changed.emit(bus_name)
+	if OS.has_feature("web"):
+		_apply_web_player_volumes(bus_name)
+
+
+func _apply_web_player_volumes(changed_bus: StringName) -> void:
+	if changed_bus == &"Master":
+		return
+	for entry in _player_base_volumes.values():
+		var player: AudioStreamPlayer = entry.player
+		if not is_instance_valid(player) or player.bus != changed_bus:
+			continue
+		player.volume_db = get_player_volume_db(changed_bus, entry.base_db)
 
 
 func _ensure_audio_buses() -> void:

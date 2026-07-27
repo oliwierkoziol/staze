@@ -40,12 +40,20 @@ func _ready() -> void:
 	
 	bg_music = AudioStreamPlayer.new()
 	bg_music.bus = &"Music"
-	bg_music.volume_db = -30.0
+	bg_music.volume_db = BG_MUSIC_BASE_DB
 	add_child(bg_music)
+	GameSettings.register_player_volume(bg_music, BG_MUSIC_BASE_DB)
 	bg_music.finished.connect(_on_bg_music_finished)
 	if OS.has_feature("web"):
 		get_viewport().gui_input.connect(_on_web_gui_input)
 		set_process_input(true)
+	GameSettings.audio_volume_changed.connect(_on_audio_volume_changed)
+
+
+func _on_audio_volume_changed(bus_name: StringName) -> void:
+	if bus_name == &"Music" and bg_fade_tween:
+		bg_fade_tween.kill()
+		bg_fade_tween = null
 
 
 func _input(event: InputEvent) -> void:
@@ -71,6 +79,8 @@ func _unlock_web_audio() -> void:
 	if is_bg_playing and bg_music and not bg_music.playing:
 		_play_current_bg_track()
 
+const BG_MUSIC_BASE_DB := -30.0
+
 func _create_player(path: String) -> AudioStreamPlayer:
 	var p = AudioStreamPlayer.new()
 	p.bus = &"Effects"
@@ -79,6 +89,7 @@ func _create_player(path: String) -> AudioStreamPlayer:
 		p.stream = stream
 		p.volume_db = -25.0
 		add_child(p)
+		GameSettings.register_player_volume(p, -25.0)
 	else:
 		push_error("AudioManager: Could not load sound from " + path)
 	return p
@@ -131,7 +142,8 @@ func _play_current_bg_track() -> void:
 		
 		if bg_fade_tween: bg_fade_tween.kill()
 		bg_fade_tween = create_tween()
-		bg_fade_tween.tween_property(bg_music, "volume_db", -30.0, 2.0)
+		var target_db: float = GameSettings.get_player_volume_db(&"Music", BG_MUSIC_BASE_DB)
+		bg_fade_tween.tween_property(bg_music, "volume_db", target_db, 2.0)
 
 func _on_bg_music_finished() -> void:
 	if not is_bg_playing: return
