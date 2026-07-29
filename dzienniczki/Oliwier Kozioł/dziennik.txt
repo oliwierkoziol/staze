@@ -79,13 +79,29 @@
 - Naprawa wielu pomniejszych błędów 
 
 21 lipca
+- Poprawiono działanie systemu poziomu trudności
+- Zmiany w trybie walki o zamek
+- Poprawki graficzne w wyświetlaniu hexów
+- Poprawki w działaniu buffów/debuffów
 
 22 lipca
+- Generowanie efektów dźwiękowych do gry
+- Poprawki wydajnościowe gry
+- Testowanie gry
 
 23 lipca
+- Dodanie efektów dźwiękowych i kwestii głosowych do jednostek
+- Naprawa działania tutoriala
+- Poprawa działania menu pauzy 
 
 24 lipca
+- Rozpoczęcie łączenia obu projektów
+- Naprawa wielu poszczególnych błędów w kampanii
+- Zmiana działania systemu zapisu/wczytywania
 
 27 lipca
+- Przerobienie dużej części UI
+- Poprawa assetów (dźwięków, czcionek), w tym w buildzie przeglądarkowym
+- Dodano do kampanii zamek jako ostateczny cel gry
+- Dodano nowe menu główne
 - Ukończenie projektu
-
